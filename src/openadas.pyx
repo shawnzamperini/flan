@@ -33,7 +33,7 @@ class OpenADAS:
             element = header[5][1:].title()
             # year = int(header[-1])
             ncharges = charge_high - charge_low + 1
-            print("Reading in data for {} Z={}".format(element, atomic_number))
+            print("ADAS: Reading in data for {} Z={}".format(element, atomic_number))
             f.readline()
 
             # Setup arrays.

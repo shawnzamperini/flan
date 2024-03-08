@@ -11,6 +11,9 @@ cdef class PyImpurity:
 	def __init__(self, int imp_atom_num, float mass, float x, float y, 
                 float z, float charge, int fbirth):
 		self.c_imp = Impurity(imp_atom_num, mass, x, y, z, charge, fbirth)
+		self.c_imp.vx = 0.0
+		self.c_imp.vy = 0.0
+		self.c_imp.vz = 0.0
 	
 	# Attribute access
 	@property

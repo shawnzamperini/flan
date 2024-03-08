@@ -7,6 +7,8 @@
 import sys
 import numpy as np
 import constants
+from tqdm import tqdm
+import cython
 
 # Import Impurity C++ class.
 from imp_cpp import PyImpurity
@@ -16,7 +18,12 @@ from imp_cpp import PyImpurity
 import openadas
 
 from libcpp.vector cimport vector
+from libcpp.string cimport string
 
+
+# These seem to still be clocked as python objects when I use them, so
+# I'll just define them at this scope instead.
+cdef float ev = constants.ev
 
 def follow_impurities(input_opts, gkyl_bkg):
     """
@@ -25,9 +32,11 @@ def follow_impurities(input_opts, gkyl_bkg):
     
     # Define variables to use as much C++ as possible here.
     cdef int i, j, imp_zstart_int, x_idx, y_idx, z_idx, fstart
+    cdef int loop_counts, iz_warn_count, rc_warn_count
     cdef float x, y, z, local_ne, local_te, local_ti, local_ni
     cdef float local_ex, local_ey, local_ez, iz_coef, rc_coef, iz_prob
-    cdef float rc_prob, ran, local_bz
+    cdef float rc_prob, ran, local_bz, print_percent, perc_done
+    cdef float avg_time_followed
     
     # Extract input options for simulation as C++ types.
     cdef float imp_mass = input_opts["imp_mass"] * constants.amu
@@ -37,6 +46,9 @@ def follow_impurities(input_opts, gkyl_bkg):
     cdef float imp_xmax = input_opts["imp_xmax"]
     cdef int gkyl_fstart = input_opts["gkyl_fstart"]
     cdef int imp_atom_num = input_opts["imp_atom_num"]
+    cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]
+    cdef float imp_zstart_val = input_opts["imp_zstart_val"]
+    cdef bool coll_forces = input_opts["coll_forces"]
     
     # If we interpolated frames, gkyl_fend will be that many additional
     # frames longer! 
@@ -60,6 +72,9 @@ def follow_impurities(input_opts, gkyl_bkg):
             for j in range(zstart_cdf.shape[1]):
                 zstart_cdf[i,j] = np.cumsum(gkyl_bkg["ni_avg"][i,j] / 
                     gkyl_bkg["ni_avg"][i,j].sum())
+        
+    elif imp_zstart_opt == "single_value":
+        imp_zstart_int = 2
         
     else:
         print("Error: imp_zstart input not recognized: {}"
@@ -124,35 +139,42 @@ def follow_impurities(input_opts, gkyl_bkg):
     # Arrays to keep track of the total particle weight passing through
     # each cell as well as the counts. This is the Monte Carlo way to
     # calculate density.
-    imp_weight_arr = np.zeros(gkyl_bkg["b"].shape)
-    imp_count_arr = np.zeros(gkyl_bkg["b"].shape)
+    imp_weight_arr = np.zeros(gkyl_bkg["ne"].shape)
+    imp_count_arr = np.zeros(gkyl_bkg["ne"].shape)
     
     # Printout every X percent.
-    cdef float print_percent = 10
+    print_percent = 10
+    loop_counts = 0
+    iz_warn_count = 0
+    rc_warn_count = 0
+    avg_time_followed = 0.0
 
     # Loop through tracking the full path of one impurity at a time.
-    for i in range(0, num_imps):
+    print("Beginning impurity following...")
+    for i in tqdm(range(0, num_imps)):
         
         # Print out counter every 10%. 
-        if i > 0 and i % (num_imps / print_percent) == 0:
-            print("{}/{}".format(i, num_imps))
+        #if i > 0 and i % (num_imps / print_percent) == 0:
+        #    perc_done = i / num_imps * 100
+        #    print("{:3.0f}% ({:}/{:})".format(perc_done, i, num_imps))
         
         # Determine random starting location. First is uniform between
         # xmin and xmax. 
         x = imp_xmin + (imp_xmax - imp_xmin) * xstart_rans[i]
-        x_idx = np.argmin(np.abs(x - gkyl_x))
         
         # We assume symmetry in the y direction, so uniformily
         # distributed between those as well.
         y = gkyl_ymin + (gkyl_ymax - gkyl_ymin) * ystart_rans[i]
-        y_idx = np.argmin(np.abs(y - gkyl_y))
         
-        # Next determine starting z location. This will be the closest
-        # value in the CDF.
+        # Next determine starting z location. 
+        #   1: This will be the closest value in the CDF.
+        #   2: Value specified. 
         if imp_zstart_int == 1:
             z_idx = np.argmin(np.abs(zstart_cdf[x_idx, y_idx] 
             - zstart_rans[i]))
-        z = gkyl_z[z_idx]
+            z = gkyl_z[z_idx]
+        elif imp_zstart_int == 2:
+            z = imp_zstart_val
         
         # Assume impurity can start at any frame (this means we are 
         # assuming a constant impurity source). This could lead to 
@@ -165,23 +187,34 @@ def follow_impurities(input_opts, gkyl_bkg):
         imp = PyImpurity(imp_atom_num, imp_mass, x, y, z, 
             imp_init_charge, fstart)
         
-        if i > 0 and i % (num_imps / print_percent) == 0:
-            print("  x = {:.4f}".format(x))
-            print("  y = {:.4f}".format(y))
-            print("  z = {:.4f}".format(z))
-            print("  f = {:}".format(fstart))
+        #if i > 0 and i % (num_imps / print_percent) == 0:
+        #    print("  x = {:.4f}".format(x))
+        #    print("  y = {:.4f}".format(y))
+        #    print("  z = {:.4f}".format(z))
+        #    print("  f = {:}".format(fstart))
         
-        # Track transport of ions one frame at a time. Python indexes
-        # the frames starting from 0, so we loop from 0 to gkyl_fend
-        # minus fstart to account for that. 
-        for f in range(0, gkyl_fend-fstart):
+        # Track transport of ions one frame at a time. Not all 
+        # impurities will start at the first Gkeyll frame by design. The
+        # first frame an impurity starts at is fstart, which when 
+        # 0-indexed is fstart - gkyl_fstart, and the final frame it can
+        # reach is gkyl_end-gkyl_fstart when 0-indexed.
+        for f in range(fstart-gkyl_fstart, gkyl_fend-gkyl_fstart):
+            
+            # Update nearest index values.
+            x_idx = np.argmin(np.abs(imp.x - gkyl_x))
+            y_idx = np.argmin(np.abs(imp.y - gkyl_y))
+            z_idx = np.argmin(np.abs(imp.z - gkyl_z))
             
             # Add particle weight and count in our arrays. The particle
             # weights is just the timestep. You can think of this as
             # a particle in a cell is really only dt / (1 s) of a 
             # particle.
-            imp_weight_arr[x_idx, y_idx, z_idx] += dt
-            imp_count_arr[x_idx, y_idx, z_idx] += 1
+            imp_weight_arr[f, x_idx, y_idx, z_idx] += dt
+            imp_count_arr[f, x_idx, y_idx, z_idx] += 1
+            
+            # If desired, save the tracks of each impurity in (x,y,z)
+            # and/or (vx,vy,vz) space.
+            # To-do...
             
             # Extract the plasma parameters at the current location.
             local_ne = gkyl_bkg["ne"][f, x_idx, y_idx, z_idx]
@@ -198,8 +231,8 @@ def follow_impurities(input_opts, gkyl_bkg):
             # probabilities, then pull a random number and see if we
             # are doing either of those. First load the rate 
             # coefficients.
-            print("te={:.2f}  ti={:.2f}  ne={:.2e}  charge={}".format(
-                local_te, local_ti, local_ne, imp.charge))
+            #print("te={:.2f}  ti={:.2f}  ne={:.2e}  charge={}".format(
+            #    local_te, local_ti, local_ne, imp.charge))
             iz_coef = oa.get_rate_coef(rate_df_iz, local_te, local_ne, 
                 imp.charge)
             rc_coef = oa.get_rate_coef(rate_df_rc, local_te, local_ne, 
@@ -224,7 +257,6 @@ def follow_impurities(input_opts, gkyl_bkg):
                 imp.charge -= 1
             #print("rc: ran={:.2e}  rc_prob={:.2e}".format(ran, rc_prob))
             
-            
             # Check for wrong numbers?
             if imp.charge < 0:
                 print("Error: imp_charge < 0 ({})".format(imp.charge))
@@ -232,16 +264,21 @@ def follow_impurities(input_opts, gkyl_bkg):
                 print("Error: imp_charge > {} ({})".format(imp.charge, 
                 imp.imp_atom_num))
             if iz_prob > 1:
-                print("Error: iz_prob ({}) > 1".format(iz_prob))
+                #print("Error: iz_prob ({}) > 1".format(iz_prob))
+                iz_warn_count += 1
             if rc_prob > 1:
-                print("Error: rc_prob ({}) > 1".format(rc_prob))
+                #print("Error: rc_prob ({}) > 1".format(rc_prob))
+                rc_warn_count += 1
                 
             # Perform step. imp object is updated within.
-            print("Before imp_step: {:.6f}  {:.6f}  {:.6f}".format(
-                imp.x, imp.y, imp.z))
-            imp_step(imp, local_ex, local_ey, local_ez, local_bz, dt)
-            print("After imp_step:  {:.6f}  {:.6f}  {:.6f}".format(
-                imp.x, imp.y, imp.z))
+            #print("Before imp_step: {:.6f}  {:.6f}  {:.6f}".format(
+            #    imp.x, imp.y, imp.z))
+            imp_step(imp, local_ex, local_ey, local_ez, local_bz, dt, 
+                coll_forces)
+            #print("After imp_step:  {:.6f}  {:.6f}  {:.6f}".format(
+            #    imp.x, imp.y, imp.z))
+            #print("{}-{}: x={:.4f}  y={:.4f}  z={:.4f}  ({}, {}, {})"
+            #    .format(i, f, imp.x, imp.y, imp.z, x_idx, y_idx, z_idx))
             
             # Bounds checking. Treat x and z bounds as absorbing, and
             # the y bound as periodic.
@@ -253,27 +290,50 @@ def follow_impurities(input_opts, gkyl_bkg):
                 imp.y = gkyl_ymax + (imp.y - gkyl_ymin)
             elif imp.y >= gkyl_ymax:
                 imp.y = gkyl_ymin + (imp.y - gkyl_ymax)
-                
             
-        
-        # Free up memory.
+            loop_counts += 1
+            avg_time_followed += dt
+                
+        # Free up memory (if necessary since it gets overwritten later).
         del imp
 
     # Calculate the impurity density. This is only for 3D cartesian
     # grid. Normalize to the sum then divide by the volume of each cell
-    # to get values in m-3 (off by some unknown scalar).
+    # to get values in s/m-3. Finally multiply by the scaling factor
+    # (units of 1/s) to return the density in m-3.
     imp_dens_arr = imp_weight_arr / imp_weight_arr.sum()
     dx = gkyl_x[1] - gkyl_x[0]
     dy = gkyl_y[1] - gkyl_y[0]
     dz = gkyl_z[1] - gkyl_z[0]
     imp_dens_arr /= (dx * dy * dz)
+    imp_dens_arr *= imp_scaling_fact
     
+    # Average time following an impurity ion.
+    avg_time_followed /= num_imps
+    
+    # Print how many time we had an ionization or recombination warning.
+    if iz_warn_count > 0:
+        print("Warning: The ionization probability (iz_prob) was " \
+            ">1 {:} times, or {:.2e}% of the time. " \
+            "Consider a smaller timestep.".format(iz_warn_count, 
+            iz_warn_count/loop_counts*100))
+    if rc_warn_count > 0:
+        print("Warning: The recombination probability (rc_prob) was " \
+            ">1 {:} times, or {:.2e}% of the time. " \
+            "Consider a smaller timestep.".format(rc_warn_count, 
+            rc_warn_count/loop_counts*100))
 
     # Bundle up the things we care about and return.
-    return_dict = {"imp_dens_arr": imp_dens_arr}
+    return_dict = {"imp_dens_arr": imp_dens_arr, "dt": dt, 
+        "avg_time_followed": avg_time_followed}
     return return_dict
 
-def imp_step(imp, ex, ey, ez, bz, dt):
+
+# This decorator helps cut out the error checking done by python for 
+# zero division. 
+@cython.cdivision(True)
+cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt, 
+    bool coll_forces):
     """
     Update impurity location. We are using the GITR equations, defined
     in Younkin CPC 2021 (DOI: 10.1016/j.cpc.2021.107885):
@@ -283,7 +343,8 @@ def imp_step(imp, ex, ey, ez, bz, dt):
     Fc = (see equation, too annoying to type out)
     """
     
-    cdef float fx, fy, fz, dx, dy, dz, dvx, dvy, dvz, ev
+    cdef float fx, fy, fz, dx, dy, dz, dvx, dvy, dvz, q, imp_charge
+    cdef float imp_mass
     fx = 0.0
     fy = 0.0
     fz = 0.0
@@ -293,7 +354,9 @@ def imp_step(imp, ex, ey, ez, bz, dt):
     dvx = 0.0
     dvy = 0.0
     dvz = 0.0
-    q = imp.charge * constants.ev
+    imp_charge = imp.charge
+    imp_mass = imp.mass
+    q = imp_charge * ev
     
     # --------------------
     # Step in x direction.
@@ -318,12 +381,11 @@ def imp_step(imp, ex, ey, ez, bz, dt):
     # --------------------
     # Electric field term
     fz += q * ez
-    print ("ez = {:.2e}".format(ez))
     
     # Now calculate the step sizes.
-    dvx = fx * dt / imp.mass
-    dvy = fy * dt / imp.mass
-    dvz = fz * dt / imp.mass
+    dvx = fx * dt / imp_mass
+    dvy = fy * dt / imp_mass
+    dvz = fz * dt / imp_mass
     #print("  dvx = {:.2e}  dvy = {:.2e}  dvz = {:.2e}".format(dvx, 
     #    dvy, dvz))
     dx = dvx * dt
