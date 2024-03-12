@@ -12,7 +12,7 @@ cdef extern from "Impurity.cpp":
 cdef extern from "Impurity.h" namespace "impurities":
     cdef cppclass Impurity:
         Impurity() except +
-        Impurity(int, float, float, float, float, float, int) except +
-        int fbirth, imp_atom_num;
-        float charge, mass, x, y, z, vx, vy, vz, t;
+        Impurity(int, float, float, float, float, int, int) except +
+        int fbirth, imp_atom_num, charge;
+        float mass, x, y, z, vx, vy, vz, t;
         vector[float] xhist, yhist, zhist, vxhist, vyhist, vzhist;

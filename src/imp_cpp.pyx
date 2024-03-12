@@ -9,7 +9,7 @@ cdef class PyImpurity:
 	cdef Impurity c_imp  # Hold a C++ instance which we're wrapping
 	
 	def __init__(self, int imp_atom_num, float mass, float x, float y, 
-                float z, float charge, int fbirth):
+                float z, int charge, int fbirth):
 		self.c_imp = Impurity(imp_atom_num, mass, x, y, z, charge, fbirth)
 		self.c_imp.vx = 0.0
 		self.c_imp.vy = 0.0

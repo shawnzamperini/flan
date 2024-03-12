@@ -36,6 +36,29 @@ class FlanPlots:
 			supplied, an .mp4 will be made instead of a static plot.
 		"""
 		
+		# Conform to convention where this is a list, even if one entry.
+		if type(dataname) is str:
+			dataname = [dataname]
+		if type(vmin) != list:
+			vmin = [vmin]
+		if type(vmax) != list:
+			vmax = [vmax]
+		
+		if len(vmin) != len(dataname):
+			print("Error! Please enter as many vmins as there are " \
+				"datanames, as a list.")
+			return None
+		if len(vmax) != len(dataname):
+			print("Error! Please enter as many vmaxs as there are " \
+				"datanames, as a list.")
+			return None
+		
+		# Only allow up to 4 plots.
+		if len(dataname) > 4:
+			print("Slow down there cowboy! Only 4 plots allowed " \
+				"at a time.")
+			return None
+		
 		# Load the plot coordinates, which are the same as Gkeyll's.
 		x = self.nc["gkyl_bkg"]["gkyl_x"][:]
 		y = self.nc["gkyl_bkg"]["gkyl_y"][:]
@@ -44,36 +67,87 @@ class FlanPlots:
 		# Find the closest index to the input z coordinate. 
 		z_idx = np.argmin(np.abs(z - plot_z))
 		
-		# Load the impurity density at our z index.
-		if dataname == "imp_dens":
-			data = self.nc["imp_results"]["imp_dens"][:,:,:,z_idx]
-		elif dataname == "ne":
-			data = self.nc["gkyl_bkg"]["gkyl_ne"][:,:,:,z_idx]
+		# Load the impurity density at our z index. Allow for multiple
+		# datanames at the same time for multiple plots. 
+		data = []
+		for dn in dataname:
+			if dn == "imp_dens":
+				data.append(self.nc["imp_results"]["imp_dens"]
+					[:,:,:,z_idx])
+			elif dn == "ne":
+				data.append(self.nc["gkyl_bkg"]["gkyl_ne"][:,:,:,z_idx])
+			elif dn == "te":
+				data.append(self.nc["gkyl_bkg"]["gkyl_te"][:,:,:,z_idx])
+			elif dn == "ni":
+				data.append(self.nc["gkyl_bkg"]["gkyl_ni"][:,:,:,z_idx])
+			elif dn == "ti":
+				data.append(self.nc["gkyl_bkg"]["gkyl_ti"][:,:,:,z_idx])
+			elif dn == "ex":
+				data.append(self.nc["gkyl_bkg"]["gkyl_elecx"]
+					[:,:,:,z_idx])
+			elif dn == "ey":
+				data.append(self.nc["gkyl_bkg"]["gkyl_elecy"]
+					[:,:,:,z_idx])
+			elif dn == "ez":
+				data.append(self.nc["gkyl_bkg"]["gkyl_elecz"]
+					[:,:,:,z_idx])
 		
+		# Timestep used in the impuritty transport simulation.
+		dt = float(self.nc["imp_results"]["imp_dt"][:])
 		
-		fig, ax = plt.subplots(figsize=(5, 4))
+		if len(data) == 1:
+			fig, ax1 = plt.subplots(figsize=(5, 4))
+			axs = [ax1]
+		elif len(data) == 2:
+			fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 4))
+			ax2.set_facecolor("grey")
+			axs = [ax1, ax2]
+		elif len(data) == 3:
+			fig, (ax1, ax2, ax3) = plt.subplots(1, 2, figsize=(11, 4))
+			ax2.set_facecolor("grey")
+			ax3.set_facecolor("grey")
+			axs = [ax1, ax2, ax3]
+		elif len(data) == 4:
+			fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(8, 8))
+			ax2.set_facecolor("grey")
+			ax3.set_facecolor("grey")
+			ax4.set_facecolor("grey")
+			axs = [ax1, ax2, ax3, ax4]
+		ax1.set_facecolor("grey")
+		
+		# Colorbars.
+		caxs = []
+		for i in range(0, len(data)):
+			div = make_axes_locatable(axs[i])
+			caxs.append(div.append_axes('right', '5%', '5%'))
 		
 		# If a frame is specified, load that data, otherwise we'll be
 		# making an .mp4 of all the plots.
 		if f is not None:
-			data_f = data[f].T
-
-			# Create normalization based on input options.
-			if normtype == "linear":
-				norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
-			elif normtype == "log":
-				norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
-
-			# Make a 2D plot using pcolormesh. 
-			cont = ax.pcolormesh(x, y, data_f, shading="nearest", 
-				norm=norm, cmap=cmap)
-			ax.set_xlabel("x (m)", fontsize=fontsize)
-			ax.set_ylabel("y (m)", fontsize=fontsize)
 			
-			# Colorbar.
-			div = make_axes_locatable(ax)
-			cax = div.append_axes('right', '5%', '5%')
-			cbar = fig.colorbar(cont, cax=cax)
+			# Assemble one plot as a time.
+			for i in range(0, len(data)):
+				data_f = data[i][f].T
+
+				# Create normalization based on input options.
+				if normtype == "linear":
+					norm = mpl.colors.Normalize(vmin=vmin[i], 
+						vmax=vmax[i])
+				elif normtype == "log":
+					norm = mpl.colors.LogNorm(vmin=vmin[i], 
+						vmax=vmax[i])
+
+				# Make a 2D plot using pcolormesh. 
+				cont = axs[i].pcolormesh(x, y, data_f, shading="nearest", 
+					norm=norm, cmap=cmap)
+				axs[i].set_xlabel("x (m)", fontsize=fontsize)
+				axs[i].set_ylabel("y (m)", fontsize=fontsize)
+				axs[i].set_title("t = {:.2f} us".format(dt * f * 1e6))
+				
+				# Colorbar.
+				#div = make_axes_locatable(axs[i])
+				#cax = div.append_axes('right', '5%', '5%')
+				cbar = fig.colorbar(cont, cax=caxs[i])
 			
 			fig.tight_layout()
 			fig.show()
@@ -83,51 +157,62 @@ class FlanPlots:
 		# Make an .mp4 of all the frames. Copying plot settings from 
 		# above.
 		else:
-			data_f = data[0].T
-	
-			if normtype == "linear":
-				norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
-			elif normtype == "log":
-				norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
-			cont = ax.pcolormesh(x, y, data_f, shading="nearest", 
-				norm=norm, cmap=cmap)
-			ax.set_xlabel("x (m)", fontsize=fontsize)
-			ax.set_ylabel("y (m)", fontsize=fontsize)
-			div = make_axes_locatable(ax)
-			cax = div.append_axes('right', '5%', '5%')
-			cbar = fig.colorbar(cont, cax=cax)
-			cbar.set_label(r"$Impurity Density (\mathdefault{m^{-3}}$)", 
-				fontsize=fontsize)
-			fig.tight_layout()
+			# Assemble one plot as a time.
+			for i in range(0, len(data)):
+				data_f = data[i][0].T
+
+				# Create normalization based on input options.
+				if normtype == "linear":
+					norm = mpl.colors.Normalize(vmin=vmin[i], 
+						vmax=vmax[i])
+				elif normtype == "log":
+					norm = mpl.colors.LogNorm(vmin=vmin[i], 
+						vmax=vmax[i])
+
+				# Make a 2D plot using pcolormesh. 
+				cont = axs[i].pcolormesh(x, y, data_f, shading="nearest", 
+					norm=norm, cmap=cmap)
+				axs[i].set_xlabel("x (m)", fontsize=fontsize)
+				axs[i].set_ylabel("y (m)", fontsize=fontsize)
+				axs[i].set_title("t = {:.2f} us".format(0))
+				
+				# Colorbar.
+				#div = make_axes_locatable(axs[i])
+				#cax = div.append_axes('right', '5%', '5%')
+				cbar = fig.colorbar(cont, cax=caxs[i])
+			
+				fig.tight_layout()
 			
 			# Update function to pass to animation so it can create
 			# our animation.
 			def update(frame):
 				
-				# Clear axis before adding the new plot.
-				ax.clear()
+				for i in range(0, len(data)):
+					data_f = data[i][frame].T
+					axs[i].clear()
+					caxs[i].clear()
+
+					# Create normalization based on input options.
+					if normtype == "linear":
+						norm = mpl.colors.Normalize(vmin=vmin[i], 
+							vmax=vmax[i])
+					elif normtype == "log":
+						norm = mpl.colors.LogNorm(vmin=vmin[i], 
+							vmax=vmax[i])
+
+					# Make a 2D plot using pcolormesh. 
+					cont = axs[i].pcolormesh(x, y, data_f, shading="nearest", 
+						norm=norm, cmap=cmap)
+					axs[i].set_xlabel("x (m)", fontsize=fontsize)
+					axs[i].set_ylabel("y (m)", fontsize=fontsize)
+					axs[i].set_title("t = {:.2f} us".format(dt * frame * 1e6))
+					
+					# Colorbar.
+					#div = make_axes_locatable(axs[i])
+					#cax = div.append_axes('right', '5%', '5%')
+					cbar = fig.colorbar(cont, cax=caxs[i])
 				
-				# Chunk of code that is just a copy of above with the
-				# comments removed. 
-				data_f = data[frame].T
-				if normtype == "linear":
-					norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
-				elif normtype == "log":
-					norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
-				cont = ax.pcolormesh(x, y, data_f, shading="nearest", 
-					norm=norm, cmap=cmap)
-				ax.set_xlabel("x (m)", fontsize=fontsize)
-				ax.set_ylabel("y (m)", fontsize=fontsize)
-				# div = make_axes_locatable(ax)
-				# cax = div.append_axes('right', '5%', '5%')
-				
-				# Clear colorbar axis.
-				cax.cla()
-				cbar = fig.colorbar(cont, cax=cax)
-				cbar.set_label(r"Impurity Density ($\mathdefault{m^{-3}}$)", 
-					fontsize=fontsize)
-				fig.tight_layout()
-	
+					fig.tight_layout()
 				return cont
 			
 			# Create animation and save.
@@ -135,9 +220,14 @@ class FlanPlots:
 				mp4name = "{:}_imp_dens".format(self.nc["input_opts"]
 				["case_name"][:][0])
 			ani = animation.FuncAnimation(fig=fig, func=update, 
-				frames=data.shape[0], interval=interval)
+				frames=data[0].shape[0], interval=interval)
 			writervideo = animation.FFMpegWriter(fps=15)
 			ani.save('{:}.mp4'.format(mp4name), writer=writervideo)
 			fig.show()
 			
 			
+	def plot_x(self):
+		"""
+		Plot a quantity along the x coordinate. 
+		"""
+		pass

@@ -7,7 +7,9 @@
 import sys
 import numpy as np
 import constants
+import time
 from tqdm import tqdm
+from scipy.interpolate import RegularGridInterpolator
 import cython
 
 # Import Impurity C++ class.
@@ -48,7 +50,6 @@ def follow_impurities(input_opts, gkyl_bkg):
     cdef int imp_atom_num = input_opts["imp_atom_num"]
     cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]
     cdef float imp_zstart_val = input_opts["imp_zstart_val"]
-    cdef bool coll_forces = input_opts["coll_forces"]
     
     # If we interpolated frames, gkyl_fend will be that many additional
     # frames longer! 
@@ -102,8 +103,12 @@ def follow_impurities(input_opts, gkyl_bkg):
     # Load the Gkeyll background into vectors. 
     # I'm not sure I fully grasp this... see here:
     # https://cython.readthedocs.io/en/stable/src/userguide/memoryviews.html
-    # For now stick with pyhton numpy arrays but this is a potential
+    # For now stick with python numpy arrays but this is a potential
     # area for speed up.
+    # It may not make sense to do this, since we use these arrays in
+    # np.argmin, which is already not too slow. We'd need to write
+    # our own argmin function in cytthon or C/C++, which I don't think 
+    # is worth it.
     
     # I think it's probably more efficient to load all the random
     # numbers we'll need up front (where possible).
@@ -124,12 +129,39 @@ def follow_impurities(input_opts, gkyl_bkg):
     #   oa: The OpenADAS class object. 
     #   rate_df_iz: The ionization rate coefficients
     #   rate_df_rc: The recombination rate coefficients 
-    # The two rate_df are pandas DataFrames. The oa class facilitates
-    # extracting rate coefficients from the DataFrames via, e.g.:
-    #   oa.get_rate_coef(rate_df_iz, te=15, ne=5e18, charge=5)
-    # It will interpolate for values of te/ne that are not in the
-    # DataFrame. The returned units are m3/s.
+    # The two rate_df are pandas DataFrames. We could use the oa class
+    # to get the rate coefficients for a given ne, Te, charge, but I 
+    # found it is way quicker to create RegularGridInterpolators for
+    # each charge ahead of time that can be called for a given ne, Te.
     oa, rate_df_rc, rate_df_iz = load_adas(input_opts)
+    
+    def create_interps(df, atom_num):
+        interps = []
+        
+        # Loop from 1 to atom_num+1 since the df is 1-indexed.
+        for charge in range(1, atom_num+1):
+            
+            # Data is in log10, let's just make it normal units since
+            # computers don't care. The units are converted to SI:
+            #   Te: eV
+            #   ne: cm-3 --> m-3
+            #   rates: cm3/s --> m3/s
+            tes = np.power(10, df.columns.values)
+            nes = np.power(10, df.loc[charge].index.values) * 1e6 
+            rates = np.power(10, df.loc[charge].values).T * 1e-6  
+
+            # RegularGridInterpolater is recommended for our case.
+            interp = RegularGridInterpolator((tes, nes), rates, 
+                bounds_error=False, fill_value=None)
+            interps.append(interp)
+            
+        return interps
+    
+    # Remember, these lists are 0-index, so for a specific charge number
+    # we will want to index it with charge-1. The functions are called
+    # with interps[charge-1](local_te, local_ne).
+    interps_rc = create_interps(rate_df_rc, imp_atom_num)
+    interps_iz = create_interps(rate_df_iz, imp_atom_num)
     
     # Will need these available as floats.
     cdef float gkyl_fstart_fl = float(input_opts["gkyl_fstart"])
@@ -142,21 +174,16 @@ def follow_impurities(input_opts, gkyl_bkg):
     imp_weight_arr = np.zeros(gkyl_bkg["ne"].shape)
     imp_count_arr = np.zeros(gkyl_bkg["ne"].shape)
     
-    # Printout every X percent.
-    print_percent = 10
+    # Initialize some loop variables.
     loop_counts = 0
     iz_warn_count = 0
     rc_warn_count = 0
     avg_time_followed = 0.0
+    imp_foll_tstart = time.time()
 
     # Loop through tracking the full path of one impurity at a time.
     print("Beginning impurity following...")
     for i in tqdm(range(0, num_imps)):
-        
-        # Print out counter every 10%. 
-        #if i > 0 and i % (num_imps / print_percent) == 0:
-        #    perc_done = i / num_imps * 100
-        #    print("{:3.0f}% ({:}/{:})".format(perc_done, i, num_imps))
         
         # Determine random starting location. First is uniform between
         # xmin and xmax. 
@@ -167,7 +194,8 @@ def follow_impurities(input_opts, gkyl_bkg):
         y = gkyl_ymin + (gkyl_ymax - gkyl_ymin) * ystart_rans[i]
         
         # Next determine starting z location. 
-        #   1: This will be the closest value in the CDF.
+        #   1: This will be the closest value in the CDF, proportional
+        #        to the ion density.
         #   2: Value specified. 
         if imp_zstart_int == 1:
             z_idx = np.argmin(np.abs(zstart_cdf[x_idx, y_idx] 
@@ -187,6 +215,8 @@ def follow_impurities(input_opts, gkyl_bkg):
         imp = PyImpurity(imp_atom_num, imp_mass, x, y, z, 
             imp_init_charge, fstart)
         
+        # Debug print statement to get a sense of where impurities are
+        # being born.
         #if i > 0 and i % (num_imps / print_percent) == 0:
         #    print("  x = {:.4f}".format(x))
         #    print("  y = {:.4f}".format(y))
@@ -226,21 +256,19 @@ def follow_impurities(input_opts, gkyl_bkg):
             local_ez = gkyl_bkg["elecz"][f, x_idx, y_idx, z_idx]
             local_bz = gkyl_bkg["b"][x_idx, y_idx, z_idx]
             
-            
             # Use ADAS to determine ionization/recombination 
             # probabilities, then pull a random number and see if we
             # are doing either of those. First load the rate 
-            # coefficients.
+            # coefficients by calling the function for this charge state
+            # that we already loaded before the main loop.
             #print("te={:.2f}  ti={:.2f}  ne={:.2e}  charge={}".format(
             #    local_te, local_ti, local_ne, imp.charge))
-            iz_coef = oa.get_rate_coef(rate_df_iz, local_te, local_ne, 
-                imp.charge)
-            rc_coef = oa.get_rate_coef(rate_df_rc, local_te, local_ne, 
-                imp.charge)
+            rc_coef = interps_rc[imp.charge-1]((local_te, local_ne))
+            iz_coef = interps_iz[imp.charge-1]((local_te, local_ne))
                 
             # The probability of a ion ionizing/recombining during the 
             # timestep is then: 
-            #   prob = coef * local_ne * dt
+            #   prob = coef [m3/s] * local_ne [m-3] * dt [s]
             iz_prob = iz_coef * local_ne * dt
             rc_prob = rc_coef * local_ne * dt
             
@@ -249,11 +277,11 @@ def follow_impurities(input_opts, gkyl_bkg):
             # random number every loop, so this could probably be
             # optimized a bit.
             ran = np.random.random()
-            if ran < iz_prob:
+            if ran < iz_prob and imp.charge < imp_atom_num:
                 imp.charge += 1
             #print("iz: ran={:.2e}  iz_prob={:.2e}".format(ran, iz_prob))
             ran = np.random.random()
-            if ran < rc_prob:
+            if ran < rc_prob and imp.charge > 0:
                 imp.charge -= 1
             #print("rc: ran={:.2e}  rc_prob={:.2e}".format(ran, rc_prob))
             
@@ -273,8 +301,7 @@ def follow_impurities(input_opts, gkyl_bkg):
             # Perform step. imp object is updated within.
             #print("Before imp_step: {:.6f}  {:.6f}  {:.6f}".format(
             #    imp.x, imp.y, imp.z))
-            imp_step(imp, local_ex, local_ey, local_ez, local_bz, dt, 
-                coll_forces)
+            imp_step(imp, local_ex, local_ey, local_ez, local_bz, dt)
             #print("After imp_step:  {:.6f}  {:.6f}  {:.6f}".format(
             #    imp.x, imp.y, imp.z))
             #print("{}-{}: x={:.4f}  y={:.4f}  z={:.4f}  ({}, {}, {})"
@@ -297,9 +324,14 @@ def follow_impurities(input_opts, gkyl_bkg):
         # Free up memory (if necessary since it gets overwritten later).
         del imp
 
+    # Calculate how long the main loop took.
+    imp_foll_tend = time.time()
+    cpu_time_used = imp_foll_tend - imp_foll_tstart
+    print("Time spent following impurities: {:.1f} s".format(cpu_time_used))
+
     # Calculate the impurity density. This is only for 3D cartesian
     # grid. Normalize to the sum then divide by the volume of each cell
-    # to get values in s/m-3. Finally multiply by the scaling factor
+    # to get values in s/m3. Finally multiply by the scaling factor
     # (units of 1/s) to return the density in m-3.
     imp_dens_arr = imp_weight_arr / imp_weight_arr.sum()
     dx = gkyl_x[1] - gkyl_x[0]
@@ -324,16 +356,20 @@ def follow_impurities(input_opts, gkyl_bkg):
             rc_warn_count/loop_counts*100))
 
     # Bundle up the things we care about and return.
-    return_dict = {"imp_dens_arr": imp_dens_arr, "dt": dt, 
-        "avg_time_followed": avg_time_followed}
+    return_dict = {
+        "imp_dens_arr": imp_dens_arr, 
+        "dt": dt, 
+        "avg_time_followed": avg_time_followed, 
+        "cpu_time_used": cpu_time_used
+        }
+        
     return return_dict
 
 
 # This decorator helps cut out the error checking done by python for 
 # zero division. 
 @cython.cdivision(True)
-cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt, 
-    bool coll_forces):
+cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt):
     """
     Update impurity location. We are using the GITR equations, defined
     in Younkin CPC 2021 (DOI: 10.1016/j.cpc.2021.107885):
@@ -343,20 +379,18 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,
     Fc = (see equation, too annoying to type out)
     """
     
-    cdef float fx, fy, fz, dx, dy, dz, dvx, dvy, dvz, q, imp_charge
-    cdef float imp_mass
-    fx = 0.0
-    fy = 0.0
-    fz = 0.0
-    dx = 0.0
-    dy = 0.0
-    dz = 0.0
-    dvx = 0.0
-    dvy = 0.0
-    dvz = 0.0
-    imp_charge = imp.charge
-    imp_mass = imp.mass
-    q = imp_charge * ev
+    cdef float fx = 0.0
+    cdef float fy = 0.0
+    cdef float fz = 0.0
+    cdef float dx = 0.0
+    cdef float dy = 0.0
+    cdef float dz = 0.0
+    cdef float dvx = 0.0
+    cdef float dvy = 0.0
+    cdef float dvz = 0.0
+    cdef float imp_charge = imp.charge
+    cdef float imp_mass = imp.mass
+    cdef float q = imp_charge * ev
     
     # --------------------
     # Step in x direction.
@@ -435,3 +469,4 @@ def load_adas(input_opts):
     rate_df_iz = oa.read_rate_coef_unres(scd_path)
     
     return oa, rate_df_rc, rate_df_iz
+
