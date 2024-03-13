@@ -114,7 +114,8 @@ def read_adios1(gkyl_dir, gkyl_name, fstart, fend, gkyl_elc_name,
 	
 	# Create a dictionary which will hold the Gkeyll background data.
 	gkyl_bkg = {k:[] for k in ["time", "ne", "te", "ni", "ti", "elecx", 
-		"elecy", "elecz"]}
+		"elecy", "elecz", "dtedx", "dtedy", "dtedz", "dtidx", "dtidy", 
+		"dtidz", "viz"]}
 	
 	# Grab all the Gkeyll data for the desired range of frames and 
 	# consolidate into numpy arrays.
@@ -161,6 +162,10 @@ def read_adios1(gkyl_dir, gkyl_name, fstart, fend, gkyl_elc_name,
 		
 		# Electric field.
 		tmp_elec = np.gradient(-tmp_phi, x, y, z)
+		
+		# Temperature gradients.
+		tmp_gradte = np.gradient(tmp_te, x, y, z)
+		tmp_gradti = np.gradient(tmp_ti, x, y, z)
 	
 		# Store everything into our dictionary.
 		gkyl_bkg["time"].append(t)
@@ -171,12 +176,19 @@ def read_adios1(gkyl_dir, gkyl_name, fstart, fend, gkyl_elc_name,
 		gkyl_bkg["elecx"].append(tmp_elec[0])
 		gkyl_bkg["elecy"].append(tmp_elec[1])
 		gkyl_bkg["elecz"].append(tmp_elec[2])
+		gkyl_bkg["dtedx"].append(tmp_gradte[0])
+		gkyl_bkg["dtedy"].append(tmp_gradte[1])
+		gkyl_bkg["dtedz"].append(tmp_gradte[2])
+		gkyl_bkg["dtidx"].append(tmp_gradti[0])
+		gkyl_bkg["dtidy"].append(tmp_gradti[1])
+		gkyl_bkg["dtidz"].append(tmp_gradti[2])
+		gkyl_bkg["viz"].append(tmp_upar)
 	
 	# Convert everything to numpy arrays. We do this here because
 	# appending to a list in the previous section is faster than
 	# appending to a numpy array, but ultimately we want to work with 
 	# numpy arrays.
-	gkyl_bkg = {k:np.array(v) for k, v in gkyl_bkg.items()}
+	gkyl_bkg = {k:np.array(v, dtype=np.single) for k, v in gkyl_bkg.items()}
 		
 	# Fill in an array using the magnetic field function. Right now
 	# assume a magnetic field that only depends on the x value, which
@@ -188,10 +200,10 @@ def read_adios1(gkyl_dir, gkyl_name, fstart, fend, gkyl_elc_name,
 	
 	# Calculate the magnetic field gradient, then store into gkyl_bkg.
 	grad_b = np.gradient(b, x, y, z)
-	gkyl_bkg["b"] = b
-	gkyl_bkg["grad_bx"] = grad_b[0]
-	gkyl_bkg["grad_by"] = grad_b[1]
-	gkyl_bkg["grad_bz"] = grad_b[2]
+	gkyl_bkg["b"] = b.astype(np.single)
+	gkyl_bkg["grad_bx"] = grad_b[0].astype(np.single)
+	gkyl_bkg["grad_by"] = grad_b[1].astype(np.single)
+	gkyl_bkg["grad_bz"] = grad_b[2].astype(np.single)
 	
 	return gkyl_bkg
 

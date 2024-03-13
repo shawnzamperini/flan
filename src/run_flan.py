@@ -32,5 +32,4 @@ if __name__ == "__main__":
 		print("  run_flan.py my_case")
 		sys.exit()
 	
-	print(sys.argv[1])
 	run_flan(sys.argv[1])

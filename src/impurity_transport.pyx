@@ -38,9 +38,12 @@ def follow_impurities(input_opts, gkyl_bkg):
     cdef float x, y, z, local_ne, local_te, local_ti, local_ni
     cdef float local_ex, local_ey, local_ez, iz_coef, rc_coef, iz_prob
     cdef float rc_prob, ran, local_bz, print_percent, perc_done
-    cdef float avg_time_followed
+    cdef float avg_time_followed, local_dtedx, local_dtedy, local_dtedz
+    cdef float local_dtidx, local_dtidy, local_dtidz, local_viz
+    cdef float local_stop_time
     
     # Extract input options for simulation as C++ types.
+    cdef float imp_amu = input_opts["imp_mass"]
     cdef float imp_mass = input_opts["imp_mass"] * constants.amu
     cdef float imp_init_charge = input_opts["imp_init_charge"]
     cdef int num_imps = input_opts["num_imps"]
@@ -50,6 +53,8 @@ def follow_impurities(input_opts, gkyl_bkg):
     cdef int imp_atom_num = input_opts["imp_atom_num"]
     cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]
     cdef float imp_zstart_val = input_opts["imp_zstart_val"]
+    cdef bint coll_forces = input_opts["coll_forces"]
+    print("coll_forces: {}".format(coll_forces))
     
     # If we interpolated frames, gkyl_fend will be that many additional
     # frames longer! 
@@ -100,15 +105,42 @@ def follow_impurities(input_opts, gkyl_bkg):
     cdef float dt = gkyl_bkg["time"][1] - gkyl_bkg["time"][0]
     print("Simulation timestep: {:.2e} s".format(dt))
     
-    # Load the Gkeyll background into vectors. 
-    # I'm not sure I fully grasp this... see here:
-    # https://cython.readthedocs.io/en/stable/src/userguide/memoryviews.html
-    # For now stick with python numpy arrays but this is a potential
-    # area for speed up.
-    # It may not make sense to do this, since we use these arrays in
-    # np.argmin, which is already not too slow. We'd need to write
-    # our own argmin function in cytthon or C/C++, which I don't think 
-    # is worth it.
+    # Load the Gkeyll background into memory views. 
+    cdef float[:,:,:,:] gkyl_ne = gkyl_bkg["ne"]
+    cdef float[:,:,:,:] gkyl_te = gkyl_bkg["te"]
+    cdef float[:,:,:,:] gkyl_ni = gkyl_bkg["ni"]
+    cdef float[:,:,:,:] gkyl_ti = gkyl_bkg["ti"]
+    cdef float[:,:,:,:] gkyl_elecx = gkyl_bkg["elecx"]
+    cdef float[:,:,:,:] gkyl_elecy = gkyl_bkg["elecy"]
+    cdef float[:,:,:,:] gkyl_elecz = gkyl_bkg["elecz"]
+    cdef float[:,:,:,:] gkyl_viz = gkyl_bkg["viz"]
+    cdef float[:,:,:] gkyl_b = gkyl_bkg["b"]
+    
+    # These need to be converted from eV/m to J/m.
+    cdef float[:,:,:,:] gkyl_dtedx = gkyl_bkg["dtedx"] * constants.ev
+    cdef float[:,:,:,:] gkyl_dtedy = gkyl_bkg["dtedy"] * constants.ev
+    cdef float[:,:,:,:] gkyl_dtedz = gkyl_bkg["dtedz"] * constants.ev
+    cdef float[:,:,:,:] gkyl_dtidx = gkyl_bkg["dtidx"] * constants.ev
+    cdef float[:,:,:,:] gkyl_dtidy = gkyl_bkg["dtidy"] * constants.ev
+    cdef float[:,:,:,:] gkyl_dtidz = gkyl_bkg["dtidz"] * constants.ev
+    
+    # Calculate the stopping time (Stangeby Eq. 6.35) ahead of time.
+    # Calculate as python numpy array then assign to C array.
+    ln_alpha = 15.0
+    ion_amu = 2.04  # Hardcoding deuterium in.
+    tmp_stop_time = 1.47e13 * imp_amu * gkyl_bkg["ti"] * \
+        np.sqrt(gkyl_bkg["ti"] / ion_amu) / \
+        ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *  
+        np.power(imp_atom_num, 2) * ln_alpha)
+    cdef float[:,:,:,:] stop_time = tmp_stop_time
+    
+    # Calculate the alpha and beta parameters that go in front of the 
+    # electron and ion temperature gradient forces, respectively. 
+    mu = imp_mass / (imp_mass + constants.mi)
+    cdef float alpha = 0.71 * np.power(imp_atom_num, 2)
+    cdef float beta = 3 * (mu + 5 * np.sqrt(2) * 
+        np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 * 
+        np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))
     
     # I think it's probably more efficient to load all the random
     # numbers we'll need up front (where possible).
@@ -247,14 +279,40 @@ def follow_impurities(input_opts, gkyl_bkg):
             # To-do...
             
             # Extract the plasma parameters at the current location.
-            local_ne = gkyl_bkg["ne"][f, x_idx, y_idx, z_idx]
-            local_te = gkyl_bkg["te"][f, x_idx, y_idx, z_idx]
-            local_ni = gkyl_bkg["ni"][f, x_idx, y_idx, z_idx]
-            local_ti = gkyl_bkg["ti"][f, x_idx, y_idx, z_idx]
-            local_ex = gkyl_bkg["elecx"][f, x_idx, y_idx, z_idx]
-            local_ey = gkyl_bkg["elecy"][f, x_idx, y_idx, z_idx]
-            local_ez = gkyl_bkg["elecz"][f, x_idx, y_idx, z_idx]
-            local_bz = gkyl_bkg["b"][x_idx, y_idx, z_idx]
+            #local_ne = gkyl_bkg["ne"][f, x_idx, y_idx, z_idx]
+            #local_te = gkyl_bkg["te"][f, x_idx, y_idx, z_idx]
+            #local_ni = gkyl_bkg["ni"][f, x_idx, y_idx, z_idx]
+            #local_ti = gkyl_bkg["ti"][f, x_idx, y_idx, z_idx]
+            #local_ex = gkyl_bkg["elecx"][f, x_idx, y_idx, z_idx]
+            #local_ey = gkyl_bkg["elecy"][f, x_idx, y_idx, z_idx]
+            #local_ez = gkyl_bkg["elecz"][f, x_idx, y_idx, z_idx]
+            #local_bz = gkyl_bkg["b"][x_idx, y_idx, z_idx]
+            local_ne = gkyl_ne[f, x_idx, y_idx, z_idx]
+            local_te = gkyl_te[f, x_idx, y_idx, z_idx]
+            local_ni = gkyl_ni[f, x_idx, y_idx, z_idx]
+            local_ti = gkyl_ti[f, x_idx, y_idx, z_idx]
+            local_ex = gkyl_elecx[f, x_idx, y_idx, z_idx]
+            local_ey = gkyl_elecy[f, x_idx, y_idx, z_idx]
+            local_ez = gkyl_elecz[f, x_idx, y_idx, z_idx]
+            local_bz = gkyl_b[x_idx, y_idx, z_idx]
+            local_viz = gkyl_viz[f, x_idx, y_idx, z_idx]
+            local_stop_time = stop_time[f, x_idx, y_idx, z_idx]
+            
+            # Only need these if the collisional forces are on.
+            if coll_forces:
+                local_dtedx = gkyl_dtedx[f, x_idx, y_idx, z_idx]
+                local_dtedy = gkyl_dtedy[f, x_idx, y_idx, z_idx]
+                local_dtedz = gkyl_dtedz[f, x_idx, y_idx, z_idx]
+                local_dtidx = gkyl_dtidx[f, x_idx, y_idx, z_idx]
+                local_dtidy = gkyl_dtidy[f, x_idx, y_idx, z_idx]
+                local_dtidz = gkyl_dtidz[f, x_idx, y_idx, z_idx]
+            else:
+                local_dtedx = 0.0
+                local_dtedy = 0.0
+                local_dtedz = 0.0
+                local_dtidx = 0.0
+                local_dtidy = 0.0
+                local_dtidz = 0.0
             
             # Use ADAS to determine ionization/recombination 
             # probabilities, then pull a random number and see if we
@@ -299,13 +357,19 @@ def follow_impurities(input_opts, gkyl_bkg):
                 rc_warn_count += 1
                 
             # Perform step. imp object is updated within.
-            #print("Before imp_step: {:.6f}  {:.6f}  {:.6f}".format(
-            #    imp.x, imp.y, imp.z))
-            imp_step(imp, local_ex, local_ey, local_ez, local_bz, dt)
-            #print("After imp_step:  {:.6f}  {:.6f}  {:.6f}".format(
-            #    imp.x, imp.y, imp.z))
+            #print("Before imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} {:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx, 
+            #    imp.vy, imp.vz))
+            imp_step(imp, local_ex, local_ey, local_ez, local_bz, dt, 
+                local_dtedx, local_dtedy, local_dtedz, local_dtidx, 
+                local_dtidy, local_dtidz, local_viz, local_stop_time, 
+                alpha, beta, coll_forces)
+            #print("After imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} {:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx, 
+            #    imp.vy, imp.vz))
             #print("{}-{}: x={:.4f}  y={:.4f}  z={:.4f}  ({}, {}, {})"
             #    .format(i, f, imp.x, imp.y, imp.z, x_idx, y_idx, z_idx))
+            
+            loop_counts += 1
+            avg_time_followed += dt
             
             # Bounds checking. Treat x and z bounds as absorbing, and
             # the y bound as periodic.
@@ -318,9 +382,6 @@ def follow_impurities(input_opts, gkyl_bkg):
             elif imp.y >= gkyl_ymax:
                 imp.y = gkyl_ymin + (imp.y - gkyl_ymax)
             
-            loop_counts += 1
-            avg_time_followed += dt
-                
         # Free up memory (if necessary since it gets overwritten later).
         del imp
 
@@ -369,7 +430,10 @@ def follow_impurities(input_opts, gkyl_bkg):
 # This decorator helps cut out the error checking done by python for 
 # zero division. 
 @cython.cdivision(True)
-cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt):
+cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,
+    float dtedx, float dtedy, float dtedz, float dtidx, float dtidy, 
+    float dtidz, float viz, float stop_time, float alpha, float beta, 
+    bint coll_forces):
     """
     Update impurity location. We are using the GITR equations, defined
     in Younkin CPC 2021 (DOI: 10.1016/j.cpc.2021.107885):
@@ -391,6 +455,9 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt):
     cdef float imp_charge = imp.charge
     cdef float imp_mass = imp.mass
     cdef float q = imp_charge * ev
+    cdef float imp_vx = imp.vx
+    cdef float imp_vy = imp.vy
+    cdef float imp_vz = imp.vz
     
     # --------------------
     # Step in x direction.
@@ -399,7 +466,22 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt):
     fx += q * ex
     
     # Magnetic field term
-    fx += q * imp.vy * bz
+    fx += q * imp_vy * bz
+    
+    # Collisional forces.
+    if coll_forces:
+        
+        # Electron and ion temperature gradient forces.
+        #print("x: feg = {:.3e}".format(alpha * dtedx))
+        #print("x: fig = {:.3e}".format(beta * dtidx))
+        #fx += alpha * dtedx
+        #fx += beta * dtidx
+        
+        # Friction force.
+        # Data not available from Gkeyll - need the cross field velocity 
+        # moments.
+    
+        pass
     
     # --------------------
     # Step in y direction.
@@ -408,7 +490,21 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt):
     fy += q * ey
     
     # Magnetic field term
-    fy += -q * imp.vx * bz
+    fy += -q * imp_vx * bz
+    
+    if coll_forces:
+        
+        # Electron and ion temperature gradient terms.
+        #print("y: feg = {:.3e}".format(alpha * dtedy))
+        #print("y: fig = {:.3e}".format(beta * dtidy))
+        #fy += alpha * dtedy
+        #fy += beta * dtidy
+        
+        # Friction force.
+        # Data not available from Gkeyll - need the cross field velocity 
+        # moments.
+        
+        pass
     
     # --------------------
     # Step in z direction. 
@@ -416,15 +512,33 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt):
     # Electric field term
     fz += q * ez
     
+    if coll_forces:
+        
+        # Electron and ion temperature gradient terms.
+        #print("z: feg = {:.3e}".format(alpha * dtedz))
+        #print("z: fig = {:.3e}".format(beta * dtidz))
+        fz += alpha * dtedz
+        fz += beta * dtidz
+        
+        # The friction force. 
+        #print("z: ff = {:.3e}".format(imp_mass * (viz - imp_vz) / stop_time))
+        #print("     viz = {:.3e}".format(viz))
+        #print("     imp_vz = {:.3e}".format(imp_vz))
+        #print("     stop_time = {:.3e}".format(stop_time))
+        fz += imp_mass * (viz - imp_vz) / stop_time
+    
     # Now calculate the step sizes.
     dvx = fx * dt / imp_mass
     dvy = fy * dt / imp_mass
     dvz = fz * dt / imp_mass
     #print("  dvx = {:.2e}  dvy = {:.2e}  dvz = {:.2e}".format(dvx, 
     #    dvy, dvz))
-    dx = dvx * dt
-    dy = dvy * dt
-    dz = dvz * dt
+    dx = (imp_vx + dvx) * dt
+    dy = (imp_vy + dvy) * dt
+    dz = (imp_vz + dvz) * dt
+    #print("  dvx = {:.2e}  dvy = {:.2e}  dvz = {:.2e}".format(dvx, 
+    #    dvy, dvz))
+    
     
     # Update imp object with new values.
     imp.x += dx
@@ -432,7 +546,7 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt):
     imp.z += dz
     imp.vx += dvx
     imp.vy += dvy
-    imp.vz ++ dvz
+    imp.vz += dvz
     
     return None
     

@@ -4,6 +4,8 @@
 from setuptools import Extension, setup
 from Cython.Build import cythonize
 import numpy
+import sys
+import os
 
 # For HTML output of where python/C is being used.
 import Cython.Compiler.Options
@@ -14,6 +16,7 @@ extensions = [
     Extension("*", ["*.pyx"],
         include_dirs=[numpy.get_include()]),
 ]
+
 setup(
     name="flan",
     ext_modules=cythonize(extensions),
