@@ -33,14 +33,14 @@ def follow_impurities(input_opts, gkyl_bkg):
     """
     
     # Define variables to use as much C++ as possible here.
-    cdef int i, j, imp_zstart_int, x_idx, y_idx, z_idx, fstart
+    cdef int i, j, imp_zstart_int, x_idx, y_idx, z_idx, fstart, fend
     cdef int loop_counts, iz_warn_count, rc_warn_count
     cdef float x, y, z, local_ne, local_te, local_ti, local_ni
     cdef float local_ex, local_ey, local_ez, iz_coef, rc_coef, iz_prob
     cdef float rc_prob, ran, local_bz, print_percent, perc_done
     cdef float avg_time_followed, local_dtedx, local_dtedy, local_dtedz
     cdef float local_dtidx, local_dtidy, local_dtidz, local_viz
-    cdef float local_stop_time
+    cdef float local_stop_time, fstart_fl, fend_fl
     
     # Extract input options for simulation as C++ types.
     cdef float imp_amu = input_opts["imp_mass"]
@@ -50,16 +50,20 @@ def follow_impurities(input_opts, gkyl_bkg):
     cdef float imp_xmin = input_opts["imp_xmin"]
     cdef float imp_xmax = input_opts["imp_xmax"]
     cdef int gkyl_fstart = input_opts["gkyl_fstart"]
+    cdef int gkyl_fend = input_opts["gkyl_fend"]
     cdef int imp_atom_num = input_opts["imp_atom_num"]
     cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]
     cdef float imp_zstart_val = input_opts["imp_zstart_val"]
     cdef bint coll_forces = input_opts["coll_forces"]
-    print("coll_forces: {}".format(coll_forces))
+    cdef bint imp_xyz_tracks = input_opts["imp_xyz_tracks"]
     
-    # If we interpolated frames, gkyl_fend will be that many additional
-    # frames longer! 
-    # To-do...
-    cdef int gkyl_fend = input_opts["gkyl_fend"]
+    # If we interpolated frames the end frame for our context will be
+    # larger by gkyl_num_interp + 1. See read_gkyl.interp_frames for
+    # more info. 
+    #gkyl_num_interp = input_opts["gkyl_num_interp"]
+    #if gkyl_num_interp is not None:
+    #    gkyl_fend *= (gkyl_num_interp + 1)
+    
     
     # Other options where it isn't a big deal if they aren't C types.
     imp_zstart_opt = input_opts["imp_zstart_opt"]
@@ -195,16 +199,32 @@ def follow_impurities(input_opts, gkyl_bkg):
     interps_rc = create_interps(rate_df_rc, imp_atom_num)
     interps_iz = create_interps(rate_df_iz, imp_atom_num)
     
-    # Will need these available as floats.
-    cdef float gkyl_fstart_fl = float(input_opts["gkyl_fstart"])
-    cdef float gkyl_fend_fl = float(input_opts["gkyl_fend"])
-    cdef float fstart_fl
+    # The ending frame will always be the end of the simulation, this
+    # is the first dimension in our arrays (0-indexed, not Gkeyll 
+    # indexed).
+    fend = gkyl_ne.shape[0]
+    fend_fl = float(fend)
     
     # Arrays to keep track of the total particle weight passing through
     # each cell as well as the counts. This is the Monte Carlo way to
     # calculate density.
     imp_weight_arr = np.zeros(gkyl_bkg["ne"].shape)
     imp_count_arr = np.zeros(gkyl_bkg["ne"].shape)
+    
+    # Lists to record the impurity ion tracks. I am going to hardcode
+    # a safegaurd in here for now, since I don't want to accidentaly run
+    # this and make a massive output file. I think you shoul dbe able to
+    # accomplish any goals you need with 1,000 particles anyways.
+    if imp_xyz_tracks:
+        if num_imps > 1000:
+            print("Warning! imp_xyz_tracks is set to True and over" +\
+                " 1,000 particles were input. To avoid memory" +\
+                " issues, num_imps is being reduced to 1,000. This" +\
+                " is a hardcoded safeguard.")
+            num_imps = 1000
+        xyz_lists_x = [[] for i in range(num_imps)]
+        xyz_lists_y = [[] for i in range(num_imps)]
+        xyz_lists_z = [[] for i in range(num_imps)]
     
     # Initialize some loop variables.
     loop_counts = 0
@@ -215,7 +235,8 @@ def follow_impurities(input_opts, gkyl_bkg):
 
     # Loop through tracking the full path of one impurity at a time.
     print("Beginning impurity following...")
-    for i in tqdm(range(0, num_imps)):
+    #for i in tqdm(range(0, num_imps)):
+    for i in range(num_imps):
         
         # Determine random starting location. First is uniform between
         # xmin and xmax. 
@@ -239,8 +260,10 @@ def follow_impurities(input_opts, gkyl_bkg):
         # Assume impurity can start at any frame (this means we are 
         # assuming a constant impurity source). This could lead to 
         # low statistics at the starting frames, should be studied. 
-        fstart_fl = gkyl_fstart_fl + (gkyl_fend_fl - gkyl_fstart_fl) * \
-            fstart_rans[i]
+        #fstart_fl = gkyl_fstart_fl + (gkyl_fend_fl - gkyl_fstart_fl) * \
+        #    fstart_rans[i]
+        #fstart = np.round(fstart_fl)
+        fstart_fl = fend_fl * fstart_rans[i]
         fstart = np.round(fstart_fl)
         
         # Now create our Impurity object. 
@@ -260,7 +283,8 @@ def follow_impurities(input_opts, gkyl_bkg):
         # first frame an impurity starts at is fstart, which when 
         # 0-indexed is fstart - gkyl_fstart, and the final frame it can
         # reach is gkyl_end-gkyl_fstart when 0-indexed.
-        for f in range(fstart-gkyl_fstart, gkyl_fend-gkyl_fstart):
+        #for f in range(fstart-gkyl_fstart, gkyl_fend-gkyl_fstart):
+        for f in range(fstart, fend):
             
             # Update nearest index values.
             x_idx = np.argmin(np.abs(imp.x - gkyl_x))
@@ -276,17 +300,12 @@ def follow_impurities(input_opts, gkyl_bkg):
             
             # If desired, save the tracks of each impurity in (x,y,z)
             # and/or (vx,vy,vz) space.
-            # To-do...
+            #if imp_xyz_tracks:
+            #    xyz_lists_x[i].append(imp.x)
+            #    xyz_lists_y[i].append(imp.y)
+            #    xyz_lists_z[i].append(imp.z)
             
             # Extract the plasma parameters at the current location.
-            #local_ne = gkyl_bkg["ne"][f, x_idx, y_idx, z_idx]
-            #local_te = gkyl_bkg["te"][f, x_idx, y_idx, z_idx]
-            #local_ni = gkyl_bkg["ni"][f, x_idx, y_idx, z_idx]
-            #local_ti = gkyl_bkg["ti"][f, x_idx, y_idx, z_idx]
-            #local_ex = gkyl_bkg["elecx"][f, x_idx, y_idx, z_idx]
-            #local_ey = gkyl_bkg["elecy"][f, x_idx, y_idx, z_idx]
-            #local_ez = gkyl_bkg["elecz"][f, x_idx, y_idx, z_idx]
-            #local_bz = gkyl_bkg["b"][x_idx, y_idx, z_idx]
             local_ne = gkyl_ne[f, x_idx, y_idx, z_idx]
             local_te = gkyl_te[f, x_idx, y_idx, z_idx]
             local_ni = gkyl_ni[f, x_idx, y_idx, z_idx]
@@ -435,8 +454,10 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,
     float dtidz, float viz, float stop_time, float alpha, float beta, 
     bint coll_forces):
     """
-    Update impurity location. We are using the GITR equations, defined
-    in Younkin CPC 2021 (DOI: 10.1016/j.cpc.2021.107885):
+    Update impurity location. We are using the normal Lorentz force plus
+    the friction, electron temperature gradient and ion temperature
+    gradient forces in the z direction (these are the collisional
+    forces). FF, FeG and FiG are defined in Stangeby, Eq. 6.21. 
     
     F = q(E + v x B) + Fc
     
@@ -464,9 +485,11 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,
     # --------------------
     # Electric field term
     fx += q * ex
+    #print("fx_e {:.3e}".format(q * ex))
     
     # Magnetic field term
     fx += q * imp_vy * bz
+    #print("fx_b {:.3e}".format(q * imp_vy * bz))
     
     # Collisional forces.
     if coll_forces:
@@ -488,9 +511,11 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,
     # --------------------
     # Electric field term
     fy += q * ey
+    #print("fy_e {:.3e}".format(q * ey))
     
     # Magnetic field term
     fy += -q * imp_vx * bz
+    #print("fy_b {:.3e}".format(q * imp_vx * bz))
     
     if coll_forces:
         
@@ -511,6 +536,7 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,
     # --------------------
     # Electric field term
     fz += q * ez
+    #print("fz_e {:.3e}".format(q * ez))
     
     if coll_forces:
         
@@ -518,7 +544,9 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,
         #print("z: feg = {:.3e}".format(alpha * dtedz))
         #print("z: fig = {:.3e}".format(beta * dtidz))
         fz += alpha * dtedz
+        #print("fz_feg {:.3e}".format(alpha * dtedz))
         fz += beta * dtidz
+        #print("fz_fig {:.3e}".format(beta * dtidz))
         
         # The friction force. 
         #print("z: ff = {:.3e}".format(imp_mass * (viz - imp_vz) / stop_time))
@@ -526,6 +554,7 @@ cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,
         #print("     imp_vz = {:.3e}".format(imp_vz))
         #print("     stop_time = {:.3e}".format(stop_time))
         fz += imp_mass * (viz - imp_vz) / stop_time
+        #print("fz_ff {:.3e}".format(imp_mass * (viz - imp_vz) / stop_time))
     
     # Now calculate the step sizes.
     dvx = fx * dt / imp_mass

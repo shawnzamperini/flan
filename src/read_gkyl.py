@@ -22,6 +22,7 @@ def read_gkyl(input_opts):
 	gkyl_elc_name = input_opts["gkyl_elc_name"]
 	gkyl_ion_name = input_opts["gkyl_ion_name"]
 	gkyl_bmag = input_opts["func_bmag"]
+	gkyl_num_interp = input_opts["gkyl_num_interp"]
 	
 	# Select the type of Gkeyll data to load, which depends on the 
 	# version of Gkeyll that was used. All will return gkyl_bkg of
@@ -40,12 +41,20 @@ def read_gkyl(input_opts):
 			.format(gkyl_format))
 		sys.exit()
 	
+	# Inteprolate extra frames between each frame if desired.
+	if gkyl_num_interp is not None:
+		gkyl_bkg = interp_frames(gkyl_bkg, gkyl_num_interp)
+
 	# Average all the frames together for steady-state background.
 	gkyl_bkg["ne_avg"] = gkyl_bkg["ne"].mean(axis=0)
 	gkyl_bkg["te_avg"] = gkyl_bkg["te"].mean(axis=0)
 	gkyl_bkg["ni_avg"] = gkyl_bkg["ni"].mean(axis=0)
 	gkyl_bkg["ti_avg"] = gkyl_bkg["ti"].mean(axis=0)
 	
+	# Convert everything to floats. We use floats in impurity_following,
+	# I'm sure this will bite me in the ass one day.
+	for k, v in gkyl_bkg.items():
+		gkyl_bkg[k] = gkyl_bkg[k].astype(np.float32)
 	
 	return gkyl_bkg
 
@@ -56,10 +65,16 @@ def read_adios1(gkyl_dir, gkyl_name, fstart, fend, gkyl_elc_name,
 	identified by if the .bp files are standalone (ADIOS1) or put into
 	their own directories (ADIOS2, see other function). 
 	
+	---Input---
 	gkyl_dir (str): Path to the directory with the .bp file.
 	gkyl_name (str): Name of the Gkyell run.
 	fstart (int): First frame of the Gkeyll simulation to load.
 	fend (int): Last frame of the Gkeyll simulation to load.
+	gkyl_elc_name (str): The name used for the electron species.
+	gkyl_ion_name (str): The name used for the (dueterium) ions.
+	gkyl_bmag (func): This is a function that is input in the input file
+		and then passed to this function. It contains the magnetic field
+		as a function of the x, y, and z coordinates.
 	"""
 	
 	def read_bp_file(gkyl_param, gkyl_idx, gkyl_species=None, 
@@ -67,6 +82,7 @@ def read_adios1(gkyl_dir, gkyl_name, fstart, fend, gkyl_elc_name,
 		"""
 		Function to read in a .bp file. 
 		
+		---Input---
 		gkyl_param (str): Name of the Gkyell parameter to load. This 
 			generally is one of "M0" (density), "Temp" or "phi". 
 		gkyl_idx (int): Index of the .bp file to load (e.g., 
@@ -188,7 +204,7 @@ def read_adios1(gkyl_dir, gkyl_name, fstart, fend, gkyl_elc_name,
 	# appending to a list in the previous section is faster than
 	# appending to a numpy array, but ultimately we want to work with 
 	# numpy arrays.
-	gkyl_bkg = {k:np.array(v, dtype=np.single) for k, v in gkyl_bkg.items()}
+	gkyl_bkg = {k:np.array(v) for k, v in gkyl_bkg.items()}
 		
 	# Fill in an array using the magnetic field function. Right now
 	# assume a magnetic field that only depends on the x value, which
@@ -201,9 +217,9 @@ def read_adios1(gkyl_dir, gkyl_name, fstart, fend, gkyl_elc_name,
 	# Calculate the magnetic field gradient, then store into gkyl_bkg.
 	grad_b = np.gradient(b, x, y, z)
 	gkyl_bkg["b"] = b.astype(np.single)
-	gkyl_bkg["grad_bx"] = grad_b[0].astype(np.single)
-	gkyl_bkg["grad_by"] = grad_b[1].astype(np.single)
-	gkyl_bkg["grad_bz"] = grad_b[2].astype(np.single)
+	gkyl_bkg["grad_bx"] = grad_b[0]
+	gkyl_bkg["grad_by"] = grad_b[1]
+	gkyl_bkg["grad_bz"] = grad_b[2]
 	
 	return gkyl_bkg
 
@@ -223,3 +239,94 @@ def read_gkylzero():
 	developed.
 	"""
 	pass
+
+def interp_frames(gkyl_bkg, gkyl_num_interp):
+	"""
+	Interpolate a number of frames between each Gkeyll frame for
+	each plasma quantity.
+	
+	---Input---
+	gkyl_bkg (dict): The Gkeyll background returns from one of the read 
+		functions above.
+	gkyl_num_interp (int): The number of frames to add between each 
+		Gkeyll frame.
+		
+	---Output---
+	gkyl_bkg (dict): The Gkeyll background in the same format as before,
+		just with the additional frames added in.
+	
+	"""
+
+	# Extract how many frames we currently have, as well as the timestep
+	# both before and after the interpolating operation.
+	nframes = gkyl_bkg["ne"].shape[0]
+	old_dt = gkyl_bkg["time"][1] - gkyl_bkg["time"][0]
+	new_dt = old_dt / (gkyl_num_interp + 1)
+	new_nframes = nframes + (nframes-1) * gkyl_num_interp
+	
+	# Extract all the plasma parameters into a list of arrays to loop 
+	# through.
+	print("Interpolating frames...")
+	print("Original timestep: = {:.2e}".format(old_dt))
+	print("New timestep = {:.2e}".format(new_dt))
+	keys = ["ne", "te", "ni", "ti", "elecx", "elecy", "elecz", "dtedx", 
+		"dtedy", "dtedz", "dtidx", "dtidy", "dtidz", "viz"]
+	arrs = {k: gkyl_bkg[k] for k in keys}
+	
+	# Loop through one array at a time, tmp_arrs will hold the 
+	# interpolated arrays, which we will overwrite the old arrays with 
+	# at the end.
+	tmp_arrs = {k: None for k in keys}
+	for k in tqdm(arrs.keys()):
+		
+		# Create temporary array of the right size, filled with zeros.
+		# Note that we are just increasing the first dimension here (the
+		# number of frames), the others stay the same since we are just
+		# interpolating in time. In theory one could interpolate in 
+		# space with the same method, but if that's the case probably
+		# best to rerun the Gkeyll simulation.
+		# The new number of frames is:
+		#   nframes + (nframes-1) * gkyl_num_interp
+		# The below picture may help understand, where * = orginal frame
+		# and - = interpolated frame. Say nframes = 5 and 
+		# gkyl_num_interp = 3. There are then four gaps (nframes-1) to 
+		# interpolate three frames into. The new number of frames is the
+		# original number plus 5 + (5-1) * 3 = 17.
+		#
+		#    0   1   2   3   4
+		#    *   *   *   *   *      I've 0-indexed these because
+		#    *---*---*---*---*      of python
+		#    0123456789...
+		#
+		# We can also infer the old-->new mapping for frame number here.
+		#   0-->0
+		#   1-->4
+		#   2-->8
+		#   3-->12
+		#   4-->16
+		# So the mapping is to just multiply by (gkyl_num_interp+1).
+		tmp_arr = np.zeros((new_nframes, arrs[k].shape[1], 
+			arrs[k].shape[2], arrs[k].shape[3]))
+		for f in range(0, nframes-1):
+			
+			# Just use good ole point-slope formula for the interpolated 
+			# frames.
+			y0 = arrs[k][f]
+			y1 = arrs[k][f + 1]
+			m = (y1 - y0) / old_dt
+			tmp_arr[f * (gkyl_num_interp+1)] = y0
+			tmp_arr[(f+1) * (gkyl_num_interp+1)] = y1
+			for g in range(1, gkyl_num_interp+1):
+				tmp_arr[f * (gkyl_num_interp+1)+g] = m * new_dt * g + y0
+		tmp_arrs[k] = tmp_arr
+	
+	# Reassign into gkyl_bkg.
+	for k in keys:
+		gkyl_bkg[k] = tmp_arrs[k] 
+		
+	# Don't forget to update the time array.
+	old_tstart = gkyl_bkg["time"][0]
+	old_tend = gkyl_bkg["time"][-1]
+	gkyl_bkg["time"] = np.arange(old_tstart, old_tend+new_dt, new_dt)
+	
+	return gkyl_bkg

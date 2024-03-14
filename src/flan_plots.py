@@ -81,25 +81,50 @@ class FlanPlots:
 		# Conform to convention where this is a list, even if one entry.
 		if type(dataname) is str:
 			dataname = [dataname]
-		if type(vmin) != list:
+		if type(normtype) is str:
+			normtype = [normtype]
+		if type(vmin) != list and vmin is not None:
 			vmin = [vmin]
-		if type(vmax) != list:
+		if type(vmax) != list and vmax is not None:
 			vmax = [vmax]
 		if type(plot_yscale) != list:
 			plot_yscale = [plot_yscale]
-		if type(plot_ymin) != list:
+		if type(plot_ymin) != list and plot_ymin is not None:
 			plot_ymin = [plot_ymin]
-		if type(plot_ymax) != list:
+		if type(plot_ymax) != list and plot_ymax is not None:
 			plot_ymax = [plot_ymax]	
 		
-		if len(vmin) != len(dataname):
-			print("Error! Please enter as many vmins as there are " \
-				"datanames, as a list.")
-			return None
-		if len(vmax) != len(dataname):
-			print("Error! Please enter as many vmaxs as there are " \
-				"datanames, as a list.")
-			return None
+		# ~ if len(vmin) != len(dataname):
+			# ~ print("Error! Please enter as many vmins as there are " \
+				# ~ "datanames, as a list.")
+			# ~ return None
+		# ~ if len(vmax) != len(dataname):
+			# ~ print("Error! Please enter as many vmaxs as there are " \
+				# ~ "datanames, as a list.")
+			# ~ return None
+			
+		# Fill in with the correct amount of Nones. Maybe a better way 
+		# to do this but who cares.
+		if vmin is None:
+			vmin = []
+			for i in range(len(dataname)):
+				vmin.append(None)
+		if vmax is None:
+			vmax = []
+			for i in range(len(dataname)):
+				vmax.append(None)
+		#if plot_yscale is None:
+		#	plot_yscale = []
+		#	for i in range(len(dataname)):
+		#		plot_yscale.append(None)
+		if plot_ymin is None:
+			plot_ymin = []
+			for i in range(len(dataname)):
+				plot_ymin.append(None)
+		if plot_ymax is None:
+			plot_ymax = []
+			for i in range(len(dataname)):
+				plot_ymax.append(None)
 		
 		# Only allow up to 4 plots.
 		if len(dataname) > 4:
@@ -118,7 +143,7 @@ class FlanPlots:
 		# Likewise for the y coordinate, if desired. Otherwise the data
 		# will get averaged over the y coordinate. 
 		if plot_y is None or str(plot_y) == "average":
-			y_idx = np.arange(len(y), dtype=np.int)
+			y_idx = np.arange(len(y), dtype=int)
 		else:
 			y_idx = np.argmin(np.abs(y - plot_y))
 		
@@ -190,10 +215,10 @@ class FlanPlots:
 					data_f = data[i][f].T
 
 					# Create normalization based on input options.
-					if normtype == "linear":
+					if normtype[i] == "linear":
 						norm = mpl.colors.Normalize(vmin=vmin[i], 
 							vmax=vmax[i])
-					elif normtype == "log":
+					elif normtype[i] == "log":
 						norm = mpl.colors.LogNorm(vmin=vmin[i], 
 							vmax=vmax[i])
 
@@ -235,16 +260,16 @@ class FlanPlots:
 					data_f = data[i][0].T
 
 					# Create normalization based on input options.
-					if normtype == "linear":
+					if normtype[i] == "linear":
 						norm = mpl.colors.Normalize(vmin=vmin[i], 
 							vmax=vmax[i])
-					elif normtype == "log":
+					elif normtype[i] == "log":
 						norm = mpl.colors.LogNorm(vmin=vmin[i], 
 							vmax=vmax[i])
 
 					# Make a 2D plot using pcolormesh. 
-					cont = axs[i].pcolormesh(x, y, data_f, shading="nearest", 
-						norm=norm, cmap=cmap)
+					cont = axs[i].pcolormesh(x, y, data_f, 
+						shading="nearest", norm=norm, cmap=cmap)
 					axs[i].set_xlabel("x (m)", fontsize=fontsize)
 					axs[i].set_ylabel("y (m)", fontsize=fontsize)
 					axs[i].set_title("t = {:.2f} us".format(0))
@@ -272,16 +297,16 @@ class FlanPlots:
 				# The heatmap update.
 				def update(frame):
 					
-					for i in range(0, len(data)):
+					for i in range(len(data)):
 						data_f = data[i][frame].T
 						axs[i].clear()
 						caxs[i].clear()
 
 						# Create normalization based on input options.
-						if normtype == "linear":
+						if normtype[i] == "linear":
 							norm = mpl.colors.Normalize(vmin=vmin[i], 
 								vmax=vmax[i])
-						elif normtype == "log":
+						elif normtype[i] == "log":
 							norm = mpl.colors.LogNorm(vmin=vmin[i], 
 								vmax=vmax[i])
 
@@ -304,17 +329,18 @@ class FlanPlots:
 				
 				# The standard plot update.
 				def update(frame):
-					data_f = data[i][frame]
-					axs[i].clear()
-					axs[i].plot(x, data_f, color=linecolor, lw=2)
-					axs[i].set_xlabel("x (m)", fontsize=fontsize)
-					axs[i].set_title("t = {:.2f} us".format(dt * frame * 1e6))
-					axs[i].set_yscale(plot_yscale[i])
-					axs[i].set_ylim(plot_ymin[i], plot_ymax[i])
+					for i in range(len(data)):
+						data_f = data[i][frame]
+						axs[i].clear()
+						axs[i].plot(x, data_f, color=linecolor, lw=2)
+						axs[i].set_xlabel("x (m)", fontsize=fontsize)
+						axs[i].set_title("t = {:.2f} us".format(dt * frame * 1e6))
+						axs[i].set_yscale(plot_yscale[i])
+						axs[i].set_ylim(plot_ymin[i], plot_ymax[i])
 			
 			# Create animation and save.
 			if mp4name is None:
-				mp4name = "{:}_imp_dens".format(self.nc["input_opts"]
+				mp4name = "{:}".format(self.nc["input_opts"]
 				["case_name"][:][0])
 			ani = animation.FuncAnimation(fig=fig, func=update, 
 				frames=data[0].shape[0], interval=interval)
