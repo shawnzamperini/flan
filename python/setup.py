@@ -26,9 +26,9 @@ else:
 
 extensions = [
     Extension("*", ["*.pyx"],
-        include_dirs=[numpy.get_include()]
-        #extra_compile_args=[openmp_arg],
-        #extra_link_args=[openmp_arg]
+        include_dirs=[numpy.get_include()],
+        extra_compile_args=[openmp_arg],
+        extra_link_args=[openmp_arg]
     ),
 ]
 

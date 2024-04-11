@@ -84,6 +84,12 @@ def save_netcdf(input_opts, gkyl_bkg, imp_dict, compression="zlib"):
 		compression=compression)
 	imp_avg_time = impgrp.createVariable("avg_time_followed", "f4", 
 		compression=compression)
+	imp_vx = impgrp.createVariable("imp_vx", "f4", ("gkyl_fdim", 
+		"gkyl_xdim", "gkyl_ydim", "gkyl_zdim"), 
+		compression=compression, significant_digits=6)
+	imp_vy = impgrp.createVariable("imp_vy", "f4", ("gkyl_fdim", 
+		"gkyl_xdim", "gkyl_ydim", "gkyl_zdim"),
+		compression=compression, significant_digits=6)
 		
 	# Create variables for the input file. Compression apparently is
 	# not allowed with strings. 
@@ -130,6 +136,8 @@ def save_netcdf(input_opts, gkyl_bkg, imp_dict, compression="zlib"):
 	imp_scaling_fact.units = "s-1"
 	imp_dt.units = "s"
 	imp_avg_time.units = "s"
+	imp_vx.units = "m/s"
+	imp_vy.units = "m/s"
 	
 	# Put variables into NetCDF files. Note strings needs to be 
 	# converted to numpy array first, just the way netcdf works. 
@@ -148,6 +156,8 @@ def save_netcdf(input_opts, gkyl_bkg, imp_dict, compression="zlib"):
 	imp_dens[:] = imp_dict["imp_dens_arr"]
 	imp_dt[:] = imp_dict["dt"]
 	imp_avg_time[:] = imp_dict["avg_time_followed"]
+	imp_vx[:] = imp_dict["imp_vx_arr"]
+	imp_vy[:] = imp_dict["imp_vy_arr"]
 	imp_mass[:] = input_opts["imp_mass"]
 	imp_atom_num[:] = input_opts["imp_atom_num"]
 	imp_init_charge[:] = input_opts["imp_init_charge"]

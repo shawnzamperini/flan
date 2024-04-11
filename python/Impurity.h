@@ -10,7 +10,7 @@ namespace impurities {
     class Impurity {
         public:
 			int fbirth, imp_atom_num, charge;
-            float mass, x, y, z, vx, vy, vz, t;
+            float mass, x, y, z, vx, vy, vz, t, xstart, zstart;
             std::vector<float> xhist, yhist, zhist, vxhist, vyhist, vzhist;
             Impurity();
             Impurity(int imp_atom_num, float mass, float x, float y, 

@@ -18,6 +18,9 @@ namespace impurities {
         this->y=y;
         this->z=z;
         this->fbirth=fbirth;
+        this->zstart=z;
+        this->xstart=x;
+
         this->vx=0;
         this->vy=0;
         this->vz=0;
