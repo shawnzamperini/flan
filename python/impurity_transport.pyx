@@ -37,7 +37,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     
     # Define variables to use as much C++ as possible here.
     cdef int i, j, imp_zstart_int, x_idx, y_idx, z_idx, fstart, fend, f
-    cdef int loop_counts, iz_warn_count, rc_warn_count
+    cdef int loop_counts, iz_warn_count, rc_warn_count, coll_count
     cdef float x, y, z, local_ne, local_te, local_ti, local_ni
     cdef float local_ex, local_ey, local_ez, iz_coef, rc_coef, iz_prob
     cdef float rc_prob, ran, local_bz, print_percent, perc_done
@@ -303,7 +303,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     # Dictionary containing some statistics.
     stat_dict = {"low_xbound_count":0, "high_xbound_count":0, 
         "low_zbound_count":0, "high_zbound_count":0, 
-        "low_xbound_time":0.0}
+        "low_xbound_time":0.0, "coll_events":0, "total_imp_time":0.0}
 
     # Initialize some loop variables.
     loop_counts = 0
@@ -311,19 +311,6 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     rc_warn_count = 0
     avg_time_followed = 0.0
     imp_foll_tstart = time.time()
-
-    # A dictionary containing lists of the start and end locations of 
-    # impurities that deposited on a surface. This is used to make a plot for 
-    # my PSI talk.
-    displ_dict = {"xstarts":[], "zstarts":[], "xends":[], "zends":[], 
-        "bound_hit":[]}
-    def update_displ_dict(d, imp, bh):
-        d["xstarts"].append(imp.xstart)
-        d["zstarts"].append(imp.zstart)
-        d["xends"].append(imp.x)
-        d["zends"].append(imp.z)
-        d["bound_hit"].append(bh)
-        return d
 
     # Loop through tracking the full path of one impurity at a time.
     print("Beginning impurity following...")
@@ -380,7 +367,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                 #    z = gkyl_z[z_idx] + (gkyl_z[z_idx - 1] - gkyl_z[z_idx]) \
                 #        * zstart_rans_fine[i]
                 z = (gkyl_z[z_idx] - zwidth / 2) + zwidth * zstart_rans_fine[i]
-                
+
                 #z = gkyl_z[z_idx]
             elif imp_zstart_int == 2:
                 z = imp_zstart_val
@@ -388,6 +375,9 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
             # Now create our Impurity object. 
             imp = PyImpurity(imp_atom_num, imp_mass, x, y, z, 
                 imp_init_charge, fstart)
+
+            # Counter to track how many collisions the ion had.
+            coll_count = 0
             
             # Debug print statement to get a sense of where impurities are
             # being born.
@@ -522,9 +512,12 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                     # Collision occured! Rotate velocity vector 90 degrees.
                     if ran < coll_prob:
                         rotate_vel_vector(imp)
+                        coll_count += 1
+                        stat_dict["coll_events"] += 1
                     
                 loop_counts += 1
                 avg_time_followed += dt
+                stat_dict["total_imp_time"] += dt
                 
                 # Bounds checking. Treat x and z bounds as absorbing, and
                 # the y bound as periodic.
@@ -534,15 +527,12 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                         stat_dict["low_xbound_time"] += imp.t
                     elif imp.x >= gkyl_xmax:
                         stat_dict["high_xbound_count"] += 1
-                        update_displ_dict(displ_dict, imp, "xhigh")
                     break
                 if imp.z <= gkyl_zmin or imp.z >= gkyl_zmax:
                     if imp.z <= gkyl_zmin:
                         stat_dict["low_zbound_count"] += 1
-                        update_displ_dict(displ_dict, imp, "zlow")
                     elif imp.z >= gkyl_zmax:
                         stat_dict["high_zbound_count"] += 1
-                        update_displ_dict(displ_dict, imp, "zhigh")
                     break
                 if imp.y <= gkyl_ymin:
                     imp.y = gkyl_ymax + (imp.y - gkyl_ymin)
@@ -592,12 +582,6 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     # I'm abandoning this version of the code soon.
     print("stat_dict")
     print(stat_dict)
-
-    # Pickle the displacement dictionary, not something to include in the
-    # netcdf file, and again, not worth doing better since I'm abandoning
-    # the python version of this code.
-    with open("displ_dict.pickle", "wb") as file:
-        pickle.dump(displ_dict, file)
 
     # Bundle up the things we care about and return.
     return_dict = {
