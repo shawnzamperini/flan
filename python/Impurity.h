@@ -9,12 +9,12 @@
 namespace impurities {
     class Impurity {
         public:
-			int fbirth, imp_atom_num, charge;
-            float mass, x, y, z, vx, vy, vz, t, xstart, zstart;
+			int fstart, imp_atom_num, charge;
+            float mass, x, y, z, vx, vy, vz, t, xstart, zstart, weight;
             std::vector<float> xhist, yhist, zhist, vxhist, vyhist, vzhist;
             Impurity();
             Impurity(int imp_atom_num, float mass, float x, float y, 
-				float z, int charge, int fbirth);
+				float z, int charge, int fstart, float weight);
             ~Impurity();
     };
 }

@@ -9,8 +9,9 @@ cdef class PyImpurity:
     cdef Impurity c_imp  # Hold a C++ instance which we're wrapping
     
     def __init__(self, int imp_atom_num, float mass, float x, float y, 
-                float z, int charge, int fbirth):
-        self.c_imp = Impurity(imp_atom_num, mass, x, y, z, charge, fbirth)
+                float z, int charge, int fstart, float weight):
+        self.c_imp = Impurity(imp_atom_num, mass, x, y, z, charge, fstart, 
+                              weight)
         self.c_imp.vx = 0.0
         self.c_imp.vy = 0.0
         self.c_imp.vz = 0.0
@@ -112,3 +113,19 @@ cdef class PyImpurity:
     @zstart.setter
     def zstart(self, zstart):
         self.c_imp.zstart = zstart
+    
+    # Attribute access
+    @property
+    def fstart(self):
+        return self.c_imp.fstart
+    @fstart.setter
+    def fstart(self, fstart):
+        self.c_imp.fstart = fstart
+
+    # Attribute access
+    @property
+    def weight(self):
+        return self.c_imp.weight
+    @weight.setter
+    def weight(self, weight):
+        self.c_imp.weight = weight

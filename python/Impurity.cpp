@@ -10,17 +10,17 @@ namespace impurities {
 
     // Overloaded constructor
     Impurity::Impurity (int imp_atom_num, float mass, float x, float y, 
-                float z, int charge, int fbirth) {
+                float z, int charge, int fstart, float weight) {
         this->imp_atom_num = imp_atom_num;
         this->charge = charge;
         this->mass = mass;
         this->x=x;
         this->y=y;
         this->z=z;
-        this->fbirth=fbirth;
+        this->fstart=fstart;
         this->zstart=z;
         this->xstart=x;
-
+        this->weight=weight;
         this->vx=0;
         this->vy=0;
         this->vz=0;

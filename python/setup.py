@@ -26,9 +26,9 @@ else:
 
 extensions = [
     Extension("*", ["*.pyx"],
-        include_dirs=[numpy.get_include()],
-        extra_compile_args=[openmp_arg],
-        extra_link_args=[openmp_arg]
+        include_dirs=[numpy.get_include()]
+        #extra_compile_args=[openmp_arg],
+        #extra_link_args=[openmp_arg]
     ),
 ]
 
@@ -36,7 +36,9 @@ extensions = [
 
 setup(
     name="flan",
-    ext_modules=cythonize(extensions),
+    ext_modules=cythonize(
+        extensions,
+        compiler_directives={'language_level' : "3str"})
 )
 
 # me make damn sure, that disutils does not mess with our

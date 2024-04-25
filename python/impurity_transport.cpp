@@ -4,12 +4,6 @@
 {
     "distutils": {
         "depends": [],
-        "extra_compile_args": [
-            "-fopenmp"
-        ],
-        "extra_link_args": [
-            "-fopenmp"
-        ],
         "include_dirs": [
             "/Users/zamperini/opt/anaconda3/envs/pgkyl/lib/python3.11/site-packages/numpy/core/include"
         ],
@@ -2627,6 +2621,55 @@ static PyObject *__Pyx_CyFunction_New(PyMethodDef *ml,
 #define __Pyx_PyStr_ConcatInPlaceSafe(a, b) ((unlikely((a) == Py_None) || unlikely((b) == Py_None)) ?\
     PyNumber_InPlaceAdd(a, b) : __Pyx_PyStr_ConcatInPlace(a, b))
 
+/* PyObjectCallNoArg.proto */
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
+
+/* PyObjectGetMethod.proto */
+static int __Pyx_PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method);
+
+/* PyObjectCallMethod0.proto */
+static PyObject* __Pyx_PyObject_CallMethod0(PyObject* obj, PyObject* method_name);
+
+/* pop.proto */
+static CYTHON_INLINE PyObject* __Pyx__PyObject_Pop(PyObject* L);
+#if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
+static CYTHON_INLINE PyObject* __Pyx_PyList_Pop(PyObject* L);
+#define __Pyx_PyObject_Pop(L) (likely(PyList_CheckExact(L)) ?\
+    __Pyx_PyList_Pop(L) : __Pyx__PyObject_Pop(L))
+#else
+#define __Pyx_PyList_Pop(L)  __Pyx__PyObject_Pop(L)
+#define __Pyx_PyObject_Pop(L)  __Pyx__PyObject_Pop(L)
+#endif
+
+/* UnpackUnboundCMethod.proto */
+typedef struct {
+    PyObject *type;
+    PyObject **method_name;
+    PyCFunction func;
+    PyObject *method;
+    int flag;
+} __Pyx_CachedCFunction;
+
+/* CallUnboundCMethod0.proto */
+static PyObject* __Pyx__CallUnboundCMethod0(__Pyx_CachedCFunction* cfunc, PyObject* self);
+#if CYTHON_COMPILING_IN_CPYTHON
+#define __Pyx_CallUnboundCMethod0(cfunc, self)\
+    (likely((cfunc)->func) ?\
+        (likely((cfunc)->flag == METH_NOARGS) ?  (*((cfunc)->func))(self, NULL) :\
+         (PY_VERSION_HEX >= 0x030600B1 && likely((cfunc)->flag == METH_FASTCALL) ?\
+            (PY_VERSION_HEX >= 0x030700A0 ?\
+                (*(__Pyx_PyCFunctionFast)(void*)(PyCFunction)(cfunc)->func)(self, &__pyx_empty_tuple, 0) :\
+                (*(__Pyx_PyCFunctionFastWithKeywords)(void*)(PyCFunction)(cfunc)->func)(self, &__pyx_empty_tuple, 0, NULL)) :\
+          (PY_VERSION_HEX >= 0x030700A0 && (cfunc)->flag == (METH_FASTCALL | METH_KEYWORDS) ?\
+            (*(__Pyx_PyCFunctionFastWithKeywords)(void*)(PyCFunction)(cfunc)->func)(self, &__pyx_empty_tuple, 0, NULL) :\
+            (likely((cfunc)->flag == (METH_VARARGS | METH_KEYWORDS)) ?  ((*(PyCFunctionWithKeywords)(void*)(PyCFunction)(cfunc)->func)(self, __pyx_empty_tuple, NULL)) :\
+               ((cfunc)->flag == METH_VARARGS ?  (*((cfunc)->func))(self, __pyx_empty_tuple) :\
+               __Pyx__CallUnboundCMethod0(cfunc, self)))))) :\
+        __Pyx__CallUnboundCMethod0(cfunc, self))
+#else
+#define __Pyx_CallUnboundCMethod0(cfunc, self)  __Pyx__CallUnboundCMethod0(cfunc, self)
+#endif
+
 /* BufferIndexError.proto */
 static void __Pyx_RaiseBufferIndexError(int axis);
 
@@ -2665,15 +2708,6 @@ static PyObject* __Pyx_PyObject_GenericGetAttr(PyObject* obj, PyObject* attr_nam
 #else
 #define __Pyx_PyObject_GenericGetAttr PyObject_GenericGetAttr
 #endif
-
-/* PyObjectCallNoArg.proto */
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
-
-/* PyObjectGetMethod.proto */
-static int __Pyx_PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method);
-
-/* PyObjectCallMethod0.proto */
-static PyObject* __Pyx_PyObject_CallMethod0(PyObject* obj, PyObject* method_name);
 
 /* ValidateBasesTuple.proto */
 #if CYTHON_COMPILING_IN_CPYTHON || CYTHON_COMPILING_IN_LIMITED_API || CYTHON_USE_TYPE_SPECS
@@ -3001,6 +3035,7 @@ int __pyx_module_is_main_impurity_transport = 0;
 /* #### Code section: global_var ### */
 static PyObject *__pyx_builtin_print;
 static PyObject *__pyx_builtin_range;
+static PyObject *__pyx_builtin_round;
 static PyObject *__pyx_builtin___import__;
 static PyObject *__pyx_builtin_ValueError;
 static PyObject *__pyx_builtin_MemoryError;
@@ -3066,6 +3101,7 @@ static const char __pyx_k_min[] = "min";
 static const char __pyx_k_nes[] = "nes";
 static const char __pyx_k_new[] = "__new__";
 static const char __pyx_k_obj[] = "obj";
+static const char __pyx_k_pop[] = "pop";
 static const char __pyx_k_ran[] = "ran";
 static const char __pyx_k_sum[] = "sum";
 static const char __pyx_k_sys[] = "sys";
@@ -3120,6 +3156,7 @@ static const char __pyx_k_power[] = "power";
 static const char __pyx_k_print[] = "print";
 static const char __pyx_k_range[] = "range";
 static const char __pyx_k_rates[] = "rates";
+static const char __pyx_k_round[] = "round";
 static const char __pyx_k_shape[] = "shape";
 static const char __pyx_k_start[] = "start";
 static const char __pyx_k_x_idx[] = "x_idx";
@@ -3143,6 +3180,7 @@ static const char __pyx_k_gkyl_z[] = "gkyl_z";
 static const char __pyx_k_ignore[] = "ignore";
 static const char __pyx_k_import[] = "__import__";
 static const char __pyx_k_interp[] = "interp";
+static const char __pyx_k_median[] = "median";
 static const char __pyx_k_name_2[] = "__name__";
 static const char __pyx_k_oa_dir[] = "oa_dir";
 static const char __pyx_k_pickle[] = "pickle";
@@ -3155,6 +3193,7 @@ static const char __pyx_k_unpack[] = "unpack";
 static const char __pyx_k_update[] = "update";
 static const char __pyx_k_v_fact[] = "v_fact";
 static const char __pyx_k_values[] = "values";
+static const char __pyx_k_weight[] = "weight";
 static const char __pyx_k_x_bins[] = "x_bins";
 static const char __pyx_k_xwidth[] = "xwidth";
 static const char __pyx_k_y_bins[] = "y_bins";
@@ -3177,6 +3216,7 @@ static const char __pyx_k_ion_amu[] = "ion_amu";
 static const char __pyx_k_iz_coef[] = "iz_coef";
 static const char __pyx_k_iz_prob[] = "iz_prob";
 static const char __pyx_k_memview[] = "memview";
+static const char __pyx_k_nonzero[] = "nonzero";
 static const char __pyx_k_nu_corr[] = "nu_corr";
 static const char __pyx_k_rc_coef[] = "rc_coef";
 static const char __pyx_k_rc_prob[] = "rc_prob";
@@ -3290,6 +3330,7 @@ static const char __pyx_k_is_coroutine[] = "_is_coroutine";
 static const char __pyx_k_lnalpha_corr[] = "lnalpha_corr";
 static const char __pyx_k_lnalpha_fact[] = "lnalpha_fact";
 static const char __pyx_k_nu_corr_fact[] = "nu_corr_fact";
+static const char __pyx_k_num_add_imps[] = "num_add_imps";
 static const char __pyx_k_openadas_dir[] = "openadas_dir";
 static const char __pyx_k_pyx_checksum[] = "__pyx_checksum";
 static const char __pyx_k_single_value[] = "single_value";
@@ -3305,6 +3346,7 @@ static const char __pyx_k_print_percent[] = "print_percent";
 static const char __pyx_k_rc_warn_count[] = "rc_warn_count";
 static const char __pyx_k_reduce_cython[] = "__reduce_cython__";
 static const char __pyx_k_tmp_stop_time[] = "tmp_stop_time";
+static const char __pyx_k_var_reduction[] = "var_reduction";
 static const char __pyx_k_AssertionError[] = "AssertionError";
 static const char __pyx_k_create_interps[] = "create_interps";
 static const char __pyx_k_imp_weight_arr[] = "imp_weight_arr";
@@ -3314,7 +3356,9 @@ static const char __pyx_k_imp_zstart_opt[] = "imp_zstart_opt";
 static const char __pyx_k_imp_zstart_val[] = "imp_zstart_val";
 static const char __pyx_k_total_imp_time[] = "total_imp_time";
 static const char __pyx_k_View_MemoryView[] = "View.MemoryView";
+static const char __pyx_k_additional_imps[] = "additional_imps";
 static const char __pyx_k_allocate_buffer[] = "allocate_buffer";
+static const char __pyx_k_coll_warn_count[] = "coll_warn_count";
 static const char __pyx_k_collections_abc[] = "collections.abc";
 static const char __pyx_k_dtype_is_object[] = "dtype_is_object";
 static const char __pyx_k_imp_foll_tstart[] = "imp_foll_tstart";
@@ -3329,12 +3373,14 @@ static const char __pyx_k_imp_scaling_fact[] = "imp_scaling_fact";
 static const char __pyx_k_low_xbound_count[] = "low_xbound_count";
 static const char __pyx_k_low_zbound_count[] = "low_zbound_count";
 static const char __pyx_k_zstart_rans_fine[] = "zstart_rans_fine";
+static const char __pyx_k_Error_coll_prob_1[] = "Error: coll_prob > 1 ({})";
 static const char __pyx_k_avg_time_followed[] = "avg_time_followed";
 static const char __pyx_k_follow_impurities[] = "follow_impurities";
 static const char __pyx_k_high_xbound_count[] = "high_xbound_count";
 static const char __pyx_k_high_zbound_count[] = "high_zbound_count";
 static const char __pyx_k_pyx_unpickle_Enum[] = "__pyx_unpickle_Enum";
 static const char __pyx_k_scipy_interpolate[] = "scipy.interpolate";
+static const char __pyx_k_var_red_part_freq[] = "var_red_part_freq";
 static const char __pyx_k_Error_imp_charge_0[] = "Error: imp.charge < 0 ({})";
 static const char __pyx_k_asyncio_coroutines[] = "asyncio.coroutines";
 static const char __pyx_k_calc_coll_freq_arr[] = "calc_coll_freq_arr";
@@ -3342,11 +3388,15 @@ static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_impurity_transport[] = "impurity_transport";
 static const char __pyx_k_proportional_to_ni[] = "proportional_to_ni";
 static const char __pyx_k_strided_and_direct[] = "<strided and direct>";
+static const char __pyx_k_var_red_part_count[] = "var_red_part_count";
+static const char __pyx_k_var_reduction_freq[] = "var_reduction_freq";
 static const char __pyx_k_zstart_rans_coarse[] = "zstart_rans_coarse";
+static const char __pyx_k_var_count_qualifier[] = "var_count_qualifier: {}";
 static const char __pyx_k_read_rate_coef_unres[] = "read_rate_coef_unres";
 static const char __pyx_k_strided_and_indirect[] = "<strided and indirect>";
 static const char __pyx_k_Invalid_shape_in_axis[] = "Invalid shape in axis ";
 static const char __pyx_k_contiguous_and_direct[] = "<contiguous and direct>";
+static const char __pyx_k_var_count_qualifier_2[] = "var_count_qualifier";
 static const char __pyx_k_Cannot_index_with_type[] = "Cannot index with type '";
 static const char __pyx_k_MemoryView_of_r_object[] = "<MemoryView of %r object>";
 static const char __pyx_k_impurity_transport_pyx[] = "impurity_transport.pyx";
@@ -3355,6 +3405,7 @@ static const char __pyx_k_RegularGridInterpolator[] = "RegularGridInterpolator";
 static const char __pyx_k_contiguous_and_indirect[] = "<contiguous and indirect>";
 static const char __pyx_k_Simulation_timestep_2e_s[] = "Simulation timestep: {:.2e} s";
 static const char __pyx_k_is_a_hardcoded_safeguard[] = " is a hardcoded safeguard.";
+static const char __pyx_k_var_reduction_min_weight[] = "var_reduction_min_weight";
 static const char __pyx_k_Dimension_d_is_not_direct[] = "Dimension %d is not direct";
 static const char __pyx_k_Index_out_of_bounds_axis_d[] = "Index out of bounds (axis %d)";
 static const char __pyx_k_Step_may_not_be_zero_axis_d[] = "Step may not be zero (axis %d)";
@@ -3366,6 +3417,7 @@ static const char __pyx_k_1_000_particles_were_input_To_a[] = " 1,000 particles 
 static const char __pyx_k_Time_spent_following_impurities[] = "Time spent following impurities: {:.1f} s";
 static const char __pyx_k_follow_impurities_locals_create[] = "follow_impurities.<locals>.create_interps";
 static const char __pyx_k_issues_num_imps_is_being_reduce[] = " issues, num_imps is being reduced to 1,000. This";
+static const char __pyx_k_Additional_split_impurities_foll[] = "Additional split impurities followed: {}";
 static const char __pyx_k_All_dimensions_preceding_dimensi[] = "All dimensions preceding dimension %d must be indexed and not sliced";
 static const char __pyx_k_Buffer_view_does_not_expose_stri[] = "Buffer view does not expose strides";
 static const char __pyx_k_Calculating_collision_frequencie[] = "Calculating collision frequencies...";
@@ -3382,6 +3434,7 @@ static const char __pyx_k_Indirect_dimensions_not_supporte[] = "Indirect dimensi
 static const char __pyx_k_Invalid_mode_expected_c_or_fortr[] = "Invalid mode, expected 'c' or 'fortran', got ";
 static const char __pyx_k_Out_of_bounds_on_buffer_access_a[] = "Out of bounds on buffer access (axis ";
 static const char __pyx_k_Unable_to_convert_item_to_object[] = "Unable to convert item to object";
+static const char __pyx_k_Warning_The_collision_probabilit[] = "Warning: The collision probability (coll_prob) was >1 {:} times, or {:.2e}% of the time. Consider a smaller timestep.";
 static const char __pyx_k_Warning_The_ionization_probabili[] = "Warning: The ionization probability (iz_prob) was >1 {:} times, or {:.2e}% of the time. Consider a smaller timestep.";
 static const char __pyx_k_Warning_The_recombination_probab[] = "Warning: The recombination probability (rc_prob) was >1 {:} times, or {:.2e}% of the time. Consider a smaller timestep.";
 static const char __pyx_k_Warning_imp_xyz_tracks_is_set_to[] = "Warning! imp_xyz_tracks is set to True and over";
@@ -3431,13 +3484,14 @@ static PyObject *__pyx_pf___pyx_memoryviewslice___reduce_cython__(CYTHON_UNUSED 
 static PyObject *__pyx_pf___pyx_memoryviewslice_2__setstate_cython__(CYTHON_UNUSED struct __pyx_memoryviewslice_obj *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_pf_15View_dot_MemoryView___pyx_unpickle_Enum(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v___pyx_type, long __pyx_v___pyx_checksum, PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interps(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_df, PyObject *__pyx_v_atom_num); /* proto */
-static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_input_opts, PyObject *__pyx_v_gkyl_bkg, PyObject *__pyx_v_parallel); /* proto */
+static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_input_opts, PyObject *__pyx_v_gkyl_bkg, CYTHON_UNUSED PyObject *__pyx_v_parallel); /* proto */
 static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_input_opts); /* proto */
 static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_ne, PyObject *__pyx_v_ni, PyObject *__pyx_v_te, PyObject *__pyx_v_ti, PyObject *__pyx_v_imp_mass, PyObject *__pyx_v_imp_atom_num); /* proto */
 static PyObject *__pyx_tp_new_array(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_Enum(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_memoryview(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new__memoryviewslice(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
+static __Pyx_CachedCFunction __pyx_umethod_PyList_Type_pop = {0, 0, 0, 0, 0};
 /* #### Code section: late_includes ### */
 /* #### Code section: module_state ### */
 typedef struct {
@@ -3490,6 +3544,7 @@ typedef struct {
   PyObject *__pyx_kp_u_;
   PyObject *__pyx_kp_s_1_000_particles_were_input_To_a;
   PyObject *__pyx_n_s_ASCII;
+  PyObject *__pyx_kp_s_Additional_split_impurities_foll;
   PyObject *__pyx_kp_s_All_dimensions_preceding_dimensi;
   PyObject *__pyx_n_s_AssertionError;
   PyObject *__pyx_kp_s_Beginning_impurity_following;
@@ -3505,6 +3560,7 @@ typedef struct {
   PyObject *__pyx_kp_s_Empty_shape_tuple_for_cython_arr;
   PyObject *__pyx_kp_s_Error_Files_for_imp_atom_num_not;
   PyObject *__pyx_kp_s_Error_coll_forces_and_collisions;
+  PyObject *__pyx_kp_s_Error_coll_prob_1;
   PyObject *__pyx_kp_s_Error_imp_charge;
   PyObject *__pyx_kp_s_Error_imp_charge_0;
   PyObject *__pyx_kp_s_Error_imp_zstart_input_not_recog;
@@ -3532,6 +3588,7 @@ typedef struct {
   PyObject *__pyx_kp_s_Unable_to_convert_item_to_object;
   PyObject *__pyx_n_s_ValueError;
   PyObject *__pyx_n_s_View_MemoryView;
+  PyObject *__pyx_kp_s_Warning_The_collision_probabilit;
   PyObject *__pyx_kp_s_Warning_The_ionization_probabili;
   PyObject *__pyx_kp_s_Warning_The_recombination_probab;
   PyObject *__pyx_kp_s_Warning_imp_xyz_tracks_is_set_to;
@@ -3548,6 +3605,7 @@ typedef struct {
   PyObject *__pyx_kp_s_acd50_w_dat;
   PyObject *__pyx_n_s_acd_file;
   PyObject *__pyx_n_s_acd_path;
+  PyObject *__pyx_n_s_additional_imps;
   PyObject *__pyx_n_s_allocate_buffer;
   PyObject *__pyx_n_s_alpha;
   PyObject *__pyx_n_s_amu;
@@ -3578,6 +3636,7 @@ typedef struct {
   PyObject *__pyx_n_s_coll_occured;
   PyObject *__pyx_n_s_coll_prob;
   PyObject *__pyx_n_s_coll_shape;
+  PyObject *__pyx_n_s_coll_warn_count;
   PyObject *__pyx_n_s_collections;
   PyObject *__pyx_kp_s_collections_abc;
   PyObject *__pyx_n_s_collisions;
@@ -3741,6 +3800,7 @@ typedef struct {
   PyObject *__pyx_n_s_main;
   PyObject *__pyx_n_s_mass;
   PyObject *__pyx_n_s_max;
+  PyObject *__pyx_n_s_median;
   PyObject *__pyx_n_s_memview;
   PyObject *__pyx_n_s_mi;
   PyObject *__pyx_n_s_min;
@@ -3756,10 +3816,12 @@ typedef struct {
   PyObject *__pyx_n_s_new;
   PyObject *__pyx_n_s_ni;
   PyObject *__pyx_kp_s_no_default___reduce___due_to_non;
+  PyObject *__pyx_n_s_nonzero;
   PyObject *__pyx_n_s_np;
   PyObject *__pyx_n_s_nu_corr;
   PyObject *__pyx_n_s_nu_corr_fact;
   PyObject *__pyx_n_s_nu_imp_ion;
+  PyObject *__pyx_n_s_num_add_imps;
   PyObject *__pyx_n_s_num_imps;
   PyObject *__pyx_n_s_numpy;
   PyObject *__pyx_n_s_oa;
@@ -3772,6 +3834,7 @@ typedef struct {
   PyObject *__pyx_n_s_perc_done;
   PyObject *__pyx_n_s_pi;
   PyObject *__pyx_n_s_pickle;
+  PyObject *__pyx_n_s_pop;
   PyObject *__pyx_n_s_power;
   PyObject *__pyx_n_s_print;
   PyObject *__pyx_n_s_print_percent;
@@ -3798,6 +3861,7 @@ typedef struct {
   PyObject *__pyx_n_s_reduce_ex;
   PyObject *__pyx_n_s_register;
   PyObject *__pyx_n_s_return_dict;
+  PyObject *__pyx_n_s_round;
   PyObject *__pyx_n_s_sample;
   PyObject *__pyx_kp_s_scd50_w_dat;
   PyObject *__pyx_n_s_scd_file;
@@ -3838,6 +3902,13 @@ typedef struct {
   PyObject *__pyx_n_s_update;
   PyObject *__pyx_n_s_v_fact;
   PyObject *__pyx_n_s_values;
+  PyObject *__pyx_kp_s_var_count_qualifier;
+  PyObject *__pyx_n_s_var_count_qualifier_2;
+  PyObject *__pyx_n_s_var_red_part_count;
+  PyObject *__pyx_n_s_var_red_part_freq;
+  PyObject *__pyx_n_s_var_reduction;
+  PyObject *__pyx_n_s_var_reduction_freq;
+  PyObject *__pyx_n_s_var_reduction_min_weight;
   PyObject *__pyx_n_s_version_info;
   PyObject *__pyx_n_s_viz;
   PyObject *__pyx_n_s_vti;
@@ -3845,6 +3916,7 @@ typedef struct {
   PyObject *__pyx_n_s_vx;
   PyObject *__pyx_n_s_vy;
   PyObject *__pyx_n_s_vz;
+  PyObject *__pyx_n_s_weight;
   PyObject *__pyx_n_s_x;
   PyObject *__pyx_n_s_x_bins;
   PyObject *__pyx_n_s_x_idx;
@@ -3867,6 +3939,7 @@ typedef struct {
   PyObject *__pyx_n_s_zstart_rans_fine;
   PyObject *__pyx_n_s_zwidth;
   PyObject *__pyx_float_0_0;
+  PyObject *__pyx_float_1_0;
   PyObject *__pyx_float_1_1;
   PyObject *__pyx_float_1_3;
   PyObject *__pyx_float_1e6;
@@ -3969,6 +4042,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_kp_u_);
   Py_CLEAR(clear_module_state->__pyx_kp_s_1_000_particles_were_input_To_a);
   Py_CLEAR(clear_module_state->__pyx_n_s_ASCII);
+  Py_CLEAR(clear_module_state->__pyx_kp_s_Additional_split_impurities_foll);
   Py_CLEAR(clear_module_state->__pyx_kp_s_All_dimensions_preceding_dimensi);
   Py_CLEAR(clear_module_state->__pyx_n_s_AssertionError);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Beginning_impurity_following);
@@ -3984,6 +4058,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_kp_s_Empty_shape_tuple_for_cython_arr);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Error_Files_for_imp_atom_num_not);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Error_coll_forces_and_collisions);
+  Py_CLEAR(clear_module_state->__pyx_kp_s_Error_coll_prob_1);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Error_imp_charge);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Error_imp_charge_0);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Error_imp_zstart_input_not_recog);
@@ -4011,6 +4086,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_kp_s_Unable_to_convert_item_to_object);
   Py_CLEAR(clear_module_state->__pyx_n_s_ValueError);
   Py_CLEAR(clear_module_state->__pyx_n_s_View_MemoryView);
+  Py_CLEAR(clear_module_state->__pyx_kp_s_Warning_The_collision_probabilit);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Warning_The_ionization_probabili);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Warning_The_recombination_probab);
   Py_CLEAR(clear_module_state->__pyx_kp_s_Warning_imp_xyz_tracks_is_set_to);
@@ -4027,6 +4103,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_kp_s_acd50_w_dat);
   Py_CLEAR(clear_module_state->__pyx_n_s_acd_file);
   Py_CLEAR(clear_module_state->__pyx_n_s_acd_path);
+  Py_CLEAR(clear_module_state->__pyx_n_s_additional_imps);
   Py_CLEAR(clear_module_state->__pyx_n_s_allocate_buffer);
   Py_CLEAR(clear_module_state->__pyx_n_s_alpha);
   Py_CLEAR(clear_module_state->__pyx_n_s_amu);
@@ -4057,6 +4134,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_coll_occured);
   Py_CLEAR(clear_module_state->__pyx_n_s_coll_prob);
   Py_CLEAR(clear_module_state->__pyx_n_s_coll_shape);
+  Py_CLEAR(clear_module_state->__pyx_n_s_coll_warn_count);
   Py_CLEAR(clear_module_state->__pyx_n_s_collections);
   Py_CLEAR(clear_module_state->__pyx_kp_s_collections_abc);
   Py_CLEAR(clear_module_state->__pyx_n_s_collisions);
@@ -4220,6 +4298,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_main);
   Py_CLEAR(clear_module_state->__pyx_n_s_mass);
   Py_CLEAR(clear_module_state->__pyx_n_s_max);
+  Py_CLEAR(clear_module_state->__pyx_n_s_median);
   Py_CLEAR(clear_module_state->__pyx_n_s_memview);
   Py_CLEAR(clear_module_state->__pyx_n_s_mi);
   Py_CLEAR(clear_module_state->__pyx_n_s_min);
@@ -4235,10 +4314,12 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_new);
   Py_CLEAR(clear_module_state->__pyx_n_s_ni);
   Py_CLEAR(clear_module_state->__pyx_kp_s_no_default___reduce___due_to_non);
+  Py_CLEAR(clear_module_state->__pyx_n_s_nonzero);
   Py_CLEAR(clear_module_state->__pyx_n_s_np);
   Py_CLEAR(clear_module_state->__pyx_n_s_nu_corr);
   Py_CLEAR(clear_module_state->__pyx_n_s_nu_corr_fact);
   Py_CLEAR(clear_module_state->__pyx_n_s_nu_imp_ion);
+  Py_CLEAR(clear_module_state->__pyx_n_s_num_add_imps);
   Py_CLEAR(clear_module_state->__pyx_n_s_num_imps);
   Py_CLEAR(clear_module_state->__pyx_n_s_numpy);
   Py_CLEAR(clear_module_state->__pyx_n_s_oa);
@@ -4251,6 +4332,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_perc_done);
   Py_CLEAR(clear_module_state->__pyx_n_s_pi);
   Py_CLEAR(clear_module_state->__pyx_n_s_pickle);
+  Py_CLEAR(clear_module_state->__pyx_n_s_pop);
   Py_CLEAR(clear_module_state->__pyx_n_s_power);
   Py_CLEAR(clear_module_state->__pyx_n_s_print);
   Py_CLEAR(clear_module_state->__pyx_n_s_print_percent);
@@ -4277,6 +4359,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_reduce_ex);
   Py_CLEAR(clear_module_state->__pyx_n_s_register);
   Py_CLEAR(clear_module_state->__pyx_n_s_return_dict);
+  Py_CLEAR(clear_module_state->__pyx_n_s_round);
   Py_CLEAR(clear_module_state->__pyx_n_s_sample);
   Py_CLEAR(clear_module_state->__pyx_kp_s_scd50_w_dat);
   Py_CLEAR(clear_module_state->__pyx_n_s_scd_file);
@@ -4317,6 +4400,13 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_update);
   Py_CLEAR(clear_module_state->__pyx_n_s_v_fact);
   Py_CLEAR(clear_module_state->__pyx_n_s_values);
+  Py_CLEAR(clear_module_state->__pyx_kp_s_var_count_qualifier);
+  Py_CLEAR(clear_module_state->__pyx_n_s_var_count_qualifier_2);
+  Py_CLEAR(clear_module_state->__pyx_n_s_var_red_part_count);
+  Py_CLEAR(clear_module_state->__pyx_n_s_var_red_part_freq);
+  Py_CLEAR(clear_module_state->__pyx_n_s_var_reduction);
+  Py_CLEAR(clear_module_state->__pyx_n_s_var_reduction_freq);
+  Py_CLEAR(clear_module_state->__pyx_n_s_var_reduction_min_weight);
   Py_CLEAR(clear_module_state->__pyx_n_s_version_info);
   Py_CLEAR(clear_module_state->__pyx_n_s_viz);
   Py_CLEAR(clear_module_state->__pyx_n_s_vti);
@@ -4324,6 +4414,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_vx);
   Py_CLEAR(clear_module_state->__pyx_n_s_vy);
   Py_CLEAR(clear_module_state->__pyx_n_s_vz);
+  Py_CLEAR(clear_module_state->__pyx_n_s_weight);
   Py_CLEAR(clear_module_state->__pyx_n_s_x);
   Py_CLEAR(clear_module_state->__pyx_n_s_x_bins);
   Py_CLEAR(clear_module_state->__pyx_n_s_x_idx);
@@ -4346,6 +4437,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_zstart_rans_fine);
   Py_CLEAR(clear_module_state->__pyx_n_s_zwidth);
   Py_CLEAR(clear_module_state->__pyx_float_0_0);
+  Py_CLEAR(clear_module_state->__pyx_float_1_0);
   Py_CLEAR(clear_module_state->__pyx_float_1_1);
   Py_CLEAR(clear_module_state->__pyx_float_1_3);
   Py_CLEAR(clear_module_state->__pyx_float_1e6);
@@ -4426,6 +4518,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_kp_u_);
   Py_VISIT(traverse_module_state->__pyx_kp_s_1_000_particles_were_input_To_a);
   Py_VISIT(traverse_module_state->__pyx_n_s_ASCII);
+  Py_VISIT(traverse_module_state->__pyx_kp_s_Additional_split_impurities_foll);
   Py_VISIT(traverse_module_state->__pyx_kp_s_All_dimensions_preceding_dimensi);
   Py_VISIT(traverse_module_state->__pyx_n_s_AssertionError);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Beginning_impurity_following);
@@ -4441,6 +4534,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_kp_s_Empty_shape_tuple_for_cython_arr);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Error_Files_for_imp_atom_num_not);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Error_coll_forces_and_collisions);
+  Py_VISIT(traverse_module_state->__pyx_kp_s_Error_coll_prob_1);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Error_imp_charge);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Error_imp_charge_0);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Error_imp_zstart_input_not_recog);
@@ -4468,6 +4562,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_kp_s_Unable_to_convert_item_to_object);
   Py_VISIT(traverse_module_state->__pyx_n_s_ValueError);
   Py_VISIT(traverse_module_state->__pyx_n_s_View_MemoryView);
+  Py_VISIT(traverse_module_state->__pyx_kp_s_Warning_The_collision_probabilit);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Warning_The_ionization_probabili);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Warning_The_recombination_probab);
   Py_VISIT(traverse_module_state->__pyx_kp_s_Warning_imp_xyz_tracks_is_set_to);
@@ -4484,6 +4579,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_kp_s_acd50_w_dat);
   Py_VISIT(traverse_module_state->__pyx_n_s_acd_file);
   Py_VISIT(traverse_module_state->__pyx_n_s_acd_path);
+  Py_VISIT(traverse_module_state->__pyx_n_s_additional_imps);
   Py_VISIT(traverse_module_state->__pyx_n_s_allocate_buffer);
   Py_VISIT(traverse_module_state->__pyx_n_s_alpha);
   Py_VISIT(traverse_module_state->__pyx_n_s_amu);
@@ -4514,6 +4610,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_coll_occured);
   Py_VISIT(traverse_module_state->__pyx_n_s_coll_prob);
   Py_VISIT(traverse_module_state->__pyx_n_s_coll_shape);
+  Py_VISIT(traverse_module_state->__pyx_n_s_coll_warn_count);
   Py_VISIT(traverse_module_state->__pyx_n_s_collections);
   Py_VISIT(traverse_module_state->__pyx_kp_s_collections_abc);
   Py_VISIT(traverse_module_state->__pyx_n_s_collisions);
@@ -4677,6 +4774,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_main);
   Py_VISIT(traverse_module_state->__pyx_n_s_mass);
   Py_VISIT(traverse_module_state->__pyx_n_s_max);
+  Py_VISIT(traverse_module_state->__pyx_n_s_median);
   Py_VISIT(traverse_module_state->__pyx_n_s_memview);
   Py_VISIT(traverse_module_state->__pyx_n_s_mi);
   Py_VISIT(traverse_module_state->__pyx_n_s_min);
@@ -4692,10 +4790,12 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_new);
   Py_VISIT(traverse_module_state->__pyx_n_s_ni);
   Py_VISIT(traverse_module_state->__pyx_kp_s_no_default___reduce___due_to_non);
+  Py_VISIT(traverse_module_state->__pyx_n_s_nonzero);
   Py_VISIT(traverse_module_state->__pyx_n_s_np);
   Py_VISIT(traverse_module_state->__pyx_n_s_nu_corr);
   Py_VISIT(traverse_module_state->__pyx_n_s_nu_corr_fact);
   Py_VISIT(traverse_module_state->__pyx_n_s_nu_imp_ion);
+  Py_VISIT(traverse_module_state->__pyx_n_s_num_add_imps);
   Py_VISIT(traverse_module_state->__pyx_n_s_num_imps);
   Py_VISIT(traverse_module_state->__pyx_n_s_numpy);
   Py_VISIT(traverse_module_state->__pyx_n_s_oa);
@@ -4708,6 +4808,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_perc_done);
   Py_VISIT(traverse_module_state->__pyx_n_s_pi);
   Py_VISIT(traverse_module_state->__pyx_n_s_pickle);
+  Py_VISIT(traverse_module_state->__pyx_n_s_pop);
   Py_VISIT(traverse_module_state->__pyx_n_s_power);
   Py_VISIT(traverse_module_state->__pyx_n_s_print);
   Py_VISIT(traverse_module_state->__pyx_n_s_print_percent);
@@ -4734,6 +4835,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_reduce_ex);
   Py_VISIT(traverse_module_state->__pyx_n_s_register);
   Py_VISIT(traverse_module_state->__pyx_n_s_return_dict);
+  Py_VISIT(traverse_module_state->__pyx_n_s_round);
   Py_VISIT(traverse_module_state->__pyx_n_s_sample);
   Py_VISIT(traverse_module_state->__pyx_kp_s_scd50_w_dat);
   Py_VISIT(traverse_module_state->__pyx_n_s_scd_file);
@@ -4774,6 +4876,13 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_update);
   Py_VISIT(traverse_module_state->__pyx_n_s_v_fact);
   Py_VISIT(traverse_module_state->__pyx_n_s_values);
+  Py_VISIT(traverse_module_state->__pyx_kp_s_var_count_qualifier);
+  Py_VISIT(traverse_module_state->__pyx_n_s_var_count_qualifier_2);
+  Py_VISIT(traverse_module_state->__pyx_n_s_var_red_part_count);
+  Py_VISIT(traverse_module_state->__pyx_n_s_var_red_part_freq);
+  Py_VISIT(traverse_module_state->__pyx_n_s_var_reduction);
+  Py_VISIT(traverse_module_state->__pyx_n_s_var_reduction_freq);
+  Py_VISIT(traverse_module_state->__pyx_n_s_var_reduction_min_weight);
   Py_VISIT(traverse_module_state->__pyx_n_s_version_info);
   Py_VISIT(traverse_module_state->__pyx_n_s_viz);
   Py_VISIT(traverse_module_state->__pyx_n_s_vti);
@@ -4781,6 +4890,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_vx);
   Py_VISIT(traverse_module_state->__pyx_n_s_vy);
   Py_VISIT(traverse_module_state->__pyx_n_s_vz);
+  Py_VISIT(traverse_module_state->__pyx_n_s_weight);
   Py_VISIT(traverse_module_state->__pyx_n_s_x);
   Py_VISIT(traverse_module_state->__pyx_n_s_x_bins);
   Py_VISIT(traverse_module_state->__pyx_n_s_x_idx);
@@ -4803,6 +4913,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_zstart_rans_fine);
   Py_VISIT(traverse_module_state->__pyx_n_s_zwidth);
   Py_VISIT(traverse_module_state->__pyx_float_0_0);
+  Py_VISIT(traverse_module_state->__pyx_float_1_0);
   Py_VISIT(traverse_module_state->__pyx_float_1_1);
   Py_VISIT(traverse_module_state->__pyx_float_1_3);
   Py_VISIT(traverse_module_state->__pyx_float_1e6);
@@ -4905,6 +5016,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_kp_u_ __pyx_mstate_global->__pyx_kp_u_
 #define __pyx_kp_s_1_000_particles_were_input_To_a __pyx_mstate_global->__pyx_kp_s_1_000_particles_were_input_To_a
 #define __pyx_n_s_ASCII __pyx_mstate_global->__pyx_n_s_ASCII
+#define __pyx_kp_s_Additional_split_impurities_foll __pyx_mstate_global->__pyx_kp_s_Additional_split_impurities_foll
 #define __pyx_kp_s_All_dimensions_preceding_dimensi __pyx_mstate_global->__pyx_kp_s_All_dimensions_preceding_dimensi
 #define __pyx_n_s_AssertionError __pyx_mstate_global->__pyx_n_s_AssertionError
 #define __pyx_kp_s_Beginning_impurity_following __pyx_mstate_global->__pyx_kp_s_Beginning_impurity_following
@@ -4920,6 +5032,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_kp_s_Empty_shape_tuple_for_cython_arr __pyx_mstate_global->__pyx_kp_s_Empty_shape_tuple_for_cython_arr
 #define __pyx_kp_s_Error_Files_for_imp_atom_num_not __pyx_mstate_global->__pyx_kp_s_Error_Files_for_imp_atom_num_not
 #define __pyx_kp_s_Error_coll_forces_and_collisions __pyx_mstate_global->__pyx_kp_s_Error_coll_forces_and_collisions
+#define __pyx_kp_s_Error_coll_prob_1 __pyx_mstate_global->__pyx_kp_s_Error_coll_prob_1
 #define __pyx_kp_s_Error_imp_charge __pyx_mstate_global->__pyx_kp_s_Error_imp_charge
 #define __pyx_kp_s_Error_imp_charge_0 __pyx_mstate_global->__pyx_kp_s_Error_imp_charge_0
 #define __pyx_kp_s_Error_imp_zstart_input_not_recog __pyx_mstate_global->__pyx_kp_s_Error_imp_zstart_input_not_recog
@@ -4947,6 +5060,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_kp_s_Unable_to_convert_item_to_object __pyx_mstate_global->__pyx_kp_s_Unable_to_convert_item_to_object
 #define __pyx_n_s_ValueError __pyx_mstate_global->__pyx_n_s_ValueError
 #define __pyx_n_s_View_MemoryView __pyx_mstate_global->__pyx_n_s_View_MemoryView
+#define __pyx_kp_s_Warning_The_collision_probabilit __pyx_mstate_global->__pyx_kp_s_Warning_The_collision_probabilit
 #define __pyx_kp_s_Warning_The_ionization_probabili __pyx_mstate_global->__pyx_kp_s_Warning_The_ionization_probabili
 #define __pyx_kp_s_Warning_The_recombination_probab __pyx_mstate_global->__pyx_kp_s_Warning_The_recombination_probab
 #define __pyx_kp_s_Warning_imp_xyz_tracks_is_set_to __pyx_mstate_global->__pyx_kp_s_Warning_imp_xyz_tracks_is_set_to
@@ -4963,6 +5077,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_kp_s_acd50_w_dat __pyx_mstate_global->__pyx_kp_s_acd50_w_dat
 #define __pyx_n_s_acd_file __pyx_mstate_global->__pyx_n_s_acd_file
 #define __pyx_n_s_acd_path __pyx_mstate_global->__pyx_n_s_acd_path
+#define __pyx_n_s_additional_imps __pyx_mstate_global->__pyx_n_s_additional_imps
 #define __pyx_n_s_allocate_buffer __pyx_mstate_global->__pyx_n_s_allocate_buffer
 #define __pyx_n_s_alpha __pyx_mstate_global->__pyx_n_s_alpha
 #define __pyx_n_s_amu __pyx_mstate_global->__pyx_n_s_amu
@@ -4993,6 +5108,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_coll_occured __pyx_mstate_global->__pyx_n_s_coll_occured
 #define __pyx_n_s_coll_prob __pyx_mstate_global->__pyx_n_s_coll_prob
 #define __pyx_n_s_coll_shape __pyx_mstate_global->__pyx_n_s_coll_shape
+#define __pyx_n_s_coll_warn_count __pyx_mstate_global->__pyx_n_s_coll_warn_count
 #define __pyx_n_s_collections __pyx_mstate_global->__pyx_n_s_collections
 #define __pyx_kp_s_collections_abc __pyx_mstate_global->__pyx_kp_s_collections_abc
 #define __pyx_n_s_collisions __pyx_mstate_global->__pyx_n_s_collisions
@@ -5156,6 +5272,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_main __pyx_mstate_global->__pyx_n_s_main
 #define __pyx_n_s_mass __pyx_mstate_global->__pyx_n_s_mass
 #define __pyx_n_s_max __pyx_mstate_global->__pyx_n_s_max
+#define __pyx_n_s_median __pyx_mstate_global->__pyx_n_s_median
 #define __pyx_n_s_memview __pyx_mstate_global->__pyx_n_s_memview
 #define __pyx_n_s_mi __pyx_mstate_global->__pyx_n_s_mi
 #define __pyx_n_s_min __pyx_mstate_global->__pyx_n_s_min
@@ -5171,10 +5288,12 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_new __pyx_mstate_global->__pyx_n_s_new
 #define __pyx_n_s_ni __pyx_mstate_global->__pyx_n_s_ni
 #define __pyx_kp_s_no_default___reduce___due_to_non __pyx_mstate_global->__pyx_kp_s_no_default___reduce___due_to_non
+#define __pyx_n_s_nonzero __pyx_mstate_global->__pyx_n_s_nonzero
 #define __pyx_n_s_np __pyx_mstate_global->__pyx_n_s_np
 #define __pyx_n_s_nu_corr __pyx_mstate_global->__pyx_n_s_nu_corr
 #define __pyx_n_s_nu_corr_fact __pyx_mstate_global->__pyx_n_s_nu_corr_fact
 #define __pyx_n_s_nu_imp_ion __pyx_mstate_global->__pyx_n_s_nu_imp_ion
+#define __pyx_n_s_num_add_imps __pyx_mstate_global->__pyx_n_s_num_add_imps
 #define __pyx_n_s_num_imps __pyx_mstate_global->__pyx_n_s_num_imps
 #define __pyx_n_s_numpy __pyx_mstate_global->__pyx_n_s_numpy
 #define __pyx_n_s_oa __pyx_mstate_global->__pyx_n_s_oa
@@ -5187,6 +5306,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_perc_done __pyx_mstate_global->__pyx_n_s_perc_done
 #define __pyx_n_s_pi __pyx_mstate_global->__pyx_n_s_pi
 #define __pyx_n_s_pickle __pyx_mstate_global->__pyx_n_s_pickle
+#define __pyx_n_s_pop __pyx_mstate_global->__pyx_n_s_pop
 #define __pyx_n_s_power __pyx_mstate_global->__pyx_n_s_power
 #define __pyx_n_s_print __pyx_mstate_global->__pyx_n_s_print
 #define __pyx_n_s_print_percent __pyx_mstate_global->__pyx_n_s_print_percent
@@ -5213,6 +5333,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_reduce_ex __pyx_mstate_global->__pyx_n_s_reduce_ex
 #define __pyx_n_s_register __pyx_mstate_global->__pyx_n_s_register
 #define __pyx_n_s_return_dict __pyx_mstate_global->__pyx_n_s_return_dict
+#define __pyx_n_s_round __pyx_mstate_global->__pyx_n_s_round
 #define __pyx_n_s_sample __pyx_mstate_global->__pyx_n_s_sample
 #define __pyx_kp_s_scd50_w_dat __pyx_mstate_global->__pyx_kp_s_scd50_w_dat
 #define __pyx_n_s_scd_file __pyx_mstate_global->__pyx_n_s_scd_file
@@ -5253,6 +5374,13 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_update __pyx_mstate_global->__pyx_n_s_update
 #define __pyx_n_s_v_fact __pyx_mstate_global->__pyx_n_s_v_fact
 #define __pyx_n_s_values __pyx_mstate_global->__pyx_n_s_values
+#define __pyx_kp_s_var_count_qualifier __pyx_mstate_global->__pyx_kp_s_var_count_qualifier
+#define __pyx_n_s_var_count_qualifier_2 __pyx_mstate_global->__pyx_n_s_var_count_qualifier_2
+#define __pyx_n_s_var_red_part_count __pyx_mstate_global->__pyx_n_s_var_red_part_count
+#define __pyx_n_s_var_red_part_freq __pyx_mstate_global->__pyx_n_s_var_red_part_freq
+#define __pyx_n_s_var_reduction __pyx_mstate_global->__pyx_n_s_var_reduction
+#define __pyx_n_s_var_reduction_freq __pyx_mstate_global->__pyx_n_s_var_reduction_freq
+#define __pyx_n_s_var_reduction_min_weight __pyx_mstate_global->__pyx_n_s_var_reduction_min_weight
 #define __pyx_n_s_version_info __pyx_mstate_global->__pyx_n_s_version_info
 #define __pyx_n_s_viz __pyx_mstate_global->__pyx_n_s_viz
 #define __pyx_n_s_vti __pyx_mstate_global->__pyx_n_s_vti
@@ -5260,6 +5388,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_vx __pyx_mstate_global->__pyx_n_s_vx
 #define __pyx_n_s_vy __pyx_mstate_global->__pyx_n_s_vy
 #define __pyx_n_s_vz __pyx_mstate_global->__pyx_n_s_vz
+#define __pyx_n_s_weight __pyx_mstate_global->__pyx_n_s_weight
 #define __pyx_n_s_x __pyx_mstate_global->__pyx_n_s_x
 #define __pyx_n_s_x_bins __pyx_mstate_global->__pyx_n_s_x_bins
 #define __pyx_n_s_x_idx __pyx_mstate_global->__pyx_n_s_x_idx
@@ -5282,6 +5411,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_zstart_rans_fine __pyx_mstate_global->__pyx_n_s_zstart_rans_fine
 #define __pyx_n_s_zwidth __pyx_mstate_global->__pyx_n_s_zwidth
 #define __pyx_float_0_0 __pyx_mstate_global->__pyx_float_0_0
+#define __pyx_float_1_0 __pyx_mstate_global->__pyx_float_1_0
 #define __pyx_float_1_1 __pyx_mstate_global->__pyx_float_1_1
 #define __pyx_float_1_3 __pyx_mstate_global->__pyx_float_1_3
 #define __pyx_float_1e6 __pyx_mstate_global->__pyx_float_1e6
@@ -19126,7 +19256,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
 ) {
   PyObject *__pyx_v_input_opts = 0;
   PyObject *__pyx_v_gkyl_bkg = 0;
-  PyObject *__pyx_v_parallel = 0;
+  CYTHON_UNUSED PyObject *__pyx_v_parallel = 0;
   #if !CYTHON_METH_FASTCALL
   CYTHON_UNUSED Py_ssize_t __pyx_nargs;
   #endif
@@ -19235,7 +19365,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-/* "impurity_transport.pyx":220
+/* "impurity_transport.pyx":207
  *     oa, rate_df_rc, rate_df_iz = load_adas(input_opts)
  * 
  *     def create_interps(df, atom_num):             # <<<<<<<<<<<<<<
@@ -19299,7 +19429,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 220, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 207, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
         CYTHON_FALLTHROUGH;
         case  1:
@@ -19307,14 +19437,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[1]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 220, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 207, __pyx_L3_error)
         else {
-          __Pyx_RaiseArgtupleInvalid("create_interps", 1, 2, 2, 1); __PYX_ERR(0, 220, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("create_interps", 1, 2, 2, 1); __PYX_ERR(0, 207, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "create_interps") < 0)) __PYX_ERR(0, 220, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "create_interps") < 0)) __PYX_ERR(0, 207, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 2)) {
       goto __pyx_L5_argtuple_error;
@@ -19327,7 +19457,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("create_interps", 1, 2, 2, __pyx_nargs); __PYX_ERR(0, 220, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("create_interps", 1, 2, 2, __pyx_nargs); __PYX_ERR(0, 207, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -19377,36 +19507,36 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("create_interps", 1);
 
-  /* "impurity_transport.pyx":221
+  /* "impurity_transport.pyx":208
  * 
  *     def create_interps(df, atom_num):
  *         interps = []             # <<<<<<<<<<<<<<
  * 
  *         # Loop from 1 to atom_num+1 since the df is 1-indexed.
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 221, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 208, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_interps = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":224
+  /* "impurity_transport.pyx":211
  * 
  *         # Loop from 1 to atom_num+1 since the df is 1-indexed.
  *         for charge in range(1, atom_num+1):             # <<<<<<<<<<<<<<
  * 
  *             # Data is in log10, let's just make it normal units since
  */
-  __pyx_t_1 = __Pyx_PyInt_AddObjC(__pyx_v_atom_num, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_AddObjC(__pyx_v_atom_num, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 211, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 224, __pyx_L1_error)
+  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 211, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_int_1);
   __Pyx_GIVEREF(__pyx_int_1);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_int_1)) __PYX_ERR(0, 224, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_int_1)) __PYX_ERR(0, 211, __pyx_L1_error);
   __Pyx_GIVEREF(__pyx_t_1);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_1)) __PYX_ERR(0, 211, __pyx_L1_error);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_range, __pyx_t_2, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_range, __pyx_t_2, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 211, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   if (likely(PyList_CheckExact(__pyx_t_1)) || PyTuple_CheckExact(__pyx_t_1)) {
@@ -19414,9 +19544,9 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
     __pyx_t_3 = 0;
     __pyx_t_4 = NULL;
   } else {
-    __pyx_t_3 = -1; __pyx_t_2 = PyObject_GetIter(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 224, __pyx_L1_error)
+    __pyx_t_3 = -1; __pyx_t_2 = PyObject_GetIter(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 211, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_4 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 224, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 211, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   for (;;) {
@@ -19425,28 +19555,28 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
         {
           Py_ssize_t __pyx_temp = __Pyx_PyList_GET_SIZE(__pyx_t_2);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 224, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 211, __pyx_L1_error)
           #endif
           if (__pyx_t_3 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_1 = PyList_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely((0 < 0))) __PYX_ERR(0, 224, __pyx_L1_error)
+        __pyx_t_1 = PyList_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely((0 < 0))) __PYX_ERR(0, 211, __pyx_L1_error)
         #else
-        __pyx_t_1 = __Pyx_PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 211, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         #endif
       } else {
         {
           Py_ssize_t __pyx_temp = __Pyx_PyTuple_GET_SIZE(__pyx_t_2);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 224, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 211, __pyx_L1_error)
           #endif
           if (__pyx_t_3 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely((0 < 0))) __PYX_ERR(0, 224, __pyx_L1_error)
+        __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely((0 < 0))) __PYX_ERR(0, 211, __pyx_L1_error)
         #else
-        __pyx_t_1 = __Pyx_PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 211, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         #endif
       }
@@ -19456,7 +19586,7 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 224, __pyx_L1_error)
+          else __PYX_ERR(0, 211, __pyx_L1_error)
         }
         break;
       }
@@ -19465,21 +19595,21 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
     __Pyx_XDECREF_SET(__pyx_v_charge, __pyx_t_1);
     __pyx_t_1 = 0;
 
-    /* "impurity_transport.pyx":231
+    /* "impurity_transport.pyx":218
  *             #   ne: cm-3 --> m-3
  *             #   rates: cm3/s --> m3/s
  *             tes = np.power(10, df.columns.values)             # <<<<<<<<<<<<<<
  *             nes = np.power(10, df.loc[charge].index.values) * 1e6
  *             rates = np.power(10, df.loc[charge].values).T * 1e-6
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 231, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 218, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_power); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 231, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_power); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 218, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_df, __pyx_n_s_columns); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 231, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_df, __pyx_n_s_columns); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 218, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_values); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 231, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_values); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 218, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_5 = NULL;
@@ -19501,34 +19631,34 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
       __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_6, __pyx_callargs+1-__pyx_t_8, 2+__pyx_t_8);
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 231, __pyx_L1_error)
+      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 218, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     }
     __Pyx_XDECREF_SET(__pyx_v_tes, __pyx_t_1);
     __pyx_t_1 = 0;
 
-    /* "impurity_transport.pyx":232
+    /* "impurity_transport.pyx":219
  *             #   rates: cm3/s --> m3/s
  *             tes = np.power(10, df.columns.values)
  *             nes = np.power(10, df.loc[charge].index.values) * 1e6             # <<<<<<<<<<<<<<
  *             rates = np.power(10, df.loc[charge].values).T * 1e-6
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_np); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 232, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_np); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_power); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 232, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_power); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_df, __pyx_n_s_loc); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 232, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_df, __pyx_n_s_loc); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_5 = __Pyx_PyObject_GetItem(__pyx_t_6, __pyx_v_charge); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 232, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetItem(__pyx_t_6, __pyx_v_charge); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_index); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 232, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_index); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_values); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 232, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_values); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __pyx_t_6 = NULL;
@@ -19550,34 +19680,34 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
       __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_7, __pyx_callargs+1-__pyx_t_8, 2+__pyx_t_8);
       __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 232, __pyx_L1_error)
+      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 219, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     }
-    __pyx_t_7 = PyNumber_Multiply(__pyx_t_1, __pyx_float_1e6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 232, __pyx_L1_error)
+    __pyx_t_7 = PyNumber_Multiply(__pyx_t_1, __pyx_float_1e6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_XDECREF_SET(__pyx_v_nes, __pyx_t_7);
     __pyx_t_7 = 0;
 
-    /* "impurity_transport.pyx":233
+    /* "impurity_transport.pyx":220
  *             tes = np.power(10, df.columns.values)
  *             nes = np.power(10, df.loc[charge].index.values) * 1e6
  *             rates = np.power(10, df.loc[charge].values).T * 1e-6             # <<<<<<<<<<<<<<
  * 
  *             # RegularGridInterpolater is recommended for our case.
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 233, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_power); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 233, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_power); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_df, __pyx_n_s_loc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 233, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_df, __pyx_n_s_loc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_t_1, __pyx_v_charge); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 233, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_t_1, __pyx_v_charge); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_values); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 233, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_values); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __pyx_t_6 = NULL;
@@ -19599,65 +19729,65 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
       __pyx_t_7 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_8, 2+__pyx_t_8);
       __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 233, __pyx_L1_error)
+      if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 220, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     }
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_T); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 233, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_T); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_7 = PyNumber_Multiply(__pyx_t_5, __pyx_float_1eneg_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 233, __pyx_L1_error)
+    __pyx_t_7 = PyNumber_Multiply(__pyx_t_5, __pyx_float_1eneg_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_XDECREF_SET(__pyx_v_rates, __pyx_t_7);
     __pyx_t_7 = 0;
 
-    /* "impurity_transport.pyx":236
+    /* "impurity_transport.pyx":223
  * 
  *             # RegularGridInterpolater is recommended for our case.
  *             interp = RegularGridInterpolator((tes, nes), rates,             # <<<<<<<<<<<<<<
  *                 bounds_error=False, fill_value=None)
  *             interps.append(interp)
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_RegularGridInterpolator); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 236, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_RegularGridInterpolator); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 223, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_5 = PyTuple_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 236, __pyx_L1_error)
+    __pyx_t_5 = PyTuple_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 223, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_INCREF(__pyx_v_tes);
     __Pyx_GIVEREF(__pyx_v_tes);
-    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_v_tes)) __PYX_ERR(0, 236, __pyx_L1_error);
+    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_v_tes)) __PYX_ERR(0, 223, __pyx_L1_error);
     __Pyx_INCREF(__pyx_v_nes);
     __Pyx_GIVEREF(__pyx_v_nes);
-    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_5, 1, __pyx_v_nes)) __PYX_ERR(0, 236, __pyx_L1_error);
-    __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 236, __pyx_L1_error)
+    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_5, 1, __pyx_v_nes)) __PYX_ERR(0, 223, __pyx_L1_error);
+    __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 223, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_GIVEREF(__pyx_t_5);
-    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_5)) __PYX_ERR(0, 236, __pyx_L1_error);
+    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_5)) __PYX_ERR(0, 223, __pyx_L1_error);
     __Pyx_INCREF(__pyx_v_rates);
     __Pyx_GIVEREF(__pyx_v_rates);
-    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_v_rates)) __PYX_ERR(0, 236, __pyx_L1_error);
+    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_v_rates)) __PYX_ERR(0, 223, __pyx_L1_error);
     __pyx_t_5 = 0;
 
-    /* "impurity_transport.pyx":237
+    /* "impurity_transport.pyx":224
  *             # RegularGridInterpolater is recommended for our case.
  *             interp = RegularGridInterpolator((tes, nes), rates,
  *                 bounds_error=False, fill_value=None)             # <<<<<<<<<<<<<<
  *             interps.append(interp)
  * 
  */
-    __pyx_t_5 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 237, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 224, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_bounds_error, Py_False) < 0) __PYX_ERR(0, 237, __pyx_L1_error)
-    if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_fill_value, Py_None) < 0) __PYX_ERR(0, 237, __pyx_L1_error)
+    if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_bounds_error, Py_False) < 0) __PYX_ERR(0, 224, __pyx_L1_error)
+    if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_fill_value, Py_None) < 0) __PYX_ERR(0, 224, __pyx_L1_error)
 
-    /* "impurity_transport.pyx":236
+    /* "impurity_transport.pyx":223
  * 
  *             # RegularGridInterpolater is recommended for our case.
  *             interp = RegularGridInterpolator((tes, nes), rates,             # <<<<<<<<<<<<<<
  *                 bounds_error=False, fill_value=None)
  *             interps.append(interp)
  */
-    __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_1, __pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 236, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_1, __pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 223, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -19665,16 +19795,16 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
     __Pyx_XDECREF_SET(__pyx_v_interp, __pyx_t_6);
     __pyx_t_6 = 0;
 
-    /* "impurity_transport.pyx":238
+    /* "impurity_transport.pyx":225
  *             interp = RegularGridInterpolator((tes, nes), rates,
  *                 bounds_error=False, fill_value=None)
  *             interps.append(interp)             # <<<<<<<<<<<<<<
  * 
  *         return interps
  */
-    __pyx_t_9 = __Pyx_PyList_Append(__pyx_v_interps, __pyx_v_interp); if (unlikely(__pyx_t_9 == ((int)-1))) __PYX_ERR(0, 238, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyList_Append(__pyx_v_interps, __pyx_v_interp); if (unlikely(__pyx_t_9 == ((int)-1))) __PYX_ERR(0, 225, __pyx_L1_error)
 
-    /* "impurity_transport.pyx":224
+    /* "impurity_transport.pyx":211
  * 
  *         # Loop from 1 to atom_num+1 since the df is 1-indexed.
  *         for charge in range(1, atom_num+1):             # <<<<<<<<<<<<<<
@@ -19684,19 +19814,19 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "impurity_transport.pyx":240
+  /* "impurity_transport.pyx":227
  *             interps.append(interp)
  * 
  *         return interps             # <<<<<<<<<<<<<<
  * 
- *     # Remember, these lists are 0-index, so for a specific charge number
+ *     # Remember, these lists are 0-indexed, so for a specific charge number
  */
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(__pyx_v_interps);
   __pyx_r = __pyx_v_interps;
   goto __pyx_L0;
 
-  /* "impurity_transport.pyx":220
+  /* "impurity_transport.pyx":207
  *     oa, rate_df_rc, rate_df_iz = load_adas(input_opts)
  * 
  *     def create_interps(df, atom_num):             # <<<<<<<<<<<<<<
@@ -19733,7 +19863,7 @@ static PyObject *__pyx_pf_18impurity_transport_17follow_impurities_create_interp
  *     This function contains the primary impurity ion following routine.
  */
 
-static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_input_opts, PyObject *__pyx_v_gkyl_bkg, PyObject *__pyx_v_parallel) {
+static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_input_opts, PyObject *__pyx_v_gkyl_bkg, CYTHON_UNUSED PyObject *__pyx_v_parallel) {
   int __pyx_v_i;
   int __pyx_v_j;
   int __pyx_v_imp_zstart_int;
@@ -19747,6 +19877,10 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   int __pyx_v_iz_warn_count;
   int __pyx_v_rc_warn_count;
   int __pyx_v_coll_count;
+  int __pyx_v_var_count_qualifier;
+  int __pyx_v_num_add_imps;
+  int __pyx_v_coll_warn_count;
+  int __pyx_v_charge;
   float __pyx_v_x;
   float __pyx_v_y;
   float __pyx_v_z;
@@ -19789,6 +19923,9 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   int __pyx_v_coll_forces;
   int __pyx_v_collisions;
   int __pyx_v_imp_xyz_tracks;
+  int __pyx_v_var_reduction;
+  float __pyx_v_var_reduction_freq;
+  float __pyx_v_var_reduction_min_weight;
   PyObject *__pyx_v_xwidth = NULL;
   CYTHON_UNUSED PyObject *__pyx_v_x_bins = NULL;
   PyObject *__pyx_v_ywidth = NULL;
@@ -19850,11 +19987,14 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   CYTHON_UNUSED PyObject *__pyx_v_xyz_lists_x = NULL;
   CYTHON_UNUSED PyObject *__pyx_v_xyz_lists_y = NULL;
   CYTHON_UNUSED PyObject *__pyx_v_xyz_lists_z = NULL;
+  int __pyx_v_var_red_part_freq;
+  int __pyx_v_var_red_part_count;
   PyObject *__pyx_v_stat_dict = NULL;
   PyObject *__pyx_v_imp_foll_tstart = NULL;
   PyObject *__pyx_v_imp = NULL;
-  PyObject *__pyx_v_coll_freq = NULL;
-  PyObject *__pyx_v_coll_prob = NULL;
+  PyObject *__pyx_v_additional_imps = NULL;
+  float __pyx_v_coll_freq;
+  float __pyx_v_coll_prob;
   PyObject *__pyx_v_imp_foll_tend = NULL;
   PyObject *__pyx_v_cpu_time_used = NULL;
   PyObject *__pyx_v_imp_dens_arr = NULL;
@@ -19905,19 +20045,20 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   int __pyx_t_36;
   float __pyx_t_37;
   Py_ssize_t __pyx_t_38;
-  Py_ssize_t __pyx_t_39;
+  PyObject *__pyx_t_39 = NULL;
   PyObject *__pyx_t_40 = NULL;
   PyObject *__pyx_t_41 = NULL;
   PyObject *__pyx_t_42 = NULL;
   PyObject *__pyx_t_43 = NULL;
   PyObject *__pyx_t_44 = NULL;
   PyObject *__pyx_t_45 = NULL;
+  PyObject *__pyx_t_46 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("follow_impurities", 1);
 
-  /* "impurity_transport.pyx":47
+  /* "impurity_transport.pyx":50
  *     cdef float local_dtidx, local_dtidy, local_dtidz, local_viz
  *     cdef float local_stop_time, fstart_fl, fend_fl
  *     cdef bint coll_occured = 0             # <<<<<<<<<<<<<<
@@ -19926,200 +20067,239 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   __pyx_v_coll_occured = 0;
 
-  /* "impurity_transport.pyx":50
+  /* "impurity_transport.pyx":53
  * 
  *     # Extract input options for simulation as C++ types.
  *     cdef float imp_amu = input_opts["imp_mass"]             # <<<<<<<<<<<<<<
  *     cdef float imp_mass = input_opts["imp_mass"] * constants.amu
  *     cdef float imp_init_charge = input_opts["imp_init_charge"]
  */
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 50, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_imp_amu = __pyx_t_2;
 
-  /* "impurity_transport.pyx":51
+  /* "impurity_transport.pyx":54
  *     # Extract input options for simulation as C++ types.
  *     cdef float imp_amu = input_opts["imp_mass"]
  *     cdef float imp_mass = input_opts["imp_mass"] * constants.amu             # <<<<<<<<<<<<<<
  *     cdef float imp_init_charge = input_opts["imp_init_charge"]
  *     cdef int num_imps = input_opts["num_imps"]
  */
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_constants); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_constants); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_amu); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_amu); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = PyNumber_Multiply(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_3 = PyNumber_Multiply(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_imp_mass = __pyx_t_2;
 
-  /* "impurity_transport.pyx":52
+  /* "impurity_transport.pyx":55
  *     cdef float imp_amu = input_opts["imp_mass"]
  *     cdef float imp_mass = input_opts["imp_mass"] * constants.amu
  *     cdef float imp_init_charge = input_opts["imp_init_charge"]             # <<<<<<<<<<<<<<
  *     cdef int num_imps = input_opts["num_imps"]
  *     cdef float imp_xmin = input_opts["imp_xmin"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_init_charge); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 52, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_init_charge); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 52, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_imp_init_charge = __pyx_t_2;
 
-  /* "impurity_transport.pyx":53
+  /* "impurity_transport.pyx":56
  *     cdef float imp_mass = input_opts["imp_mass"] * constants.amu
  *     cdef float imp_init_charge = input_opts["imp_init_charge"]
  *     cdef int num_imps = input_opts["num_imps"]             # <<<<<<<<<<<<<<
  *     cdef float imp_xmin = input_opts["imp_xmin"]
  *     cdef float imp_xmax = input_opts["imp_xmax"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_num_imps); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 53, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_num_imps); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 53, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_num_imps = __pyx_t_5;
 
-  /* "impurity_transport.pyx":54
+  /* "impurity_transport.pyx":57
  *     cdef float imp_init_charge = input_opts["imp_init_charge"]
  *     cdef int num_imps = input_opts["num_imps"]
  *     cdef float imp_xmin = input_opts["imp_xmin"]             # <<<<<<<<<<<<<<
  *     cdef float imp_xmax = input_opts["imp_xmax"]
  *     cdef int gkyl_fstart = input_opts["gkyl_fstart"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_xmin); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_xmin); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 57, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 57, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_imp_xmin = __pyx_t_2;
 
-  /* "impurity_transport.pyx":55
+  /* "impurity_transport.pyx":58
  *     cdef int num_imps = input_opts["num_imps"]
  *     cdef float imp_xmin = input_opts["imp_xmin"]
  *     cdef float imp_xmax = input_opts["imp_xmax"]             # <<<<<<<<<<<<<<
  *     cdef int gkyl_fstart = input_opts["gkyl_fstart"]
  *     cdef int gkyl_fend = input_opts["gkyl_fend"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_xmax); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 55, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_xmax); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 58, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 55, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 58, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_imp_xmax = __pyx_t_2;
 
-  /* "impurity_transport.pyx":56
+  /* "impurity_transport.pyx":59
  *     cdef float imp_xmin = input_opts["imp_xmin"]
  *     cdef float imp_xmax = input_opts["imp_xmax"]
  *     cdef int gkyl_fstart = input_opts["gkyl_fstart"]             # <<<<<<<<<<<<<<
  *     cdef int gkyl_fend = input_opts["gkyl_fend"]
  *     cdef int imp_atom_num = input_opts["imp_atom_num"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_gkyl_fstart); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 56, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_gkyl_fstart); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 56, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_gkyl_fstart = __pyx_t_5;
 
-  /* "impurity_transport.pyx":57
+  /* "impurity_transport.pyx":60
  *     cdef float imp_xmax = input_opts["imp_xmax"]
  *     cdef int gkyl_fstart = input_opts["gkyl_fstart"]
  *     cdef int gkyl_fend = input_opts["gkyl_fend"]             # <<<<<<<<<<<<<<
  *     cdef int imp_atom_num = input_opts["imp_atom_num"]
  *     cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_gkyl_fend); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 57, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_gkyl_fend); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 57, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_gkyl_fend = __pyx_t_5;
 
-  /* "impurity_transport.pyx":58
+  /* "impurity_transport.pyx":61
  *     cdef int gkyl_fstart = input_opts["gkyl_fstart"]
  *     cdef int gkyl_fend = input_opts["gkyl_fend"]
  *     cdef int imp_atom_num = input_opts["imp_atom_num"]             # <<<<<<<<<<<<<<
  *     cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]
  *     cdef float imp_zstart_val = input_opts["imp_zstart_val"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_atom_num); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 58, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_atom_num); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 61, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 58, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 61, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_imp_atom_num = __pyx_t_5;
 
-  /* "impurity_transport.pyx":59
+  /* "impurity_transport.pyx":62
  *     cdef int gkyl_fend = input_opts["gkyl_fend"]
  *     cdef int imp_atom_num = input_opts["imp_atom_num"]
  *     cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]             # <<<<<<<<<<<<<<
  *     cdef float imp_zstart_val = input_opts["imp_zstart_val"]
  *     cdef bint coll_forces = input_opts["coll_forces"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_scaling_fact); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_scaling_fact); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 62, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 62, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_imp_scaling_fact = __pyx_t_2;
 
-  /* "impurity_transport.pyx":60
+  /* "impurity_transport.pyx":63
  *     cdef int imp_atom_num = input_opts["imp_atom_num"]
  *     cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]
  *     cdef float imp_zstart_val = input_opts["imp_zstart_val"]             # <<<<<<<<<<<<<<
  *     cdef bint coll_forces = input_opts["coll_forces"]
  *     cdef bint collisions = input_opts["collisions"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_zstart_val); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 60, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_zstart_val); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 63, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 60, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 63, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_imp_zstart_val = __pyx_t_2;
 
-  /* "impurity_transport.pyx":61
+  /* "impurity_transport.pyx":64
  *     cdef float imp_scaling_fact = input_opts["imp_scaling_fact"]
  *     cdef float imp_zstart_val = input_opts["imp_zstart_val"]
  *     cdef bint coll_forces = input_opts["coll_forces"]             # <<<<<<<<<<<<<<
  *     cdef bint collisions = input_opts["collisions"]
  *     cdef bint imp_xyz_tracks = input_opts["imp_xyz_tracks"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_coll_forces); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 61, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_coll_forces); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 64, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 61, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 64, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_coll_forces = __pyx_t_6;
 
-  /* "impurity_transport.pyx":62
+  /* "impurity_transport.pyx":65
  *     cdef float imp_zstart_val = input_opts["imp_zstart_val"]
  *     cdef bint coll_forces = input_opts["coll_forces"]
  *     cdef bint collisions = input_opts["collisions"]             # <<<<<<<<<<<<<<
  *     cdef bint imp_xyz_tracks = input_opts["imp_xyz_tracks"]
- * 
+ *     cdef bint var_reduction = input_opts["var_reduction"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_collisions); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 62, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_collisions); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 65, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 62, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 65, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_collisions = __pyx_t_6;
 
-  /* "impurity_transport.pyx":63
+  /* "impurity_transport.pyx":66
  *     cdef bint coll_forces = input_opts["coll_forces"]
  *     cdef bint collisions = input_opts["collisions"]
  *     cdef bint imp_xyz_tracks = input_opts["imp_xyz_tracks"]             # <<<<<<<<<<<<<<
- * 
- *     # If we interpolated frames the end frame for our context will be
+ *     cdef bint var_reduction = input_opts["var_reduction"]
+ *     cdef float var_reduction_freq = input_opts["var_reduction_freq"]
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_xyz_tracks); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 63, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_xyz_tracks); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 66, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 63, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 66, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_imp_xyz_tracks = __pyx_t_6;
 
-  /* "impurity_transport.pyx":74
+  /* "impurity_transport.pyx":67
+ *     cdef bint collisions = input_opts["collisions"]
+ *     cdef bint imp_xyz_tracks = input_opts["imp_xyz_tracks"]
+ *     cdef bint var_reduction = input_opts["var_reduction"]             # <<<<<<<<<<<<<<
+ *     cdef float var_reduction_freq = input_opts["var_reduction_freq"]
+ *     cdef float var_reduction_min_weight = input_opts["var_reduction_min_weight"]
+ */
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_var_reduction); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 67, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 67, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __pyx_v_var_reduction = __pyx_t_6;
+
+  /* "impurity_transport.pyx":68
+ *     cdef bint imp_xyz_tracks = input_opts["imp_xyz_tracks"]
+ *     cdef bint var_reduction = input_opts["var_reduction"]
+ *     cdef float var_reduction_freq = input_opts["var_reduction_freq"]             # <<<<<<<<<<<<<<
+ *     cdef float var_reduction_min_weight = input_opts["var_reduction_min_weight"]
+ * 
+ */
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_var_reduction_freq); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 68, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 68, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __pyx_v_var_reduction_freq = __pyx_t_2;
+
+  /* "impurity_transport.pyx":69
+ *     cdef bint var_reduction = input_opts["var_reduction"]
+ *     cdef float var_reduction_freq = input_opts["var_reduction_freq"]
+ *     cdef float var_reduction_min_weight = input_opts["var_reduction_min_weight"]             # <<<<<<<<<<<<<<
+ * 
  *     # Check the both collisional forces and fully kinetic collisions are not
- *     # both on. In theory the latter captures the other.
+ */
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_var_reduction_min_weight); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 69, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 69, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __pyx_v_var_reduction_min_weight = __pyx_t_2;
+
+  /* "impurity_transport.pyx":75
+ *     # remove anything with coll_forces since it is a (probably bad)
+ *     # approximation.
  *     if coll_forces and collisions:             # <<<<<<<<<<<<<<
  *         print("Error! coll_forces and collisions cannot both be on. Choose one")
  *         sys.exit()
@@ -20133,27 +20313,27 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_6) {
 
-    /* "impurity_transport.pyx":75
- *     # both on. In theory the latter captures the other.
+    /* "impurity_transport.pyx":76
+ *     # approximation.
  *     if coll_forces and collisions:
  *         print("Error! coll_forces and collisions cannot both be on. Choose one")             # <<<<<<<<<<<<<<
  *         sys.exit()
  * 
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 75, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 76, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "impurity_transport.pyx":76
+    /* "impurity_transport.pyx":77
  *     if coll_forces and collisions:
  *         print("Error! coll_forces and collisions cannot both be on. Choose one")
  *         sys.exit()             # <<<<<<<<<<<<<<
  * 
  *     # The gkeyll coordinates are the cell centers, but we want to know the
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_sys); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 76, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_sys); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 77, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_exit); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 76, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_exit); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 77, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_t_4 = NULL;
@@ -20174,84 +20354,84 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       PyObject *__pyx_callargs[2] = {__pyx_t_4, NULL};
       __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 76, __pyx_L1_error)
+      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 77, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     }
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "impurity_transport.pyx":74
- *     # Check the both collisional forces and fully kinetic collisions are not
- *     # both on. In theory the latter captures the other.
+    /* "impurity_transport.pyx":75
+ *     # remove anything with coll_forces since it is a (probably bad)
+ *     # approximation.
  *     if coll_forces and collisions:             # <<<<<<<<<<<<<<
  *         print("Error! coll_forces and collisions cannot both be on. Choose one")
  *         sys.exit()
  */
   }
 
-  /* "impurity_transport.pyx":80
+  /* "impurity_transport.pyx":81
  *     # The gkeyll coordinates are the cell centers, but we want to know the
  *     # edges of each cells for our purposes.
  *     xwidth = (gkyl_bkg["x"][1] - gkyl_bkg["x"][0])             # <<<<<<<<<<<<<<
  *     x_bins = np.arange(gkyl_bkg["x"][0] - xwidth / 2,
  *         gkyl_bkg["x"][-1] + xwidth / 2, xwidth)
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_GetItemInt(__pyx_t_3, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetItemInt(__pyx_t_3, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_3, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_3, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = PyNumber_Subtract(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_3 = PyNumber_Subtract(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_xwidth = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":81
+  /* "impurity_transport.pyx":82
  *     # edges of each cells for our purposes.
  *     xwidth = (gkyl_bkg["x"][1] - gkyl_bkg["x"][0])
  *     x_bins = np.arange(gkyl_bkg["x"][0] - xwidth / 2,             # <<<<<<<<<<<<<<
  *         gkyl_bkg["x"][-1] + xwidth / 2, xwidth)
  *     ywidth = (gkyl_bkg["y"][1] - gkyl_bkg["y"][0])
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_arange); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_arange); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_4, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_4, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_xwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_xwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_8 = PyNumber_Subtract(__pyx_t_7, __pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_8 = PyNumber_Subtract(__pyx_t_7, __pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":82
+  /* "impurity_transport.pyx":83
  *     xwidth = (gkyl_bkg["x"][1] - gkyl_bkg["x"][0])
  *     x_bins = np.arange(gkyl_bkg["x"][0] - xwidth / 2,
  *         gkyl_bkg["x"][-1] + xwidth / 2, xwidth)             # <<<<<<<<<<<<<<
  *     ywidth = (gkyl_bkg["y"][1] - gkyl_bkg["y"][0])
  *     y_bins = np.arange(gkyl_bkg["y"][0] - ywidth / 2,
  */
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_4, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_4, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_xwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_xwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_9 = PyNumber_Add(__pyx_t_7, __pyx_t_4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_9 = PyNumber_Add(__pyx_t_7, __pyx_t_4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -20275,76 +20455,76 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 81, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 82, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
   __pyx_v_x_bins = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":83
+  /* "impurity_transport.pyx":84
  *     x_bins = np.arange(gkyl_bkg["x"][0] - xwidth / 2,
  *         gkyl_bkg["x"][-1] + xwidth / 2, xwidth)
  *     ywidth = (gkyl_bkg["y"][1] - gkyl_bkg["y"][0])             # <<<<<<<<<<<<<<
  *     y_bins = np.arange(gkyl_bkg["y"][0] - ywidth / 2,
  *         gkyl_bkg["y"][-1] + ywidth / 2, ywidth)
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 83, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_GetItemInt(__pyx_t_3, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 83, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetItemInt(__pyx_t_3, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 83, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_9 = __Pyx_GetItemInt(__pyx_t_3, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 83, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_GetItemInt(__pyx_t_3, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = PyNumber_Subtract(__pyx_t_1, __pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 83, __pyx_L1_error)
+  __pyx_t_3 = PyNumber_Subtract(__pyx_t_1, __pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_v_ywidth = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":84
+  /* "impurity_transport.pyx":85
  *         gkyl_bkg["x"][-1] + xwidth / 2, xwidth)
  *     ywidth = (gkyl_bkg["y"][1] - gkyl_bkg["y"][0])
  *     y_bins = np.arange(gkyl_bkg["y"][0] - ywidth / 2,             # <<<<<<<<<<<<<<
  *         gkyl_bkg["y"][-1] + ywidth / 2, ywidth)
  *     zwidth = (gkyl_bkg["z"][1] - gkyl_bkg["z"][0])
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 84, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 85, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_arange); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_arange); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 85, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 85, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_9, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_9, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 85, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_9 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_ywidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_ywidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 85, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_4 = PyNumber_Subtract(__pyx_t_8, __pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_Subtract(__pyx_t_8, __pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 85, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":85
+  /* "impurity_transport.pyx":86
  *     ywidth = (gkyl_bkg["y"][1] - gkyl_bkg["y"][0])
  *     y_bins = np.arange(gkyl_bkg["y"][0] - ywidth / 2,
  *         gkyl_bkg["y"][-1] + ywidth / 2, ywidth)             # <<<<<<<<<<<<<<
  *     zwidth = (gkyl_bkg["z"][1] - gkyl_bkg["z"][0])
  *     z_bins = np.arange(gkyl_bkg["z"][0] - zwidth / 2,
  */
-  __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 85, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 86, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_9, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 85, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_9, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 86, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_9 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_ywidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 85, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_ywidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 86, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_7 = PyNumber_Add(__pyx_t_8, __pyx_t_9); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 85, __pyx_L1_error)
+  __pyx_t_7 = PyNumber_Add(__pyx_t_8, __pyx_t_9); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 86, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
@@ -20368,76 +20548,76 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 84, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 85, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
   __pyx_v_y_bins = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":86
+  /* "impurity_transport.pyx":87
  *     y_bins = np.arange(gkyl_bkg["y"][0] - ywidth / 2,
  *         gkyl_bkg["y"][-1] + ywidth / 2, ywidth)
  *     zwidth = (gkyl_bkg["z"][1] - gkyl_bkg["z"][0])             # <<<<<<<<<<<<<<
  *     z_bins = np.arange(gkyl_bkg["z"][0] - zwidth / 2,
  *         gkyl_bkg["z"][-1] + zwidth / 2, zwidth)
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 86, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 87, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_GetItemInt(__pyx_t_3, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 86, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetItemInt(__pyx_t_3, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 86, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 87, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_3, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 86, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_3, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 87, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = PyNumber_Subtract(__pyx_t_1, __pyx_t_7); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 86, __pyx_L1_error)
+  __pyx_t_3 = PyNumber_Subtract(__pyx_t_1, __pyx_t_7); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 87, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_v_zwidth = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":87
+  /* "impurity_transport.pyx":88
  *         gkyl_bkg["y"][-1] + ywidth / 2, ywidth)
  *     zwidth = (gkyl_bkg["z"][1] - gkyl_bkg["z"][0])
  *     z_bins = np.arange(gkyl_bkg["z"][0] - zwidth / 2,             # <<<<<<<<<<<<<<
  *         gkyl_bkg["z"][-1] + zwidth / 2, zwidth)
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_arange); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_arange); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __pyx_t_7 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 87, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_7, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 87, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __pyx_t_7 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_zwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 87, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_9 = PyNumber_Subtract(__pyx_t_4, __pyx_t_7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 87, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-
-  /* "impurity_transport.pyx":88
- *     zwidth = (gkyl_bkg["z"][1] - gkyl_bkg["z"][0])
- *     z_bins = np.arange(gkyl_bkg["z"][0] - zwidth / 2,
- *         gkyl_bkg["z"][-1] + zwidth / 2, zwidth)             # <<<<<<<<<<<<<<
- * 
- * 
- */
   __pyx_t_7 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_7, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 88, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_7, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_t_7 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_zwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_8 = PyNumber_Add(__pyx_t_4, __pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 88, __pyx_L1_error)
+  __pyx_t_9 = PyNumber_Subtract(__pyx_t_4, __pyx_t_7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 88, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+
+  /* "impurity_transport.pyx":89
+ *     zwidth = (gkyl_bkg["z"][1] - gkyl_bkg["z"][0])
+ *     z_bins = np.arange(gkyl_bkg["z"][0] - zwidth / 2,
+ *         gkyl_bkg["z"][-1] + zwidth / 2, zwidth)             # <<<<<<<<<<<<<<
+ * 
+ *     # Convert the imp_zstart option into an integer - just easier.
+ */
+  __pyx_t_7 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 89, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_7);
+  __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_7, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 89, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+  __pyx_t_7 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_zwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 89, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_7);
+  __pyx_t_8 = PyNumber_Add(__pyx_t_4, __pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 89, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -20461,7 +20641,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 87, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 88, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
@@ -20470,37 +20650,37 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
 
   /* "impurity_transport.pyx":92
  * 
- *     # Other options where it isn't a big deal if they aren't C types.
- *     imp_zstart_opt = input_opts["imp_zstart_opt"]             # <<<<<<<<<<<<<<
- *     imp_zstart_int = 0
- * 
+ *     # Convert the imp_zstart option into an integer - just easier.
+ *     imp_zstart_int = 0             # <<<<<<<<<<<<<<
+ *     imp_zstart_opt = input_opts["imp_zstart_opt"]
+ *     if imp_zstart_opt == "proportional_to_ni":
  */
-  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_zstart_opt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 92, __pyx_L1_error)
+  __pyx_v_imp_zstart_int = 0;
+
+  /* "impurity_transport.pyx":93
+ *     # Convert the imp_zstart option into an integer - just easier.
+ *     imp_zstart_int = 0
+ *     imp_zstart_opt = input_opts["imp_zstart_opt"]             # <<<<<<<<<<<<<<
+ *     if imp_zstart_opt == "proportional_to_ni":
+ *         imp_zstart_int = 1
+ */
+  __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_zstart_opt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 93, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_v_imp_zstart_opt = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":93
- *     # Other options where it isn't a big deal if they aren't C types.
+  /* "impurity_transport.pyx":94
+ *     imp_zstart_int = 0
  *     imp_zstart_opt = input_opts["imp_zstart_opt"]
- *     imp_zstart_int = 0             # <<<<<<<<<<<<<<
- * 
- *     # Convert the imp_zstart option into an integer - just easier.
- */
-  __pyx_v_imp_zstart_int = 0;
-
-  /* "impurity_transport.pyx":96
- * 
- *     # Convert the imp_zstart option into an integer - just easier.
  *     if imp_zstart_opt == "proportional_to_ni":             # <<<<<<<<<<<<<<
  *         imp_zstart_int = 1
  * 
  */
-  __pyx_t_6 = (__Pyx_PyString_Equals(__pyx_v_imp_zstart_opt, __pyx_n_s_proportional_to_ni, Py_EQ)); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 96, __pyx_L1_error)
+  __pyx_t_6 = (__Pyx_PyString_Equals(__pyx_v_imp_zstart_opt, __pyx_n_s_proportional_to_ni, Py_EQ)); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 94, __pyx_L1_error)
   if (__pyx_t_6) {
 
-    /* "impurity_transport.pyx":97
- *     # Convert the imp_zstart option into an integer - just easier.
+    /* "impurity_transport.pyx":95
+ *     imp_zstart_opt = input_opts["imp_zstart_opt"]
  *     if imp_zstart_opt == "proportional_to_ni":
  *         imp_zstart_int = 1             # <<<<<<<<<<<<<<
  * 
@@ -20508,21 +20688,21 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
     __pyx_v_imp_zstart_int = 1;
 
-    /* "impurity_transport.pyx":112
- * 
- *         # Do it for each frame.
+    /* "impurity_transport.pyx":102
+ *         # PDF along the z direction for each x,y coordinate, and then
+ *         # using cumsum to convert it to a CDF. Do it for each frame.
  *         zstart_cdf = np.zeros(gkyl_bkg["ni"].shape)             # <<<<<<<<<<<<<<
  *         for f in range(zstart_cdf.shape[0]):
  *             for i in range(zstart_cdf.shape[1]):
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 112, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 102, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 112, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 102, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 112, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 102, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_shape); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 112, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_shape); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 102, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_1 = NULL;
@@ -20544,134 +20724,134 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 112, __pyx_L1_error)
+      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 102, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
     __pyx_v_zstart_cdf = __pyx_t_3;
     __pyx_t_3 = 0;
 
-    /* "impurity_transport.pyx":113
- *         # Do it for each frame.
+    /* "impurity_transport.pyx":103
+ *         # using cumsum to convert it to a CDF. Do it for each frame.
  *         zstart_cdf = np.zeros(gkyl_bkg["ni"].shape)
  *         for f in range(zstart_cdf.shape[0]):             # <<<<<<<<<<<<<<
  *             for i in range(zstart_cdf.shape[1]):
  *                 for j in range(zstart_cdf.shape[2]):
  */
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_zstart_cdf, __pyx_n_s_shape); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 113, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_zstart_cdf, __pyx_n_s_shape); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 103, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_3, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 113, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_3, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 103, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_10 = __Pyx_PyInt_As_long(__pyx_t_8); if (unlikely((__pyx_t_10 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 113, __pyx_L1_error)
+    __pyx_t_10 = __Pyx_PyInt_As_long(__pyx_t_8); if (unlikely((__pyx_t_10 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 103, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __pyx_t_11 = __pyx_t_10;
     for (__pyx_t_5 = 0; __pyx_t_5 < __pyx_t_11; __pyx_t_5+=1) {
       __pyx_v_f = __pyx_t_5;
 
-      /* "impurity_transport.pyx":114
+      /* "impurity_transport.pyx":104
  *         zstart_cdf = np.zeros(gkyl_bkg["ni"].shape)
  *         for f in range(zstart_cdf.shape[0]):
  *             for i in range(zstart_cdf.shape[1]):             # <<<<<<<<<<<<<<
  *                 for j in range(zstart_cdf.shape[2]):
  *                     zstart_cdf[f,i,j] = np.cumsum(gkyl_bkg["ni"][f,i,j] /
  */
-      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_zstart_cdf, __pyx_n_s_shape); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 114, __pyx_L1_error)
+      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_zstart_cdf, __pyx_n_s_shape); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 104, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_3 = __Pyx_GetItemInt(__pyx_t_8, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 114, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_GetItemInt(__pyx_t_8, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 104, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      __pyx_t_12 = __Pyx_PyInt_As_long(__pyx_t_3); if (unlikely((__pyx_t_12 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 114, __pyx_L1_error)
+      __pyx_t_12 = __Pyx_PyInt_As_long(__pyx_t_3); if (unlikely((__pyx_t_12 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 104, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __pyx_t_13 = __pyx_t_12;
       for (__pyx_t_14 = 0; __pyx_t_14 < __pyx_t_13; __pyx_t_14+=1) {
         __pyx_v_i = __pyx_t_14;
 
-        /* "impurity_transport.pyx":115
+        /* "impurity_transport.pyx":105
  *         for f in range(zstart_cdf.shape[0]):
  *             for i in range(zstart_cdf.shape[1]):
  *                 for j in range(zstart_cdf.shape[2]):             # <<<<<<<<<<<<<<
  *                     zstart_cdf[f,i,j] = np.cumsum(gkyl_bkg["ni"][f,i,j] /
  *                         gkyl_bkg["ni"][f,i,j].sum())
  */
-        __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_zstart_cdf, __pyx_n_s_shape); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 115, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_zstart_cdf, __pyx_n_s_shape); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 105, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
-        __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_3, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 115, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_3, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 105, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        __pyx_t_15 = __Pyx_PyInt_As_long(__pyx_t_8); if (unlikely((__pyx_t_15 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 115, __pyx_L1_error)
+        __pyx_t_15 = __Pyx_PyInt_As_long(__pyx_t_8); if (unlikely((__pyx_t_15 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 105, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         __pyx_t_16 = __pyx_t_15;
         for (__pyx_t_17 = 0; __pyx_t_17 < __pyx_t_16; __pyx_t_17+=1) {
           __pyx_v_j = __pyx_t_17;
 
-          /* "impurity_transport.pyx":116
+          /* "impurity_transport.pyx":106
  *             for i in range(zstart_cdf.shape[1]):
  *                 for j in range(zstart_cdf.shape[2]):
  *                     zstart_cdf[f,i,j] = np.cumsum(gkyl_bkg["ni"][f,i,j] /             # <<<<<<<<<<<<<<
  *                         gkyl_bkg["ni"][f,i,j].sum())
  * 
  */
-          __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_3);
-          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_cumsum); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_cumsum); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-          __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_3);
-          __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_i); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_i); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_7);
-          __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_4);
-          __pyx_t_18 = PyTuple_New(3); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_18 = PyTuple_New(3); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
           __Pyx_GIVEREF(__pyx_t_1);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 0, __pyx_t_1)) __PYX_ERR(0, 116, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 0, __pyx_t_1)) __PYX_ERR(0, 106, __pyx_L1_error);
           __Pyx_GIVEREF(__pyx_t_7);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 1, __pyx_t_7)) __PYX_ERR(0, 116, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 1, __pyx_t_7)) __PYX_ERR(0, 106, __pyx_L1_error);
           __Pyx_GIVEREF(__pyx_t_4);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 2, __pyx_t_4)) __PYX_ERR(0, 116, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 2, __pyx_t_4)) __PYX_ERR(0, 106, __pyx_L1_error);
           __pyx_t_1 = 0;
           __pyx_t_7 = 0;
           __pyx_t_4 = 0;
-          __pyx_t_4 = __Pyx_PyObject_GetItem(__pyx_t_3, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_4 = __Pyx_PyObject_GetItem(__pyx_t_3, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_4);
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-          /* "impurity_transport.pyx":117
+          /* "impurity_transport.pyx":107
  *                 for j in range(zstart_cdf.shape[2]):
  *                     zstart_cdf[f,i,j] = np.cumsum(gkyl_bkg["ni"][f,i,j] /
  *                         gkyl_bkg["ni"][f,i,j].sum())             # <<<<<<<<<<<<<<
  * 
  *     elif imp_zstart_opt == "single_value":
  */
-          __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 117, __pyx_L1_error)
+          __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 107, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_3);
-          __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 117, __pyx_L1_error)
+          __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 107, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_7);
-          __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_i); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 117, __pyx_L1_error)
+          __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_i); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 107, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_19 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 117, __pyx_L1_error)
+          __pyx_t_19 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 107, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_19);
-          __pyx_t_20 = PyTuple_New(3); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 117, __pyx_L1_error)
+          __pyx_t_20 = PyTuple_New(3); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 107, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_20);
           __Pyx_GIVEREF(__pyx_t_7);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_20, 0, __pyx_t_7)) __PYX_ERR(0, 117, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_20, 0, __pyx_t_7)) __PYX_ERR(0, 107, __pyx_L1_error);
           __Pyx_GIVEREF(__pyx_t_1);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_20, 1, __pyx_t_1)) __PYX_ERR(0, 117, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_20, 1, __pyx_t_1)) __PYX_ERR(0, 107, __pyx_L1_error);
           __Pyx_GIVEREF(__pyx_t_19);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_20, 2, __pyx_t_19)) __PYX_ERR(0, 117, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_20, 2, __pyx_t_19)) __PYX_ERR(0, 107, __pyx_L1_error);
           __pyx_t_7 = 0;
           __pyx_t_1 = 0;
           __pyx_t_19 = 0;
-          __pyx_t_19 = __Pyx_PyObject_GetItem(__pyx_t_3, __pyx_t_20); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 117, __pyx_L1_error)
+          __pyx_t_19 = __Pyx_PyObject_GetItem(__pyx_t_3, __pyx_t_20); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 107, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_19);
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
           __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-          __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_sum); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 117, __pyx_L1_error)
+          __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_sum); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 107, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_20);
           __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
           __pyx_t_19 = NULL;
@@ -20692,19 +20872,19 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
             PyObject *__pyx_callargs[2] = {__pyx_t_19, NULL};
             __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_20, __pyx_callargs+1-__pyx_t_21, 0+__pyx_t_21);
             __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
-            if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 117, __pyx_L1_error)
+            if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 107, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_18);
             __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
           }
 
-          /* "impurity_transport.pyx":116
+          /* "impurity_transport.pyx":106
  *             for i in range(zstart_cdf.shape[1]):
  *                 for j in range(zstart_cdf.shape[2]):
  *                     zstart_cdf[f,i,j] = np.cumsum(gkyl_bkg["ni"][f,i,j] /             # <<<<<<<<<<<<<<
  *                         gkyl_bkg["ni"][f,i,j].sum())
  * 
  */
-          __pyx_t_20 = __Pyx_PyNumber_Divide(__pyx_t_4, __pyx_t_18); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_20 = __Pyx_PyNumber_Divide(__pyx_t_4, __pyx_t_18); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_20);
           __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
@@ -20727,37 +20907,37 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
             __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
             __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
             __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-            if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 116, __pyx_L1_error)
+            if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 106, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_8);
             __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
           }
-          __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_20 = __Pyx_PyInt_From_int(__pyx_v_i); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_20 = __Pyx_PyInt_From_int(__pyx_v_i); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_20);
-          __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_4 = PyTuple_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 116, __pyx_L1_error)
+          __pyx_t_4 = PyTuple_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_4);
           __Pyx_GIVEREF(__pyx_t_9);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_9)) __PYX_ERR(0, 116, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_9)) __PYX_ERR(0, 106, __pyx_L1_error);
           __Pyx_GIVEREF(__pyx_t_20);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_t_20)) __PYX_ERR(0, 116, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_t_20)) __PYX_ERR(0, 106, __pyx_L1_error);
           __Pyx_GIVEREF(__pyx_t_18);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 2, __pyx_t_18)) __PYX_ERR(0, 116, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 2, __pyx_t_18)) __PYX_ERR(0, 106, __pyx_L1_error);
           __pyx_t_9 = 0;
           __pyx_t_20 = 0;
           __pyx_t_18 = 0;
-          if (unlikely((PyObject_SetItem(__pyx_v_zstart_cdf, __pyx_t_4, __pyx_t_8) < 0))) __PYX_ERR(0, 116, __pyx_L1_error)
+          if (unlikely((PyObject_SetItem(__pyx_v_zstart_cdf, __pyx_t_4, __pyx_t_8) < 0))) __PYX_ERR(0, 106, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         }
       }
     }
 
-    /* "impurity_transport.pyx":96
- * 
- *     # Convert the imp_zstart option into an integer - just easier.
+    /* "impurity_transport.pyx":94
+ *     imp_zstart_int = 0
+ *     imp_zstart_opt = input_opts["imp_zstart_opt"]
  *     if imp_zstart_opt == "proportional_to_ni":             # <<<<<<<<<<<<<<
  *         imp_zstart_int = 1
  * 
@@ -20765,17 +20945,17 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     goto __pyx_L6;
   }
 
-  /* "impurity_transport.pyx":119
+  /* "impurity_transport.pyx":109
  *                         gkyl_bkg["ni"][f,i,j].sum())
  * 
  *     elif imp_zstart_opt == "single_value":             # <<<<<<<<<<<<<<
  *         imp_zstart_int = 2
  * 
  */
-  __pyx_t_6 = (__Pyx_PyString_Equals(__pyx_v_imp_zstart_opt, __pyx_n_s_single_value, Py_EQ)); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 119, __pyx_L1_error)
+  __pyx_t_6 = (__Pyx_PyString_Equals(__pyx_v_imp_zstart_opt, __pyx_n_s_single_value, Py_EQ)); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 109, __pyx_L1_error)
   if (__pyx_t_6) {
 
-    /* "impurity_transport.pyx":120
+    /* "impurity_transport.pyx":110
  * 
  *     elif imp_zstart_opt == "single_value":
  *         imp_zstart_int = 2             # <<<<<<<<<<<<<<
@@ -20784,7 +20964,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
     __pyx_v_imp_zstart_int = 2;
 
-    /* "impurity_transport.pyx":119
+    /* "impurity_transport.pyx":109
  *                         gkyl_bkg["ni"][f,i,j].sum())
  * 
  *     elif imp_zstart_opt == "single_value":             # <<<<<<<<<<<<<<
@@ -20794,7 +20974,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     goto __pyx_L6;
   }
 
-  /* "impurity_transport.pyx":123
+  /* "impurity_transport.pyx":113
  * 
  *     else:
  *         print("Error: imp_zstart input not recognized: {}"             # <<<<<<<<<<<<<<
@@ -20803,14 +20983,14 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   /*else*/ {
 
-    /* "impurity_transport.pyx":124
+    /* "impurity_transport.pyx":114
  *     else:
  *         print("Error: imp_zstart input not recognized: {}"
  *             .format(imp_zstart_opt))             # <<<<<<<<<<<<<<
  *         sys.exit()
  * 
  */
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_imp_zstart_input_not_recog, __pyx_n_s_format); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 124, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_imp_zstart_input_not_recog, __pyx_n_s_format); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 114, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_18 = NULL;
     __pyx_t_5 = 0;
@@ -20830,33 +21010,33 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       PyObject *__pyx_callargs[2] = {__pyx_t_18, __pyx_v_imp_zstart_opt};
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 124, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 114, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     }
 
-    /* "impurity_transport.pyx":123
+    /* "impurity_transport.pyx":113
  * 
  *     else:
  *         print("Error: imp_zstart input not recognized: {}"             # <<<<<<<<<<<<<<
  *             .format(imp_zstart_opt))
  *         sys.exit()
  */
-    __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 123, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 113, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":125
+    /* "impurity_transport.pyx":115
  *         print("Error: imp_zstart input not recognized: {}"
  *             .format(imp_zstart_opt))
  *         sys.exit()             # <<<<<<<<<<<<<<
  * 
  *     # Get the dimensions of the Gkeyll volume.
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_sys); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 125, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_sys); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 115, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_exit); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 125, __pyx_L1_error)
+    __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_exit); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 115, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __pyx_t_8 = NULL;
@@ -20877,7 +21057,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       PyObject *__pyx_callargs[2] = {__pyx_t_8, NULL};
       __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 125, __pyx_L1_error)
+      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 115, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
     }
@@ -20885,52 +21065,52 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   }
   __pyx_L6:;
 
-  /* "impurity_transport.pyx":131
- *     #ny = len(gkyl_bkg["y"])
- *     #nz = len(gkyl_bkg["z"])
+  /* "impurity_transport.pyx":118
+ * 
+ *     # Get the dimensions of the Gkeyll volume.
  *     gkyl_x = gkyl_bkg["x"]             # <<<<<<<<<<<<<<
  *     gkyl_y = gkyl_bkg["y"]
  *     gkyl_z = gkyl_bkg["z"]
  */
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 118, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_v_gkyl_x = __pyx_t_4;
   __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":132
- *     #nz = len(gkyl_bkg["z"])
+  /* "impurity_transport.pyx":119
+ *     # Get the dimensions of the Gkeyll volume.
  *     gkyl_x = gkyl_bkg["x"]
  *     gkyl_y = gkyl_bkg["y"]             # <<<<<<<<<<<<<<
  *     gkyl_z = gkyl_bkg["z"]
  *     cdef float gkyl_xmin = gkyl_bkg["x"].min()
  */
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 132, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 119, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_v_gkyl_y = __pyx_t_4;
   __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":133
+  /* "impurity_transport.pyx":120
  *     gkyl_x = gkyl_bkg["x"]
  *     gkyl_y = gkyl_bkg["y"]
  *     gkyl_z = gkyl_bkg["z"]             # <<<<<<<<<<<<<<
  *     cdef float gkyl_xmin = gkyl_bkg["x"].min()
  *     cdef float gkyl_xmax = gkyl_bkg["x"].max()
  */
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 133, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 120, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_v_gkyl_z = __pyx_t_4;
   __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":134
+  /* "impurity_transport.pyx":121
  *     gkyl_y = gkyl_bkg["y"]
  *     gkyl_z = gkyl_bkg["z"]
  *     cdef float gkyl_xmin = gkyl_bkg["x"].min()             # <<<<<<<<<<<<<<
  *     cdef float gkyl_xmax = gkyl_bkg["x"].max()
  *     cdef float gkyl_ymin = gkyl_bkg["y"].min()
  */
-  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 134, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 121, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_min); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 134, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_min); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 121, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __pyx_t_18 = NULL;
@@ -20951,24 +21131,24 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_18, NULL};
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 134, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 121, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 134, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 121, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_gkyl_xmin = __pyx_t_2;
 
-  /* "impurity_transport.pyx":135
+  /* "impurity_transport.pyx":122
  *     gkyl_z = gkyl_bkg["z"]
  *     cdef float gkyl_xmin = gkyl_bkg["x"].min()
  *     cdef float gkyl_xmax = gkyl_bkg["x"].max()             # <<<<<<<<<<<<<<
  *     cdef float gkyl_ymin = gkyl_bkg["y"].min()
  *     cdef float gkyl_ymax = gkyl_bkg["y"].max()
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_x); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 122, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_max); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_max); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 122, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_t_8 = NULL;
@@ -20989,24 +21169,24 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_8, NULL};
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 135, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 122, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 122, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_gkyl_xmax = __pyx_t_2;
 
-  /* "impurity_transport.pyx":136
+  /* "impurity_transport.pyx":123
  *     cdef float gkyl_xmin = gkyl_bkg["x"].min()
  *     cdef float gkyl_xmax = gkyl_bkg["x"].max()
  *     cdef float gkyl_ymin = gkyl_bkg["y"].min()             # <<<<<<<<<<<<<<
  *     cdef float gkyl_ymax = gkyl_bkg["y"].max()
  *     cdef float gkyl_zmin = gkyl_bkg["z"].min()
  */
-  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 136, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 123, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_min); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 136, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_min); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 123, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __pyx_t_18 = NULL;
@@ -21027,24 +21207,24 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_18, NULL};
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 136, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 123, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 136, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 123, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_gkyl_ymin = __pyx_t_2;
 
-  /* "impurity_transport.pyx":137
+  /* "impurity_transport.pyx":124
  *     cdef float gkyl_xmax = gkyl_bkg["x"].max()
  *     cdef float gkyl_ymin = gkyl_bkg["y"].min()
  *     cdef float gkyl_ymax = gkyl_bkg["y"].max()             # <<<<<<<<<<<<<<
  *     cdef float gkyl_zmin = gkyl_bkg["z"].min()
  *     cdef float gkyl_zmax = gkyl_bkg["z"].max()
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 137, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_y); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 124, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_max); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 137, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_max); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 124, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_t_8 = NULL;
@@ -21065,24 +21245,24 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_8, NULL};
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 137, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 124, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 137, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 124, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_gkyl_ymax = __pyx_t_2;
 
-  /* "impurity_transport.pyx":138
+  /* "impurity_transport.pyx":125
  *     cdef float gkyl_ymin = gkyl_bkg["y"].min()
  *     cdef float gkyl_ymax = gkyl_bkg["y"].max()
  *     cdef float gkyl_zmin = gkyl_bkg["z"].min()             # <<<<<<<<<<<<<<
  *     cdef float gkyl_zmax = gkyl_bkg["z"].max()
  * 
  */
-  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 125, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_min); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_min); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 125, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __pyx_t_18 = NULL;
@@ -21103,24 +21283,24 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_18, NULL};
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 138, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 125, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 125, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_gkyl_zmin = __pyx_t_2;
 
-  /* "impurity_transport.pyx":139
+  /* "impurity_transport.pyx":126
  *     cdef float gkyl_ymax = gkyl_bkg["y"].max()
  *     cdef float gkyl_zmin = gkyl_bkg["z"].min()
  *     cdef float gkyl_zmax = gkyl_bkg["z"].max()             # <<<<<<<<<<<<<<
  * 
  *     # Assume constant time step between frames.
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_z); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 126, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_max); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_max); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 126, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_t_8 = NULL;
@@ -21141,49 +21321,49 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_8, NULL};
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 139, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 126, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 126, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_gkyl_zmax = __pyx_t_2;
 
-  /* "impurity_transport.pyx":142
+  /* "impurity_transport.pyx":129
  * 
  *     # Assume constant time step between frames.
  *     cdef float dt = gkyl_bkg["time"][1] - gkyl_bkg["time"][0]             # <<<<<<<<<<<<<<
  *     print("Simulation timestep: {:.2e} s".format(dt))
  * 
  */
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_time); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_time); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_18 = __Pyx_GetItemInt(__pyx_t_4, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_GetItemInt(__pyx_t_4, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_time); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_time); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_4, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_4, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = PyNumber_Subtract(__pyx_t_18, __pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_Subtract(__pyx_t_18, __pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_dt = __pyx_t_2;
 
-  /* "impurity_transport.pyx":143
+  /* "impurity_transport.pyx":130
  *     # Assume constant time step between frames.
  *     cdef float dt = gkyl_bkg["time"][1] - gkyl_bkg["time"][0]
  *     print("Simulation timestep: {:.2e} s".format(dt))             # <<<<<<<<<<<<<<
  * 
- *     # Load the Gkeyll background into memory views.
+ *     # Load the Gkeyll background into memory views, which have faster access.
  */
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Simulation_timestep_2e_s, __pyx_n_s_format); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 143, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Simulation_timestep_2e_s, __pyx_n_s_format); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_18 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 143, __pyx_L1_error)
+  __pyx_t_18 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __pyx_t_20 = NULL;
   __pyx_t_5 = 0;
@@ -21204,353 +21384,353 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 143, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 130, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
-  __pyx_t_8 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 143, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "impurity_transport.pyx":146
+  /* "impurity_transport.pyx":133
  * 
- *     # Load the Gkeyll background into memory views.
+ *     # Load the Gkeyll background into memory views, which have faster access.
  *     cdef float[:,:,:,:] gkyl_ne = gkyl_bkg["ne"]             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_te = gkyl_bkg["te"]
  *     cdef float[:,:,:,:] gkyl_ni = gkyl_bkg["ni"]
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 146, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 133, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 146, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 133, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_ne = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":147
- *     # Load the Gkeyll background into memory views.
+  /* "impurity_transport.pyx":134
+ *     # Load the Gkeyll background into memory views, which have faster access.
  *     cdef float[:,:,:,:] gkyl_ne = gkyl_bkg["ne"]
  *     cdef float[:,:,:,:] gkyl_te = gkyl_bkg["te"]             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_ni = gkyl_bkg["ni"]
  *     cdef float[:,:,:,:] gkyl_ti = gkyl_bkg["ti"]
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_te); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_te); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 134, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 134, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_te = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":148
+  /* "impurity_transport.pyx":135
  *     cdef float[:,:,:,:] gkyl_ne = gkyl_bkg["ne"]
  *     cdef float[:,:,:,:] gkyl_te = gkyl_bkg["te"]
  *     cdef float[:,:,:,:] gkyl_ni = gkyl_bkg["ni"]             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_ti = gkyl_bkg["ti"]
  *     cdef float[:,:,:,:] gkyl_elecx = gkyl_bkg["elecx"]
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 135, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 135, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_ni = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":149
+  /* "impurity_transport.pyx":136
  *     cdef float[:,:,:,:] gkyl_te = gkyl_bkg["te"]
  *     cdef float[:,:,:,:] gkyl_ni = gkyl_bkg["ni"]
  *     cdef float[:,:,:,:] gkyl_ti = gkyl_bkg["ti"]             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_elecx = gkyl_bkg["elecx"]
  *     cdef float[:,:,:,:] gkyl_elecy = gkyl_bkg["elecy"]
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ti); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 149, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ti); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 136, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 149, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 136, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_ti = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":150
+  /* "impurity_transport.pyx":137
  *     cdef float[:,:,:,:] gkyl_ni = gkyl_bkg["ni"]
  *     cdef float[:,:,:,:] gkyl_ti = gkyl_bkg["ti"]
  *     cdef float[:,:,:,:] gkyl_elecx = gkyl_bkg["elecx"]             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_elecy = gkyl_bkg["elecy"]
  *     cdef float[:,:,:,:] gkyl_elecz = gkyl_bkg["elecz"]
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_elecx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 150, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_elecx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 137, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 150, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 137, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_elecx = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":151
+  /* "impurity_transport.pyx":138
  *     cdef float[:,:,:,:] gkyl_ti = gkyl_bkg["ti"]
  *     cdef float[:,:,:,:] gkyl_elecx = gkyl_bkg["elecx"]
  *     cdef float[:,:,:,:] gkyl_elecy = gkyl_bkg["elecy"]             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_elecz = gkyl_bkg["elecz"]
  *     cdef float[:,:,:,:] gkyl_viz = gkyl_bkg["viz"]
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_elecy); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 151, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_elecy); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 151, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_elecy = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":152
+  /* "impurity_transport.pyx":139
  *     cdef float[:,:,:,:] gkyl_elecx = gkyl_bkg["elecx"]
  *     cdef float[:,:,:,:] gkyl_elecy = gkyl_bkg["elecy"]
  *     cdef float[:,:,:,:] gkyl_elecz = gkyl_bkg["elecz"]             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_viz = gkyl_bkg["viz"]
  *     cdef float[:,:,:] gkyl_b = gkyl_bkg["b"]
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_elecz); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 152, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_elecz); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 139, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 152, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 139, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_elecz = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":153
+  /* "impurity_transport.pyx":140
  *     cdef float[:,:,:,:] gkyl_elecy = gkyl_bkg["elecy"]
  *     cdef float[:,:,:,:] gkyl_elecz = gkyl_bkg["elecz"]
  *     cdef float[:,:,:,:] gkyl_viz = gkyl_bkg["viz"]             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:] gkyl_b = gkyl_bkg["b"]
  * 
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_viz); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_viz); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_viz = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":154
+  /* "impurity_transport.pyx":141
  *     cdef float[:,:,:,:] gkyl_elecz = gkyl_bkg["elecz"]
  *     cdef float[:,:,:,:] gkyl_viz = gkyl_bkg["viz"]
  *     cdef float[:,:,:] gkyl_b = gkyl_bkg["b"]             # <<<<<<<<<<<<<<
  * 
  *     # These need to be converted from eV/m to J/m.
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_b); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 154, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_b); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 141, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_23 = __Pyx_PyObject_to_MemoryviewSlice_dsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_23.memview)) __PYX_ERR(0, 154, __pyx_L1_error)
+  __pyx_t_23 = __Pyx_PyObject_to_MemoryviewSlice_dsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_23.memview)) __PYX_ERR(0, 141, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_b = __pyx_t_23;
   __pyx_t_23.memview = NULL;
   __pyx_t_23.data = NULL;
 
-  /* "impurity_transport.pyx":157
+  /* "impurity_transport.pyx":144
  * 
  *     # These need to be converted from eV/m to J/m.
  *     cdef float[:,:,:,:] gkyl_dtedx = gkyl_bkg["dtedx"] * constants.ev             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_dtedy = gkyl_bkg["dtedy"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtedz = gkyl_bkg["dtedz"] * constants.ev
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtedx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 157, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtedx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_constants); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 157, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_constants); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_ev); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 157, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_ev); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = PyNumber_Multiply(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 157, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_Multiply(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_4, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 157, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_4, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_gkyl_dtedx = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":158
+  /* "impurity_transport.pyx":145
  *     # These need to be converted from eV/m to J/m.
  *     cdef float[:,:,:,:] gkyl_dtedx = gkyl_bkg["dtedx"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtedy = gkyl_bkg["dtedy"] * constants.ev             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_dtedz = gkyl_bkg["dtedz"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtidx = gkyl_bkg["dtidx"] * constants.ev
  */
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtedy); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtedy); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_constants); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_constants); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_ev); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_ev); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_18 = PyNumber_Multiply(__pyx_t_4, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_t_18 = PyNumber_Multiply(__pyx_t_4, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_18, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_18, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __pyx_v_gkyl_dtedy = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":159
+  /* "impurity_transport.pyx":146
  *     cdef float[:,:,:,:] gkyl_dtedx = gkyl_bkg["dtedx"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtedy = gkyl_bkg["dtedy"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtedz = gkyl_bkg["dtedz"] * constants.ev             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_dtidx = gkyl_bkg["dtidx"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtidy = gkyl_bkg["dtidy"] * constants.ev
  */
-  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtedz); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtedz); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_constants); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_constants); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_ev); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_ev); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = PyNumber_Multiply(__pyx_t_18, __pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_8 = PyNumber_Multiply(__pyx_t_18, __pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_dtedz = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":160
+  /* "impurity_transport.pyx":147
  *     cdef float[:,:,:,:] gkyl_dtedy = gkyl_bkg["dtedy"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtedz = gkyl_bkg["dtedz"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtidx = gkyl_bkg["dtidx"] * constants.ev             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_dtidy = gkyl_bkg["dtidy"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtidz = gkyl_bkg["dtidz"] * constants.ev
  */
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtidx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 160, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtidx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_constants); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 160, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_constants); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_ev); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 160, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_ev); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = PyNumber_Multiply(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 160, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_Multiply(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_4, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 160, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_4, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_gkyl_dtidx = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":161
+  /* "impurity_transport.pyx":148
  *     cdef float[:,:,:,:] gkyl_dtedz = gkyl_bkg["dtedz"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtidx = gkyl_bkg["dtidx"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtidy = gkyl_bkg["dtidy"] * constants.ev             # <<<<<<<<<<<<<<
  *     cdef float[:,:,:,:] gkyl_dtidz = gkyl_bkg["dtidz"] * constants.ev
  * 
  */
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtidy); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 161, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtidy); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 148, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_constants); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 161, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_constants); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 148, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_ev); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 161, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_ev); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 148, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_18 = PyNumber_Multiply(__pyx_t_4, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 161, __pyx_L1_error)
+  __pyx_t_18 = PyNumber_Multiply(__pyx_t_4, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 148, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_18, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 161, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_18, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 148, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __pyx_v_gkyl_dtidy = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":162
+  /* "impurity_transport.pyx":149
  *     cdef float[:,:,:,:] gkyl_dtidx = gkyl_bkg["dtidx"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtidy = gkyl_bkg["dtidy"] * constants.ev
  *     cdef float[:,:,:,:] gkyl_dtidz = gkyl_bkg["dtidz"] * constants.ev             # <<<<<<<<<<<<<<
  * 
  *     # Can't cdef within a control statement like if, so define here and
  */
-  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtidz); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 162, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_dtidz); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 149, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_constants); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 162, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_constants); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 149, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_ev); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 162, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_ev); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 149, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = PyNumber_Multiply(__pyx_t_18, __pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 162, __pyx_L1_error)
+  __pyx_t_8 = PyNumber_Multiply(__pyx_t_18, __pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 149, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 162, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_8, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 149, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_gkyl_dtidz = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":166
+  /* "impurity_transport.pyx":153
  *     # Can't cdef within a control statement like if, so define here and
  *     # potentially overwrite if the option is on.
  *     cdef float[:,:,:,:] stop_time = np.zeros(gkyl_bkg["ne"].shape,             # <<<<<<<<<<<<<<
  *         dtype=np.float32)
  *     cdef alpha = 0.0
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 166, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 166, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 166, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_shape); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 166, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_shape); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = PyTuple_New(1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 166, __pyx_L1_error)
+  __pyx_t_8 = PyTuple_New(1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_GIVEREF(__pyx_t_18);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_18)) __PYX_ERR(0, 166, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_18)) __PYX_ERR(0, 153, __pyx_L1_error);
   __pyx_t_18 = 0;
 
-  /* "impurity_transport.pyx":167
+  /* "impurity_transport.pyx":154
  *     # potentially overwrite if the option is on.
  *     cdef float[:,:,:,:] stop_time = np.zeros(gkyl_bkg["ne"].shape,
  *         dtype=np.float32)             # <<<<<<<<<<<<<<
  *     cdef alpha = 0.0
  *     cdef beta = 0.0
  */
-  __pyx_t_18 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_20);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_float32); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_float32); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-  if (PyDict_SetItem(__pyx_t_18, __pyx_n_s_dtype, __pyx_t_9) < 0) __PYX_ERR(0, 167, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_18, __pyx_n_s_dtype, __pyx_t_9) < 0) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":166
+  /* "impurity_transport.pyx":153
  *     # Can't cdef within a control statement like if, so define here and
  *     # potentially overwrite if the option is on.
  *     cdef float[:,:,:,:] stop_time = np.zeros(gkyl_bkg["ne"].shape,             # <<<<<<<<<<<<<<
  *         dtype=np.float32)
  *     cdef alpha = 0.0
  */
-  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 166, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_9, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 166, __pyx_L1_error)
+  __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_t_9, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_v_stop_time = __pyx_t_22;
   __pyx_t_22.memview = NULL;
   __pyx_t_22.data = NULL;
 
-  /* "impurity_transport.pyx":168
+  /* "impurity_transport.pyx":155
  *     cdef float[:,:,:,:] stop_time = np.zeros(gkyl_bkg["ne"].shape,
  *         dtype=np.float32)
  *     cdef alpha = 0.0             # <<<<<<<<<<<<<<
@@ -21560,7 +21740,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   __Pyx_INCREF(__pyx_float_0_0);
   __pyx_v_alpha = __pyx_float_0_0;
 
-  /* "impurity_transport.pyx":169
+  /* "impurity_transport.pyx":156
  *         dtype=np.float32)
  *     cdef alpha = 0.0
  *     cdef beta = 0.0             # <<<<<<<<<<<<<<
@@ -21570,7 +21750,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   __Pyx_INCREF(__pyx_float_0_0);
   __pyx_v_beta = __pyx_float_0_0;
 
-  /* "impurity_transport.pyx":171
+  /* "impurity_transport.pyx":158
  *     cdef beta = 0.0
  * 
  *     if coll_forces:             # <<<<<<<<<<<<<<
@@ -21579,7 +21759,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   if (__pyx_v_coll_forces) {
 
-    /* "impurity_transport.pyx":175
+    /* "impurity_transport.pyx":162
  *         # Calculate the stopping time (Stangeby Eq. 6.35) ahead of time.
  *         # Calculate as python numpy array then assign to C array.
  *         ln_alpha = 15.0             # <<<<<<<<<<<<<<
@@ -21588,7 +21768,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
     __pyx_v_ln_alpha = 15.0;
 
-    /* "impurity_transport.pyx":176
+    /* "impurity_transport.pyx":163
  *         # Calculate as python numpy array then assign to C array.
  *         ln_alpha = 15.0
  *         ion_amu = 2.04  # Hardcoding deuterium in.             # <<<<<<<<<<<<<<
@@ -21597,39 +21777,39 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
     __pyx_v_ion_amu = 2.04;
 
-    /* "impurity_transport.pyx":177
+    /* "impurity_transport.pyx":164
  *         ln_alpha = 15.0
  *         ion_amu = 2.04  # Hardcoding deuterium in.
  *         tmp_stop_time = 1.47e13 * imp_amu * gkyl_bkg["ti"] * \             # <<<<<<<<<<<<<<
  *             np.sqrt(gkyl_bkg["ti"] / ion_amu) / \
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *
  */
-    __pyx_t_9 = PyFloat_FromDouble((1.47e13 * __pyx_v_imp_amu)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 177, __pyx_L1_error)
+    __pyx_t_9 = PyFloat_FromDouble((1.47e13 * __pyx_v_imp_amu)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 164, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ti); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 177, __pyx_L1_error)
+    __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ti); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 164, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
-    __pyx_t_8 = PyNumber_Multiply(__pyx_t_9, __pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 177, __pyx_L1_error)
+    __pyx_t_8 = PyNumber_Multiply(__pyx_t_9, __pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 164, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-    /* "impurity_transport.pyx":178
+    /* "impurity_transport.pyx":165
  *         ion_amu = 2.04  # Hardcoding deuterium in.
  *         tmp_stop_time = 1.47e13 * imp_amu * gkyl_bkg["ti"] * \
  *             np.sqrt(gkyl_bkg["ti"] / ion_amu) / \             # <<<<<<<<<<<<<<
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *
  *             np.power(imp_atom_num, 2) * ln_alpha)
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 178, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 165, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 178, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 165, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ti); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 178, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ti); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 165, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_20 = PyFloat_FromDouble(__pyx_v_ion_amu); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 178, __pyx_L1_error)
+    __pyx_t_20 = PyFloat_FromDouble(__pyx_v_ion_amu); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 165, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
-    __pyx_t_19 = __Pyx_PyNumber_Divide(__pyx_t_9, __pyx_t_20); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 178, __pyx_L1_error)
+    __pyx_t_19 = __Pyx_PyNumber_Divide(__pyx_t_9, __pyx_t_20); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 165, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
@@ -21652,24 +21832,24 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
       __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-      if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 178, __pyx_L1_error)
+      if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 165, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_18);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     }
 
-    /* "impurity_transport.pyx":177
+    /* "impurity_transport.pyx":164
  *         ln_alpha = 15.0
  *         ion_amu = 2.04  # Hardcoding deuterium in.
  *         tmp_stop_time = 1.47e13 * imp_amu * gkyl_bkg["ti"] * \             # <<<<<<<<<<<<<<
  *             np.sqrt(gkyl_bkg["ti"] / ion_amu) / \
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *
  */
-    __pyx_t_4 = PyNumber_Multiply(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 177, __pyx_L1_error)
+    __pyx_t_4 = PyNumber_Multiply(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 164, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-    /* "impurity_transport.pyx":179
+    /* "impurity_transport.pyx":166
  *         tmp_stop_time = 1.47e13 * imp_amu * gkyl_bkg["ti"] * \
  *             np.sqrt(gkyl_bkg["ti"] / ion_amu) / \
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *             # <<<<<<<<<<<<<<
@@ -21678,30 +21858,30 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
     if (unlikely(__pyx_v_imp_amu == 0)) {
       PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-      __PYX_ERR(0, 179, __pyx_L1_error)
+      __PYX_ERR(0, 166, __pyx_L1_error)
     }
-    __pyx_t_18 = PyFloat_FromDouble((1.0 + (__pyx_v_ion_amu / ((double)__pyx_v_imp_amu)))); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 179, __pyx_L1_error)
+    __pyx_t_18 = PyFloat_FromDouble((1.0 + (__pyx_v_ion_amu / ((double)__pyx_v_imp_amu)))); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 166, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
-    __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 179, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 166, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_19 = PyNumber_Multiply(__pyx_t_18, __pyx_t_8); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 179, __pyx_L1_error)
+    __pyx_t_19 = PyNumber_Multiply(__pyx_t_18, __pyx_t_8); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 166, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":180
+    /* "impurity_transport.pyx":167
  *             np.sqrt(gkyl_bkg["ti"] / ion_amu) / \
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *
  *             np.power(imp_atom_num, 2) * ln_alpha)             # <<<<<<<<<<<<<<
  *         stop_time = tmp_stop_time
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 180, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
-    __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_power); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 180, __pyx_L1_error)
+    __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_power); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-    __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 180, __pyx_L1_error)
+    __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
     __pyx_t_9 = NULL;
     __pyx_t_5 = 0;
@@ -21722,104 +21902,104 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_20, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 180, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 167, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     }
 
-    /* "impurity_transport.pyx":179
+    /* "impurity_transport.pyx":166
  *         tmp_stop_time = 1.47e13 * imp_amu * gkyl_bkg["ti"] * \
  *             np.sqrt(gkyl_bkg["ti"] / ion_amu) / \
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *             # <<<<<<<<<<<<<<
  *             np.power(imp_atom_num, 2) * ln_alpha)
  *         stop_time = tmp_stop_time
  */
-    __pyx_t_20 = PyNumber_Multiply(__pyx_t_19, __pyx_t_8); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 179, __pyx_L1_error)
+    __pyx_t_20 = PyNumber_Multiply(__pyx_t_19, __pyx_t_8); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 166, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":180
+    /* "impurity_transport.pyx":167
  *             np.sqrt(gkyl_bkg["ti"] / ion_amu) / \
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *
  *             np.power(imp_atom_num, 2) * ln_alpha)             # <<<<<<<<<<<<<<
  *         stop_time = tmp_stop_time
  * 
  */
-    __pyx_t_8 = PyFloat_FromDouble(__pyx_v_ln_alpha); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 180, __pyx_L1_error)
+    __pyx_t_8 = PyFloat_FromDouble(__pyx_v_ln_alpha); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_19 = PyNumber_Multiply(__pyx_t_20, __pyx_t_8); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 180, __pyx_L1_error)
+    __pyx_t_19 = PyNumber_Multiply(__pyx_t_20, __pyx_t_8); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":178
+    /* "impurity_transport.pyx":165
  *         ion_amu = 2.04  # Hardcoding deuterium in.
  *         tmp_stop_time = 1.47e13 * imp_amu * gkyl_bkg["ti"] * \
  *             np.sqrt(gkyl_bkg["ti"] / ion_amu) / \             # <<<<<<<<<<<<<<
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *
  *             np.power(imp_atom_num, 2) * ln_alpha)
  */
-    __pyx_t_8 = __Pyx_PyNumber_Divide(__pyx_t_4, __pyx_t_19); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 178, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyNumber_Divide(__pyx_t_4, __pyx_t_19); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 165, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     __pyx_v_tmp_stop_time = __pyx_t_8;
     __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":181
+    /* "impurity_transport.pyx":168
  *             ((1 + ion_amu / imp_amu) * gkyl_bkg["ni"] *
  *             np.power(imp_atom_num, 2) * ln_alpha)
  *         stop_time = tmp_stop_time             # <<<<<<<<<<<<<<
  * 
  *         # Calculate the alpha and beta parameters that go in front of the
  */
-    __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_v_tmp_stop_time, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 181, __pyx_L1_error)
+    __pyx_t_22 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsds_float(__pyx_v_tmp_stop_time, PyBUF_WRITABLE); if (unlikely(!__pyx_t_22.memview)) __PYX_ERR(0, 168, __pyx_L1_error)
     __PYX_XCLEAR_MEMVIEW(&__pyx_v_stop_time, 1);
     __pyx_v_stop_time = __pyx_t_22;
     __pyx_t_22.memview = NULL;
     __pyx_t_22.data = NULL;
 
-    /* "impurity_transport.pyx":185
+    /* "impurity_transport.pyx":172
  *         # Calculate the alpha and beta parameters that go in front of the
  *         # electron and ion temperature gradient forces, respectively.
  *         mu = imp_mass / (imp_mass + constants.mi)             # <<<<<<<<<<<<<<
  *         alpha = 0.71 * np.power(imp_atom_num, 2)
  *         beta = 3 * (mu + 5 * np.sqrt(2) *
  */
-    __pyx_t_8 = PyFloat_FromDouble(__pyx_v_imp_mass); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __pyx_t_8 = PyFloat_FromDouble(__pyx_v_imp_mass); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 172, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_19 = PyFloat_FromDouble(__pyx_v_imp_mass); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __pyx_t_19 = PyFloat_FromDouble(__pyx_v_imp_mass); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 172, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
-    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_constants); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_constants); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 172, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_mi); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_mi); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 172, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = PyNumber_Add(__pyx_t_19, __pyx_t_20); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __pyx_t_4 = PyNumber_Add(__pyx_t_19, __pyx_t_20); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 172, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-    __pyx_t_20 = __Pyx_PyNumber_Divide(__pyx_t_8, __pyx_t_4); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __pyx_t_20 = __Pyx_PyNumber_Divide(__pyx_t_8, __pyx_t_4); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 172, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_v_mu = __pyx_t_20;
     __pyx_t_20 = 0;
 
-    /* "impurity_transport.pyx":186
+    /* "impurity_transport.pyx":173
  *         # electron and ion temperature gradient forces, respectively.
  *         mu = imp_mass / (imp_mass + constants.mi)
  *         alpha = 0.71 * np.power(imp_atom_num, 2)             # <<<<<<<<<<<<<<
  *         beta = 3 * (mu + 5 * np.sqrt(2) *
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 186, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 173, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_power); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 186, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_power); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 173, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 186, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 173, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_19 = NULL;
     __pyx_t_5 = 0;
@@ -21840,26 +22020,26 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       __pyx_t_20 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 186, __pyx_L1_error)
+      if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 173, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_20);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
-    __pyx_t_8 = PyNumber_Multiply(__pyx_float_0_71, __pyx_t_20); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 186, __pyx_L1_error)
+    __pyx_t_8 = PyNumber_Multiply(__pyx_float_0_71, __pyx_t_20); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 173, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     __Pyx_DECREF_SET(__pyx_v_alpha, __pyx_t_8);
     __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":187
+    /* "impurity_transport.pyx":174
  *         mu = imp_mass / (imp_mass + constants.mi)
  *         alpha = 0.71 * np.power(imp_atom_num, 2)
  *         beta = 3 * (mu + 5 * np.sqrt(2) *             # <<<<<<<<<<<<<<
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     __pyx_t_20 = NULL;
@@ -21880,27 +22060,27 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       PyObject *__pyx_callargs[2] = {__pyx_t_20, __pyx_int_2};
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 187, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 174, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     }
-    __pyx_t_4 = __Pyx_PyInt_MultiplyCObj(__pyx_int_5, __pyx_t_8, 5, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyInt_MultiplyCObj(__pyx_int_5, __pyx_t_8, 5, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":188
+    /* "impurity_transport.pyx":175
  *         alpha = 0.71 * np.power(imp_atom_num, 2)
  *         beta = 3 * (mu + 5 * np.sqrt(2) *
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *             # <<<<<<<<<<<<<<
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
-    __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_square); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_square); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-    __pyx_t_20 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_20 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
     __pyx_t_18 = NULL;
     __pyx_t_5 = 0;
@@ -21921,36 +22101,36 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
       __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 188, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 175, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     }
 
-    /* "impurity_transport.pyx":187
+    /* "impurity_transport.pyx":174
  *         mu = imp_mass / (imp_mass + constants.mi)
  *         alpha = 0.71 * np.power(imp_atom_num, 2)
  *         beta = 3 * (mu + 5 * np.sqrt(2) *             # <<<<<<<<<<<<<<
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))
  */
-    __pyx_t_19 = PyNumber_Multiply(__pyx_t_4, __pyx_t_8); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_19 = PyNumber_Multiply(__pyx_t_4, __pyx_t_8); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":188
+    /* "impurity_transport.pyx":175
  *         alpha = 0.71 * np.power(imp_atom_num, 2)
  *         beta = 3 * (mu + 5 * np.sqrt(2) *
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *             # <<<<<<<<<<<<<<
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_power); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_power); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = PyFloat_FromDouble((5.0 / 2.0)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_4 = PyFloat_FromDouble((5.0 / 2.0)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_18 = NULL;
     __pyx_t_5 = 0;
@@ -21971,27 +22151,27 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_20, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 188, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 175, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     }
-    __pyx_t_20 = PyNumber_Multiply(__pyx_float_1_1, __pyx_t_8); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_20 = PyNumber_Multiply(__pyx_float_1_1, __pyx_t_8); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":189
+    /* "impurity_transport.pyx":176
  *         beta = 3 * (mu + 5 * np.sqrt(2) *
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_power); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_power); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_4 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_9 = NULL;
     __pyx_t_5 = 0;
@@ -22012,78 +22192,78 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 189, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 176, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
     }
 
-    /* "impurity_transport.pyx":188
+    /* "impurity_transport.pyx":175
  *         alpha = 0.71 * np.power(imp_atom_num, 2)
  *         beta = 3 * (mu + 5 * np.sqrt(2) *
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *             # <<<<<<<<<<<<<<
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))
  * 
  */
-    __pyx_t_18 = PyNumber_Multiply(__pyx_float_0_35, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_18 = PyNumber_Multiply(__pyx_float_0_35, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __pyx_t_8 = PyNumber_Subtract(__pyx_t_20, __pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_8 = PyNumber_Subtract(__pyx_t_20, __pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-    __pyx_t_18 = PyNumber_Multiply(__pyx_t_19, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_18 = PyNumber_Multiply(__pyx_t_19, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 175, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":187
+    /* "impurity_transport.pyx":174
  *         mu = imp_mass / (imp_mass + constants.mi)
  *         alpha = 0.71 * np.power(imp_atom_num, 2)
  *         beta = 3 * (mu + 5 * np.sqrt(2) *             # <<<<<<<<<<<<<<
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))
  */
-    __pyx_t_8 = PyNumber_Add(__pyx_v_mu, __pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_8 = PyNumber_Add(__pyx_v_mu, __pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-    /* "impurity_transport.pyx":189
+    /* "impurity_transport.pyx":176
  *         beta = 3 * (mu + 5 * np.sqrt(2) *
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_18 = __Pyx_PyInt_SubtractObjC(__pyx_t_8, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_18 = __Pyx_PyInt_SubtractObjC(__pyx_t_8, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":187
+    /* "impurity_transport.pyx":174
  *         mu = imp_mass / (imp_mass + constants.mi)
  *         alpha = 0.71 * np.power(imp_atom_num, 2)
  *         beta = 3 * (mu + 5 * np.sqrt(2) *             # <<<<<<<<<<<<<<
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))
  */
-    __pyx_t_8 = __Pyx_PyInt_MultiplyCObj(__pyx_int_3, __pyx_t_18, 3, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyInt_MultiplyCObj(__pyx_int_3, __pyx_t_18, 3, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-    /* "impurity_transport.pyx":189
+    /* "impurity_transport.pyx":176
  *         beta = 3 * (mu + 5 * np.sqrt(2) *
  *             np.square(imp_atom_num) * (1.1 * np.power(mu, 5/2) - 0.35 *
  *             np.power(mu, 3/2)) - 1) / (2.6 - 2 * mu + 5.4 * np.square(mu))             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_18 = __Pyx_PyInt_MultiplyCObj(__pyx_int_2, __pyx_v_mu, 2, 0, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_18 = __Pyx_PyInt_MultiplyCObj(__pyx_int_2, __pyx_v_mu, 2, 0, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
-    __pyx_t_19 = __Pyx_PyFloat_SubtractCObj(__pyx_float_2_6, __pyx_t_18, 2.6, 0, 0); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_19 = __Pyx_PyFloat_SubtractCObj(__pyx_float_2_6, __pyx_t_18, 2.6, 0, 0); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_square); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_square); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     __pyx_t_20 = NULL;
@@ -22104,25 +22284,25 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       PyObject *__pyx_callargs[2] = {__pyx_t_20, __pyx_v_mu};
       __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
-      if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 189, __pyx_L1_error)
+      if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 176, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_18);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     }
-    __pyx_t_4 = PyNumber_Multiply(__pyx_float_5_4, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_4 = PyNumber_Multiply(__pyx_float_5_4, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-    __pyx_t_18 = PyNumber_Add(__pyx_t_19, __pyx_t_4); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_18 = PyNumber_Add(__pyx_t_19, __pyx_t_4); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyNumber_Divide(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyNumber_Divide(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 176, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
     __Pyx_DECREF_SET(__pyx_v_beta, __pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":171
+    /* "impurity_transport.pyx":158
  *     cdef beta = 0.0
  * 
  *     if coll_forces:             # <<<<<<<<<<<<<<
@@ -22131,7 +22311,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   }
 
-  /* "impurity_transport.pyx":199
+  /* "impurity_transport.pyx":186
  *     cdef vector[float] zstart_rans_fine
  *     cdef vector[float] fstart_rans
  *     xstart_rans.reserve(num_imps)             # <<<<<<<<<<<<<<
@@ -22142,10 +22322,10 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_v_xstart_rans.reserve(__pyx_v_num_imps);
   } catch(...) {
     __Pyx_CppExn2PyErr();
-    __PYX_ERR(0, 199, __pyx_L1_error)
+    __PYX_ERR(0, 186, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":200
+  /* "impurity_transport.pyx":187
  *     cdef vector[float] fstart_rans
  *     xstart_rans.reserve(num_imps)
  *     ystart_rans.reserve(num_imps)             # <<<<<<<<<<<<<<
@@ -22156,10 +22336,10 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_v_ystart_rans.reserve(__pyx_v_num_imps);
   } catch(...) {
     __Pyx_CppExn2PyErr();
-    __PYX_ERR(0, 200, __pyx_L1_error)
+    __PYX_ERR(0, 187, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":201
+  /* "impurity_transport.pyx":188
  *     xstart_rans.reserve(num_imps)
  *     ystart_rans.reserve(num_imps)
  *     zstart_rans_coarse.reserve(num_imps)             # <<<<<<<<<<<<<<
@@ -22170,10 +22350,10 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_v_zstart_rans_coarse.reserve(__pyx_v_num_imps);
   } catch(...) {
     __Pyx_CppExn2PyErr();
-    __PYX_ERR(0, 201, __pyx_L1_error)
+    __PYX_ERR(0, 188, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":202
+  /* "impurity_transport.pyx":189
  *     ystart_rans.reserve(num_imps)
  *     zstart_rans_coarse.reserve(num_imps)
  *     zstart_rans_fine.reserve(num_imps)             # <<<<<<<<<<<<<<
@@ -22184,10 +22364,10 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_v_zstart_rans_fine.reserve(__pyx_v_num_imps);
   } catch(...) {
     __Pyx_CppExn2PyErr();
-    __PYX_ERR(0, 202, __pyx_L1_error)
+    __PYX_ERR(0, 189, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":203
+  /* "impurity_transport.pyx":190
  *     zstart_rans_coarse.reserve(num_imps)
  *     zstart_rans_fine.reserve(num_imps)
  *     fstart_rans.reserve(num_imps)             # <<<<<<<<<<<<<<
@@ -22198,25 +22378,25 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_v_fstart_rans.reserve(__pyx_v_num_imps);
   } catch(...) {
     __Pyx_CppExn2PyErr();
-    __PYX_ERR(0, 203, __pyx_L1_error)
+    __PYX_ERR(0, 190, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":204
+  /* "impurity_transport.pyx":191
  *     zstart_rans_fine.reserve(num_imps)
  *     fstart_rans.reserve(num_imps)
  *     xstart_rans = np.random.random(num_imps)             # <<<<<<<<<<<<<<
  *     ystart_rans = np.random.random(num_imps)
  *     zstart_rans_coarse = np.random.random(num_imps)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 204, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 191, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 204, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 191, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 204, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 191, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 204, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 191, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_t_19 = NULL;
   __pyx_t_5 = 0;
@@ -22237,30 +22417,30 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 204, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 191, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
-  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 204, __pyx_L1_error)
+  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 191, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_xstart_rans = __PYX_STD_MOVE_IF_SUPPORTED(__pyx_t_24);
 
-  /* "impurity_transport.pyx":205
+  /* "impurity_transport.pyx":192
  *     fstart_rans.reserve(num_imps)
  *     xstart_rans = np.random.random(num_imps)
  *     ystart_rans = np.random.random(num_imps)             # <<<<<<<<<<<<<<
  *     zstart_rans_coarse = np.random.random(num_imps)
  *     zstart_rans_fine = np.random.random(num_imps)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 205, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 192, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 205, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 192, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 205, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 192, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 205, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 192, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_t_19 = NULL;
   __pyx_t_5 = 0;
@@ -22281,30 +22461,30 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 205, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 192, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
-  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 205, __pyx_L1_error)
+  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 192, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_ystart_rans = __PYX_STD_MOVE_IF_SUPPORTED(__pyx_t_24);
 
-  /* "impurity_transport.pyx":206
+  /* "impurity_transport.pyx":193
  *     xstart_rans = np.random.random(num_imps)
  *     ystart_rans = np.random.random(num_imps)
  *     zstart_rans_coarse = np.random.random(num_imps)             # <<<<<<<<<<<<<<
  *     zstart_rans_fine = np.random.random(num_imps)
  *     fstart_rans = np.random.random(num_imps)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 206, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 206, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 206, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 206, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_t_19 = NULL;
   __pyx_t_5 = 0;
@@ -22325,30 +22505,30 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 206, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 193, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
-  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 206, __pyx_L1_error)
+  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_zstart_rans_coarse = __PYX_STD_MOVE_IF_SUPPORTED(__pyx_t_24);
 
-  /* "impurity_transport.pyx":207
+  /* "impurity_transport.pyx":194
  *     ystart_rans = np.random.random(num_imps)
  *     zstart_rans_coarse = np.random.random(num_imps)
  *     zstart_rans_fine = np.random.random(num_imps)             # <<<<<<<<<<<<<<
  *     fstart_rans = np.random.random(num_imps)
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 207, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 207, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 207, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 207, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_t_19 = NULL;
   __pyx_t_5 = 0;
@@ -22369,30 +22549,30 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 207, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 194, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
-  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 207, __pyx_L1_error)
+  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_zstart_rans_fine = __PYX_STD_MOVE_IF_SUPPORTED(__pyx_t_24);
 
-  /* "impurity_transport.pyx":208
+  /* "impurity_transport.pyx":195
  *     zstart_rans_coarse = np.random.random(num_imps)
  *     zstart_rans_fine = np.random.random(num_imps)
  *     fstart_rans = np.random.random(num_imps)             # <<<<<<<<<<<<<<
  * 
  *     # Create OpenADAS object to load the rate coefficients. These are:
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_t_19 = NULL;
   __pyx_t_5 = 0;
@@ -22413,22 +22593,22 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 208, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 195, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
-  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_24 = __pyx_convert_vector_from_py_float(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_fstart_rans = __PYX_STD_MOVE_IF_SUPPORTED(__pyx_t_24);
 
-  /* "impurity_transport.pyx":218
+  /* "impurity_transport.pyx":205
  *     # found it is way quicker to create RegularGridInterpolators for
  *     # each charge ahead of time that can be called for a given ne, Te.
  *     oa, rate_df_rc, rate_df_iz = load_adas(input_opts)             # <<<<<<<<<<<<<<
  * 
  *     def create_interps(df, atom_num):
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_load_adas); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 218, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_load_adas); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 205, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __pyx_t_8 = NULL;
   __pyx_t_5 = 0;
@@ -22448,7 +22628,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_8, __pyx_v_input_opts};
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 218, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   }
@@ -22458,7 +22638,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     if (unlikely(size != 3)) {
       if (size > 3) __Pyx_RaiseTooManyValuesError(3);
       else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-      __PYX_ERR(0, 218, __pyx_L1_error)
+      __PYX_ERR(0, 205, __pyx_L1_error)
     }
     #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
     if (likely(PyTuple_CheckExact(sequence))) {
@@ -22474,17 +22654,17 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __Pyx_INCREF(__pyx_t_8);
     __Pyx_INCREF(__pyx_t_19);
     #else
-    __pyx_t_18 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 218, __pyx_L1_error)
+    __pyx_t_18 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
-    __pyx_t_8 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 218, __pyx_L1_error)
+    __pyx_t_8 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_19 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 218, __pyx_L1_error)
+    __pyx_t_19 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
     #endif
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   } else {
     Py_ssize_t index = -1;
-    __pyx_t_20 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 218, __pyx_L1_error)
+    __pyx_t_20 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_t_25 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_20);
@@ -22494,7 +22674,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __Pyx_GOTREF(__pyx_t_8);
     index = 2; __pyx_t_19 = __pyx_t_25(__pyx_t_20); if (unlikely(!__pyx_t_19)) goto __pyx_L14_unpacking_failed;
     __Pyx_GOTREF(__pyx_t_19);
-    if (__Pyx_IternextUnpackEndCheck(__pyx_t_25(__pyx_t_20), 3) < 0) __PYX_ERR(0, 218, __pyx_L1_error)
+    if (__Pyx_IternextUnpackEndCheck(__pyx_t_25(__pyx_t_20), 3) < 0) __PYX_ERR(0, 205, __pyx_L1_error)
     __pyx_t_25 = NULL;
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     goto __pyx_L15_unpacking_done;
@@ -22502,7 +22682,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
     __pyx_t_25 = NULL;
     if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-    __PYX_ERR(0, 218, __pyx_L1_error)
+    __PYX_ERR(0, 205, __pyx_L1_error)
     __pyx_L15_unpacking_done:;
   }
   __pyx_v_oa = __pyx_t_18;
@@ -22512,96 +22692,96 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   __pyx_v_rate_df_iz = __pyx_t_19;
   __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":220
+  /* "impurity_transport.pyx":207
  *     oa, rate_df_rc, rate_df_iz = load_adas(input_opts)
  * 
  *     def create_interps(df, atom_num):             # <<<<<<<<<<<<<<
  *         interps = []
  * 
  */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_18impurity_transport_17follow_impurities_1create_interps, 0, __pyx_n_s_follow_impurities_locals_create, NULL, __pyx_n_s_impurity_transport, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_18impurity_transport_17follow_impurities_1create_interps, 0, __pyx_n_s_follow_impurities_locals_create, NULL, __pyx_n_s_impurity_transport, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_v_create_interps = __pyx_t_4;
   __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":245
+  /* "impurity_transport.pyx":232
  *     # we will want to index it with charge-1. The functions are called
  *     # with interps[charge-1](local_te, local_ne).
  *     interps_rc = create_interps(rate_df_rc, imp_atom_num)             # <<<<<<<<<<<<<<
  *     interps_iz = create_interps(rate_df_iz, imp_atom_num)
  * 
  */
-  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 245, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 232, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_19 = __pyx_pf_18impurity_transport_17follow_impurities_create_interps(__pyx_v_create_interps, __pyx_v_rate_df_rc, __pyx_t_4); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 245, __pyx_L1_error)
+  __pyx_t_19 = __pyx_pf_18impurity_transport_17follow_impurities_create_interps(__pyx_v_create_interps, __pyx_v_rate_df_rc, __pyx_t_4); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 232, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_interps_rc = __pyx_t_19;
   __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":246
+  /* "impurity_transport.pyx":233
  *     # with interps[charge-1](local_te, local_ne).
  *     interps_rc = create_interps(rate_df_rc, imp_atom_num)
  *     interps_iz = create_interps(rate_df_iz, imp_atom_num)             # <<<<<<<<<<<<<<
  * 
  *     if collisions:
  */
-  __pyx_t_19 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 246, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 233, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __pyx_t_4 = __pyx_pf_18impurity_transport_17follow_impurities_create_interps(__pyx_v_create_interps, __pyx_v_rate_df_iz, __pyx_t_19); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 246, __pyx_L1_error)
+  __pyx_t_4 = __pyx_pf_18impurity_transport_17follow_impurities_create_interps(__pyx_v_create_interps, __pyx_v_rate_df_iz, __pyx_t_19); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 233, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
   __pyx_v_interps_iz = __pyx_t_4;
   __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":248
+  /* "impurity_transport.pyx":235
  *     interps_iz = create_interps(rate_df_iz, imp_atom_num)
  * 
  *     if collisions:             # <<<<<<<<<<<<<<
  * 
- *         # Calculate the collision frequency arrays up front. We intentionally pass
+ *         # Calculate the collision frequency arrays up front. We intentionally
  */
   if (__pyx_v_collisions) {
 
-    /* "impurity_transport.pyx":253
- *         # the non-cythonized arrays to make life easier in the function. Doesn't
- *         # matter much since this is only called once.
+    /* "impurity_transport.pyx":240
+ *         # pass the non-cythonized arrays to make life easier in the function.
+ *         # Doesn't matter much since this is only called once and we use numpy.
  *         print("Calculating collision frequencies...")             # <<<<<<<<<<<<<<
  *         coll_freq_arr_py = calc_coll_freq_arr(gkyl_bkg["ne"], gkyl_bkg["ni"],
  *             gkyl_bkg["te"], gkyl_bkg["ti"], input_opts["imp_mass"], imp_atom_num)
  */
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 253, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 240, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":254
- *         # matter much since this is only called once.
+    /* "impurity_transport.pyx":241
+ *         # Doesn't matter much since this is only called once and we use numpy.
  *         print("Calculating collision frequencies...")
  *         coll_freq_arr_py = calc_coll_freq_arr(gkyl_bkg["ne"], gkyl_bkg["ni"],             # <<<<<<<<<<<<<<
  *             gkyl_bkg["te"], gkyl_bkg["ti"], input_opts["imp_mass"], imp_atom_num)
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_calc_coll_freq_arr); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 254, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_calc_coll_freq_arr); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 241, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
-    __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 254, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 241, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 254, __pyx_L1_error)
+    __pyx_t_18 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ni); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 241, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_18);
 
-    /* "impurity_transport.pyx":255
+    /* "impurity_transport.pyx":242
  *         print("Calculating collision frequencies...")
  *         coll_freq_arr_py = calc_coll_freq_arr(gkyl_bkg["ne"], gkyl_bkg["ni"],
  *             gkyl_bkg["te"], gkyl_bkg["ti"], input_opts["imp_mass"], imp_atom_num)             # <<<<<<<<<<<<<<
  * 
  *     else:
  */
-    __pyx_t_20 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_te); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 255, __pyx_L1_error)
+    __pyx_t_20 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_te); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 242, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_20);
-    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ti); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 255, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ti); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 242, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_mass); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 255, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_mass); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 242, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 255, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 242, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __pyx_t_7 = NULL;
     __pyx_t_5 = 0;
@@ -22627,24 +22807,24 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 254, __pyx_L1_error)
+      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 241, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     }
     __pyx_v_coll_freq_arr_py = __pyx_t_4;
     __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":248
+    /* "impurity_transport.pyx":235
  *     interps_iz = create_interps(rate_df_iz, imp_atom_num)
  * 
  *     if collisions:             # <<<<<<<<<<<<<<
  * 
- *         # Calculate the collision frequency arrays up front. We intentionally pass
+ *         # Calculate the collision frequency arrays up front. We intentionally
  */
     goto __pyx_L16;
   }
 
-  /* "impurity_transport.pyx":262
+  /* "impurity_transport.pyx":249
  *         # dimension that is the size of the number of impurity charge states
  *         # since that's what shape array we get if collisions are on.
  *         coll_shape = list(gkyl_bkg["ne"].shape)             # <<<<<<<<<<<<<<
@@ -22652,39 +22832,39 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *         coll_freq_arr_py = np.zeros(coll_shape)
  */
   /*else*/ {
-    __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 262, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 249, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_shape); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 262, __pyx_L1_error)
+    __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_shape); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 249, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PySequence_ListKeepNew(__pyx_t_19); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 262, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PySequence_ListKeepNew(__pyx_t_19); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 249, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     __pyx_v_coll_shape = ((PyObject*)__pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":263
+    /* "impurity_transport.pyx":250
  *         # since that's what shape array we get if collisions are on.
  *         coll_shape = list(gkyl_bkg["ne"].shape)
  *         coll_shape.insert(0, imp_atom_num)             # <<<<<<<<<<<<<<
  *         coll_freq_arr_py = np.zeros(coll_shape)
  * 
  */
-    __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 263, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 250, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_26 = PyList_Insert(__pyx_v_coll_shape, 0, __pyx_t_4); if (unlikely(__pyx_t_26 == ((int)-1))) __PYX_ERR(0, 263, __pyx_L1_error)
+    __pyx_t_26 = PyList_Insert(__pyx_v_coll_shape, 0, __pyx_t_4); if (unlikely(__pyx_t_26 == ((int)-1))) __PYX_ERR(0, 250, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":264
+    /* "impurity_transport.pyx":251
  *         coll_shape = list(gkyl_bkg["ne"].shape)
  *         coll_shape.insert(0, imp_atom_num)
  *         coll_freq_arr_py = np.zeros(coll_shape)             # <<<<<<<<<<<<<<
  * 
  *     # Assign nan's to zero. nan's occur I believe because Gkeyll arrays
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_np); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 264, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_np); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 251, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_zeros); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 264, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_zeros); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 251, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     __pyx_t_19 = NULL;
@@ -22705,7 +22885,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       PyObject *__pyx_callargs[2] = {__pyx_t_19, __pyx_v_coll_shape};
       __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
-      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 264, __pyx_L1_error)
+      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 251, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     }
@@ -22714,16 +22894,16 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   }
   __pyx_L16:;
 
-  /* "impurity_transport.pyx":269
+  /* "impurity_transport.pyx":256
  *     # have some extra zeros in them that results in nan's getting calculated.
  *     # There doesn't seem to be any effect on the simulation from them.
  *     coll_freq_arr_py[np.isnan(coll_freq_arr_py)] = 0.0             # <<<<<<<<<<<<<<
  * 
- *     cdef float[:,:,:,:,:] coll_freq_arr = np.array(coll_freq_arr_py,
+ *     # Create memory view of it for faster access.
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 269, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 256, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_isnan); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 269, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_isnan); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 256, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -22744,67 +22924,67 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_1, __pyx_v_coll_freq_arr_py};
     __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 269, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 256, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
   }
-  if (unlikely((PyObject_SetItem(__pyx_v_coll_freq_arr_py, __pyx_t_4, __pyx_float_0_0) < 0))) __PYX_ERR(0, 269, __pyx_L1_error)
+  if (unlikely((PyObject_SetItem(__pyx_v_coll_freq_arr_py, __pyx_t_4, __pyx_float_0_0) < 0))) __PYX_ERR(0, 256, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":271
- *     coll_freq_arr_py[np.isnan(coll_freq_arr_py)] = 0.0
+  /* "impurity_transport.pyx":259
  * 
+ *     # Create memory view of it for faster access.
  *     cdef float[:,:,:,:,:] coll_freq_arr = np.array(coll_freq_arr_py,             # <<<<<<<<<<<<<<
  *         dtype=np.float32)
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 271, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 259, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_array); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 271, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_array); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 259, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 271, __pyx_L1_error)
+  __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 259, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_INCREF(__pyx_v_coll_freq_arr_py);
   __Pyx_GIVEREF(__pyx_v_coll_freq_arr_py);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_v_coll_freq_arr_py)) __PYX_ERR(0, 271, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_v_coll_freq_arr_py)) __PYX_ERR(0, 259, __pyx_L1_error);
 
-  /* "impurity_transport.pyx":272
- * 
+  /* "impurity_transport.pyx":260
+ *     # Create memory view of it for faster access.
  *     cdef float[:,:,:,:,:] coll_freq_arr = np.array(coll_freq_arr_py,
  *         dtype=np.float32)             # <<<<<<<<<<<<<<
  * 
  *     # The ending frame will always be the end of the simulation, this
  */
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 260, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 260, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_float32); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_float32); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 260, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, __pyx_t_9) < 0) __PYX_ERR(0, 272, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, __pyx_t_9) < 0) __PYX_ERR(0, 260, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":271
- *     coll_freq_arr_py[np.isnan(coll_freq_arr_py)] = 0.0
+  /* "impurity_transport.pyx":259
  * 
+ *     # Create memory view of it for faster access.
  *     cdef float[:,:,:,:,:] coll_freq_arr = np.array(coll_freq_arr_py,             # <<<<<<<<<<<<<<
  *         dtype=np.float32)
  * 
  */
-  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_19, __pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 271, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_19, __pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 259, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_27 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsdsds_float(__pyx_t_9, PyBUF_WRITABLE); if (unlikely(!__pyx_t_27.memview)) __PYX_ERR(0, 271, __pyx_L1_error)
+  __pyx_t_27 = __Pyx_PyObject_to_MemoryviewSlice_dsdsdsdsds_float(__pyx_t_9, PyBUF_WRITABLE); if (unlikely(!__pyx_t_27.memview)) __PYX_ERR(0, 259, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_v_coll_freq_arr = __pyx_t_27;
   __pyx_t_27.memview = NULL;
   __pyx_t_27.data = NULL;
 
-  /* "impurity_transport.pyx":277
+  /* "impurity_transport.pyx":265
  *     # is the first dimension in our arrays (0-indexed, not Gkeyll
  *     # indexed).
  *     fend = gkyl_ne.shape[0]             # <<<<<<<<<<<<<<
@@ -22813,7 +22993,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   __pyx_v_fend = (__pyx_v_gkyl_ne.shape[0]);
 
-  /* "impurity_transport.pyx":278
+  /* "impurity_transport.pyx":266
  *     # indexed).
  *     fend = gkyl_ne.shape[0]
  *     fend_fl = float(fend)             # <<<<<<<<<<<<<<
@@ -22822,21 +23002,21 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   __pyx_v_fend_fl = ((double)__pyx_v_fend);
 
-  /* "impurity_transport.pyx":283
+  /* "impurity_transport.pyx":271
  *     # each cell as well as the counts. This is the Monte Carlo way to
  *     # calculate density.
  *     imp_weight_arr = np.zeros(gkyl_bkg["ne"].shape)             # <<<<<<<<<<<<<<
  *     imp_count_arr = np.zeros(gkyl_bkg["ne"].shape)
  *     imp_vx_arr = np.zeros(gkyl_bkg["ne"].shape)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 283, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 283, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 283, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_shape); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 283, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_shape); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -22858,28 +23038,28 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 283, __pyx_L1_error)
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 271, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
   __pyx_v_imp_weight_arr = __pyx_t_9;
   __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":284
+  /* "impurity_transport.pyx":272
  *     # calculate density.
  *     imp_weight_arr = np.zeros(gkyl_bkg["ne"].shape)
  *     imp_count_arr = np.zeros(gkyl_bkg["ne"].shape)             # <<<<<<<<<<<<<<
  *     imp_vx_arr = np.zeros(gkyl_bkg["ne"].shape)
  *     imp_vy_arr = np.zeros(gkyl_bkg["ne"].shape)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_zeros); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_zeros); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_shape); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_shape); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -22901,28 +23081,28 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 284, __pyx_L1_error)
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 272, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
   }
   __pyx_v_imp_count_arr = __pyx_t_9;
   __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":285
+  /* "impurity_transport.pyx":273
  *     imp_weight_arr = np.zeros(gkyl_bkg["ne"].shape)
  *     imp_count_arr = np.zeros(gkyl_bkg["ne"].shape)
  *     imp_vx_arr = np.zeros(gkyl_bkg["ne"].shape)             # <<<<<<<<<<<<<<
  *     imp_vy_arr = np.zeros(gkyl_bkg["ne"].shape)
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_np); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 285, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_np); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_zeros); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 285, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_zeros); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-  __pyx_t_19 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 285, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_shape); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 285, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_shape); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
   __pyx_t_19 = NULL;
@@ -22944,28 +23124,28 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 285, __pyx_L1_error)
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 273, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
   __pyx_v_imp_vx_arr = __pyx_t_9;
   __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":286
+  /* "impurity_transport.pyx":274
  *     imp_count_arr = np.zeros(gkyl_bkg["ne"].shape)
  *     imp_vx_arr = np.zeros(gkyl_bkg["ne"].shape)
  *     imp_vy_arr = np.zeros(gkyl_bkg["ne"].shape)             # <<<<<<<<<<<<<<
  * 
  *     # Lists to record the impurity ion tracks. I am going to hardcode
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 286, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 286, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 274, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 286, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_gkyl_bkg, __pyx_n_s_ne); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_shape); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 286, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_shape); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 274, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -22987,15 +23167,15 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 286, __pyx_L1_error)
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 274, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
   __pyx_v_imp_vy_arr = __pyx_t_9;
   __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":292
- *     # this and make a massive output file. I think you shoul dbe able to
+  /* "impurity_transport.pyx":280
+ *     # this and make a massive output file. I think you should be able to
  *     # accomplish any goals you need with 1,000 particles anyways.
  *     if imp_xyz_tracks:             # <<<<<<<<<<<<<<
  *         if num_imps > 1000:
@@ -23003,7 +23183,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   if (__pyx_v_imp_xyz_tracks) {
 
-    /* "impurity_transport.pyx":293
+    /* "impurity_transport.pyx":281
  *     # accomplish any goals you need with 1,000 particles anyways.
  *     if imp_xyz_tracks:
  *         if num_imps > 1000:             # <<<<<<<<<<<<<<
@@ -23013,51 +23193,51 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
     __pyx_t_6 = (__pyx_v_num_imps > 0x3E8);
     if (__pyx_t_6) {
 
-      /* "impurity_transport.pyx":294
+      /* "impurity_transport.pyx":282
  *     if imp_xyz_tracks:
  *         if num_imps > 1000:
  *             print("Warning! imp_xyz_tracks is set to True and over" +\             # <<<<<<<<<<<<<<
  *                 " 1,000 particles were input. To avoid memory" +\
  *                 " issues, num_imps is being reduced to 1,000. This" +\
  */
-      __pyx_t_9 = __Pyx_PyStr_Concat(__pyx_kp_s_Warning_imp_xyz_tracks_is_set_to, __pyx_kp_s_1_000_particles_were_input_To_a); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 294, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyStr_Concat(__pyx_kp_s_Warning_imp_xyz_tracks_is_set_to, __pyx_kp_s_1_000_particles_were_input_To_a); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 282, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
 
-      /* "impurity_transport.pyx":295
+      /* "impurity_transport.pyx":283
  *         if num_imps > 1000:
  *             print("Warning! imp_xyz_tracks is set to True and over" +\
  *                 " 1,000 particles were input. To avoid memory" +\             # <<<<<<<<<<<<<<
  *                 " issues, num_imps is being reduced to 1,000. This" +\
  *                 " is a hardcoded safeguard.")
  */
-      __pyx_t_4 = __Pyx_PyStr_ConcatInPlace(__pyx_t_9, __pyx_kp_s_issues_num_imps_is_being_reduce); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 295, __pyx_L1_error)
+      __pyx_t_4 = __Pyx_PyStr_ConcatInPlace(__pyx_t_9, __pyx_kp_s_issues_num_imps_is_being_reduce); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 283, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-      /* "impurity_transport.pyx":296
+      /* "impurity_transport.pyx":284
  *             print("Warning! imp_xyz_tracks is set to True and over" +\
  *                 " 1,000 particles were input. To avoid memory" +\
  *                 " issues, num_imps is being reduced to 1,000. This" +\             # <<<<<<<<<<<<<<
  *                 " is a hardcoded safeguard.")
  *             num_imps = 1000
  */
-      __pyx_t_9 = __Pyx_PyStr_ConcatInPlace(__pyx_t_4, __pyx_kp_s_is_a_hardcoded_safeguard); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 296, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyStr_ConcatInPlace(__pyx_t_4, __pyx_kp_s_is_a_hardcoded_safeguard); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 284, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-      /* "impurity_transport.pyx":294
+      /* "impurity_transport.pyx":282
  *     if imp_xyz_tracks:
  *         if num_imps > 1000:
  *             print("Warning! imp_xyz_tracks is set to True and over" +\             # <<<<<<<<<<<<<<
  *                 " 1,000 particles were input. To avoid memory" +\
  *                 " issues, num_imps is being reduced to 1,000. This" +\
  */
-      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 294, __pyx_L1_error)
+      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 282, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-      /* "impurity_transport.pyx":298
+      /* "impurity_transport.pyx":286
  *                 " issues, num_imps is being reduced to 1,000. This" +\
  *                 " is a hardcoded safeguard.")
  *             num_imps = 1000             # <<<<<<<<<<<<<<
@@ -23066,7 +23246,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
       __pyx_v_num_imps = 0x3E8;
 
-      /* "impurity_transport.pyx":293
+      /* "impurity_transport.pyx":281
  *     # accomplish any goals you need with 1,000 particles anyways.
  *     if imp_xyz_tracks:
  *         if num_imps > 1000:             # <<<<<<<<<<<<<<
@@ -23075,7 +23255,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
     }
 
-    /* "impurity_transport.pyx":299
+    /* "impurity_transport.pyx":287
  *                 " is a hardcoded safeguard.")
  *             num_imps = 1000
  *         xyz_lists_x = [[] for i in range(num_imps)]             # <<<<<<<<<<<<<<
@@ -23083,22 +23263,22 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *         xyz_lists_z = [[] for i in range(num_imps)]
  */
     { /* enter inner scope */
-      __pyx_t_4 = PyList_New(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 299, __pyx_L1_error)
+      __pyx_t_4 = PyList_New(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 287, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __pyx_t_5 = __pyx_v_num_imps;
       __pyx_t_14 = __pyx_t_5;
       for (__pyx_t_17 = 0; __pyx_t_17 < __pyx_t_14; __pyx_t_17+=1) {
         __pyx_7genexpr__pyx_v_i = __pyx_t_17;
-        __pyx_t_9 = PyList_New(0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 299, __pyx_L1_error)
+        __pyx_t_9 = PyList_New(0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 287, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        if (unlikely(__Pyx_ListComp_Append(__pyx_t_4, (PyObject*)__pyx_t_9))) __PYX_ERR(0, 299, __pyx_L1_error)
+        if (unlikely(__Pyx_ListComp_Append(__pyx_t_4, (PyObject*)__pyx_t_9))) __PYX_ERR(0, 287, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       }
     } /* exit inner scope */
     __pyx_v_xyz_lists_x = ((PyObject*)__pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":300
+    /* "impurity_transport.pyx":288
  *             num_imps = 1000
  *         xyz_lists_x = [[] for i in range(num_imps)]
  *         xyz_lists_y = [[] for i in range(num_imps)]             # <<<<<<<<<<<<<<
@@ -23106,46 +23286,46 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  * 
  */
     { /* enter inner scope */
-      __pyx_t_4 = PyList_New(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 300, __pyx_L1_error)
+      __pyx_t_4 = PyList_New(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 288, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __pyx_t_5 = __pyx_v_num_imps;
       __pyx_t_14 = __pyx_t_5;
       for (__pyx_t_17 = 0; __pyx_t_17 < __pyx_t_14; __pyx_t_17+=1) {
         __pyx_8genexpr1__pyx_v_i = __pyx_t_17;
-        __pyx_t_9 = PyList_New(0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 300, __pyx_L1_error)
+        __pyx_t_9 = PyList_New(0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 288, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        if (unlikely(__Pyx_ListComp_Append(__pyx_t_4, (PyObject*)__pyx_t_9))) __PYX_ERR(0, 300, __pyx_L1_error)
+        if (unlikely(__Pyx_ListComp_Append(__pyx_t_4, (PyObject*)__pyx_t_9))) __PYX_ERR(0, 288, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       }
     } /* exit inner scope */
     __pyx_v_xyz_lists_y = ((PyObject*)__pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":301
+    /* "impurity_transport.pyx":289
  *         xyz_lists_x = [[] for i in range(num_imps)]
  *         xyz_lists_y = [[] for i in range(num_imps)]
  *         xyz_lists_z = [[] for i in range(num_imps)]             # <<<<<<<<<<<<<<
  * 
- *     # Dictionary containing some statistics.
+ *     # Determine after how often variance reduction should be recalculated in
  */
     { /* enter inner scope */
-      __pyx_t_4 = PyList_New(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 301, __pyx_L1_error)
+      __pyx_t_4 = PyList_New(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 289, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __pyx_t_5 = __pyx_v_num_imps;
       __pyx_t_14 = __pyx_t_5;
       for (__pyx_t_17 = 0; __pyx_t_17 < __pyx_t_14; __pyx_t_17+=1) {
         __pyx_8genexpr2__pyx_v_i = __pyx_t_17;
-        __pyx_t_9 = PyList_New(0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 301, __pyx_L1_error)
+        __pyx_t_9 = PyList_New(0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 289, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        if (unlikely(__Pyx_ListComp_Append(__pyx_t_4, (PyObject*)__pyx_t_9))) __PYX_ERR(0, 301, __pyx_L1_error)
+        if (unlikely(__Pyx_ListComp_Append(__pyx_t_4, (PyObject*)__pyx_t_9))) __PYX_ERR(0, 289, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       }
     } /* exit inner scope */
     __pyx_v_xyz_lists_z = ((PyObject*)__pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "impurity_transport.pyx":292
- *     # this and make a massive output file. I think you shoul dbe able to
+    /* "impurity_transport.pyx":280
+ *     # this and make a massive output file. I think you should be able to
  *     # accomplish any goals you need with 1,000 particles anyways.
  *     if imp_xyz_tracks:             # <<<<<<<<<<<<<<
  *         if num_imps > 1000:
@@ -23153,26 +23333,146 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   }
 
-  /* "impurity_transport.pyx":304
+  /* "impurity_transport.pyx":297
+ *     #   if i / num_imp == var_reduction_freq
+ *     # will never execute.
+ *     cdef int var_red_part_freq = 0             # <<<<<<<<<<<<<<
+ *     cdef int var_red_part_count = 0
  * 
- *     # Dictionary containing some statistics.
+ */
+  __pyx_v_var_red_part_freq = 0;
+
+  /* "impurity_transport.pyx":298
+ *     # will never execute.
+ *     cdef int var_red_part_freq = 0
+ *     cdef int var_red_part_count = 0             # <<<<<<<<<<<<<<
+ * 
+ *     # Fringe and silly case, but nonetheless.
+ */
+  __pyx_v_var_red_part_count = 0;
+
+  /* "impurity_transport.pyx":301
+ * 
+ *     # Fringe and silly case, but nonetheless.
+ *     if num_imps * var_reduction_freq < 1:             # <<<<<<<<<<<<<<
+ *         var_red_part_freq = 1
+ * 
+ */
+  __pyx_t_6 = ((__pyx_v_num_imps * __pyx_v_var_reduction_freq) < 1.0);
+  if (__pyx_t_6) {
+
+    /* "impurity_transport.pyx":302
+ *     # Fringe and silly case, but nonetheless.
+ *     if num_imps * var_reduction_freq < 1:
+ *         var_red_part_freq = 1             # <<<<<<<<<<<<<<
+ * 
+ *     # Round to nearest integer.
+ */
+    __pyx_v_var_red_part_freq = 1;
+
+    /* "impurity_transport.pyx":301
+ * 
+ *     # Fringe and silly case, but nonetheless.
+ *     if num_imps * var_reduction_freq < 1:             # <<<<<<<<<<<<<<
+ *         var_red_part_freq = 1
+ * 
+ */
+    goto __pyx_L25;
+  }
+
+  /* "impurity_transport.pyx":306
+ *     # Round to nearest integer.
+ *     else:
+ *         var_red_part_freq = round(num_imps * var_reduction_freq)             # <<<<<<<<<<<<<<
+ * 
+ *     # Debugging dictionary containing some statistics.
+ */
+  /*else*/ {
+    __pyx_t_4 = PyFloat_FromDouble((__pyx_v_num_imps * __pyx_v_var_reduction_freq)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 306, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_round, __pyx_t_4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 306, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 306, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+    __pyx_v_var_red_part_freq = __pyx_t_5;
+  }
+  __pyx_L25:;
+
+  /* "impurity_transport.pyx":309
+ * 
+ *     # Debugging dictionary containing some statistics.
  *     stat_dict = {"low_xbound_count":0, "high_xbound_count":0,             # <<<<<<<<<<<<<<
  *         "low_zbound_count":0, "high_zbound_count":0,
  *         "low_xbound_time":0.0, "coll_events":0, "total_imp_time":0.0}
  */
-  __pyx_t_4 = __Pyx_PyDict_NewPresized(7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 304, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_low_xbound_count, __pyx_int_0) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_high_xbound_count, __pyx_int_0) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_low_zbound_count, __pyx_int_0) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_high_zbound_count, __pyx_int_0) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_low_xbound_time, __pyx_float_0_0) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_coll_events, __pyx_int_0) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_total_imp_time, __pyx_float_0_0) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  __pyx_v_stat_dict = ((PyObject*)__pyx_t_4);
-  __pyx_t_4 = 0;
+  __pyx_t_9 = __Pyx_PyDict_NewPresized(7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 309, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_low_xbound_count, __pyx_int_0) < 0) __PYX_ERR(0, 309, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_high_xbound_count, __pyx_int_0) < 0) __PYX_ERR(0, 309, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_low_zbound_count, __pyx_int_0) < 0) __PYX_ERR(0, 309, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_high_zbound_count, __pyx_int_0) < 0) __PYX_ERR(0, 309, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_low_xbound_time, __pyx_float_0_0) < 0) __PYX_ERR(0, 309, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_coll_events, __pyx_int_0) < 0) __PYX_ERR(0, 309, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_total_imp_time, __pyx_float_0_0) < 0) __PYX_ERR(0, 309, __pyx_L1_error)
+  __pyx_v_stat_dict = ((PyObject*)__pyx_t_9);
+  __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":309
+  /* "impurity_transport.pyx":314
+ * 
+ *     # Initialize to avoid compiler warning.
+ *     local_dtedx = 0.0             # <<<<<<<<<<<<<<
+ *     local_dtedy = 0.0
+ *     local_dtedz = 0.0
+ */
+  __pyx_v_local_dtedx = 0.0;
+
+  /* "impurity_transport.pyx":315
+ *     # Initialize to avoid compiler warning.
+ *     local_dtedx = 0.0
+ *     local_dtedy = 0.0             # <<<<<<<<<<<<<<
+ *     local_dtedz = 0.0
+ *     local_dtidx = 0.0
+ */
+  __pyx_v_local_dtedy = 0.0;
+
+  /* "impurity_transport.pyx":316
+ *     local_dtedx = 0.0
+ *     local_dtedy = 0.0
+ *     local_dtedz = 0.0             # <<<<<<<<<<<<<<
+ *     local_dtidx = 0.0
+ *     local_dtidy = 0.0
+ */
+  __pyx_v_local_dtedz = 0.0;
+
+  /* "impurity_transport.pyx":317
+ *     local_dtedy = 0.0
+ *     local_dtedz = 0.0
+ *     local_dtidx = 0.0             # <<<<<<<<<<<<<<
+ *     local_dtidy = 0.0
+ *     local_dtidz = 0.0
+ */
+  __pyx_v_local_dtidx = 0.0;
+
+  /* "impurity_transport.pyx":318
+ *     local_dtedz = 0.0
+ *     local_dtidx = 0.0
+ *     local_dtidy = 0.0             # <<<<<<<<<<<<<<
+ *     local_dtidz = 0.0
+ * 
+ */
+  __pyx_v_local_dtidy = 0.0;
+
+  /* "impurity_transport.pyx":319
+ *     local_dtidx = 0.0
+ *     local_dtidy = 0.0
+ *     local_dtidz = 0.0             # <<<<<<<<<<<<<<
+ * 
+ *     # Initialize some loop variables.
+ */
+  __pyx_v_local_dtidz = 0.0;
+
+  /* "impurity_transport.pyx":322
  * 
  *     # Initialize some loop variables.
  *     loop_counts = 0             # <<<<<<<<<<<<<<
@@ -23181,53 +23481,89 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   __pyx_v_loop_counts = 0;
 
-  /* "impurity_transport.pyx":310
+  /* "impurity_transport.pyx":323
  *     # Initialize some loop variables.
  *     loop_counts = 0
  *     iz_warn_count = 0             # <<<<<<<<<<<<<<
  *     rc_warn_count = 0
- *     avg_time_followed = 0.0
+ *     coll_warn_count = 0
  */
   __pyx_v_iz_warn_count = 0;
 
-  /* "impurity_transport.pyx":311
+  /* "impurity_transport.pyx":324
  *     loop_counts = 0
  *     iz_warn_count = 0
  *     rc_warn_count = 0             # <<<<<<<<<<<<<<
+ *     coll_warn_count = 0
  *     avg_time_followed = 0.0
- *     imp_foll_tstart = time.time()
  */
   __pyx_v_rc_warn_count = 0;
 
-  /* "impurity_transport.pyx":312
+  /* "impurity_transport.pyx":325
  *     iz_warn_count = 0
  *     rc_warn_count = 0
+ *     coll_warn_count = 0             # <<<<<<<<<<<<<<
+ *     avg_time_followed = 0.0
+ *     var_count_qualifier = 0
+ */
+  __pyx_v_coll_warn_count = 0;
+
+  /* "impurity_transport.pyx":326
+ *     rc_warn_count = 0
+ *     coll_warn_count = 0
  *     avg_time_followed = 0.0             # <<<<<<<<<<<<<<
- *     imp_foll_tstart = time.time()
- * 
+ *     var_count_qualifier = 0
+ *     num_add_imps = 0
  */
   __pyx_v_avg_time_followed = 0.0;
 
-  /* "impurity_transport.pyx":313
- *     rc_warn_count = 0
+  /* "impurity_transport.pyx":327
+ *     coll_warn_count = 0
  *     avg_time_followed = 0.0
+ *     var_count_qualifier = 0             # <<<<<<<<<<<<<<
+ *     num_add_imps = 0
+ *     z = 0.0
+ */
+  __pyx_v_var_count_qualifier = 0;
+
+  /* "impurity_transport.pyx":328
+ *     avg_time_followed = 0.0
+ *     var_count_qualifier = 0
+ *     num_add_imps = 0             # <<<<<<<<<<<<<<
+ *     z = 0.0
+ *     imp_foll_tstart = time.time()
+ */
+  __pyx_v_num_add_imps = 0;
+
+  /* "impurity_transport.pyx":329
+ *     var_count_qualifier = 0
+ *     num_add_imps = 0
+ *     z = 0.0             # <<<<<<<<<<<<<<
+ *     imp_foll_tstart = time.time()
+ * 
+ */
+  __pyx_v_z = 0.0;
+
+  /* "impurity_transport.pyx":330
+ *     num_add_imps = 0
+ *     z = 0.0
  *     imp_foll_tstart = time.time()             # <<<<<<<<<<<<<<
  * 
  *     # Loop through tracking the full path of one impurity at a time.
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_time); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 313, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_time); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 313, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_time); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 330, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_time); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 330, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_9 = NULL;
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __pyx_t_4 = NULL;
   __pyx_t_5 = 0;
   #if CYTHON_UNPACK_METHODS
   if (unlikely(PyMethod_Check(__pyx_t_19))) {
-    __pyx_t_9 = PyMethod_GET_SELF(__pyx_t_19);
-    if (likely(__pyx_t_9)) {
+    __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_19);
+    if (likely(__pyx_t_4)) {
       PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_19);
-      __Pyx_INCREF(__pyx_t_9);
+      __Pyx_INCREF(__pyx_t_4);
       __Pyx_INCREF(function);
       __Pyx_DECREF_SET(__pyx_t_19, function);
       __pyx_t_5 = 1;
@@ -23235,173 +23571,197 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   }
   #endif
   {
-    PyObject *__pyx_callargs[2] = {__pyx_t_9, NULL};
-    __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
-    __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 313, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
+    PyObject *__pyx_callargs[2] = {__pyx_t_4, NULL};
+    __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
+    __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 330, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
   }
-  __pyx_v_imp_foll_tstart = __pyx_t_4;
-  __pyx_t_4 = 0;
+  __pyx_v_imp_foll_tstart = __pyx_t_9;
+  __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":316
+  /* "impurity_transport.pyx":333
  * 
  *     # Loop through tracking the full path of one impurity at a time.
  *     print("Beginning impurity following...")             # <<<<<<<<<<<<<<
+ *     for i in tqdm(range(0, num_imps)):
  * 
- *     # We have two different loops, depending on if we want to run in
  */
-  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__13, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 316, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__13, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+  /* "impurity_transport.pyx":334
+ *     # Loop through tracking the full path of one impurity at a time.
+ *     print("Beginning impurity following...")
+ *     for i in tqdm(range(0, num_imps)):             # <<<<<<<<<<<<<<
+ * 
+ *         # Before starting an impurity, check if variance reduction needs to
+ */
+  __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_tqdm); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 334, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_19);
+  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 334, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-
-  /* "impurity_transport.pyx":323
- *     # python operations (e.g., np.argmin) are allowed. I think this
- *     # also include python classes, so we do away with PyImpurity too.
- *     if parallel:             # <<<<<<<<<<<<<<
- * 
- *         pass
- */
-  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_parallel); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 323, __pyx_L1_error)
-  if (__pyx_t_6) {
-    goto __pyx_L25;
+  __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 334, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_INCREF(__pyx_int_0);
+  __Pyx_GIVEREF(__pyx_int_0);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_int_0)) __PYX_ERR(0, 334, __pyx_L1_error);
+  __Pyx_GIVEREF(__pyx_t_4);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_t_4)) __PYX_ERR(0, 334, __pyx_L1_error);
+  __pyx_t_4 = 0;
+  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_range, __pyx_t_1, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 334, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = NULL;
+  __pyx_t_5 = 0;
+  #if CYTHON_UNPACK_METHODS
+  if (unlikely(PyMethod_Check(__pyx_t_19))) {
+    __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_19);
+    if (likely(__pyx_t_1)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_19);
+      __Pyx_INCREF(__pyx_t_1);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_19, function);
+      __pyx_t_5 = 1;
+    }
   }
-
-  /* "impurity_transport.pyx":330
- * 
- *     else:
- *         for i in tqdm(range(0, num_imps)):             # <<<<<<<<<<<<<<
- * 
- *             # Assume impurity can start at any frame (this means we are
- */
-  /*else*/ {
-    __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_tqdm); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 330, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_19);
-    __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_num_imps); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 330, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 330, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_INCREF(__pyx_int_0);
-    __Pyx_GIVEREF(__pyx_int_0);
-    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_int_0)) __PYX_ERR(0, 330, __pyx_L1_error);
-    __Pyx_GIVEREF(__pyx_t_9);
-    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_t_9)) __PYX_ERR(0, 330, __pyx_L1_error);
-    __pyx_t_9 = 0;
-    __pyx_t_9 = __Pyx_PyObject_Call(__pyx_builtin_range, __pyx_t_1, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 330, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = NULL;
-    __pyx_t_5 = 0;
-    #if CYTHON_UNPACK_METHODS
-    if (unlikely(PyMethod_Check(__pyx_t_19))) {
-      __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_19);
-      if (likely(__pyx_t_1)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_19);
-        __Pyx_INCREF(__pyx_t_1);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_19, function);
-        __pyx_t_5 = 1;
-      }
-    }
-    #endif
-    {
-      PyObject *__pyx_callargs[2] = {__pyx_t_1, __pyx_t_9};
-      __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 330, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-    }
-    if (likely(PyList_CheckExact(__pyx_t_4)) || PyTuple_CheckExact(__pyx_t_4)) {
-      __pyx_t_19 = __pyx_t_4; __Pyx_INCREF(__pyx_t_19);
-      __pyx_t_28 = 0;
-      __pyx_t_29 = NULL;
-    } else {
-      __pyx_t_28 = -1; __pyx_t_19 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 330, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_19);
-      __pyx_t_29 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_19); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 330, __pyx_L1_error)
-    }
+  #endif
+  {
+    PyObject *__pyx_callargs[2] = {__pyx_t_1, __pyx_t_4};
+    __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    for (;;) {
-      if (likely(!__pyx_t_29)) {
-        if (likely(PyList_CheckExact(__pyx_t_19))) {
-          {
-            Py_ssize_t __pyx_temp = __Pyx_PyList_GET_SIZE(__pyx_t_19);
-            #if !CYTHON_ASSUME_SAFE_MACROS
-            if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 330, __pyx_L1_error)
-            #endif
-            if (__pyx_t_28 >= __pyx_temp) break;
-          }
-          #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_4 = PyList_GET_ITEM(__pyx_t_19, __pyx_t_28); __Pyx_INCREF(__pyx_t_4); __pyx_t_28++; if (unlikely((0 < 0))) __PYX_ERR(0, 330, __pyx_L1_error)
-          #else
-          __pyx_t_4 = __Pyx_PySequence_ITEM(__pyx_t_19, __pyx_t_28); __pyx_t_28++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 330, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 334, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+  }
+  if (likely(PyList_CheckExact(__pyx_t_9)) || PyTuple_CheckExact(__pyx_t_9)) {
+    __pyx_t_19 = __pyx_t_9; __Pyx_INCREF(__pyx_t_19);
+    __pyx_t_28 = 0;
+    __pyx_t_29 = NULL;
+  } else {
+    __pyx_t_28 = -1; __pyx_t_19 = PyObject_GetIter(__pyx_t_9); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 334, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_19);
+    __pyx_t_29 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_19); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 334, __pyx_L1_error)
+  }
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+  for (;;) {
+    if (likely(!__pyx_t_29)) {
+      if (likely(PyList_CheckExact(__pyx_t_19))) {
+        {
+          Py_ssize_t __pyx_temp = __Pyx_PyList_GET_SIZE(__pyx_t_19);
+          #if !CYTHON_ASSUME_SAFE_MACROS
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 334, __pyx_L1_error)
           #endif
-        } else {
-          {
-            Py_ssize_t __pyx_temp = __Pyx_PyTuple_GET_SIZE(__pyx_t_19);
-            #if !CYTHON_ASSUME_SAFE_MACROS
-            if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 330, __pyx_L1_error)
-            #endif
-            if (__pyx_t_28 >= __pyx_temp) break;
-          }
-          #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_19, __pyx_t_28); __Pyx_INCREF(__pyx_t_4); __pyx_t_28++; if (unlikely((0 < 0))) __PYX_ERR(0, 330, __pyx_L1_error)
-          #else
-          __pyx_t_4 = __Pyx_PySequence_ITEM(__pyx_t_19, __pyx_t_28); __pyx_t_28++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 330, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          #endif
+          if (__pyx_t_28 >= __pyx_temp) break;
         }
+        #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+        __pyx_t_9 = PyList_GET_ITEM(__pyx_t_19, __pyx_t_28); __Pyx_INCREF(__pyx_t_9); __pyx_t_28++; if (unlikely((0 < 0))) __PYX_ERR(0, 334, __pyx_L1_error)
+        #else
+        __pyx_t_9 = __Pyx_PySequence_ITEM(__pyx_t_19, __pyx_t_28); __pyx_t_28++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 334, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        #endif
       } else {
-        __pyx_t_4 = __pyx_t_29(__pyx_t_19);
-        if (unlikely(!__pyx_t_4)) {
-          PyObject* exc_type = PyErr_Occurred();
-          if (exc_type) {
-            if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-            else __PYX_ERR(0, 330, __pyx_L1_error)
-          }
-          break;
+        {
+          Py_ssize_t __pyx_temp = __Pyx_PyTuple_GET_SIZE(__pyx_t_19);
+          #if !CYTHON_ASSUME_SAFE_MACROS
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 334, __pyx_L1_error)
+          #endif
+          if (__pyx_t_28 >= __pyx_temp) break;
         }
-        __Pyx_GOTREF(__pyx_t_4);
+        #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+        __pyx_t_9 = PyTuple_GET_ITEM(__pyx_t_19, __pyx_t_28); __Pyx_INCREF(__pyx_t_9); __pyx_t_28++; if (unlikely((0 < 0))) __PYX_ERR(0, 334, __pyx_L1_error)
+        #else
+        __pyx_t_9 = __Pyx_PySequence_ITEM(__pyx_t_19, __pyx_t_28); __pyx_t_28++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 334, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        #endif
       }
-      __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 330, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_v_i = __pyx_t_5;
-
-      /* "impurity_transport.pyx":338
- *             #    fstart_rans[i]
- *             #fstart = np.round(fstart_fl)
- *             fstart_fl = fend_fl * fstart_rans[i]             # <<<<<<<<<<<<<<
- *             fstart = np.floor(fstart_fl)
- * 
- */
-      __pyx_v_fstart_fl = (__pyx_v_fend_fl * (__pyx_v_fstart_rans[__pyx_v_i]));
-
-      /* "impurity_transport.pyx":339
- *             #fstart = np.round(fstart_fl)
- *             fstart_fl = fend_fl * fstart_rans[i]
- *             fstart = np.floor(fstart_fl)             # <<<<<<<<<<<<<<
- * 
- *             # Determine random starting location. First is uniform between
- */
-      __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 339, __pyx_L1_error)
+    } else {
+      __pyx_t_9 = __pyx_t_29(__pyx_t_19);
+      if (unlikely(!__pyx_t_9)) {
+        PyObject* exc_type = PyErr_Occurred();
+        if (exc_type) {
+          if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
+          else __PYX_ERR(0, 334, __pyx_L1_error)
+        }
+        break;
+      }
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_floor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 339, __pyx_L1_error)
+    }
+    __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 334, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+    __pyx_v_i = __pyx_t_5;
+
+    /* "impurity_transport.pyx":339
+ *         # be recalculated. We use a scheme based on splitting particles using
+ *         # the collision probability in high variance (low count) regions.
+ *         if var_red_part_count == var_red_part_freq:             # <<<<<<<<<<<<<<
+ * 
+ *             # Use the median number of counts so far as the criteria for if a
+ */
+    __pyx_t_6 = (__pyx_v_var_red_part_count == __pyx_v_var_red_part_freq);
+    if (__pyx_t_6) {
+
+      /* "impurity_transport.pyx":344
+ *             # particle is split (below median indicates the particle is in a
+ *             # low count region, which means it's important).
+ *             var_count_qualifier = np.median(             # <<<<<<<<<<<<<<
+ *                 imp_count_arr[np.nonzero(imp_count_arr)])
+ *             print("var_count_qualifier: {}".format(var_count_qualifier))
+ */
+      __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 344, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_median); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 344, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      __pyx_t_9 = PyFloat_FromDouble(__pyx_v_fstart_fl); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 339, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+
+      /* "impurity_transport.pyx":345
+ *             # low count region, which means it's important).
+ *             var_count_qualifier = np.median(
+ *                 imp_count_arr[np.nonzero(imp_count_arr)])             # <<<<<<<<<<<<<<
+ *             print("var_count_qualifier: {}".format(var_count_qualifier))
+ *             var_red_part_count = 0
+ */
+      __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 345, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_nonzero); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 345, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_20);
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __pyx_t_3 = NULL;
       __pyx_t_5 = 0;
       #if CYTHON_UNPACK_METHODS
-      if (unlikely(PyMethod_Check(__pyx_t_1))) {
-        __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_1);
+      if (unlikely(PyMethod_Check(__pyx_t_20))) {
+        __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_20);
         if (likely(__pyx_t_3)) {
-          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_20);
           __Pyx_INCREF(__pyx_t_3);
+          __Pyx_INCREF(function);
+          __Pyx_DECREF_SET(__pyx_t_20, function);
+          __pyx_t_5 = 1;
+        }
+      }
+      #endif
+      {
+        PyObject *__pyx_callargs[2] = {__pyx_t_3, __pyx_v_imp_count_arr};
+        __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_20, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+        if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 345, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+      }
+      __pyx_t_20 = __Pyx_PyObject_GetItem(__pyx_v_imp_count_arr, __pyx_t_4); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 345, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_20);
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __pyx_t_4 = NULL;
+      __pyx_t_5 = 0;
+      #if CYTHON_UNPACK_METHODS
+      if (unlikely(PyMethod_Check(__pyx_t_1))) {
+        __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_1);
+        if (likely(__pyx_t_4)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+          __Pyx_INCREF(__pyx_t_4);
           __Pyx_INCREF(function);
           __Pyx_DECREF_SET(__pyx_t_1, function);
           __pyx_t_5 = 1;
@@ -23409,406 +23769,378 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       }
       #endif
       {
-        PyObject *__pyx_callargs[2] = {__pyx_t_3, __pyx_t_9};
-        __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-        __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 339, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
+        PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_t_20};
+        __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+        if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 344, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       }
-      __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 339, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_v_fstart = __pyx_t_5;
 
-      /* "impurity_transport.pyx":343
- *             # Determine random starting location. First is uniform between
- *             # xmin and xmax.
- *             x = imp_xmin + (imp_xmax - imp_xmin) * xstart_rans[i]             # <<<<<<<<<<<<<<
- * 
- *             # We assume symmetry in the y direction, so uniformily
+      /* "impurity_transport.pyx":344
+ *             # particle is split (below median indicates the particle is in a
+ *             # low count region, which means it's important).
+ *             var_count_qualifier = np.median(             # <<<<<<<<<<<<<<
+ *                 imp_count_arr[np.nonzero(imp_count_arr)])
+ *             print("var_count_qualifier: {}".format(var_count_qualifier))
  */
-      __pyx_v_x = (__pyx_v_imp_xmin + ((__pyx_v_imp_xmax - __pyx_v_imp_xmin) * (__pyx_v_xstart_rans[__pyx_v_i])));
+      __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 344, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __pyx_v_var_count_qualifier = __pyx_t_5;
+
+      /* "impurity_transport.pyx":346
+ *             var_count_qualifier = np.median(
+ *                 imp_count_arr[np.nonzero(imp_count_arr)])
+ *             print("var_count_qualifier: {}".format(var_count_qualifier))             # <<<<<<<<<<<<<<
+ *             var_red_part_count = 0
+ *         else:
+ */
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_var_count_qualifier, __pyx_n_s_format); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 346, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __pyx_t_20 = __Pyx_PyInt_From_int(__pyx_v_var_count_qualifier); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 346, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_20);
+      __pyx_t_4 = NULL;
+      __pyx_t_5 = 0;
+      #if CYTHON_UNPACK_METHODS
+      if (likely(PyMethod_Check(__pyx_t_1))) {
+        __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_1);
+        if (likely(__pyx_t_4)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+          __Pyx_INCREF(__pyx_t_4);
+          __Pyx_INCREF(function);
+          __Pyx_DECREF_SET(__pyx_t_1, function);
+          __pyx_t_5 = 1;
+        }
+      }
+      #endif
+      {
+        PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_t_20};
+        __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+        if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 346, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      }
+      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 346, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
       /* "impurity_transport.pyx":347
- *             # We assume symmetry in the y direction, so uniformily
- *             # distributed between those as well.
- *             y = gkyl_ymin + (gkyl_ymax - gkyl_ymin) * ystart_rans[i]             # <<<<<<<<<<<<<<
+ *                 imp_count_arr[np.nonzero(imp_count_arr)])
+ *             print("var_count_qualifier: {}".format(var_count_qualifier))
+ *             var_red_part_count = 0             # <<<<<<<<<<<<<<
+ *         else:
+ *             var_red_part_count += 1
+ */
+      __pyx_v_var_red_part_count = 0;
+
+      /* "impurity_transport.pyx":339
+ *         # be recalculated. We use a scheme based on splitting particles using
+ *         # the collision probability in high variance (low count) regions.
+ *         if var_red_part_count == var_red_part_freq:             # <<<<<<<<<<<<<<
  * 
- *             # Next determine starting z location.
+ *             # Use the median number of counts so far as the criteria for if a
  */
-      __pyx_v_y = (__pyx_v_gkyl_ymin + ((__pyx_v_gkyl_ymax - __pyx_v_gkyl_ymin) * (__pyx_v_ystart_rans[__pyx_v_i])));
+      goto __pyx_L28;
+    }
 
-      /* "impurity_transport.pyx":354
- *             #   2: Value specified.
- *             # Assign z = 0.0 to suppress compiler warning.
- *             z = 0.0             # <<<<<<<<<<<<<<
- *             if imp_zstart_int == 1:
- *                 x_idx = np.argmin(np.abs(x - gkyl_x))
+    /* "impurity_transport.pyx":349
+ *             var_red_part_count = 0
+ *         else:
+ *             var_red_part_count += 1             # <<<<<<<<<<<<<<
+ * 
+ *         # Assume impurity can start at any frame (this means we are
  */
-      __pyx_v_z = 0.0;
+    /*else*/ {
+      __pyx_v_var_red_part_count = (__pyx_v_var_red_part_count + 1);
+    }
+    __pyx_L28:;
 
-      /* "impurity_transport.pyx":355
- *             # Assign z = 0.0 to suppress compiler warning.
- *             z = 0.0
- *             if imp_zstart_int == 1:             # <<<<<<<<<<<<<<
- *                 x_idx = np.argmin(np.abs(x - gkyl_x))
- *                 y_idx = np.argmin(np.abs(y - gkyl_y))
- */
-      switch (__pyx_v_imp_zstart_int) {
-        case 1:
-
-        /* "impurity_transport.pyx":356
- *             z = 0.0
- *             if imp_zstart_int == 1:
- *                 x_idx = np.argmin(np.abs(x - gkyl_x))             # <<<<<<<<<<<<<<
- *                 y_idx = np.argmin(np.abs(y - gkyl_y))
- *                 z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]
- */
-        __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 356, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_argmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 356, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-        __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 356, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_3);
-        __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_abs); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 356, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_20);
-        __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        __pyx_t_3 = PyFloat_FromDouble(__pyx_v_x); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 356, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_3);
-        __pyx_t_18 = PyNumber_Subtract(__pyx_t_3, __pyx_v_gkyl_x); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 356, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        __pyx_t_3 = NULL;
-        __pyx_t_5 = 0;
-        #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_20))) {
-          __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_20);
-          if (likely(__pyx_t_3)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_20);
-            __Pyx_INCREF(__pyx_t_3);
-            __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_20, function);
-            __pyx_t_5 = 1;
-          }
-        }
-        #endif
-        {
-          PyObject *__pyx_callargs[2] = {__pyx_t_3, __pyx_t_18};
-          __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_20, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-          __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 356, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_1);
-          __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-        }
-        __pyx_t_20 = NULL;
-        __pyx_t_5 = 0;
-        #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_9))) {
-          __pyx_t_20 = PyMethod_GET_SELF(__pyx_t_9);
-          if (likely(__pyx_t_20)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
-            __Pyx_INCREF(__pyx_t_20);
-            __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_9, function);
-            __pyx_t_5 = 1;
-          }
-        }
-        #endif
-        {
-          PyObject *__pyx_callargs[2] = {__pyx_t_20, __pyx_t_1};
-          __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-          __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
-          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-          if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 356, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        }
-        __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 356, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_v_x_idx = __pyx_t_5;
-
-        /* "impurity_transport.pyx":357
- *             if imp_zstart_int == 1:
- *                 x_idx = np.argmin(np.abs(x - gkyl_x))
- *                 y_idx = np.argmin(np.abs(y - gkyl_y))             # <<<<<<<<<<<<<<
- *                 z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]
- *                     - zstart_rans_coarse[i]))
- */
-        __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 357, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_argmin); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 357, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 357, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_20);
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_abs); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 357, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-        __pyx_t_20 = PyFloat_FromDouble(__pyx_v_y); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 357, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_20);
-        __pyx_t_3 = PyNumber_Subtract(__pyx_t_20, __pyx_v_gkyl_y); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 357, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_3);
-        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-        __pyx_t_20 = NULL;
-        __pyx_t_5 = 0;
-        #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_18))) {
-          __pyx_t_20 = PyMethod_GET_SELF(__pyx_t_18);
-          if (likely(__pyx_t_20)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
-            __Pyx_INCREF(__pyx_t_20);
-            __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_18, function);
-            __pyx_t_5 = 1;
-          }
-        }
-        #endif
-        {
-          PyObject *__pyx_callargs[2] = {__pyx_t_20, __pyx_t_3};
-          __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-          __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
-          __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 357, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        }
-        __pyx_t_18 = NULL;
-        __pyx_t_5 = 0;
-        #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_1))) {
-          __pyx_t_18 = PyMethod_GET_SELF(__pyx_t_1);
-          if (likely(__pyx_t_18)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
-            __Pyx_INCREF(__pyx_t_18);
-            __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_1, function);
-            __pyx_t_5 = 1;
-          }
-        }
-        #endif
-        {
-          PyObject *__pyx_callargs[2] = {__pyx_t_18, __pyx_t_9};
-          __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-          __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 357, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-        }
-        __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 357, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_v_y_idx = __pyx_t_5;
-
-        /* "impurity_transport.pyx":358
- *                 x_idx = np.argmin(np.abs(x - gkyl_x))
- *                 y_idx = np.argmin(np.abs(y - gkyl_y))
- *                 z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]             # <<<<<<<<<<<<<<
- *                     - zstart_rans_coarse[i]))
+    /* "impurity_transport.pyx":354
+ *         # assuming a constant impurity source). This could lead to
+ *         # low statistics at the starting frames, should be studied.
+ *         fstart_fl = fend_fl * fstart_rans[i]             # <<<<<<<<<<<<<<
+ *         fstart = np.floor(fstart_fl)
  * 
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_argmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-        __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_abs); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_3);
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        if (unlikely(!__pyx_v_zstart_cdf)) { __Pyx_RaiseUnboundLocalError("zstart_cdf"); __PYX_ERR(0, 358, __pyx_L1_error) }
-        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_fstart); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_20 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_20);
-        __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_7 = PyTuple_New(3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_7);
-        __Pyx_GIVEREF(__pyx_t_18);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_18)) __PYX_ERR(0, 358, __pyx_L1_error);
-        __Pyx_GIVEREF(__pyx_t_20);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 1, __pyx_t_20)) __PYX_ERR(0, 358, __pyx_L1_error);
-        __Pyx_GIVEREF(__pyx_t_8);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 2, __pyx_t_8)) __PYX_ERR(0, 358, __pyx_L1_error);
-        __pyx_t_18 = 0;
-        __pyx_t_20 = 0;
-        __pyx_t_8 = 0;
-        __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_v_zstart_cdf, __pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+    __pyx_v_fstart_fl = (__pyx_v_fend_fl * (__pyx_v_fstart_rans[__pyx_v_i]));
 
-        /* "impurity_transport.pyx":359
- *                 y_idx = np.argmin(np.abs(y - gkyl_y))
- *                 z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]
- *                     - zstart_rans_coarse[i]))             # <<<<<<<<<<<<<<
+    /* "impurity_transport.pyx":355
+ *         # low statistics at the starting frames, should be studied.
+ *         fstart_fl = fend_fl * fstart_rans[i]
+ *         fstart = np.floor(fstart_fl)             # <<<<<<<<<<<<<<
  * 
- *                 # To avoid picking at the same z location, chose uniformly
+ *         # Determine random starting location. First is uniform between
  */
-        __pyx_t_7 = PyFloat_FromDouble((__pyx_v_zstart_rans_coarse[__pyx_v_i])); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 359, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_20 = PyNumber_Subtract(__pyx_t_8, __pyx_t_7); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 359, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_20);
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-        __pyx_t_7 = NULL;
-        __pyx_t_5 = 0;
-        #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_3))) {
-          __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_3);
-          if (likely(__pyx_t_7)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
-            __Pyx_INCREF(__pyx_t_7);
-            __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_3, function);
-            __pyx_t_5 = 1;
-          }
-        }
-        #endif
-        {
-          PyObject *__pyx_callargs[2] = {__pyx_t_7, __pyx_t_20};
-          __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_3, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-          __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-          __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-          if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 358, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_1);
-          __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        }
-        __pyx_t_3 = NULL;
-        __pyx_t_5 = 0;
-        #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_9))) {
-          __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_9);
-          if (likely(__pyx_t_3)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
-            __Pyx_INCREF(__pyx_t_3);
-            __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_9, function);
-            __pyx_t_5 = 1;
-          }
-        }
-        #endif
-        {
-          PyObject *__pyx_callargs[2] = {__pyx_t_3, __pyx_t_1};
-          __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-          __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-          if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 358, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        }
-
-        /* "impurity_transport.pyx":358
- *                 x_idx = np.argmin(np.abs(x - gkyl_x))
- *                 y_idx = np.argmin(np.abs(y - gkyl_y))
- *                 z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]             # <<<<<<<<<<<<<<
- *                     - zstart_rans_coarse[i]))
- * 
- */
-        __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 358, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_v_z_idx = __pyx_t_5;
-
-        /* "impurity_transport.pyx":369
- *                 #    z = gkyl_z[z_idx] + (gkyl_z[z_idx - 1] - gkyl_z[z_idx]) \
- *                 #        * zstart_rans_fine[i]
- *                 z = (gkyl_z[z_idx] - zwidth / 2) + zwidth * zstart_rans_fine[i]             # <<<<<<<<<<<<<<
- * 
- *                 #z = gkyl_z[z_idx]
- */
-        __pyx_t_4 = __Pyx_GetItemInt(__pyx_v_gkyl_z, __pyx_v_z_idx, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 369, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_9 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_zwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 369, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_1 = PyNumber_Subtract(__pyx_t_4, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 369, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_t_9 = PyFloat_FromDouble((__pyx_v_zstart_rans_fine[__pyx_v_i])); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 369, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_4 = PyNumber_Multiply(__pyx_v_zwidth, __pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 369, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_t_9 = PyNumber_Add(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 369, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_9); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 369, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_v_z = __pyx_t_2;
-
-        /* "impurity_transport.pyx":355
- *             # Assign z = 0.0 to suppress compiler warning.
- *             z = 0.0
- *             if imp_zstart_int == 1:             # <<<<<<<<<<<<<<
- *                 x_idx = np.argmin(np.abs(x - gkyl_x))
- *                 y_idx = np.argmin(np.abs(y - gkyl_y))
- */
-        break;
-        case 2:
-
-        /* "impurity_transport.pyx":373
- *                 #z = gkyl_z[z_idx]
- *             elif imp_zstart_int == 2:
- *                 z = imp_zstart_val             # <<<<<<<<<<<<<<
- * 
- *             # Now create our Impurity object.
- */
-        __pyx_v_z = __pyx_v_imp_zstart_val;
-
-        /* "impurity_transport.pyx":372
- * 
- *                 #z = gkyl_z[z_idx]
- *             elif imp_zstart_int == 2:             # <<<<<<<<<<<<<<
- *                 z = imp_zstart_val
- * 
- */
-        break;
-        default: break;
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 355, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_floor); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 355, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_20);
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+    __pyx_t_9 = PyFloat_FromDouble(__pyx_v_fstart_fl); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 355, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __pyx_t_4 = NULL;
+    __pyx_t_5 = 0;
+    #if CYTHON_UNPACK_METHODS
+    if (unlikely(PyMethod_Check(__pyx_t_20))) {
+      __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_20);
+      if (likely(__pyx_t_4)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_20);
+        __Pyx_INCREF(__pyx_t_4);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_20, function);
+        __pyx_t_5 = 1;
       }
-
-      /* "impurity_transport.pyx":376
- * 
- *             # Now create our Impurity object.
- *             imp = PyImpurity(imp_atom_num, imp_mass, x, y, z,             # <<<<<<<<<<<<<<
- *                 imp_init_charge, fstart)
- * 
- */
-      __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_PyImpurity); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 376, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 376, __pyx_L1_error)
+    }
+    #endif
+    {
+      PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_t_9};
+      __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_20, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+      __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 355, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_3 = PyFloat_FromDouble(__pyx_v_imp_mass); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 376, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_20 = PyFloat_FromDouble(__pyx_v_x); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 376, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_20);
-      __pyx_t_7 = PyFloat_FromDouble(__pyx_v_y); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 376, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_7);
-      __pyx_t_8 = PyFloat_FromDouble(__pyx_v_z); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 376, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+    }
+    __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 355, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __pyx_v_fstart = __pyx_t_5;
 
-      /* "impurity_transport.pyx":377
- *             # Now create our Impurity object.
- *             imp = PyImpurity(imp_atom_num, imp_mass, x, y, z,
- *                 imp_init_charge, fstart)             # <<<<<<<<<<<<<<
+    /* "impurity_transport.pyx":359
+ *         # Determine random starting location. First is uniform between
+ *         # xmin and xmax.
+ *         x = imp_xmin + (imp_xmax - imp_xmin) * xstart_rans[i]             # <<<<<<<<<<<<<<
  * 
- *             # Counter to track how many collisions the ion had.
+ *         # We assume symmetry in the y direction, so uniformily
  */
-      __pyx_t_18 = PyFloat_FromDouble(__pyx_v_imp_init_charge); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 377, __pyx_L1_error)
+    __pyx_v_x = (__pyx_v_imp_xmin + ((__pyx_v_imp_xmax - __pyx_v_imp_xmin) * (__pyx_v_xstart_rans[__pyx_v_i])));
+
+    /* "impurity_transport.pyx":363
+ *         # We assume symmetry in the y direction, so uniformily
+ *         # distributed between those as well.
+ *         y = gkyl_ymin + (gkyl_ymax - gkyl_ymin) * ystart_rans[i]             # <<<<<<<<<<<<<<
+ * 
+ *         # Next determine starting z location.
+ */
+    __pyx_v_y = (__pyx_v_gkyl_ymin + ((__pyx_v_gkyl_ymax - __pyx_v_gkyl_ymin) * (__pyx_v_ystart_rans[__pyx_v_i])));
+
+    /* "impurity_transport.pyx":369
+ *         #        to the ion density.
+ *         #   2: Value specified.
+ *         if imp_zstart_int == 1:             # <<<<<<<<<<<<<<
+ *             x_idx = np.argmin(np.abs(x - gkyl_x))
+ *             y_idx = np.argmin(np.abs(y - gkyl_y))
+ */
+    switch (__pyx_v_imp_zstart_int) {
+      case 1:
+
+      /* "impurity_transport.pyx":370
+ *         #   2: Value specified.
+ *         if imp_zstart_int == 1:
+ *             x_idx = np.argmin(np.abs(x - gkyl_x))             # <<<<<<<<<<<<<<
+ *             y_idx = np.argmin(np.abs(y - gkyl_y))
+ *             z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]
+ */
+      __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 370, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_20);
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_argmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 370, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+      __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 370, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_abs); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 370, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __pyx_t_4 = PyFloat_FromDouble(__pyx_v_x); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 370, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __pyx_t_18 = PyNumber_Subtract(__pyx_t_4, __pyx_v_gkyl_x); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 370, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_18);
-      __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_fstart); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 377, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_30);
-      __pyx_t_31 = NULL;
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __pyx_t_4 = NULL;
+      __pyx_t_5 = 0;
+      #if CYTHON_UNPACK_METHODS
+      if (unlikely(PyMethod_Check(__pyx_t_3))) {
+        __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
+        if (likely(__pyx_t_4)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+          __Pyx_INCREF(__pyx_t_4);
+          __Pyx_INCREF(function);
+          __Pyx_DECREF_SET(__pyx_t_3, function);
+          __pyx_t_5 = 1;
+        }
+      }
+      #endif
+      {
+        PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_t_18};
+        __pyx_t_20 = __Pyx_PyObject_FastCall(__pyx_t_3, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+        if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 370, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_20);
+        __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      }
+      __pyx_t_3 = NULL;
+      __pyx_t_5 = 0;
+      #if CYTHON_UNPACK_METHODS
+      if (unlikely(PyMethod_Check(__pyx_t_9))) {
+        __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_9);
+        if (likely(__pyx_t_3)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
+          __Pyx_INCREF(__pyx_t_3);
+          __Pyx_INCREF(function);
+          __Pyx_DECREF_SET(__pyx_t_9, function);
+          __pyx_t_5 = 1;
+        }
+      }
+      #endif
+      {
+        PyObject *__pyx_callargs[2] = {__pyx_t_3, __pyx_t_20};
+        __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+        if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 370, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      }
+      __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 370, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __pyx_v_x_idx = __pyx_t_5;
+
+      /* "impurity_transport.pyx":371
+ *         if imp_zstart_int == 1:
+ *             x_idx = np.argmin(np.abs(x - gkyl_x))
+ *             y_idx = np.argmin(np.abs(y - gkyl_y))             # <<<<<<<<<<<<<<
+ *             z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]
+ *                 - zstart_rans_coarse[i]))
+ */
+      __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 371, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_argmin); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 371, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_20);
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 371, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_abs); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 371, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_18);
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      __pyx_t_3 = PyFloat_FromDouble(__pyx_v_y); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 371, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_4 = PyNumber_Subtract(__pyx_t_3, __pyx_v_gkyl_y); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 371, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      __pyx_t_3 = NULL;
+      __pyx_t_5 = 0;
+      #if CYTHON_UNPACK_METHODS
+      if (unlikely(PyMethod_Check(__pyx_t_18))) {
+        __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_18);
+        if (likely(__pyx_t_3)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
+          __Pyx_INCREF(__pyx_t_3);
+          __Pyx_INCREF(function);
+          __Pyx_DECREF_SET(__pyx_t_18, function);
+          __pyx_t_5 = 1;
+        }
+      }
+      #endif
+      {
+        PyObject *__pyx_callargs[2] = {__pyx_t_3, __pyx_t_4};
+        __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 371, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+      }
+      __pyx_t_18 = NULL;
+      __pyx_t_5 = 0;
+      #if CYTHON_UNPACK_METHODS
+      if (unlikely(PyMethod_Check(__pyx_t_20))) {
+        __pyx_t_18 = PyMethod_GET_SELF(__pyx_t_20);
+        if (likely(__pyx_t_18)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_20);
+          __Pyx_INCREF(__pyx_t_18);
+          __Pyx_INCREF(function);
+          __Pyx_DECREF_SET(__pyx_t_20, function);
+          __pyx_t_5 = 1;
+        }
+      }
+      #endif
+      {
+        PyObject *__pyx_callargs[2] = {__pyx_t_18, __pyx_t_9};
+        __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_20, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 371, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+      }
+      __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 371, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __pyx_v_y_idx = __pyx_t_5;
+
+      /* "impurity_transport.pyx":372
+ *             x_idx = np.argmin(np.abs(x - gkyl_x))
+ *             y_idx = np.argmin(np.abs(y - gkyl_y))
+ *             z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]             # <<<<<<<<<<<<<<
+ *                 - zstart_rans_coarse[i]))
+ * 
+ */
+      __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_np); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_20);
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_argmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+      __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_18);
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_abs); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+      if (unlikely(!__pyx_v_zstart_cdf)) { __Pyx_RaiseUnboundLocalError("zstart_cdf"); __PYX_ERR(0, 372, __pyx_L1_error) }
+      __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_fstart); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_18);
+      __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_8);
+      __pyx_t_7 = PyTuple_New(3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_7);
+      __Pyx_GIVEREF(__pyx_t_18);
+      if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_18)) __PYX_ERR(0, 372, __pyx_L1_error);
+      __Pyx_GIVEREF(__pyx_t_3);
+      if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 1, __pyx_t_3)) __PYX_ERR(0, 372, __pyx_L1_error);
+      __Pyx_GIVEREF(__pyx_t_8);
+      if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 2, __pyx_t_8)) __PYX_ERR(0, 372, __pyx_L1_error);
+      __pyx_t_18 = 0;
+      __pyx_t_3 = 0;
+      __pyx_t_8 = 0;
+      __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_v_zstart_cdf, __pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+
+      /* "impurity_transport.pyx":373
+ *             y_idx = np.argmin(np.abs(y - gkyl_y))
+ *             z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]
+ *                 - zstart_rans_coarse[i]))             # <<<<<<<<<<<<<<
+ * 
+ *             # To avoid picking at the same z location, chose uniformly
+ */
+      __pyx_t_7 = PyFloat_FromDouble((__pyx_v_zstart_rans_coarse[__pyx_v_i])); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 373, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_7);
+      __pyx_t_3 = PyNumber_Subtract(__pyx_t_8, __pyx_t_7); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 373, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+      __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+      __pyx_t_7 = NULL;
       __pyx_t_5 = 0;
       #if CYTHON_UNPACK_METHODS
       if (unlikely(PyMethod_Check(__pyx_t_4))) {
-        __pyx_t_31 = PyMethod_GET_SELF(__pyx_t_4);
-        if (likely(__pyx_t_31)) {
+        __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_4);
+        if (likely(__pyx_t_7)) {
           PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
-          __Pyx_INCREF(__pyx_t_31);
+          __Pyx_INCREF(__pyx_t_7);
           __Pyx_INCREF(function);
           __Pyx_DECREF_SET(__pyx_t_4, function);
           __pyx_t_5 = 1;
@@ -23816,64 +24148,253 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
       }
       #endif
       {
-        PyObject *__pyx_callargs[8] = {__pyx_t_31, __pyx_t_1, __pyx_t_3, __pyx_t_20, __pyx_t_7, __pyx_t_8, __pyx_t_18, __pyx_t_30};
-        __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 7+__pyx_t_5);
-        __Pyx_XDECREF(__pyx_t_31); __pyx_t_31 = 0;
-        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+        PyObject *__pyx_callargs[2] = {__pyx_t_7, __pyx_t_3};
+        __pyx_t_20 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
-        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-        if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 376, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
+        if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 372, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_20);
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       }
-      __pyx_v_imp = __pyx_t_9;
-      __pyx_t_9 = 0;
+      __pyx_t_4 = NULL;
+      __pyx_t_5 = 0;
+      #if CYTHON_UNPACK_METHODS
+      if (unlikely(PyMethod_Check(__pyx_t_9))) {
+        __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_9);
+        if (likely(__pyx_t_4)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
+          __Pyx_INCREF(__pyx_t_4);
+          __Pyx_INCREF(function);
+          __Pyx_DECREF_SET(__pyx_t_9, function);
+          __pyx_t_5 = 1;
+        }
+      }
+      #endif
+      {
+        PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_t_20};
+        __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+        if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 372, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      }
+
+      /* "impurity_transport.pyx":372
+ *             x_idx = np.argmin(np.abs(x - gkyl_x))
+ *             y_idx = np.argmin(np.abs(y - gkyl_y))
+ *             z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx]             # <<<<<<<<<<<<<<
+ *                 - zstart_rans_coarse[i]))
+ * 
+ */
+      __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 372, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __pyx_v_z_idx = __pyx_t_5;
+
+      /* "impurity_transport.pyx":377
+ *             # To avoid picking at the same z location, chose uniformly
+ *             # between each bounding z value.
+ *             z = (gkyl_z[z_idx] - zwidth / 2) + zwidth * zstart_rans_fine[i]             # <<<<<<<<<<<<<<
+ * 
+ *         elif imp_zstart_int == 2:
+ */
+      __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_gkyl_z, __pyx_v_z_idx, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 377, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __pyx_t_9 = __Pyx_PyInt_TrueDivideObjC(__pyx_v_zwidth, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 377, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __pyx_t_20 = PyNumber_Subtract(__pyx_t_1, __pyx_t_9); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 377, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_20);
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __pyx_t_9 = PyFloat_FromDouble((__pyx_v_zstart_rans_fine[__pyx_v_i])); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 377, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __pyx_t_1 = PyNumber_Multiply(__pyx_v_zwidth, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 377, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __pyx_t_9 = PyNumber_Add(__pyx_t_20, __pyx_t_1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 377, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_9); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 377, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __pyx_v_z = __pyx_t_2;
+
+      /* "impurity_transport.pyx":369
+ *         #        to the ion density.
+ *         #   2: Value specified.
+ *         if imp_zstart_int == 1:             # <<<<<<<<<<<<<<
+ *             x_idx = np.argmin(np.abs(x - gkyl_x))
+ *             y_idx = np.argmin(np.abs(y - gkyl_y))
+ */
+      break;
+      case 2:
 
       /* "impurity_transport.pyx":380
  * 
- *             # Counter to track how many collisions the ion had.
- *             coll_count = 0             # <<<<<<<<<<<<<<
+ *         elif imp_zstart_int == 2:
+ *             z = imp_zstart_val             # <<<<<<<<<<<<<<
  * 
- *             # Debug print statement to get a sense of where impurities are
+ *         # Now create our Impurity object. Starts with weight = 1.0.
  */
-      __pyx_v_coll_count = 0;
+      __pyx_v_z = __pyx_v_imp_zstart_val;
 
-      /* "impurity_transport.pyx":396
- *             # reach is gkyl_end-gkyl_fstart when 0-indexed.
- *             #for f in range(fstart-gkyl_fstart, gkyl_fend-gkyl_fstart):
- *             for f in range(fstart, fend):             # <<<<<<<<<<<<<<
+      /* "impurity_transport.pyx":379
+ *             z = (gkyl_z[z_idx] - zwidth / 2) + zwidth * zstart_rans_fine[i]
+ * 
+ *         elif imp_zstart_int == 2:             # <<<<<<<<<<<<<<
+ *             z = imp_zstart_val
+ * 
+ */
+      break;
+      default: break;
+    }
+
+    /* "impurity_transport.pyx":383
+ * 
+ *         # Now create our Impurity object. Starts with weight = 1.0.
+ *         imp = PyImpurity(imp_atom_num, imp_mass, x, y, z, imp_init_charge,             # <<<<<<<<<<<<<<
+ *             fstart, 1.0)
+ * 
+ */
+    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_PyImpurity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 383, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_1);
+    __pyx_t_20 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 383, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_20);
+    __pyx_t_4 = PyFloat_FromDouble(__pyx_v_imp_mass); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 383, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __pyx_t_3 = PyFloat_FromDouble(__pyx_v_x); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 383, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    __pyx_t_7 = PyFloat_FromDouble(__pyx_v_y); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 383, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_7);
+    __pyx_t_8 = PyFloat_FromDouble(__pyx_v_z); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 383, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_8);
+    __pyx_t_18 = PyFloat_FromDouble(__pyx_v_imp_init_charge); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 383, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_18);
+
+    /* "impurity_transport.pyx":384
+ *         # Now create our Impurity object. Starts with weight = 1.0.
+ *         imp = PyImpurity(imp_atom_num, imp_mass, x, y, z, imp_init_charge,
+ *             fstart, 1.0)             # <<<<<<<<<<<<<<
+ * 
+ *         # Counter to track how many collisions the ion had.
+ */
+    __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_fstart); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 384, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_30);
+    __pyx_t_31 = NULL;
+    __pyx_t_5 = 0;
+    #if CYTHON_UNPACK_METHODS
+    if (unlikely(PyMethod_Check(__pyx_t_1))) {
+      __pyx_t_31 = PyMethod_GET_SELF(__pyx_t_1);
+      if (likely(__pyx_t_31)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+        __Pyx_INCREF(__pyx_t_31);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_1, function);
+        __pyx_t_5 = 1;
+      }
+    }
+    #endif
+    {
+      PyObject *__pyx_callargs[9] = {__pyx_t_31, __pyx_t_20, __pyx_t_4, __pyx_t_3, __pyx_t_7, __pyx_t_8, __pyx_t_18, __pyx_t_30, __pyx_float_1_0};
+      __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 8+__pyx_t_5);
+      __Pyx_XDECREF(__pyx_t_31); __pyx_t_31 = 0;
+      __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+      __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+      __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+      if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 383, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    }
+    __Pyx_XDECREF_SET(__pyx_v_imp, __pyx_t_9);
+    __pyx_t_9 = 0;
+
+    /* "impurity_transport.pyx":387
+ * 
+ *         # Counter to track how many collisions the ion had.
+ *         coll_count = 0             # <<<<<<<<<<<<<<
+ * 
+ *         # Put impurity into a list. At first this may seem confusing, why put
+ */
+    __pyx_v_coll_count = 0;
+
+    /* "impurity_transport.pyx":402
+ *         #       Particle #3b - The split particle, added to list
+ *         # And so on...
+ *         additional_imps = [imp]             # <<<<<<<<<<<<<<
+ * 
+ *         # Debug print statement to get a sense of where impurities are
+ */
+    __pyx_t_9 = PyList_New(1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 402, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_INCREF(__pyx_v_imp);
+    __Pyx_GIVEREF(__pyx_v_imp);
+    if (__Pyx_PyList_SET_ITEM(__pyx_t_9, 0, __pyx_v_imp)) __PYX_ERR(0, 402, __pyx_L1_error);
+    __Pyx_XDECREF_SET(__pyx_v_additional_imps, ((PyObject*)__pyx_t_9));
+    __pyx_t_9 = 0;
+
+    /* "impurity_transport.pyx":418
+ *         # reach is gkyl_end-gkyl_fstart when 0-indexed.
+ *         #for f in range(fstart, fend):
+ *         while additional_imps:             # <<<<<<<<<<<<<<
+ * 
+ *             # Pop the ion from the list (this removes it from the list).
+ */
+    while (1) {
+      __pyx_t_6 = (PyList_GET_SIZE(__pyx_v_additional_imps) != 0);
+      if (!__pyx_t_6) break;
+
+      /* "impurity_transport.pyx":423
+ *             # Therefore the "while additional_imps:" loop will not execute
+ *             # once this list is empty.
+ *             imp = additional_imps.pop()             # <<<<<<<<<<<<<<
+ *             for f in range(imp.fstart, fend):
+ * 
+ */
+      __pyx_t_9 = __Pyx_PyList_Pop(__pyx_v_additional_imps); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 423, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_XDECREF_SET(__pyx_v_imp, __pyx_t_9);
+      __pyx_t_9 = 0;
+
+      /* "impurity_transport.pyx":424
+ *             # once this list is empty.
+ *             imp = additional_imps.pop()
+ *             for f in range(imp.fstart, fend):             # <<<<<<<<<<<<<<
  * 
  *                 # Update nearest index values.
  */
       __pyx_t_5 = __pyx_v_fend;
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_fstart); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 424, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __pyx_t_10 = __Pyx_PyInt_As_long(__pyx_t_9); if (unlikely((__pyx_t_10 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 424, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __pyx_t_14 = __pyx_t_5;
-      for (__pyx_t_17 = __pyx_v_fstart; __pyx_t_17 < __pyx_t_14; __pyx_t_17+=1) {
+      for (__pyx_t_17 = __pyx_t_10; __pyx_t_17 < __pyx_t_14; __pyx_t_17+=1) {
         __pyx_v_f = __pyx_t_17;
 
-        /* "impurity_transport.pyx":399
+        /* "impurity_transport.pyx":427
  * 
  *                 # Update nearest index values.
  *                 x_idx = np.argmin(np.abs(imp.x - gkyl_x))             # <<<<<<<<<<<<<<
  *                 y_idx = np.argmin(np.abs(imp.y - gkyl_y))
  *                 z_idx = np.argmin(np.abs(imp.z - gkyl_z))
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 399, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_argmin); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 399, __pyx_L1_error)
+        __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 427, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_argmin); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 427, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 399, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+        __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 427, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_abs); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 399, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_abs); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 427, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 399, __pyx_L1_error)
+        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 427, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_7 = PyNumber_Subtract(__pyx_t_18, __pyx_v_gkyl_x); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 399, __pyx_L1_error)
+        __pyx_t_7 = PyNumber_Subtract(__pyx_t_18, __pyx_v_gkyl_x); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 427, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         __pyx_t_18 = NULL;
@@ -23892,11 +24413,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         #endif
         {
           PyObject *__pyx_callargs[2] = {__pyx_t_18, __pyx_t_7};
-          __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
+          __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
           __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-          if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 399, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
+          if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 427, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         }
         __pyx_t_8 = NULL;
@@ -23914,38 +24435,38 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         }
         #endif
         {
-          PyObject *__pyx_callargs[2] = {__pyx_t_8, __pyx_t_4};
+          PyObject *__pyx_callargs[2] = {__pyx_t_8, __pyx_t_1};
           __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_30, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 399, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 427, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
         }
-        __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 399, __pyx_L1_error)
+        __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 427, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         __pyx_v_x_idx = __pyx_t_21;
 
-        /* "impurity_transport.pyx":400
+        /* "impurity_transport.pyx":428
  *                 # Update nearest index values.
  *                 x_idx = np.argmin(np.abs(imp.x - gkyl_x))
  *                 y_idx = np.argmin(np.abs(imp.y - gkyl_y))             # <<<<<<<<<<<<<<
  *                 z_idx = np.argmin(np.abs(imp.z - gkyl_z))
  * 
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_30, __pyx_n_s_np); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 400, __pyx_L1_error)
+        __Pyx_GetModuleGlobalName(__pyx_t_30, __pyx_n_s_np); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 428, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_30, __pyx_n_s_argmin); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 400, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
+        __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_30, __pyx_n_s_argmin); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 428, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-        __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 400, __pyx_L1_error)
+        __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 428, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_abs); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 400, __pyx_L1_error)
+        __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_abs); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 428, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 400, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 428, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_18 = PyNumber_Subtract(__pyx_t_8, __pyx_v_gkyl_y); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 400, __pyx_L1_error)
+        __pyx_t_18 = PyNumber_Subtract(__pyx_t_8, __pyx_v_gkyl_y); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 428, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         __pyx_t_8 = NULL;
@@ -23967,57 +24488,57 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
           __pyx_t_30 = __Pyx_PyObject_FastCall(__pyx_t_7, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 400, __pyx_L1_error)
+          if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 428, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_30);
           __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
         }
         __pyx_t_7 = NULL;
         __pyx_t_21 = 0;
         #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_4))) {
-          __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_4);
+        if (unlikely(PyMethod_Check(__pyx_t_1))) {
+          __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_1);
           if (likely(__pyx_t_7)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
+            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
             __Pyx_INCREF(__pyx_t_7);
             __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_4, function);
+            __Pyx_DECREF_SET(__pyx_t_1, function);
             __pyx_t_21 = 1;
           }
         }
         #endif
         {
           PyObject *__pyx_callargs[2] = {__pyx_t_7, __pyx_t_30};
-          __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
+          __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
           __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 400, __pyx_L1_error)
+          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 428, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         }
-        __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 400, __pyx_L1_error)
+        __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 428, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         __pyx_v_y_idx = __pyx_t_21;
 
-        /* "impurity_transport.pyx":401
+        /* "impurity_transport.pyx":429
  *                 x_idx = np.argmin(np.abs(imp.x - gkyl_x))
  *                 y_idx = np.argmin(np.abs(imp.y - gkyl_y))
  *                 z_idx = np.argmin(np.abs(imp.z - gkyl_z))             # <<<<<<<<<<<<<<
  * 
  *                 # Add particle weight and count in our arrays. The particle
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 401, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_argmin); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 401, __pyx_L1_error)
+        __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 429, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_argmin); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 429, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 401, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+        __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 429, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_abs); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 401, __pyx_L1_error)
+        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_abs); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 429, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
         __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-        __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 401, __pyx_L1_error)
+        __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 429, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_8 = PyNumber_Subtract(__pyx_t_7, __pyx_v_gkyl_z); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 401, __pyx_L1_error)
+        __pyx_t_8 = PyNumber_Subtract(__pyx_t_7, __pyx_v_gkyl_z); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 429, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
         __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
         __pyx_t_7 = NULL;
@@ -24036,11 +24557,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         #endif
         {
           PyObject *__pyx_callargs[2] = {__pyx_t_7, __pyx_t_8};
-          __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
+          __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-          if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 401, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
+          if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 429, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         }
         __pyx_t_18 = NULL;
@@ -24058,180 +24579,186 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         }
         #endif
         {
-          PyObject *__pyx_callargs[2] = {__pyx_t_18, __pyx_t_4};
+          PyObject *__pyx_callargs[2] = {__pyx_t_18, __pyx_t_1};
           __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_30, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 401, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 429, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
         }
-        __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 401, __pyx_L1_error)
+        __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_t_9); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 429, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         __pyx_v_z_idx = __pyx_t_21;
 
-        /* "impurity_transport.pyx":407
- *                 # a particle in a cell is really only dt / (1 s) of a
- *                 # particle.
- *                 imp_weight_arr[f, x_idx, y_idx, z_idx] += dt             # <<<<<<<<<<<<<<
+        /* "impurity_transport.pyx":435
+ *                 # a particle in a cell is really only dt / (1 s) of a particle.
+ *                 #print(imp.weight)
+ *                 imp_weight_arr[f, x_idx, y_idx, z_idx] += imp.weight * dt             # <<<<<<<<<<<<<<
  *                 imp_count_arr[f, x_idx, y_idx, z_idx] += 1
  * 
  */
-        __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 407, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 435, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 407, __pyx_L1_error)
+        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 435, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 407, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 407, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 435, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 435, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_8 = PyTuple_New(4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 407, __pyx_L1_error)
+        __pyx_t_8 = PyTuple_New(4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 435, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
         __Pyx_GIVEREF(__pyx_t_9);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_9)) __PYX_ERR(0, 407, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_9)) __PYX_ERR(0, 435, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_30);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_30)) __PYX_ERR(0, 407, __pyx_L1_error);
-        __Pyx_GIVEREF(__pyx_t_4);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 2, __pyx_t_4)) __PYX_ERR(0, 407, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_30)) __PYX_ERR(0, 435, __pyx_L1_error);
+        __Pyx_GIVEREF(__pyx_t_1);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 2, __pyx_t_1)) __PYX_ERR(0, 435, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_18);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 3, __pyx_t_18)) __PYX_ERR(0, 407, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 3, __pyx_t_18)) __PYX_ERR(0, 435, __pyx_L1_error);
         __pyx_t_9 = 0;
         __pyx_t_30 = 0;
-        __pyx_t_4 = 0;
+        __pyx_t_1 = 0;
         __pyx_t_18 = 0;
-        __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_imp_weight_arr, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 407, __pyx_L1_error)
+        __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_imp_weight_arr, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 435, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_4 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 407, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_30 = PyNumber_InPlaceAdd(__pyx_t_18, __pyx_t_4); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 407, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 435, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_30 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 435, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_30);
+        __pyx_t_9 = PyNumber_Multiply(__pyx_t_1, __pyx_t_30); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 435, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+        __pyx_t_30 = PyNumber_InPlaceAdd(__pyx_t_18, __pyx_t_9); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 435, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        if (unlikely((PyObject_SetItem(__pyx_v_imp_weight_arr, __pyx_t_8, __pyx_t_30) < 0))) __PYX_ERR(0, 407, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        if (unlikely((PyObject_SetItem(__pyx_v_imp_weight_arr, __pyx_t_8, __pyx_t_30) < 0))) __PYX_ERR(0, 435, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-        /* "impurity_transport.pyx":408
- *                 # particle.
- *                 imp_weight_arr[f, x_idx, y_idx, z_idx] += dt
+        /* "impurity_transport.pyx":436
+ *                 #print(imp.weight)
+ *                 imp_weight_arr[f, x_idx, y_idx, z_idx] += imp.weight * dt
  *                 imp_count_arr[f, x_idx, y_idx, z_idx] += 1             # <<<<<<<<<<<<<<
  * 
  *                 # Likewise for particle velocity.
  */
-        __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 408, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 436, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 408, __pyx_L1_error)
+        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 436, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 408, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 408, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_9 = PyTuple_New(4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 408, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 436, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 436, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_18);
+        __pyx_t_1 = PyTuple_New(4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 436, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
         __Pyx_GIVEREF(__pyx_t_8);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_8)) __PYX_ERR(0, 408, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_8)) __PYX_ERR(0, 436, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_30);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_9, 1, __pyx_t_30)) __PYX_ERR(0, 408, __pyx_L1_error);
-        __Pyx_GIVEREF(__pyx_t_4);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_9, 2, __pyx_t_4)) __PYX_ERR(0, 408, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_t_30)) __PYX_ERR(0, 436, __pyx_L1_error);
+        __Pyx_GIVEREF(__pyx_t_9);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 2, __pyx_t_9)) __PYX_ERR(0, 436, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_18);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_9, 3, __pyx_t_18)) __PYX_ERR(0, 408, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 3, __pyx_t_18)) __PYX_ERR(0, 436, __pyx_L1_error);
         __pyx_t_8 = 0;
         __pyx_t_30 = 0;
-        __pyx_t_4 = 0;
+        __pyx_t_9 = 0;
         __pyx_t_18 = 0;
-        __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_imp_count_arr, __pyx_t_9); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 408, __pyx_L1_error)
+        __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_imp_count_arr, __pyx_t_1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 436, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_4 = __Pyx_PyInt_AddObjC(__pyx_t_18, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 408, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
+        __pyx_t_9 = __Pyx_PyInt_AddObjC(__pyx_t_18, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 436, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        if (unlikely((PyObject_SetItem(__pyx_v_imp_count_arr, __pyx_t_9, __pyx_t_4) < 0))) __PYX_ERR(0, 408, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (unlikely((PyObject_SetItem(__pyx_v_imp_count_arr, __pyx_t_1, __pyx_t_9) < 0))) __PYX_ERR(0, 436, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-        /* "impurity_transport.pyx":411
+        /* "impurity_transport.pyx":439
  * 
  *                 # Likewise for particle velocity.
  *                 imp_vx_arr[f, x_idx, y_idx, z_idx] += imp.vx             # <<<<<<<<<<<<<<
  *                 imp_vy_arr[f, x_idx, y_idx, z_idx] += imp.vy
  * 
  */
-        __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 411, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 439, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 439, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 411, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 411, __pyx_L1_error)
+        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 439, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 411, __pyx_L1_error)
+        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 439, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_8 = PyTuple_New(4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 411, __pyx_L1_error)
+        __pyx_t_8 = PyTuple_New(4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 439, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
+        __Pyx_GIVEREF(__pyx_t_1);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_1)) __PYX_ERR(0, 439, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_9);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_9)) __PYX_ERR(0, 411, __pyx_L1_error);
-        __Pyx_GIVEREF(__pyx_t_4);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_4)) __PYX_ERR(0, 411, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_9)) __PYX_ERR(0, 439, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_18);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 2, __pyx_t_18)) __PYX_ERR(0, 411, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 2, __pyx_t_18)) __PYX_ERR(0, 439, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_30);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 3, __pyx_t_30)) __PYX_ERR(0, 411, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 3, __pyx_t_30)) __PYX_ERR(0, 439, __pyx_L1_error);
+        __pyx_t_1 = 0;
         __pyx_t_9 = 0;
-        __pyx_t_4 = 0;
         __pyx_t_18 = 0;
         __pyx_t_30 = 0;
-        __pyx_t_30 = __Pyx_PyObject_GetItem(__pyx_v_imp_vx_arr, __pyx_t_8); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 411, __pyx_L1_error)
+        __pyx_t_30 = __Pyx_PyObject_GetItem(__pyx_v_imp_vx_arr, __pyx_t_8); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 439, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 411, __pyx_L1_error)
+        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 439, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_30, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 411, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
+        __pyx_t_9 = PyNumber_InPlaceAdd(__pyx_t_30, __pyx_t_18); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 439, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
         __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        if (unlikely((PyObject_SetItem(__pyx_v_imp_vx_arr, __pyx_t_8, __pyx_t_4) < 0))) __PYX_ERR(0, 411, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (unlikely((PyObject_SetItem(__pyx_v_imp_vx_arr, __pyx_t_8, __pyx_t_9) < 0))) __PYX_ERR(0, 439, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-        /* "impurity_transport.pyx":412
+        /* "impurity_transport.pyx":440
  *                 # Likewise for particle velocity.
  *                 imp_vx_arr[f, x_idx, y_idx, z_idx] += imp.vx
  *                 imp_vy_arr[f, x_idx, y_idx, z_idx] += imp.vy             # <<<<<<<<<<<<<<
  * 
  *                 # If desired, save the tracks of each impurity in (x,y,z)
  */
-        __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 412, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 440, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 412, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 412, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 412, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_9 = PyTuple_New(4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 412, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 440, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 440, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_18);
+        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 440, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_30);
+        __pyx_t_1 = PyTuple_New(4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 440, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
         __Pyx_GIVEREF(__pyx_t_8);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_8)) __PYX_ERR(0, 412, __pyx_L1_error);
-        __Pyx_GIVEREF(__pyx_t_4);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_9, 1, __pyx_t_4)) __PYX_ERR(0, 412, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_8)) __PYX_ERR(0, 440, __pyx_L1_error);
+        __Pyx_GIVEREF(__pyx_t_9);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_t_9)) __PYX_ERR(0, 440, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_18);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_9, 2, __pyx_t_18)) __PYX_ERR(0, 412, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 2, __pyx_t_18)) __PYX_ERR(0, 440, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_30);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_9, 3, __pyx_t_30)) __PYX_ERR(0, 412, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 3, __pyx_t_30)) __PYX_ERR(0, 440, __pyx_L1_error);
         __pyx_t_8 = 0;
-        __pyx_t_4 = 0;
+        __pyx_t_9 = 0;
         __pyx_t_18 = 0;
         __pyx_t_30 = 0;
-        __pyx_t_30 = __Pyx_PyObject_GetItem(__pyx_v_imp_vy_arr, __pyx_t_9); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 412, __pyx_L1_error)
+        __pyx_t_30 = __Pyx_PyObject_GetItem(__pyx_v_imp_vy_arr, __pyx_t_1); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 440, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vy); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 412, __pyx_L1_error)
+        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vy); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 440, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_30, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 412, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
+        __pyx_t_9 = PyNumber_InPlaceAdd(__pyx_t_30, __pyx_t_18); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 440, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
         __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        if (unlikely((PyObject_SetItem(__pyx_v_imp_vy_arr, __pyx_t_9, __pyx_t_4) < 0))) __PYX_ERR(0, 412, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (unlikely((PyObject_SetItem(__pyx_v_imp_vy_arr, __pyx_t_1, __pyx_t_9) < 0))) __PYX_ERR(0, 440, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-        /* "impurity_transport.pyx":422
+        /* "impurity_transport.pyx":450
  * 
  *                 # Extract the plasma parameters at the current location.
  *                 local_ne = gkyl_ne[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24261,11 +24788,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_35 >= __pyx_v_gkyl_ne.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 422, __pyx_L1_error)
+          __PYX_ERR(0, 450, __pyx_L1_error)
         }
         __pyx_v_local_ne = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_ne.data + __pyx_t_32 * __pyx_v_gkyl_ne.strides[0]) ) + __pyx_t_33 * __pyx_v_gkyl_ne.strides[1]) ) + __pyx_t_34 * __pyx_v_gkyl_ne.strides[2]) ) + __pyx_t_35 * __pyx_v_gkyl_ne.strides[3]) )));
 
-        /* "impurity_transport.pyx":423
+        /* "impurity_transport.pyx":451
  *                 # Extract the plasma parameters at the current location.
  *                 local_ne = gkyl_ne[f, x_idx, y_idx, z_idx]
  *                 local_te = gkyl_te[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24295,11 +24822,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_32 >= __pyx_v_gkyl_te.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 423, __pyx_L1_error)
+          __PYX_ERR(0, 451, __pyx_L1_error)
         }
         __pyx_v_local_te = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_te.data + __pyx_t_35 * __pyx_v_gkyl_te.strides[0]) ) + __pyx_t_34 * __pyx_v_gkyl_te.strides[1]) ) + __pyx_t_33 * __pyx_v_gkyl_te.strides[2]) ) + __pyx_t_32 * __pyx_v_gkyl_te.strides[3]) )));
 
-        /* "impurity_transport.pyx":424
+        /* "impurity_transport.pyx":452
  *                 local_ne = gkyl_ne[f, x_idx, y_idx, z_idx]
  *                 local_te = gkyl_te[f, x_idx, y_idx, z_idx]
  *                 local_ni = gkyl_ni[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24329,11 +24856,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_35 >= __pyx_v_gkyl_ni.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 424, __pyx_L1_error)
+          __PYX_ERR(0, 452, __pyx_L1_error)
         }
         __pyx_v_local_ni = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_ni.data + __pyx_t_32 * __pyx_v_gkyl_ni.strides[0]) ) + __pyx_t_33 * __pyx_v_gkyl_ni.strides[1]) ) + __pyx_t_34 * __pyx_v_gkyl_ni.strides[2]) ) + __pyx_t_35 * __pyx_v_gkyl_ni.strides[3]) )));
 
-        /* "impurity_transport.pyx":425
+        /* "impurity_transport.pyx":453
  *                 local_te = gkyl_te[f, x_idx, y_idx, z_idx]
  *                 local_ni = gkyl_ni[f, x_idx, y_idx, z_idx]
  *                 local_ti = gkyl_ti[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24363,11 +24890,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_32 >= __pyx_v_gkyl_ti.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 425, __pyx_L1_error)
+          __PYX_ERR(0, 453, __pyx_L1_error)
         }
         __pyx_v_local_ti = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_ti.data + __pyx_t_35 * __pyx_v_gkyl_ti.strides[0]) ) + __pyx_t_34 * __pyx_v_gkyl_ti.strides[1]) ) + __pyx_t_33 * __pyx_v_gkyl_ti.strides[2]) ) + __pyx_t_32 * __pyx_v_gkyl_ti.strides[3]) )));
 
-        /* "impurity_transport.pyx":426
+        /* "impurity_transport.pyx":454
  *                 local_ni = gkyl_ni[f, x_idx, y_idx, z_idx]
  *                 local_ti = gkyl_ti[f, x_idx, y_idx, z_idx]
  *                 local_ex = gkyl_elecx[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24397,11 +24924,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_35 >= __pyx_v_gkyl_elecx.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 426, __pyx_L1_error)
+          __PYX_ERR(0, 454, __pyx_L1_error)
         }
         __pyx_v_local_ex = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_elecx.data + __pyx_t_32 * __pyx_v_gkyl_elecx.strides[0]) ) + __pyx_t_33 * __pyx_v_gkyl_elecx.strides[1]) ) + __pyx_t_34 * __pyx_v_gkyl_elecx.strides[2]) ) + __pyx_t_35 * __pyx_v_gkyl_elecx.strides[3]) )));
 
-        /* "impurity_transport.pyx":427
+        /* "impurity_transport.pyx":455
  *                 local_ti = gkyl_ti[f, x_idx, y_idx, z_idx]
  *                 local_ex = gkyl_elecx[f, x_idx, y_idx, z_idx]
  *                 local_ey = gkyl_elecy[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24431,11 +24958,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_32 >= __pyx_v_gkyl_elecy.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 427, __pyx_L1_error)
+          __PYX_ERR(0, 455, __pyx_L1_error)
         }
         __pyx_v_local_ey = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_elecy.data + __pyx_t_35 * __pyx_v_gkyl_elecy.strides[0]) ) + __pyx_t_34 * __pyx_v_gkyl_elecy.strides[1]) ) + __pyx_t_33 * __pyx_v_gkyl_elecy.strides[2]) ) + __pyx_t_32 * __pyx_v_gkyl_elecy.strides[3]) )));
 
-        /* "impurity_transport.pyx":428
+        /* "impurity_transport.pyx":456
  *                 local_ex = gkyl_elecx[f, x_idx, y_idx, z_idx]
  *                 local_ey = gkyl_elecy[f, x_idx, y_idx, z_idx]
  *                 local_ez = gkyl_elecz[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24465,11 +24992,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_35 >= __pyx_v_gkyl_elecz.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 428, __pyx_L1_error)
+          __PYX_ERR(0, 456, __pyx_L1_error)
         }
         __pyx_v_local_ez = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_elecz.data + __pyx_t_32 * __pyx_v_gkyl_elecz.strides[0]) ) + __pyx_t_33 * __pyx_v_gkyl_elecz.strides[1]) ) + __pyx_t_34 * __pyx_v_gkyl_elecz.strides[2]) ) + __pyx_t_35 * __pyx_v_gkyl_elecz.strides[3]) )));
 
-        /* "impurity_transport.pyx":429
+        /* "impurity_transport.pyx":457
  *                 local_ey = gkyl_elecy[f, x_idx, y_idx, z_idx]
  *                 local_ez = gkyl_elecz[f, x_idx, y_idx, z_idx]
  *                 local_bz = gkyl_b[x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24494,11 +25021,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_33 >= __pyx_v_gkyl_b.shape[2])) __pyx_t_21 = 2;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 429, __pyx_L1_error)
+          __PYX_ERR(0, 457, __pyx_L1_error)
         }
         __pyx_v_local_bz = (*((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_b.data + __pyx_t_35 * __pyx_v_gkyl_b.strides[0]) ) + __pyx_t_34 * __pyx_v_gkyl_b.strides[1]) ) + __pyx_t_33 * __pyx_v_gkyl_b.strides[2]) )));
 
-        /* "impurity_transport.pyx":430
+        /* "impurity_transport.pyx":458
  *                 local_ez = gkyl_elecz[f, x_idx, y_idx, z_idx]
  *                 local_bz = gkyl_b[x_idx, y_idx, z_idx]
  *                 local_viz = gkyl_viz[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24528,11 +25055,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_32 >= __pyx_v_gkyl_viz.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 430, __pyx_L1_error)
+          __PYX_ERR(0, 458, __pyx_L1_error)
         }
         __pyx_v_local_viz = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_viz.data + __pyx_t_33 * __pyx_v_gkyl_viz.strides[0]) ) + __pyx_t_34 * __pyx_v_gkyl_viz.strides[1]) ) + __pyx_t_35 * __pyx_v_gkyl_viz.strides[2]) ) + __pyx_t_32 * __pyx_v_gkyl_viz.strides[3]) )));
 
-        /* "impurity_transport.pyx":431
+        /* "impurity_transport.pyx":459
  *                 local_bz = gkyl_b[x_idx, y_idx, z_idx]
  *                 local_viz = gkyl_viz[f, x_idx, y_idx, z_idx]
  *                 local_stop_time = stop_time[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24562,11 +25089,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         } else if (unlikely(__pyx_t_33 >= __pyx_v_stop_time.shape[3])) __pyx_t_21 = 3;
         if (unlikely(__pyx_t_21 != -1)) {
           __Pyx_RaiseBufferIndexError(__pyx_t_21);
-          __PYX_ERR(0, 431, __pyx_L1_error)
+          __PYX_ERR(0, 459, __pyx_L1_error)
         }
         __pyx_v_local_stop_time = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_stop_time.data + __pyx_t_32 * __pyx_v_stop_time.strides[0]) ) + __pyx_t_35 * __pyx_v_stop_time.strides[1]) ) + __pyx_t_34 * __pyx_v_stop_time.strides[2]) ) + __pyx_t_33 * __pyx_v_stop_time.strides[3]) )));
 
-        /* "impurity_transport.pyx":434
+        /* "impurity_transport.pyx":462
  * 
  *                 # Only need these if the collisional forces are on.
  *                 if coll_forces:             # <<<<<<<<<<<<<<
@@ -24575,7 +25102,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         if (__pyx_v_coll_forces) {
 
-          /* "impurity_transport.pyx":435
+          /* "impurity_transport.pyx":463
  *                 # Only need these if the collisional forces are on.
  *                 if coll_forces:
  *                     local_dtedx = gkyl_dtedx[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24605,11 +25132,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
           } else if (unlikely(__pyx_t_32 >= __pyx_v_gkyl_dtedx.shape[3])) __pyx_t_21 = 3;
           if (unlikely(__pyx_t_21 != -1)) {
             __Pyx_RaiseBufferIndexError(__pyx_t_21);
-            __PYX_ERR(0, 435, __pyx_L1_error)
+            __PYX_ERR(0, 463, __pyx_L1_error)
           }
           __pyx_v_local_dtedx = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_dtedx.data + __pyx_t_33 * __pyx_v_gkyl_dtedx.strides[0]) ) + __pyx_t_34 * __pyx_v_gkyl_dtedx.strides[1]) ) + __pyx_t_35 * __pyx_v_gkyl_dtedx.strides[2]) ) + __pyx_t_32 * __pyx_v_gkyl_dtedx.strides[3]) )));
 
-          /* "impurity_transport.pyx":436
+          /* "impurity_transport.pyx":464
  *                 if coll_forces:
  *                     local_dtedx = gkyl_dtedx[f, x_idx, y_idx, z_idx]
  *                     local_dtedy = gkyl_dtedy[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24639,11 +25166,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
           } else if (unlikely(__pyx_t_33 >= __pyx_v_gkyl_dtedy.shape[3])) __pyx_t_21 = 3;
           if (unlikely(__pyx_t_21 != -1)) {
             __Pyx_RaiseBufferIndexError(__pyx_t_21);
-            __PYX_ERR(0, 436, __pyx_L1_error)
+            __PYX_ERR(0, 464, __pyx_L1_error)
           }
           __pyx_v_local_dtedy = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_dtedy.data + __pyx_t_32 * __pyx_v_gkyl_dtedy.strides[0]) ) + __pyx_t_35 * __pyx_v_gkyl_dtedy.strides[1]) ) + __pyx_t_34 * __pyx_v_gkyl_dtedy.strides[2]) ) + __pyx_t_33 * __pyx_v_gkyl_dtedy.strides[3]) )));
 
-          /* "impurity_transport.pyx":437
+          /* "impurity_transport.pyx":465
  *                     local_dtedx = gkyl_dtedx[f, x_idx, y_idx, z_idx]
  *                     local_dtedy = gkyl_dtedy[f, x_idx, y_idx, z_idx]
  *                     local_dtedz = gkyl_dtedz[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24673,11 +25200,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
           } else if (unlikely(__pyx_t_32 >= __pyx_v_gkyl_dtedz.shape[3])) __pyx_t_21 = 3;
           if (unlikely(__pyx_t_21 != -1)) {
             __Pyx_RaiseBufferIndexError(__pyx_t_21);
-            __PYX_ERR(0, 437, __pyx_L1_error)
+            __PYX_ERR(0, 465, __pyx_L1_error)
           }
           __pyx_v_local_dtedz = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_dtedz.data + __pyx_t_33 * __pyx_v_gkyl_dtedz.strides[0]) ) + __pyx_t_34 * __pyx_v_gkyl_dtedz.strides[1]) ) + __pyx_t_35 * __pyx_v_gkyl_dtedz.strides[2]) ) + __pyx_t_32 * __pyx_v_gkyl_dtedz.strides[3]) )));
 
-          /* "impurity_transport.pyx":438
+          /* "impurity_transport.pyx":466
  *                     local_dtedy = gkyl_dtedy[f, x_idx, y_idx, z_idx]
  *                     local_dtedz = gkyl_dtedz[f, x_idx, y_idx, z_idx]
  *                     local_dtidx = gkyl_dtidx[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
@@ -24707,16 +25234,16 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
           } else if (unlikely(__pyx_t_33 >= __pyx_v_gkyl_dtidx.shape[3])) __pyx_t_21 = 3;
           if (unlikely(__pyx_t_21 != -1)) {
             __Pyx_RaiseBufferIndexError(__pyx_t_21);
-            __PYX_ERR(0, 438, __pyx_L1_error)
+            __PYX_ERR(0, 466, __pyx_L1_error)
           }
           __pyx_v_local_dtidx = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_dtidx.data + __pyx_t_32 * __pyx_v_gkyl_dtidx.strides[0]) ) + __pyx_t_35 * __pyx_v_gkyl_dtidx.strides[1]) ) + __pyx_t_34 * __pyx_v_gkyl_dtidx.strides[2]) ) + __pyx_t_33 * __pyx_v_gkyl_dtidx.strides[3]) )));
 
-          /* "impurity_transport.pyx":439
+          /* "impurity_transport.pyx":467
  *                     local_dtedz = gkyl_dtedz[f, x_idx, y_idx, z_idx]
  *                     local_dtidx = gkyl_dtidx[f, x_idx, y_idx, z_idx]
  *                     local_dtidy = gkyl_dtidy[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
  *                     local_dtidz = gkyl_dtidz[f, x_idx, y_idx, z_idx]
- *                 else:
+ * 
  */
           __pyx_t_33 = __pyx_v_f;
           __pyx_t_34 = __pyx_v_x_idx;
@@ -24741,16 +25268,16 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
           } else if (unlikely(__pyx_t_32 >= __pyx_v_gkyl_dtidy.shape[3])) __pyx_t_21 = 3;
           if (unlikely(__pyx_t_21 != -1)) {
             __Pyx_RaiseBufferIndexError(__pyx_t_21);
-            __PYX_ERR(0, 439, __pyx_L1_error)
+            __PYX_ERR(0, 467, __pyx_L1_error)
           }
           __pyx_v_local_dtidy = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_dtidy.data + __pyx_t_33 * __pyx_v_gkyl_dtidy.strides[0]) ) + __pyx_t_34 * __pyx_v_gkyl_dtidy.strides[1]) ) + __pyx_t_35 * __pyx_v_gkyl_dtidy.strides[2]) ) + __pyx_t_32 * __pyx_v_gkyl_dtidy.strides[3]) )));
 
-          /* "impurity_transport.pyx":440
+          /* "impurity_transport.pyx":468
  *                     local_dtidx = gkyl_dtidx[f, x_idx, y_idx, z_idx]
  *                     local_dtidy = gkyl_dtidy[f, x_idx, y_idx, z_idx]
  *                     local_dtidz = gkyl_dtidz[f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
- *                 else:
- *                     local_dtedx = 0.0
+ * 
+ *                 # Use ADAS to determine ionization/recombination
  */
           __pyx_t_32 = __pyx_v_f;
           __pyx_t_35 = __pyx_v_x_idx;
@@ -24775,186 +25302,131 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
           } else if (unlikely(__pyx_t_33 >= __pyx_v_gkyl_dtidz.shape[3])) __pyx_t_21 = 3;
           if (unlikely(__pyx_t_21 != -1)) {
             __Pyx_RaiseBufferIndexError(__pyx_t_21);
-            __PYX_ERR(0, 440, __pyx_L1_error)
+            __PYX_ERR(0, 468, __pyx_L1_error)
           }
           __pyx_v_local_dtidz = (*((float *) ( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_gkyl_dtidz.data + __pyx_t_32 * __pyx_v_gkyl_dtidz.strides[0]) ) + __pyx_t_35 * __pyx_v_gkyl_dtidz.strides[1]) ) + __pyx_t_34 * __pyx_v_gkyl_dtidz.strides[2]) ) + __pyx_t_33 * __pyx_v_gkyl_dtidz.strides[3]) )));
 
-          /* "impurity_transport.pyx":434
+          /* "impurity_transport.pyx":462
  * 
  *                 # Only need these if the collisional forces are on.
  *                 if coll_forces:             # <<<<<<<<<<<<<<
  *                     local_dtedx = gkyl_dtedx[f, x_idx, y_idx, z_idx]
  *                     local_dtedy = gkyl_dtedy[f, x_idx, y_idx, z_idx]
  */
-          goto __pyx_L30;
         }
 
-        /* "impurity_transport.pyx":442
- *                     local_dtidz = gkyl_dtidz[f, x_idx, y_idx, z_idx]
- *                 else:
- *                     local_dtedx = 0.0             # <<<<<<<<<<<<<<
- *                     local_dtedy = 0.0
- *                     local_dtedz = 0.0
- */
-        /*else*/ {
-          __pyx_v_local_dtedx = 0.0;
-
-          /* "impurity_transport.pyx":443
- *                 else:
- *                     local_dtedx = 0.0
- *                     local_dtedy = 0.0             # <<<<<<<<<<<<<<
- *                     local_dtedz = 0.0
- *                     local_dtidx = 0.0
- */
-          __pyx_v_local_dtedy = 0.0;
-
-          /* "impurity_transport.pyx":444
- *                     local_dtedx = 0.0
- *                     local_dtedy = 0.0
- *                     local_dtedz = 0.0             # <<<<<<<<<<<<<<
- *                     local_dtidx = 0.0
- *                     local_dtidy = 0.0
- */
-          __pyx_v_local_dtedz = 0.0;
-
-          /* "impurity_transport.pyx":445
- *                     local_dtedy = 0.0
- *                     local_dtedz = 0.0
- *                     local_dtidx = 0.0             # <<<<<<<<<<<<<<
- *                     local_dtidy = 0.0
- *                     local_dtidz = 0.0
- */
-          __pyx_v_local_dtidx = 0.0;
-
-          /* "impurity_transport.pyx":446
- *                     local_dtedz = 0.0
- *                     local_dtidx = 0.0
- *                     local_dtidy = 0.0             # <<<<<<<<<<<<<<
- *                     local_dtidz = 0.0
- * 
- */
-          __pyx_v_local_dtidy = 0.0;
-
-          /* "impurity_transport.pyx":447
- *                     local_dtidx = 0.0
- *                     local_dtidy = 0.0
- *                     local_dtidz = 0.0             # <<<<<<<<<<<<<<
- * 
- *                 # Use ADAS to determine ionization/recombination
- */
-          __pyx_v_local_dtidz = 0.0;
-        }
-        __pyx_L30:;
-
-        /* "impurity_transport.pyx":456
+        /* "impurity_transport.pyx":477
  *                 #print("te={:.2f}  ti={:.2f}  ne={:.2e}  charge={}".format(
  *                 #    local_te, local_ti, local_ne, imp.charge))
- *                 rc_coef = interps_rc[imp.charge-1]((local_te, local_ne))             # <<<<<<<<<<<<<<
- *                 iz_coef = interps_iz[imp.charge-1]((local_te, local_ne))
+ *                 charge = imp.charge             # <<<<<<<<<<<<<<
+ *                 rc_coef = interps_rc[charge-1]((local_te, local_ne))
+ *                 iz_coef = interps_iz[charge-1]((local_te, local_ne))
+ */
+        __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 477, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 477, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+        __pyx_v_charge = __pyx_t_21;
+
+        /* "impurity_transport.pyx":478
+ *                 #    local_te, local_ti, local_ne, imp.charge))
+ *                 charge = imp.charge
+ *                 rc_coef = interps_rc[charge-1]((local_te, local_ne))             # <<<<<<<<<<<<<<
+ *                 iz_coef = interps_iz[charge-1]((local_te, local_ne))
  * 
  */
-        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 456, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = __Pyx_PyInt_SubtractObjC(__pyx_t_4, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 456, __pyx_L1_error)
+        __pyx_t_11 = (__pyx_v_charge - 1);
+        __pyx_t_9 = __Pyx_GetItemInt(__pyx_v_interps_rc, __pyx_t_11, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 478, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_18 = PyFloat_FromDouble(__pyx_v_local_te); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 478, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_4 = __Pyx_PyObject_GetItem(__pyx_v_interps_rc, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 456, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        __pyx_t_18 = PyFloat_FromDouble(__pyx_v_local_te); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 456, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_30 = PyFloat_FromDouble(__pyx_v_local_ne); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 456, __pyx_L1_error)
+        __pyx_t_30 = PyFloat_FromDouble(__pyx_v_local_ne); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 478, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 456, __pyx_L1_error)
+        __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 478, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
         __Pyx_GIVEREF(__pyx_t_18);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_18)) __PYX_ERR(0, 456, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_18)) __PYX_ERR(0, 478, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_30);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_30)) __PYX_ERR(0, 456, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_30)) __PYX_ERR(0, 478, __pyx_L1_error);
         __pyx_t_18 = 0;
         __pyx_t_30 = 0;
         __pyx_t_30 = NULL;
         __pyx_t_21 = 0;
         #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_4))) {
-          __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_4);
+        if (unlikely(PyMethod_Check(__pyx_t_9))) {
+          __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_9);
           if (likely(__pyx_t_30)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
+            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
             __Pyx_INCREF(__pyx_t_30);
             __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_4, function);
+            __Pyx_DECREF_SET(__pyx_t_9, function);
             __pyx_t_21 = 1;
           }
         }
         #endif
         {
           PyObject *__pyx_callargs[2] = {__pyx_t_30, __pyx_t_8};
-          __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
+          __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 456, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+          if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 478, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
+          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         }
-        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_9); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 456, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 478, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __pyx_v_rc_coef = __pyx_t_2;
 
-        /* "impurity_transport.pyx":457
- *                 #    local_te, local_ti, local_ne, imp.charge))
- *                 rc_coef = interps_rc[imp.charge-1]((local_te, local_ne))
- *                 iz_coef = interps_iz[imp.charge-1]((local_te, local_ne))             # <<<<<<<<<<<<<<
+        /* "impurity_transport.pyx":479
+ *                 charge = imp.charge
+ *                 rc_coef = interps_rc[charge-1]((local_te, local_ne))
+ *                 iz_coef = interps_iz[charge-1]((local_te, local_ne))             # <<<<<<<<<<<<<<
  * 
  *                 # The probability of a ion ionizing/recombining during the
  */
-        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 457, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_8 = __Pyx_PyInt_SubtractObjC(__pyx_t_4, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 457, __pyx_L1_error)
+        __pyx_t_11 = (__pyx_v_charge - 1);
+        __pyx_t_9 = __Pyx_GetItemInt(__pyx_v_interps_iz, __pyx_t_11, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 479, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_8 = PyFloat_FromDouble(__pyx_v_local_te); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 479, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_4 = __Pyx_PyObject_GetItem(__pyx_v_interps_iz, __pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 457, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __pyx_t_8 = PyFloat_FromDouble(__pyx_v_local_te); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 457, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_30 = PyFloat_FromDouble(__pyx_v_local_ne); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 457, __pyx_L1_error)
+        __pyx_t_30 = PyFloat_FromDouble(__pyx_v_local_ne); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 479, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_18 = PyTuple_New(2); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 457, __pyx_L1_error)
+        __pyx_t_18 = PyTuple_New(2); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 479, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
         __Pyx_GIVEREF(__pyx_t_8);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 0, __pyx_t_8)) __PYX_ERR(0, 457, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 0, __pyx_t_8)) __PYX_ERR(0, 479, __pyx_L1_error);
         __Pyx_GIVEREF(__pyx_t_30);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 1, __pyx_t_30)) __PYX_ERR(0, 457, __pyx_L1_error);
+        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_18, 1, __pyx_t_30)) __PYX_ERR(0, 479, __pyx_L1_error);
         __pyx_t_8 = 0;
         __pyx_t_30 = 0;
         __pyx_t_30 = NULL;
         __pyx_t_21 = 0;
         #if CYTHON_UNPACK_METHODS
-        if (unlikely(PyMethod_Check(__pyx_t_4))) {
-          __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_4);
+        if (unlikely(PyMethod_Check(__pyx_t_9))) {
+          __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_9);
           if (likely(__pyx_t_30)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
+            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
             __Pyx_INCREF(__pyx_t_30);
             __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_4, function);
+            __Pyx_DECREF_SET(__pyx_t_9, function);
             __pyx_t_21 = 1;
           }
         }
         #endif
         {
           PyObject *__pyx_callargs[2] = {__pyx_t_30, __pyx_t_18};
-          __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
+          __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 457, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+          if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 479, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
+          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         }
-        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_9); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 457, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 479, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __pyx_v_iz_coef = __pyx_t_2;
 
-        /* "impurity_transport.pyx":462
+        /* "impurity_transport.pyx":484
  *                 # timestep is then:
  *                 #   prob = coef [m3/s] * local_ne [m-3] * dt [s]
  *                 iz_prob = iz_coef * local_ne * dt             # <<<<<<<<<<<<<<
@@ -24963,7 +25435,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         __pyx_v_iz_prob = ((__pyx_v_iz_coef * __pyx_v_local_ne) * __pyx_v_dt);
 
-        /* "impurity_transport.pyx":463
+        /* "impurity_transport.pyx":485
  *                 #   prob = coef [m3/s] * local_ne [m-3] * dt [s]
  *                 iz_prob = iz_coef * local_ne * dt
  *                 rc_prob = rc_coef * local_ne * dt             # <<<<<<<<<<<<<<
@@ -24972,49 +25444,49 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         __pyx_v_rc_prob = ((__pyx_v_rc_coef * __pyx_v_local_ne) * __pyx_v_dt);
 
-        /* "impurity_transport.pyx":469
- *                 # random number every loop, so this could probably be
- *                 # optimized a bit. We go maybe a little faster
+        /* "impurity_transport.pyx":491
+ *                 # random numbers every loop here, so this could probably be
+ *                 # optimized a bit.
  *                 ran = np.random.random()             # <<<<<<<<<<<<<<
  *                 if ran < iz_prob and imp.charge < imp_atom_num:
  *                     imp.charge += 1
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 469, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 469, __pyx_L1_error)
+        __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 491, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 491, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 469, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 491, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         __pyx_t_18 = NULL;
         __pyx_t_21 = 0;
         #if CYTHON_UNPACK_METHODS
-        if (likely(PyMethod_Check(__pyx_t_4))) {
-          __pyx_t_18 = PyMethod_GET_SELF(__pyx_t_4);
+        if (likely(PyMethod_Check(__pyx_t_9))) {
+          __pyx_t_18 = PyMethod_GET_SELF(__pyx_t_9);
           if (likely(__pyx_t_18)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
+            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
             __Pyx_INCREF(__pyx_t_18);
             __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_4, function);
+            __Pyx_DECREF_SET(__pyx_t_9, function);
             __pyx_t_21 = 1;
           }
         }
         #endif
         {
           PyObject *__pyx_callargs[2] = {__pyx_t_18, NULL};
-          __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_21, 0+__pyx_t_21);
+          __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_21, 0+__pyx_t_21);
           __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 469, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+          if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 491, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
+          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         }
-        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_9); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 469, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 491, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __pyx_v_ran = __pyx_t_2;
 
-        /* "impurity_transport.pyx":470
- *                 # optimized a bit. We go maybe a little faster
+        /* "impurity_transport.pyx":492
+ *                 # optimized a bit.
  *                 ran = np.random.random()
  *                 if ran < iz_prob and imp.charge < imp_atom_num:             # <<<<<<<<<<<<<<
  *                     imp.charge += 1
@@ -25024,38 +25496,38 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         if (__pyx_t_36) {
         } else {
           __pyx_t_6 = __pyx_t_36;
-          goto __pyx_L32_bool_binop_done;
+          goto __pyx_L35_bool_binop_done;
         }
-        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 470, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 492, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 492, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 470, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = PyObject_RichCompare(__pyx_t_9, __pyx_t_4, Py_LT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 470, __pyx_L1_error)
+        __pyx_t_18 = PyObject_RichCompare(__pyx_t_1, __pyx_t_9, Py_LT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 492, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 470, __pyx_L1_error)
+        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 492, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         __pyx_t_6 = __pyx_t_36;
-        __pyx_L32_bool_binop_done:;
+        __pyx_L35_bool_binop_done:;
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":471
+          /* "impurity_transport.pyx":493
  *                 ran = np.random.random()
  *                 if ran < iz_prob and imp.charge < imp_atom_num:
  *                     imp.charge += 1             # <<<<<<<<<<<<<<
  *                 #print("iz: ran={:.2e}  iz_prob={:.2e}".format(ran, iz_prob))
  *                 ran = np.random.random()
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 471, __pyx_L1_error)
+          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 493, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_4 = __Pyx_PyInt_AddObjC(__pyx_t_18, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 471, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
+          __pyx_t_9 = __Pyx_PyInt_AddObjC(__pyx_t_18, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 493, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_charge, __pyx_t_4) < 0) __PYX_ERR(0, 471, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+          if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_charge, __pyx_t_9) < 0) __PYX_ERR(0, 493, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-          /* "impurity_transport.pyx":470
- *                 # optimized a bit. We go maybe a little faster
+          /* "impurity_transport.pyx":492
+ *                 # optimized a bit.
  *                 ran = np.random.random()
  *                 if ran < iz_prob and imp.charge < imp_atom_num:             # <<<<<<<<<<<<<<
  *                     imp.charge += 1
@@ -25063,29 +25535,29 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":473
+        /* "impurity_transport.pyx":495
  *                     imp.charge += 1
  *                 #print("iz: ran={:.2e}  iz_prob={:.2e}".format(ran, iz_prob))
  *                 ran = np.random.random()             # <<<<<<<<<<<<<<
  *                 if ran < rc_prob and imp.charge > 0:
  *                     imp.charge -= 1
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 473, __pyx_L1_error)
+        __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 495, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 473, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_random); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 495, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 473, __pyx_L1_error)
+        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_random); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 495, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_t_9 = NULL;
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+        __pyx_t_1 = NULL;
         __pyx_t_21 = 0;
         #if CYTHON_UNPACK_METHODS
         if (likely(PyMethod_Check(__pyx_t_18))) {
-          __pyx_t_9 = PyMethod_GET_SELF(__pyx_t_18);
-          if (likely(__pyx_t_9)) {
+          __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_18);
+          if (likely(__pyx_t_1)) {
             PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
-            __Pyx_INCREF(__pyx_t_9);
+            __Pyx_INCREF(__pyx_t_1);
             __Pyx_INCREF(function);
             __Pyx_DECREF_SET(__pyx_t_18, function);
             __pyx_t_21 = 1;
@@ -25093,18 +25565,18 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         }
         #endif
         {
-          PyObject *__pyx_callargs[2] = {__pyx_t_9, NULL};
-          __pyx_t_4 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_21, 0+__pyx_t_21);
-          __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
-          if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 473, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
+          PyObject *__pyx_callargs[2] = {__pyx_t_1, NULL};
+          __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_21, 0+__pyx_t_21);
+          __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+          if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 495, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         }
-        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 473, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_9); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 495, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         __pyx_v_ran = __pyx_t_2;
 
-        /* "impurity_transport.pyx":474
+        /* "impurity_transport.pyx":496
  *                 #print("iz: ran={:.2e}  iz_prob={:.2e}".format(ran, iz_prob))
  *                 ran = np.random.random()
  *                 if ran < rc_prob and imp.charge > 0:             # <<<<<<<<<<<<<<
@@ -25115,34 +25587,34 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         if (__pyx_t_36) {
         } else {
           __pyx_t_6 = __pyx_t_36;
-          goto __pyx_L35_bool_binop_done;
+          goto __pyx_L38_bool_binop_done;
         }
-        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 474, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = PyObject_RichCompare(__pyx_t_4, __pyx_int_0, Py_GT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 474, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 474, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 496, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_18 = PyObject_RichCompare(__pyx_t_9, __pyx_int_0, Py_GT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 496, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 496, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         __pyx_t_6 = __pyx_t_36;
-        __pyx_L35_bool_binop_done:;
+        __pyx_L38_bool_binop_done:;
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":475
+          /* "impurity_transport.pyx":497
  *                 ran = np.random.random()
  *                 if ran < rc_prob and imp.charge > 0:
  *                     imp.charge -= 1             # <<<<<<<<<<<<<<
  *                 #print("rc: ran={:.2e}  rc_prob={:.2e}".format(ran, rc_prob))
  * 
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 475, __pyx_L1_error)
+          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 497, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_4 = __Pyx_PyInt_SubtractObjC(__pyx_t_18, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 475, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
+          __pyx_t_9 = __Pyx_PyInt_SubtractObjC(__pyx_t_18, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 497, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_charge, __pyx_t_4) < 0) __PYX_ERR(0, 475, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+          if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_charge, __pyx_t_9) < 0) __PYX_ERR(0, 497, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-          /* "impurity_transport.pyx":474
+          /* "impurity_transport.pyx":496
  *                 #print("iz: ran={:.2e}  iz_prob={:.2e}".format(ran, iz_prob))
  *                 ran = np.random.random()
  *                 if ran < rc_prob and imp.charge > 0:             # <<<<<<<<<<<<<<
@@ -25151,61 +25623,61 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":479
+        /* "impurity_transport.pyx":501
  * 
  *                 # Check for wrong numbers?
  *                 if imp.charge < 0:             # <<<<<<<<<<<<<<
  *                     print("Error: imp.charge < 0 ({})".format(imp.charge))
  *                 if imp.charge > imp.imp_atom_num:
  */
-        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 479, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = PyObject_RichCompare(__pyx_t_4, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 479, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 479, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 501, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_18 = PyObject_RichCompare(__pyx_t_9, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 501, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 501, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":480
+          /* "impurity_transport.pyx":502
  *                 # Check for wrong numbers?
  *                 if imp.charge < 0:
  *                     print("Error: imp.charge < 0 ({})".format(imp.charge))             # <<<<<<<<<<<<<<
  *                 if imp.charge > imp.imp_atom_num:
  *                     print("Error: imp.charge > {} ({})".format(imp.charge,
  */
-          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_imp_charge_0, __pyx_n_s_format); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 480, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 480, __pyx_L1_error)
+          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_imp_charge_0, __pyx_n_s_format); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 502, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
+          __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 502, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
           __pyx_t_30 = NULL;
           __pyx_t_21 = 0;
           #if CYTHON_UNPACK_METHODS
-          if (likely(PyMethod_Check(__pyx_t_4))) {
-            __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_4);
+          if (likely(PyMethod_Check(__pyx_t_9))) {
+            __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_9);
             if (likely(__pyx_t_30)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
+              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
               __Pyx_INCREF(__pyx_t_30);
               __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_4, function);
+              __Pyx_DECREF_SET(__pyx_t_9, function);
               __pyx_t_21 = 1;
             }
           }
           #endif
           {
-            PyObject *__pyx_callargs[2] = {__pyx_t_30, __pyx_t_9};
-            __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
+            PyObject *__pyx_callargs[2] = {__pyx_t_30, __pyx_t_1};
+            __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
             __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
-            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-            if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 480, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+            if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 502, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_18);
-            __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
           }
-          __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 480, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
+          __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_18); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 502, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-          /* "impurity_transport.pyx":479
+          /* "impurity_transport.pyx":501
  * 
  *                 # Check for wrong numbers?
  *                 if imp.charge < 0:             # <<<<<<<<<<<<<<
@@ -25214,44 +25686,44 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":481
+        /* "impurity_transport.pyx":503
  *                 if imp.charge < 0:
  *                     print("Error: imp.charge < 0 ({})".format(imp.charge))
  *                 if imp.charge > imp.imp_atom_num:             # <<<<<<<<<<<<<<
  *                     print("Error: imp.charge > {} ({})".format(imp.charge,
  *                     imp.imp_atom_num))
  */
-        __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 481, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_imp_atom_num); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 481, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 503, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_imp_atom_num); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 503, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_9 = PyObject_RichCompare(__pyx_t_4, __pyx_t_18, Py_GT); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 481, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 481, __pyx_L1_error)
+        __pyx_t_1 = PyObject_RichCompare(__pyx_t_9, __pyx_t_18, Py_GT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 503, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+        __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 503, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":482
+          /* "impurity_transport.pyx":504
  *                     print("Error: imp.charge < 0 ({})".format(imp.charge))
  *                 if imp.charge > imp.imp_atom_num:
  *                     print("Error: imp.charge > {} ({})".format(imp.charge,             # <<<<<<<<<<<<<<
  *                     imp.imp_atom_num))
  *                 if iz_prob > 1:
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_imp_charge, __pyx_n_s_format); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 482, __pyx_L1_error)
+          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_imp_charge, __pyx_n_s_format); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 504, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 482, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
+          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 504, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
 
-          /* "impurity_transport.pyx":483
+          /* "impurity_transport.pyx":505
  *                 if imp.charge > imp.imp_atom_num:
  *                     print("Error: imp.charge > {} ({})".format(imp.charge,
  *                     imp.imp_atom_num))             # <<<<<<<<<<<<<<
  *                 if iz_prob > 1:
  *                     #print("Error: iz_prob ({}) > 1".format(iz_prob))
  */
-          __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_imp_atom_num); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 483, __pyx_L1_error)
+          __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_imp_atom_num); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 505, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_30);
           __pyx_t_8 = NULL;
           __pyx_t_21 = 0;
@@ -25268,29 +25740,29 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
           }
           #endif
           {
-            PyObject *__pyx_callargs[3] = {__pyx_t_8, __pyx_t_4, __pyx_t_30};
-            __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_21, 2+__pyx_t_21);
+            PyObject *__pyx_callargs[3] = {__pyx_t_8, __pyx_t_9, __pyx_t_30};
+            __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_21, 2+__pyx_t_21);
             __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-            __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
             __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-            if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 482, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_9);
+            if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 504, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_1);
             __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
           }
 
-          /* "impurity_transport.pyx":482
+          /* "impurity_transport.pyx":504
  *                     print("Error: imp.charge < 0 ({})".format(imp.charge))
  *                 if imp.charge > imp.imp_atom_num:
  *                     print("Error: imp.charge > {} ({})".format(imp.charge,             # <<<<<<<<<<<<<<
  *                     imp.imp_atom_num))
  *                 if iz_prob > 1:
  */
-          __pyx_t_18 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_9); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 482, __pyx_L1_error)
+          __pyx_t_18 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 504, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-          /* "impurity_transport.pyx":481
+          /* "impurity_transport.pyx":503
  *                 if imp.charge < 0:
  *                     print("Error: imp.charge < 0 ({})".format(imp.charge))
  *                 if imp.charge > imp.imp_atom_num:             # <<<<<<<<<<<<<<
@@ -25299,7 +25771,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":484
+        /* "impurity_transport.pyx":506
  *                     print("Error: imp.charge > {} ({})".format(imp.charge,
  *                     imp.imp_atom_num))
  *                 if iz_prob > 1:             # <<<<<<<<<<<<<<
@@ -25309,7 +25781,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         __pyx_t_6 = (__pyx_v_iz_prob > 1.0);
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":486
+          /* "impurity_transport.pyx":508
  *                 if iz_prob > 1:
  *                     #print("Error: iz_prob ({}) > 1".format(iz_prob))
  *                     iz_warn_count += 1             # <<<<<<<<<<<<<<
@@ -25318,7 +25790,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
           __pyx_v_iz_warn_count = (__pyx_v_iz_warn_count + 1);
 
-          /* "impurity_transport.pyx":484
+          /* "impurity_transport.pyx":506
  *                     print("Error: imp.charge > {} ({})".format(imp.charge,
  *                     imp.imp_atom_num))
  *                 if iz_prob > 1:             # <<<<<<<<<<<<<<
@@ -25327,7 +25799,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":487
+        /* "impurity_transport.pyx":509
  *                     #print("Error: iz_prob ({}) > 1".format(iz_prob))
  *                     iz_warn_count += 1
  *                 if rc_prob > 1:             # <<<<<<<<<<<<<<
@@ -25337,7 +25809,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         __pyx_t_6 = (__pyx_v_rc_prob > 1.0);
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":489
+          /* "impurity_transport.pyx":511
  *                 if rc_prob > 1:
  *                     #print("Error: rc_prob ({}) > 1".format(rc_prob))
  *                     rc_warn_count += 1             # <<<<<<<<<<<<<<
@@ -25346,7 +25818,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
           __pyx_v_rc_warn_count = (__pyx_v_rc_warn_count + 1);
 
-          /* "impurity_transport.pyx":487
+          /* "impurity_transport.pyx":509
  *                     #print("Error: iz_prob ({}) > 1".format(iz_prob))
  *                     iz_warn_count += 1
  *                 if rc_prob > 1:             # <<<<<<<<<<<<<<
@@ -25355,28 +25827,28 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":497
+        /* "impurity_transport.pyx":520
  *                     local_dtedx, local_dtedy, local_dtedz, local_dtidx,
  *                     local_dtidy, local_dtidz, local_viz, local_stop_time,
  *                     alpha, beta, coll_forces)             # <<<<<<<<<<<<<<
- *                 #print("After imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} {:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx,
- *                 #    imp.vy, imp.vz))
+ *                 #print("After imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} " \
+ *                 #   "{:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx,
  */
-        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_v_alpha); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 497, __pyx_L1_error)
-        __pyx_t_37 = __pyx_PyFloat_AsFloat(__pyx_v_beta); if (unlikely((__pyx_t_37 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 497, __pyx_L1_error)
+        __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_v_alpha); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 520, __pyx_L1_error)
+        __pyx_t_37 = __pyx_PyFloat_AsFloat(__pyx_v_beta); if (unlikely((__pyx_t_37 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 520, __pyx_L1_error)
 
-        /* "impurity_transport.pyx":494
- *                 #print("Before imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} {:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx,
- *                 #    imp.vy, imp.vz))
+        /* "impurity_transport.pyx":517
+ *                 #   "{:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx,
+ *                 #   imp.vy, imp.vz))
  *                 imp_step(imp, local_ex, local_ey, local_ez, local_bz, dt,             # <<<<<<<<<<<<<<
  *                     local_dtedx, local_dtedy, local_dtedz, local_dtidx,
  *                     local_dtidy, local_dtidz, local_viz, local_stop_time,
  */
-        __pyx_t_18 = __pyx_f_18impurity_transport_imp_step(__pyx_v_imp, __pyx_v_local_ex, __pyx_v_local_ey, __pyx_v_local_ez, __pyx_v_local_bz, __pyx_v_dt, __pyx_v_local_dtedx, __pyx_v_local_dtedy, __pyx_v_local_dtedz, __pyx_v_local_dtidx, __pyx_v_local_dtidy, __pyx_v_local_dtidz, __pyx_v_local_viz, __pyx_v_local_stop_time, __pyx_t_2, __pyx_t_37, __pyx_v_coll_forces); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 494, __pyx_L1_error)
+        __pyx_t_18 = __pyx_f_18impurity_transport_imp_step(__pyx_v_imp, __pyx_v_local_ex, __pyx_v_local_ey, __pyx_v_local_ez, __pyx_v_local_bz, __pyx_v_dt, __pyx_v_local_dtedx, __pyx_v_local_dtedy, __pyx_v_local_dtedz, __pyx_v_local_dtidx, __pyx_v_local_dtidy, __pyx_v_local_dtidz, __pyx_v_local_viz, __pyx_v_local_stop_time, __pyx_t_2, __pyx_t_37, __pyx_v_coll_forces); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 517, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_18);
         __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-        /* "impurity_transport.pyx":503
+        /* "impurity_transport.pyx":527
  *                 #    .format(i, f, imp.x, imp.y, imp.z, x_idx, y_idx, z_idx))
  * 
  *                 if collisions:             # <<<<<<<<<<<<<<
@@ -25385,66 +25857,72 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         if (__pyx_v_collisions) {
 
-          /* "impurity_transport.pyx":507
- *                     # Test for a collision. If a collision occurs, the velocity
- *                     # vector will be shifted by 90 degrees in a random direction.
+          /* "impurity_transport.pyx":532
+ *                     # vector will be shifted by 90 degrees in a random
+ *                     # direction.
  *                     ran = np.random.random()             # <<<<<<<<<<<<<<
- *                     coll_freq = coll_freq_arr[imp.charge-1, f, x_idx, y_idx, z_idx]
- *                     coll_prob = coll_freq * dt
+ *                     charge = imp.charge
+ *                     coll_freq = coll_freq_arr[charge-1, f, x_idx, y_idx, z_idx]
  */
-          __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 507, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_random); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 507, __pyx_L1_error)
+          __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 532, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
+          __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_random); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 532, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_30);
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_30, __pyx_n_s_random); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 507, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+          __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_30, __pyx_n_s_random); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 532, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
           __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
           __pyx_t_30 = NULL;
           __pyx_t_21 = 0;
           #if CYTHON_UNPACK_METHODS
-          if (likely(PyMethod_Check(__pyx_t_9))) {
-            __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_9);
+          if (likely(PyMethod_Check(__pyx_t_1))) {
+            __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_1);
             if (likely(__pyx_t_30)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
+              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
               __Pyx_INCREF(__pyx_t_30);
               __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_9, function);
+              __Pyx_DECREF_SET(__pyx_t_1, function);
               __pyx_t_21 = 1;
             }
           }
           #endif
           {
             PyObject *__pyx_callargs[2] = {__pyx_t_30, NULL};
-            __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_21, 0+__pyx_t_21);
+            __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_21, 0+__pyx_t_21);
             __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
-            if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 507, __pyx_L1_error)
+            if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 532, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_18);
-            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           }
-          __pyx_t_37 = __pyx_PyFloat_AsFloat(__pyx_t_18); if (unlikely((__pyx_t_37 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 507, __pyx_L1_error)
+          __pyx_t_37 = __pyx_PyFloat_AsFloat(__pyx_t_18); if (unlikely((__pyx_t_37 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 532, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
           __pyx_v_ran = __pyx_t_37;
 
-          /* "impurity_transport.pyx":508
- *                     # vector will be shifted by 90 degrees in a random direction.
+          /* "impurity_transport.pyx":533
+ *                     # direction.
  *                     ran = np.random.random()
- *                     coll_freq = coll_freq_arr[imp.charge-1, f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
+ *                     charge = imp.charge             # <<<<<<<<<<<<<<
+ *                     coll_freq = coll_freq_arr[charge-1, f, x_idx, y_idx, z_idx]
  *                     coll_prob = coll_freq * dt
- *                     #print("{:} {:} {:} {:} {:} Coll: {:.2e}  Prob = {:.3e}".format(imp.charge, f, x_idx, y_idx, z_idx, coll_freq, coll_prob))
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 508, __pyx_L1_error)
+          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 533, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_9 = __Pyx_PyInt_SubtractObjC(__pyx_t_18, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 508, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
+          __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_t_18); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 533, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __pyx_t_38 = __Pyx_PyIndex_AsSsize_t(__pyx_t_9); if (unlikely((__pyx_t_38 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 508, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __pyx_t_33 = __pyx_t_38;
+          __pyx_v_charge = __pyx_t_21;
+
+          /* "impurity_transport.pyx":534
+ *                     ran = np.random.random()
+ *                     charge = imp.charge
+ *                     coll_freq = coll_freq_arr[charge-1, f, x_idx, y_idx, z_idx]             # <<<<<<<<<<<<<<
+ *                     coll_prob = coll_freq * dt
+ *                     #print("{:} {:} {:} {:} {:} Coll: {:.2e}  " \
+ */
+          __pyx_t_33 = (__pyx_v_charge - 1);
           __pyx_t_34 = __pyx_v_f;
           __pyx_t_35 = __pyx_v_x_idx;
           __pyx_t_32 = __pyx_v_y_idx;
-          __pyx_t_39 = __pyx_v_z_idx;
+          __pyx_t_38 = __pyx_v_z_idx;
           __pyx_t_21 = -1;
           if (__pyx_t_33 < 0) {
             __pyx_t_33 += __pyx_v_coll_freq_arr.shape[0];
@@ -25462,61 +25940,114 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
             __pyx_t_32 += __pyx_v_coll_freq_arr.shape[3];
             if (unlikely(__pyx_t_32 < 0)) __pyx_t_21 = 3;
           } else if (unlikely(__pyx_t_32 >= __pyx_v_coll_freq_arr.shape[3])) __pyx_t_21 = 3;
-          if (__pyx_t_39 < 0) {
-            __pyx_t_39 += __pyx_v_coll_freq_arr.shape[4];
-            if (unlikely(__pyx_t_39 < 0)) __pyx_t_21 = 4;
-          } else if (unlikely(__pyx_t_39 >= __pyx_v_coll_freq_arr.shape[4])) __pyx_t_21 = 4;
+          if (__pyx_t_38 < 0) {
+            __pyx_t_38 += __pyx_v_coll_freq_arr.shape[4];
+            if (unlikely(__pyx_t_38 < 0)) __pyx_t_21 = 4;
+          } else if (unlikely(__pyx_t_38 >= __pyx_v_coll_freq_arr.shape[4])) __pyx_t_21 = 4;
           if (unlikely(__pyx_t_21 != -1)) {
             __Pyx_RaiseBufferIndexError(__pyx_t_21);
-            __PYX_ERR(0, 508, __pyx_L1_error)
+            __PYX_ERR(0, 534, __pyx_L1_error)
           }
-          __pyx_t_9 = PyFloat_FromDouble((*((float *) ( /* dim=4 */ (( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_coll_freq_arr.data + __pyx_t_33 * __pyx_v_coll_freq_arr.strides[0]) ) + __pyx_t_34 * __pyx_v_coll_freq_arr.strides[1]) ) + __pyx_t_35 * __pyx_v_coll_freq_arr.strides[2]) ) + __pyx_t_32 * __pyx_v_coll_freq_arr.strides[3]) ) + __pyx_t_39 * __pyx_v_coll_freq_arr.strides[4]) )))); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 508, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __Pyx_XDECREF_SET(__pyx_v_coll_freq, __pyx_t_9);
-          __pyx_t_9 = 0;
+          __pyx_v_coll_freq = (*((float *) ( /* dim=4 */ (( /* dim=3 */ (( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_coll_freq_arr.data + __pyx_t_33 * __pyx_v_coll_freq_arr.strides[0]) ) + __pyx_t_34 * __pyx_v_coll_freq_arr.strides[1]) ) + __pyx_t_35 * __pyx_v_coll_freq_arr.strides[2]) ) + __pyx_t_32 * __pyx_v_coll_freq_arr.strides[3]) ) + __pyx_t_38 * __pyx_v_coll_freq_arr.strides[4]) )));
 
-          /* "impurity_transport.pyx":509
- *                     ran = np.random.random()
- *                     coll_freq = coll_freq_arr[imp.charge-1, f, x_idx, y_idx, z_idx]
+          /* "impurity_transport.pyx":535
+ *                     charge = imp.charge
+ *                     coll_freq = coll_freq_arr[charge-1, f, x_idx, y_idx, z_idx]
  *                     coll_prob = coll_freq * dt             # <<<<<<<<<<<<<<
- *                     #print("{:} {:} {:} {:} {:} Coll: {:.2e}  Prob = {:.3e}".format(imp.charge, f, x_idx, y_idx, z_idx, coll_freq, coll_prob))
+ *                     #print("{:} {:} {:} {:} {:} Coll: {:.2e}  " \
+ *                     #   "Prob = {:.3e}".format(imp.charge, f, x_idx, y_idx,
+ */
+          __pyx_v_coll_prob = (__pyx_v_coll_freq * __pyx_v_dt);
+
+          /* "impurity_transport.pyx":539
+ *                     #   "Prob = {:.3e}".format(imp.charge, f, x_idx, y_idx,
+ *                     #   z_idx, coll_freq, coll_prob))
+ *                     if coll_prob > 1:             # <<<<<<<<<<<<<<
+ *                         print("Error: coll_prob > 1 ({})".format(coll_prob))
+ *                         coll_warn_count += 1
+ */
+          __pyx_t_6 = (__pyx_v_coll_prob > 1.0);
+          if (__pyx_t_6) {
+
+            /* "impurity_transport.pyx":540
+ *                     #   z_idx, coll_freq, coll_prob))
+ *                     if coll_prob > 1:
+ *                         print("Error: coll_prob > 1 ({})".format(coll_prob))             # <<<<<<<<<<<<<<
+ *                         coll_warn_count += 1
  * 
  */
-          __pyx_t_9 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 509, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_18 = PyNumber_Multiply(__pyx_v_coll_freq, __pyx_t_9); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 509, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_coll_prob, __pyx_t_18);
-          __pyx_t_18 = 0;
+            __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_coll_prob_1, __pyx_n_s_format); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 540, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_1);
+            __pyx_t_30 = PyFloat_FromDouble(__pyx_v_coll_prob); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 540, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_30);
+            __pyx_t_9 = NULL;
+            __pyx_t_21 = 0;
+            #if CYTHON_UNPACK_METHODS
+            if (likely(PyMethod_Check(__pyx_t_1))) {
+              __pyx_t_9 = PyMethod_GET_SELF(__pyx_t_1);
+              if (likely(__pyx_t_9)) {
+                PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+                __Pyx_INCREF(__pyx_t_9);
+                __Pyx_INCREF(function);
+                __Pyx_DECREF_SET(__pyx_t_1, function);
+                __pyx_t_21 = 1;
+              }
+            }
+            #endif
+            {
+              PyObject *__pyx_callargs[2] = {__pyx_t_9, __pyx_t_30};
+              __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_21, 1+__pyx_t_21);
+              __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+              __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+              if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 540, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
+              __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+            }
+            __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_18); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 540, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_1);
+            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-          /* "impurity_transport.pyx":513
+            /* "impurity_transport.pyx":541
+ *                     if coll_prob > 1:
+ *                         print("Error: coll_prob > 1 ({})".format(coll_prob))
+ *                         coll_warn_count += 1             # <<<<<<<<<<<<<<
+ * 
+ *                     # Collision occured! Rotate velocity vector 90 degrees.
+ */
+            __pyx_v_coll_warn_count = (__pyx_v_coll_warn_count + 1);
+
+            /* "impurity_transport.pyx":539
+ *                     #   "Prob = {:.3e}".format(imp.charge, f, x_idx, y_idx,
+ *                     #   z_idx, coll_freq, coll_prob))
+ *                     if coll_prob > 1:             # <<<<<<<<<<<<<<
+ *                         print("Error: coll_prob > 1 ({})".format(coll_prob))
+ *                         coll_warn_count += 1
+ */
+          }
+
+          /* "impurity_transport.pyx":544
  * 
  *                     # Collision occured! Rotate velocity vector 90 degrees.
  *                     if ran < coll_prob:             # <<<<<<<<<<<<<<
  *                         rotate_vel_vector(imp)
  *                         coll_count += 1
  */
-          __pyx_t_18 = PyFloat_FromDouble(__pyx_v_ran); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 513, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_9 = PyObject_RichCompare(__pyx_t_18, __pyx_v_coll_prob, Py_LT); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 513, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 513, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+          __pyx_t_6 = (__pyx_v_ran < __pyx_v_coll_prob);
           if (__pyx_t_6) {
 
-            /* "impurity_transport.pyx":514
+            /* "impurity_transport.pyx":545
  *                     # Collision occured! Rotate velocity vector 90 degrees.
  *                     if ran < coll_prob:
  *                         rotate_vel_vector(imp)             # <<<<<<<<<<<<<<
  *                         coll_count += 1
  *                         stat_dict["coll_events"] += 1
  */
-            __pyx_t_9 = __pyx_f_18impurity_transport_rotate_vel_vector(__pyx_v_imp); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 514, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_9);
-            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+            __pyx_t_1 = __pyx_f_18impurity_transport_rotate_vel_vector(__pyx_v_imp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 545, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_1);
+            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-            /* "impurity_transport.pyx":515
+            /* "impurity_transport.pyx":546
  *                     if ran < coll_prob:
  *                         rotate_vel_vector(imp)
  *                         coll_count += 1             # <<<<<<<<<<<<<<
@@ -25525,34 +26056,267 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
             __pyx_v_coll_count = (__pyx_v_coll_count + 1);
 
-            /* "impurity_transport.pyx":516
+            /* "impurity_transport.pyx":547
  *                         rotate_vel_vector(imp)
  *                         coll_count += 1
  *                         stat_dict["coll_events"] += 1             # <<<<<<<<<<<<<<
  * 
- *                 loop_counts += 1
+ *                     # If a collision does not occur, we can still leverage the
  */
             __Pyx_INCREF(__pyx_n_s_coll_events);
-            __pyx_t_40 = __pyx_n_s_coll_events;
-            __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_40); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 516, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_9);
-            __pyx_t_18 = __Pyx_PyInt_AddObjC(__pyx_t_9, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 516, __pyx_L1_error)
+            __pyx_t_39 = __pyx_n_s_coll_events;
+            __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_39); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 547, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_1);
+            __pyx_t_18 = __Pyx_PyInt_AddObjC(__pyx_t_1, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 547, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_18);
-            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_40, __pyx_t_18) < 0))) __PYX_ERR(0, 516, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_39, __pyx_t_18) < 0))) __PYX_ERR(0, 547, __pyx_L1_error)
             __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-            __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
+            __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
 
-            /* "impurity_transport.pyx":513
+            /* "impurity_transport.pyx":544
  * 
  *                     # Collision occured! Rotate velocity vector 90 degrees.
  *                     if ran < coll_prob:             # <<<<<<<<<<<<<<
  *                         rotate_vel_vector(imp)
  *                         coll_count += 1
  */
+            goto __pyx_L46;
           }
 
-          /* "impurity_transport.pyx":503
+          /* "impurity_transport.pyx":554
+ *                     # Sorry for the ugly if statements, I blame the deep
+ *                     # indentation!
+ *                     elif var_reduction and (imp.weight >             # <<<<<<<<<<<<<<
+ *                         var_reduction_min_weight):
+ *                         if (imp_count_arr[f,x_idx,y_idx,z_idx] <=
+ */
+          if (__pyx_v_var_reduction) {
+          } else {
+            __pyx_t_6 = __pyx_v_var_reduction;
+            goto __pyx_L47_bool_binop_done;
+          }
+          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_weight); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 554, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_18);
+
+          /* "impurity_transport.pyx":555
+ *                     # indentation!
+ *                     elif var_reduction and (imp.weight >
+ *                         var_reduction_min_weight):             # <<<<<<<<<<<<<<
+ *                         if (imp_count_arr[f,x_idx,y_idx,z_idx] <=
+ *                             var_count_qualifier):
+ */
+          __pyx_t_1 = PyFloat_FromDouble(__pyx_v_var_reduction_min_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 555, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
+          __pyx_t_30 = PyObject_RichCompare(__pyx_t_18, __pyx_t_1, Py_GT); __Pyx_XGOTREF(__pyx_t_30); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 554, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+          /* "impurity_transport.pyx":554
+ *                     # Sorry for the ugly if statements, I blame the deep
+ *                     # indentation!
+ *                     elif var_reduction and (imp.weight >             # <<<<<<<<<<<<<<
+ *                         var_reduction_min_weight):
+ *                         if (imp_count_arr[f,x_idx,y_idx,z_idx] <=
+ */
+          __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_30); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 554, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+          __pyx_t_6 = __pyx_t_36;
+          __pyx_L47_bool_binop_done:;
+          if (__pyx_t_6) {
+
+            /* "impurity_transport.pyx":556
+ *                     elif var_reduction and (imp.weight >
+ *                         var_reduction_min_weight):
+ *                         if (imp_count_arr[f,x_idx,y_idx,z_idx] <=             # <<<<<<<<<<<<<<
+ *                             var_count_qualifier):
+ * 
+ */
+            __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 556, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_30);
+            __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_x_idx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 556, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_1);
+            __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_y_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 556, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_18);
+            __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_z_idx); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 556, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_9);
+            __pyx_t_8 = PyTuple_New(4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 556, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
+            __Pyx_GIVEREF(__pyx_t_30);
+            if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_30)) __PYX_ERR(0, 556, __pyx_L1_error);
+            __Pyx_GIVEREF(__pyx_t_1);
+            if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_1)) __PYX_ERR(0, 556, __pyx_L1_error);
+            __Pyx_GIVEREF(__pyx_t_18);
+            if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 2, __pyx_t_18)) __PYX_ERR(0, 556, __pyx_L1_error);
+            __Pyx_GIVEREF(__pyx_t_9);
+            if (__Pyx_PyTuple_SET_ITEM(__pyx_t_8, 3, __pyx_t_9)) __PYX_ERR(0, 556, __pyx_L1_error);
+            __pyx_t_30 = 0;
+            __pyx_t_1 = 0;
+            __pyx_t_18 = 0;
+            __pyx_t_9 = 0;
+            __pyx_t_9 = __Pyx_PyObject_GetItem(__pyx_v_imp_count_arr, __pyx_t_8); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 556, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_9);
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+
+            /* "impurity_transport.pyx":557
+ *                         var_reduction_min_weight):
+ *                         if (imp_count_arr[f,x_idx,y_idx,z_idx] <=
+ *                             var_count_qualifier):             # <<<<<<<<<<<<<<
+ * 
+ *                             # Split the particle. Each new particle weight is
+ */
+            __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_var_count_qualifier); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 557, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
+            __pyx_t_18 = PyObject_RichCompare(__pyx_t_9, __pyx_t_8, Py_LE); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 556, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+
+            /* "impurity_transport.pyx":556
+ *                     elif var_reduction and (imp.weight >
+ *                         var_reduction_min_weight):
+ *                         if (imp_count_arr[f,x_idx,y_idx,z_idx] <=             # <<<<<<<<<<<<<<
+ *                             var_count_qualifier):
+ * 
+ */
+            __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 556, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+            if (__pyx_t_6) {
+
+              /* "impurity_transport.pyx":570
+ *                             # particles. The accounting all adds up to the same
+ *                             # in the end.
+ *                             imp.weight = imp.weight * (1 - coll_prob)             # <<<<<<<<<<<<<<
+ *                             additional_imps.append(PyImpurity(imp_atom_num,
+ *                                 imp_mass, imp.x, imp.y, imp.z, imp.charge, f,
+ */
+              __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_weight); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 570, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
+              __pyx_t_8 = PyFloat_FromDouble((1.0 - __pyx_v_coll_prob)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 570, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_8);
+              __pyx_t_9 = PyNumber_Multiply(__pyx_t_18, __pyx_t_8); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 570, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_9);
+              __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+              if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_weight, __pyx_t_9) < 0) __PYX_ERR(0, 570, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+              /* "impurity_transport.pyx":571
+ *                             # in the end.
+ *                             imp.weight = imp.weight * (1 - coll_prob)
+ *                             additional_imps.append(PyImpurity(imp_atom_num,             # <<<<<<<<<<<<<<
+ *                                 imp_mass, imp.x, imp.y, imp.z, imp.charge, f,
+ *                                 imp.weight * coll_prob))
+ */
+              __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_PyImpurity); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 571, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_8);
+              __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_imp_atom_num); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 571, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
+
+              /* "impurity_transport.pyx":572
+ *                             imp.weight = imp.weight * (1 - coll_prob)
+ *                             additional_imps.append(PyImpurity(imp_atom_num,
+ *                                 imp_mass, imp.x, imp.y, imp.z, imp.charge, f,             # <<<<<<<<<<<<<<
+ *                                 imp.weight * coll_prob))
+ *                             num_add_imps += 1
+ */
+              __pyx_t_1 = PyFloat_FromDouble(__pyx_v_imp_mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 572, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_1);
+              __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 572, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_30);
+              __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 572, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_7);
+              __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 572, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_3);
+              __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 572, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_4);
+              __pyx_t_20 = __Pyx_PyInt_From_int(__pyx_v_f); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 572, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_20);
+
+              /* "impurity_transport.pyx":573
+ *                             additional_imps.append(PyImpurity(imp_atom_num,
+ *                                 imp_mass, imp.x, imp.y, imp.z, imp.charge, f,
+ *                                 imp.weight * coll_prob))             # <<<<<<<<<<<<<<
+ *                             num_add_imps += 1
+ * 
+ */
+              __pyx_t_31 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_weight); if (unlikely(!__pyx_t_31)) __PYX_ERR(0, 573, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_31);
+              __pyx_t_40 = PyFloat_FromDouble(__pyx_v_coll_prob); if (unlikely(!__pyx_t_40)) __PYX_ERR(0, 573, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_40);
+              __pyx_t_41 = PyNumber_Multiply(__pyx_t_31, __pyx_t_40); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 573, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_41);
+              __Pyx_DECREF(__pyx_t_31); __pyx_t_31 = 0;
+              __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
+              __pyx_t_40 = NULL;
+              __pyx_t_21 = 0;
+              #if CYTHON_UNPACK_METHODS
+              if (unlikely(PyMethod_Check(__pyx_t_8))) {
+                __pyx_t_40 = PyMethod_GET_SELF(__pyx_t_8);
+                if (likely(__pyx_t_40)) {
+                  PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_8);
+                  __Pyx_INCREF(__pyx_t_40);
+                  __Pyx_INCREF(function);
+                  __Pyx_DECREF_SET(__pyx_t_8, function);
+                  __pyx_t_21 = 1;
+                }
+              }
+              #endif
+              {
+                PyObject *__pyx_callargs[9] = {__pyx_t_40, __pyx_t_18, __pyx_t_1, __pyx_t_30, __pyx_t_7, __pyx_t_3, __pyx_t_4, __pyx_t_20, __pyx_t_41};
+                __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_21, 8+__pyx_t_21);
+                __Pyx_XDECREF(__pyx_t_40); __pyx_t_40 = 0;
+                __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+                __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+                __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+                __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+                __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+                __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+                __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+                __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+                if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 571, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_9);
+                __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+              }
+
+              /* "impurity_transport.pyx":571
+ *                             # in the end.
+ *                             imp.weight = imp.weight * (1 - coll_prob)
+ *                             additional_imps.append(PyImpurity(imp_atom_num,             # <<<<<<<<<<<<<<
+ *                                 imp_mass, imp.x, imp.y, imp.z, imp.charge, f,
+ *                                 imp.weight * coll_prob))
+ */
+              __pyx_t_26 = __Pyx_PyList_Append(__pyx_v_additional_imps, __pyx_t_9); if (unlikely(__pyx_t_26 == ((int)-1))) __PYX_ERR(0, 571, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+              /* "impurity_transport.pyx":574
+ *                                 imp_mass, imp.x, imp.y, imp.z, imp.charge, f,
+ *                                 imp.weight * coll_prob))
+ *                             num_add_imps += 1             # <<<<<<<<<<<<<<
+ * 
+ *                 loop_counts += 1
+ */
+              __pyx_v_num_add_imps = (__pyx_v_num_add_imps + 1);
+
+              /* "impurity_transport.pyx":556
+ *                     elif var_reduction and (imp.weight >
+ *                         var_reduction_min_weight):
+ *                         if (imp_count_arr[f,x_idx,y_idx,z_idx] <=             # <<<<<<<<<<<<<<
+ *                             var_count_qualifier):
+ * 
+ */
+            }
+
+            /* "impurity_transport.pyx":554
+ *                     # Sorry for the ugly if statements, I blame the deep
+ *                     # indentation!
+ *                     elif var_reduction and (imp.weight >             # <<<<<<<<<<<<<<
+ *                         var_reduction_min_weight):
+ *                         if (imp_count_arr[f,x_idx,y_idx,z_idx] <=
+ */
+          }
+          __pyx_L46:;
+
+          /* "impurity_transport.pyx":527
  *                 #    .format(i, f, imp.x, imp.y, imp.z, x_idx, y_idx, z_idx))
  * 
  *                 if collisions:             # <<<<<<<<<<<<<<
@@ -25561,8 +26325,8 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":518
- *                         stat_dict["coll_events"] += 1
+        /* "impurity_transport.pyx":576
+ *                             num_add_imps += 1
  * 
  *                 loop_counts += 1             # <<<<<<<<<<<<<<
  *                 avg_time_followed += dt
@@ -25570,7 +26334,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         __pyx_v_loop_counts = (__pyx_v_loop_counts + 1);
 
-        /* "impurity_transport.pyx":519
+        /* "impurity_transport.pyx":577
  * 
  *                 loop_counts += 1
  *                 avg_time_followed += dt             # <<<<<<<<<<<<<<
@@ -25579,7 +26343,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         __pyx_v_avg_time_followed = (__pyx_v_avg_time_followed + __pyx_v_dt);
 
-        /* "impurity_transport.pyx":520
+        /* "impurity_transport.pyx":578
  *                 loop_counts += 1
  *                 avg_time_followed += dt
  *                 stat_dict["total_imp_time"] += dt             # <<<<<<<<<<<<<<
@@ -25587,72 +26351,72 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *                 # Bounds checking. Treat x and z bounds as absorbing, and
  */
         __Pyx_INCREF(__pyx_n_s_total_imp_time);
-        __pyx_t_40 = __pyx_n_s_total_imp_time;
-        __pyx_t_18 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_40); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 520, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_9 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 520, __pyx_L1_error)
+        __pyx_t_39 = __pyx_n_s_total_imp_time;
+        __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_39); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 578, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_30 = PyNumber_InPlaceAdd(__pyx_t_18, __pyx_t_9); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 520, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_30);
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+        __pyx_t_8 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 578, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_8);
+        __pyx_t_41 = PyNumber_InPlaceAdd(__pyx_t_9, __pyx_t_8); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 578, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_41);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_40, __pyx_t_30) < 0))) __PYX_ERR(0, 520, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-        __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
+        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+        if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_39, __pyx_t_41) < 0))) __PYX_ERR(0, 578, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+        __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
 
-        /* "impurity_transport.pyx":524
+        /* "impurity_transport.pyx":582
  *                 # Bounds checking. Treat x and z bounds as absorbing, and
  *                 # the y bound as periodic.
  *                 if imp.x <= gkyl_xmin or imp.x >= gkyl_xmax:             # <<<<<<<<<<<<<<
  *                     if imp.x <= gkyl_xmin:
  *                         stat_dict["low_xbound_count"] += 1
  */
-        __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 524, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_xmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 524, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_18 = PyObject_RichCompare(__pyx_t_30, __pyx_t_9, Py_LE); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 524, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+        __pyx_t_41 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 582, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_41);
+        __pyx_t_8 = PyFloat_FromDouble(__pyx_v_gkyl_xmin); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 582, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_8);
+        __pyx_t_9 = PyObject_RichCompare(__pyx_t_41, __pyx_t_8, Py_LE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 582, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 582, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 524, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         if (!__pyx_t_36) {
         } else {
           __pyx_t_6 = __pyx_t_36;
-          goto __pyx_L44_bool_binop_done;
+          goto __pyx_L51_bool_binop_done;
         }
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 524, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_xmax); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 524, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 582, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_30 = PyObject_RichCompare(__pyx_t_18, __pyx_t_9, Py_GE); __Pyx_XGOTREF(__pyx_t_30); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 524, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+        __pyx_t_8 = PyFloat_FromDouble(__pyx_v_gkyl_xmax); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 582, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_8);
+        __pyx_t_41 = PyObject_RichCompare(__pyx_t_9, __pyx_t_8, Py_GE); __Pyx_XGOTREF(__pyx_t_41); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 582, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_30); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 524, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_41); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 582, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
         __pyx_t_6 = __pyx_t_36;
-        __pyx_L44_bool_binop_done:;
+        __pyx_L51_bool_binop_done:;
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":525
+          /* "impurity_transport.pyx":583
  *                 # the y bound as periodic.
  *                 if imp.x <= gkyl_xmin or imp.x >= gkyl_xmax:
  *                     if imp.x <= gkyl_xmin:             # <<<<<<<<<<<<<<
  *                         stat_dict["low_xbound_count"] += 1
  *                         stat_dict["low_xbound_time"] += imp.t
  */
-          __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 525, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_30);
-          __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_xmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 525, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_18 = PyObject_RichCompare(__pyx_t_30, __pyx_t_9, Py_LE); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 525, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+          __pyx_t_41 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 583, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_41);
+          __pyx_t_8 = PyFloat_FromDouble(__pyx_v_gkyl_xmin); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 583, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_9 = PyObject_RichCompare(__pyx_t_41, __pyx_t_8, Py_LE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 583, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 583, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 525, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
           if (__pyx_t_6) {
 
-            /* "impurity_transport.pyx":526
+            /* "impurity_transport.pyx":584
  *                 if imp.x <= gkyl_xmin or imp.x >= gkyl_xmax:
  *                     if imp.x <= gkyl_xmin:
  *                         stat_dict["low_xbound_count"] += 1             # <<<<<<<<<<<<<<
@@ -25660,17 +26424,17 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *                     elif imp.x >= gkyl_xmax:
  */
             __Pyx_INCREF(__pyx_n_s_low_xbound_count);
-            __pyx_t_40 = __pyx_n_s_low_xbound_count;
-            __pyx_t_18 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_40); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 526, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_18);
-            __pyx_t_9 = __Pyx_PyInt_AddObjC(__pyx_t_18, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 526, __pyx_L1_error)
+            __pyx_t_39 = __pyx_n_s_low_xbound_count;
+            __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_39); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 584, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_9);
-            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_40, __pyx_t_9) < 0))) __PYX_ERR(0, 526, __pyx_L1_error)
+            __pyx_t_8 = __Pyx_PyInt_AddObjC(__pyx_t_9, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 584, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
             __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-            __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
+            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_39, __pyx_t_8) < 0))) __PYX_ERR(0, 584, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+            __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
 
-            /* "impurity_transport.pyx":527
+            /* "impurity_transport.pyx":585
  *                     if imp.x <= gkyl_xmin:
  *                         stat_dict["low_xbound_count"] += 1
  *                         stat_dict["low_xbound_time"] += imp.t             # <<<<<<<<<<<<<<
@@ -25678,48 +26442,48 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *                         stat_dict["high_xbound_count"] += 1
  */
             __Pyx_INCREF(__pyx_n_s_low_xbound_time);
-            __pyx_t_40 = __pyx_n_s_low_xbound_time;
-            __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_40); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 527, __pyx_L1_error)
+            __pyx_t_39 = __pyx_n_s_low_xbound_time;
+            __pyx_t_8 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_39); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 585, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
+            __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_t); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 585, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_9);
-            __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_t); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 527, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_18);
-            __pyx_t_30 = PyNumber_InPlaceAdd(__pyx_t_9, __pyx_t_18); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 527, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_30);
+            __pyx_t_41 = PyNumber_InPlaceAdd(__pyx_t_8, __pyx_t_9); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 585, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_41);
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
             __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_40, __pyx_t_30) < 0))) __PYX_ERR(0, 527, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-            __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
+            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_39, __pyx_t_41) < 0))) __PYX_ERR(0, 585, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+            __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
 
-            /* "impurity_transport.pyx":525
+            /* "impurity_transport.pyx":583
  *                 # the y bound as periodic.
  *                 if imp.x <= gkyl_xmin or imp.x >= gkyl_xmax:
  *                     if imp.x <= gkyl_xmin:             # <<<<<<<<<<<<<<
  *                         stat_dict["low_xbound_count"] += 1
  *                         stat_dict["low_xbound_time"] += imp.t
  */
-            goto __pyx_L46;
+            goto __pyx_L53;
           }
 
-          /* "impurity_transport.pyx":528
+          /* "impurity_transport.pyx":586
  *                         stat_dict["low_xbound_count"] += 1
  *                         stat_dict["low_xbound_time"] += imp.t
  *                     elif imp.x >= gkyl_xmax:             # <<<<<<<<<<<<<<
  *                         stat_dict["high_xbound_count"] += 1
  *                     break
  */
-          __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 528, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_30);
-          __pyx_t_18 = PyFloat_FromDouble(__pyx_v_gkyl_xmax); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 528, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_9 = PyObject_RichCompare(__pyx_t_30, __pyx_t_18, Py_GE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 528, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 528, __pyx_L1_error)
+          __pyx_t_41 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 586, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_41);
+          __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_xmax); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 586, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
+          __pyx_t_8 = PyObject_RichCompare(__pyx_t_41, __pyx_t_9, Py_GE); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 586, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 586, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           if (__pyx_t_6) {
 
-            /* "impurity_transport.pyx":529
+            /* "impurity_transport.pyx":587
  *                         stat_dict["low_xbound_time"] += imp.t
  *                     elif imp.x >= gkyl_xmax:
  *                         stat_dict["high_xbound_count"] += 1             # <<<<<<<<<<<<<<
@@ -25727,17 +26491,17 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *                 if imp.z <= gkyl_zmin or imp.z >= gkyl_zmax:
  */
             __Pyx_INCREF(__pyx_n_s_high_xbound_count);
-            __pyx_t_40 = __pyx_n_s_high_xbound_count;
-            __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_40); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 529, __pyx_L1_error)
+            __pyx_t_39 = __pyx_n_s_high_xbound_count;
+            __pyx_t_8 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_39); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 587, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
+            __pyx_t_9 = __Pyx_PyInt_AddObjC(__pyx_t_8, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 587, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_9);
-            __pyx_t_18 = __Pyx_PyInt_AddObjC(__pyx_t_9, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 529, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_18);
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_39, __pyx_t_9) < 0))) __PYX_ERR(0, 587, __pyx_L1_error)
             __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_40, __pyx_t_18) < 0))) __PYX_ERR(0, 529, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-            __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
+            __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
 
-            /* "impurity_transport.pyx":528
+            /* "impurity_transport.pyx":586
  *                         stat_dict["low_xbound_count"] += 1
  *                         stat_dict["low_xbound_time"] += imp.t
  *                     elif imp.x >= gkyl_xmax:             # <<<<<<<<<<<<<<
@@ -25745,18 +26509,18 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *                     break
  */
           }
-          __pyx_L46:;
+          __pyx_L53:;
 
-          /* "impurity_transport.pyx":530
+          /* "impurity_transport.pyx":588
  *                     elif imp.x >= gkyl_xmax:
  *                         stat_dict["high_xbound_count"] += 1
  *                     break             # <<<<<<<<<<<<<<
  *                 if imp.z <= gkyl_zmin or imp.z >= gkyl_zmax:
  *                     if imp.z <= gkyl_zmin:
  */
-          goto __pyx_L29_break;
+          goto __pyx_L32_break;
 
-          /* "impurity_transport.pyx":524
+          /* "impurity_transport.pyx":582
  *                 # Bounds checking. Treat x and z bounds as absorbing, and
  *                 # the y bound as periodic.
  *                 if imp.x <= gkyl_xmin or imp.x >= gkyl_xmax:             # <<<<<<<<<<<<<<
@@ -25765,59 +26529,59 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":531
+        /* "impurity_transport.pyx":589
  *                         stat_dict["high_xbound_count"] += 1
  *                     break
  *                 if imp.z <= gkyl_zmin or imp.z >= gkyl_zmax:             # <<<<<<<<<<<<<<
  *                     if imp.z <= gkyl_zmin:
  *                         stat_dict["low_zbound_count"] += 1
  */
-        __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 531, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_zmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 531, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 589, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_30 = PyObject_RichCompare(__pyx_t_18, __pyx_t_9, Py_LE); __Pyx_XGOTREF(__pyx_t_30); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 531, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+        __pyx_t_8 = PyFloat_FromDouble(__pyx_v_gkyl_zmin); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 589, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_8);
+        __pyx_t_41 = PyObject_RichCompare(__pyx_t_9, __pyx_t_8, Py_LE); __Pyx_XGOTREF(__pyx_t_41); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 589, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_30); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 531, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_41); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 589, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
         if (!__pyx_t_36) {
         } else {
           __pyx_t_6 = __pyx_t_36;
-          goto __pyx_L48_bool_binop_done;
+          goto __pyx_L55_bool_binop_done;
         }
-        __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 531, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_zmax); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 531, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_18 = PyObject_RichCompare(__pyx_t_30, __pyx_t_9, Py_GE); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 531, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+        __pyx_t_41 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 589, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_41);
+        __pyx_t_8 = PyFloat_FromDouble(__pyx_v_gkyl_zmax); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 589, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_8);
+        __pyx_t_9 = PyObject_RichCompare(__pyx_t_41, __pyx_t_8, Py_GE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 589, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 589, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_t_36 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_36 < 0))) __PYX_ERR(0, 531, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
         __pyx_t_6 = __pyx_t_36;
-        __pyx_L48_bool_binop_done:;
+        __pyx_L55_bool_binop_done:;
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":532
+          /* "impurity_transport.pyx":590
  *                     break
  *                 if imp.z <= gkyl_zmin or imp.z >= gkyl_zmax:
  *                     if imp.z <= gkyl_zmin:             # <<<<<<<<<<<<<<
  *                         stat_dict["low_zbound_count"] += 1
  *                     elif imp.z >= gkyl_zmax:
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 532, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_zmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 532, __pyx_L1_error)
+          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 590, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_30 = PyObject_RichCompare(__pyx_t_18, __pyx_t_9, Py_LE); __Pyx_XGOTREF(__pyx_t_30); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 532, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+          __pyx_t_8 = PyFloat_FromDouble(__pyx_v_gkyl_zmin); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 590, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_41 = PyObject_RichCompare(__pyx_t_9, __pyx_t_8, Py_LE); __Pyx_XGOTREF(__pyx_t_41); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 590, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_30); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 532, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_41); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 590, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
           if (__pyx_t_6) {
 
-            /* "impurity_transport.pyx":533
+            /* "impurity_transport.pyx":591
  *                 if imp.z <= gkyl_zmin or imp.z >= gkyl_zmax:
  *                     if imp.z <= gkyl_zmin:
  *                         stat_dict["low_zbound_count"] += 1             # <<<<<<<<<<<<<<
@@ -25825,45 +26589,45 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *                         stat_dict["high_zbound_count"] += 1
  */
             __Pyx_INCREF(__pyx_n_s_low_zbound_count);
-            __pyx_t_40 = __pyx_n_s_low_zbound_count;
-            __pyx_t_30 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_40); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 533, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_30);
-            __pyx_t_9 = __Pyx_PyInt_AddObjC(__pyx_t_30, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 533, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_9);
-            __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_40, __pyx_t_9) < 0))) __PYX_ERR(0, 533, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-            __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
+            __pyx_t_39 = __pyx_n_s_low_zbound_count;
+            __pyx_t_41 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_39); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 591, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_41);
+            __pyx_t_8 = __Pyx_PyInt_AddObjC(__pyx_t_41, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 591, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
+            __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_39, __pyx_t_8) < 0))) __PYX_ERR(0, 591, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+            __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
 
-            /* "impurity_transport.pyx":532
+            /* "impurity_transport.pyx":590
  *                     break
  *                 if imp.z <= gkyl_zmin or imp.z >= gkyl_zmax:
  *                     if imp.z <= gkyl_zmin:             # <<<<<<<<<<<<<<
  *                         stat_dict["low_zbound_count"] += 1
  *                     elif imp.z >= gkyl_zmax:
  */
-            goto __pyx_L50;
+            goto __pyx_L57;
           }
 
-          /* "impurity_transport.pyx":534
+          /* "impurity_transport.pyx":592
  *                     if imp.z <= gkyl_zmin:
  *                         stat_dict["low_zbound_count"] += 1
  *                     elif imp.z >= gkyl_zmax:             # <<<<<<<<<<<<<<
  *                         stat_dict["high_zbound_count"] += 1
  *                     break
  */
-          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 534, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_30 = PyFloat_FromDouble(__pyx_v_gkyl_zmax); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 534, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_30);
-          __pyx_t_18 = PyObject_RichCompare(__pyx_t_9, __pyx_t_30, Py_GE); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 534, __pyx_L1_error)
+          __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 592, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_41 = PyFloat_FromDouble(__pyx_v_gkyl_zmax); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 592, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_41);
+          __pyx_t_9 = PyObject_RichCompare(__pyx_t_8, __pyx_t_41, Py_GE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 592, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 592, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 534, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
           if (__pyx_t_6) {
 
-            /* "impurity_transport.pyx":535
+            /* "impurity_transport.pyx":593
  *                         stat_dict["low_zbound_count"] += 1
  *                     elif imp.z >= gkyl_zmax:
  *                         stat_dict["high_zbound_count"] += 1             # <<<<<<<<<<<<<<
@@ -25871,17 +26635,17 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *                 if imp.y <= gkyl_ymin:
  */
             __Pyx_INCREF(__pyx_n_s_high_zbound_count);
-            __pyx_t_40 = __pyx_n_s_high_zbound_count;
-            __pyx_t_18 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_40); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 535, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_18);
-            __pyx_t_30 = __Pyx_PyInt_AddObjC(__pyx_t_18, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 535, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_30);
-            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_40, __pyx_t_30) < 0))) __PYX_ERR(0, 535, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-            __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
+            __pyx_t_39 = __pyx_n_s_high_zbound_count;
+            __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_stat_dict, __pyx_t_39); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 593, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_9);
+            __pyx_t_41 = __Pyx_PyInt_AddObjC(__pyx_t_9, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 593, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_41);
+            __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+            if (unlikely((PyDict_SetItem(__pyx_v_stat_dict, __pyx_t_39, __pyx_t_41) < 0))) __PYX_ERR(0, 593, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+            __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
 
-            /* "impurity_transport.pyx":534
+            /* "impurity_transport.pyx":592
  *                     if imp.z <= gkyl_zmin:
  *                         stat_dict["low_zbound_count"] += 1
  *                     elif imp.z >= gkyl_zmax:             # <<<<<<<<<<<<<<
@@ -25889,18 +26653,18 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *                     break
  */
           }
-          __pyx_L50:;
+          __pyx_L57:;
 
-          /* "impurity_transport.pyx":536
+          /* "impurity_transport.pyx":594
  *                     elif imp.z >= gkyl_zmax:
  *                         stat_dict["high_zbound_count"] += 1
  *                     break             # <<<<<<<<<<<<<<
  *                 if imp.y <= gkyl_ymin:
  *                     imp.y = gkyl_ymax + (imp.y - gkyl_ymin)
  */
-          goto __pyx_L29_break;
+          goto __pyx_L32_break;
 
-          /* "impurity_transport.pyx":531
+          /* "impurity_transport.pyx":589
  *                         stat_dict["high_xbound_count"] += 1
  *                     break
  *                 if imp.z <= gkyl_zmin or imp.z >= gkyl_zmax:             # <<<<<<<<<<<<<<
@@ -25909,101 +26673,101 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
         }
 
-        /* "impurity_transport.pyx":537
+        /* "impurity_transport.pyx":595
  *                         stat_dict["high_zbound_count"] += 1
  *                     break
  *                 if imp.y <= gkyl_ymin:             # <<<<<<<<<<<<<<
  *                     imp.y = gkyl_ymax + (imp.y - gkyl_ymin)
  *                 elif imp.y >= gkyl_ymax:
  */
-        __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 537, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_18 = PyFloat_FromDouble(__pyx_v_gkyl_ymin); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 537, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_18);
-        __pyx_t_9 = PyObject_RichCompare(__pyx_t_30, __pyx_t_18, Py_LE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 537, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-        __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-        __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 537, __pyx_L1_error)
+        __pyx_t_41 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 595, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_41);
+        __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_ymin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 595, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_8 = PyObject_RichCompare(__pyx_t_41, __pyx_t_9, Py_LE); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 595, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 595, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":538
+          /* "impurity_transport.pyx":596
  *                     break
  *                 if imp.y <= gkyl_ymin:
  *                     imp.y = gkyl_ymax + (imp.y - gkyl_ymin)             # <<<<<<<<<<<<<<
  *                 elif imp.y >= gkyl_ymax:
  *                     imp.y = gkyl_ymin + (imp.y - gkyl_ymax)
  */
-          __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_ymax); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 538, __pyx_L1_error)
+          __pyx_t_8 = PyFloat_FromDouble(__pyx_v_gkyl_ymax); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 596, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 596, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 538, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_30 = PyFloat_FromDouble(__pyx_v_gkyl_ymin); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 538, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_30);
-          __pyx_t_4 = PyNumber_Subtract(__pyx_t_18, __pyx_t_30); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 538, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-          __pyx_t_30 = PyNumber_Add(__pyx_t_9, __pyx_t_4); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 538, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_30);
+          __pyx_t_41 = PyFloat_FromDouble(__pyx_v_gkyl_ymin); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 596, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_41);
+          __pyx_t_20 = PyNumber_Subtract(__pyx_t_9, __pyx_t_41); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 596, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_20);
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-          if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_y, __pyx_t_30) < 0) __PYX_ERR(0, 538, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+          __pyx_t_41 = PyNumber_Add(__pyx_t_8, __pyx_t_20); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 596, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_41);
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+          __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+          if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_y, __pyx_t_41) < 0) __PYX_ERR(0, 596, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
 
-          /* "impurity_transport.pyx":537
+          /* "impurity_transport.pyx":595
  *                         stat_dict["high_zbound_count"] += 1
  *                     break
  *                 if imp.y <= gkyl_ymin:             # <<<<<<<<<<<<<<
  *                     imp.y = gkyl_ymax + (imp.y - gkyl_ymin)
  *                 elif imp.y >= gkyl_ymax:
  */
-          goto __pyx_L51;
+          goto __pyx_L58;
         }
 
-        /* "impurity_transport.pyx":539
+        /* "impurity_transport.pyx":597
  *                 if imp.y <= gkyl_ymin:
  *                     imp.y = gkyl_ymax + (imp.y - gkyl_ymin)
  *                 elif imp.y >= gkyl_ymax:             # <<<<<<<<<<<<<<
  *                     imp.y = gkyl_ymin + (imp.y - gkyl_ymax)
  * 
  */
-        __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 539, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_30);
-        __pyx_t_4 = PyFloat_FromDouble(__pyx_v_gkyl_ymax); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 539, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_9 = PyObject_RichCompare(__pyx_t_30, __pyx_t_4, Py_GE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 539, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 539, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_t_41 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 597, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_41);
+        __pyx_t_20 = PyFloat_FromDouble(__pyx_v_gkyl_ymax); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 597, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_20);
+        __pyx_t_8 = PyObject_RichCompare(__pyx_t_41, __pyx_t_20, Py_GE); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 597, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+        __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+        __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely((__pyx_t_6 < 0))) __PYX_ERR(0, 597, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         if (__pyx_t_6) {
 
-          /* "impurity_transport.pyx":540
+          /* "impurity_transport.pyx":598
  *                     imp.y = gkyl_ymax + (imp.y - gkyl_ymin)
  *                 elif imp.y >= gkyl_ymax:
  *                     imp.y = gkyl_ymin + (imp.y - gkyl_ymax)             # <<<<<<<<<<<<<<
  * 
  *             # Free up memory (if necessary since it gets overwritten later).
  */
-          __pyx_t_9 = PyFloat_FromDouble(__pyx_v_gkyl_ymin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 540, __pyx_L1_error)
+          __pyx_t_8 = PyFloat_FromDouble(__pyx_v_gkyl_ymin); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 598, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_20 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 598, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_20);
+          __pyx_t_41 = PyFloat_FromDouble(__pyx_v_gkyl_ymax); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 598, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_41);
+          __pyx_t_9 = PyNumber_Subtract(__pyx_t_20, __pyx_t_41); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 598, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 540, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __pyx_t_30 = PyFloat_FromDouble(__pyx_v_gkyl_ymax); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 540, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_30);
-          __pyx_t_18 = PyNumber_Subtract(__pyx_t_4, __pyx_t_30); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 540, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-          __pyx_t_30 = PyNumber_Add(__pyx_t_9, __pyx_t_18); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 540, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_30);
+          __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
+          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+          __pyx_t_41 = PyNumber_Add(__pyx_t_8, __pyx_t_9); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 598, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_41);
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_y, __pyx_t_30) < 0) __PYX_ERR(0, 540, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+          if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_y, __pyx_t_41) < 0) __PYX_ERR(0, 598, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
 
-          /* "impurity_transport.pyx":539
+          /* "impurity_transport.pyx":597
  *                 if imp.y <= gkyl_ymin:
  *                     imp.y = gkyl_ymax + (imp.y - gkyl_ymin)
  *                 elif imp.y >= gkyl_ymax:             # <<<<<<<<<<<<<<
@@ -26011,11 +26775,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  * 
  */
         }
-        __pyx_L51:;
+        __pyx_L58:;
       }
-      __pyx_L29_break:;
+      __pyx_L32_break:;
 
-      /* "impurity_transport.pyx":543
+      /* "impurity_transport.pyx":601
  * 
  *             # Free up memory (if necessary since it gets overwritten later).
  *             del imp             # <<<<<<<<<<<<<<
@@ -26023,121 +26787,122 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *     # Calculate how long the main loop took.
  */
       __Pyx_DECREF(__pyx_v_imp); __pyx_v_imp = 0;
-
-      /* "impurity_transport.pyx":330
- * 
- *     else:
- *         for i in tqdm(range(0, num_imps)):             # <<<<<<<<<<<<<<
- * 
- *             # Assume impurity can start at any frame (this means we are
- */
     }
-    __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-  }
-  __pyx_L25:;
 
-  /* "impurity_transport.pyx":546
+    /* "impurity_transport.pyx":334
+ *     # Loop through tracking the full path of one impurity at a time.
+ *     print("Beginning impurity following...")
+ *     for i in tqdm(range(0, num_imps)):             # <<<<<<<<<<<<<<
+ * 
+ *         # Before starting an impurity, check if variance reduction needs to
+ */
+  }
+  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+
+  /* "impurity_transport.pyx":604
  * 
  *     # Calculate how long the main loop took.
  *     imp_foll_tend = time.time()             # <<<<<<<<<<<<<<
  *     cpu_time_used = imp_foll_tend - imp_foll_tstart
  *     print("Time spent following impurities: {:.1f} s".format(cpu_time_used))
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_30, __pyx_n_s_time); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 546, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_30, __pyx_n_s_time); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 546, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-  __pyx_t_30 = NULL;
+  __Pyx_GetModuleGlobalName(__pyx_t_41, __pyx_n_s_time); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 604, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_41, __pyx_n_s_time); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 604, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+  __pyx_t_41 = NULL;
   __pyx_t_5 = 0;
   #if CYTHON_UNPACK_METHODS
-  if (unlikely(PyMethod_Check(__pyx_t_18))) {
-    __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_18);
-    if (likely(__pyx_t_30)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
-      __Pyx_INCREF(__pyx_t_30);
+  if (unlikely(PyMethod_Check(__pyx_t_9))) {
+    __pyx_t_41 = PyMethod_GET_SELF(__pyx_t_9);
+    if (likely(__pyx_t_41)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
+      __Pyx_INCREF(__pyx_t_41);
       __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_18, function);
+      __Pyx_DECREF_SET(__pyx_t_9, function);
       __pyx_t_5 = 1;
     }
   }
   #endif
   {
-    PyObject *__pyx_callargs[2] = {__pyx_t_30, NULL};
-    __pyx_t_19 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
-    __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
-    if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 546, __pyx_L1_error)
+    PyObject *__pyx_callargs[2] = {__pyx_t_41, NULL};
+    __pyx_t_19 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
+    __Pyx_XDECREF(__pyx_t_41); __pyx_t_41 = 0;
+    if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 604, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
-    __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   }
   __pyx_v_imp_foll_tend = __pyx_t_19;
   __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":547
+  /* "impurity_transport.pyx":605
  *     # Calculate how long the main loop took.
  *     imp_foll_tend = time.time()
  *     cpu_time_used = imp_foll_tend - imp_foll_tstart             # <<<<<<<<<<<<<<
  *     print("Time spent following impurities: {:.1f} s".format(cpu_time_used))
  * 
  */
-  __pyx_t_19 = PyNumber_Subtract(__pyx_v_imp_foll_tend, __pyx_v_imp_foll_tstart); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 547, __pyx_L1_error)
+  __pyx_t_19 = PyNumber_Subtract(__pyx_v_imp_foll_tend, __pyx_v_imp_foll_tstart); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 605, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
   __pyx_v_cpu_time_used = __pyx_t_19;
   __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":548
+  /* "impurity_transport.pyx":606
  *     imp_foll_tend = time.time()
  *     cpu_time_used = imp_foll_tend - imp_foll_tstart
  *     print("Time spent following impurities: {:.1f} s".format(cpu_time_used))             # <<<<<<<<<<<<<<
  * 
- *     # Calculate the impurity density. This is only for 3D cartesian
+ *     # Print how many additional impurities were printed.
  */
-  __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Time_spent_following_impurities, __pyx_n_s_format); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 548, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_30 = NULL;
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Time_spent_following_impurities, __pyx_n_s_format); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 606, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __pyx_t_41 = NULL;
   __pyx_t_5 = 0;
   #if CYTHON_UNPACK_METHODS
-  if (likely(PyMethod_Check(__pyx_t_18))) {
-    __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_18);
-    if (likely(__pyx_t_30)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
-      __Pyx_INCREF(__pyx_t_30);
+  if (likely(PyMethod_Check(__pyx_t_9))) {
+    __pyx_t_41 = PyMethod_GET_SELF(__pyx_t_9);
+    if (likely(__pyx_t_41)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
+      __Pyx_INCREF(__pyx_t_41);
       __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_18, function);
+      __Pyx_DECREF_SET(__pyx_t_9, function);
       __pyx_t_5 = 1;
     }
   }
   #endif
   {
-    PyObject *__pyx_callargs[2] = {__pyx_t_30, __pyx_v_cpu_time_used};
-    __pyx_t_19 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
-    __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
-    if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 548, __pyx_L1_error)
+    PyObject *__pyx_callargs[2] = {__pyx_t_41, __pyx_v_cpu_time_used};
+    __pyx_t_19 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+    __Pyx_XDECREF(__pyx_t_41); __pyx_t_41 = 0;
+    if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 606, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
-    __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   }
-  __pyx_t_18 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_19); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 548, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
+  __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_19); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 606, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":554
- *     # to get values in s/m3. Finally multiply by the scaling factor
- *     # (units of 1/s) to return the density in m-3.
- *     imp_dens_arr = imp_weight_arr / imp_weight_arr.sum()             # <<<<<<<<<<<<<<
- *     dx = gkyl_x[1] - gkyl_x[0]
- *     dy = gkyl_y[1] - gkyl_y[0]
+  /* "impurity_transport.pyx":609
+ * 
+ *     # Print how many additional impurities were printed.
+ *     print("Additional split impurities followed: {}".format(num_add_imps))             # <<<<<<<<<<<<<<
+ * 
+ *     # Calculate the impurity density. This is only for 3D cartesian
  */
-  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp_weight_arr, __pyx_n_s_sum); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 554, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Additional_split_impurities_foll, __pyx_n_s_format); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 609, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __pyx_t_30 = NULL;
+  __pyx_t_41 = __Pyx_PyInt_From_int(__pyx_v_num_add_imps); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 609, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  __pyx_t_8 = NULL;
   __pyx_t_5 = 0;
   #if CYTHON_UNPACK_METHODS
   if (likely(PyMethod_Check(__pyx_t_19))) {
-    __pyx_t_30 = PyMethod_GET_SELF(__pyx_t_19);
-    if (likely(__pyx_t_30)) {
+    __pyx_t_8 = PyMethod_GET_SELF(__pyx_t_19);
+    if (likely(__pyx_t_8)) {
       PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_19);
-      __Pyx_INCREF(__pyx_t_30);
+      __Pyx_INCREF(__pyx_t_8);
       __Pyx_INCREF(function);
       __Pyx_DECREF_SET(__pyx_t_19, function);
       __pyx_t_5 = 1;
@@ -26145,107 +26910,144 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   }
   #endif
   {
-    PyObject *__pyx_callargs[2] = {__pyx_t_30, NULL};
-    __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
-    __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
-    if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 554, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_18);
+    PyObject *__pyx_callargs[2] = {__pyx_t_8, __pyx_t_41};
+    __pyx_t_9 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
+    __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+    __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 609, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
   }
-  __pyx_t_19 = __Pyx_PyNumber_Divide(__pyx_v_imp_weight_arr, __pyx_t_18); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 554, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_9); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 609, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_v_imp_dens_arr = __pyx_t_19;
-  __pyx_t_19 = 0;
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":555
+  /* "impurity_transport.pyx":615
+ *     # to get values in s/m3. Finally multiply by the scaling factor
+ *     # (units of 1/s) to return the density in m-3.
+ *     imp_dens_arr = imp_weight_arr / imp_weight_arr.sum()             # <<<<<<<<<<<<<<
+ *     dx = gkyl_x[1] - gkyl_x[0]
+ *     dy = gkyl_y[1] - gkyl_y[0]
+ */
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp_weight_arr, __pyx_n_s_sum); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 615, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __pyx_t_41 = NULL;
+  __pyx_t_5 = 0;
+  #if CYTHON_UNPACK_METHODS
+  if (likely(PyMethod_Check(__pyx_t_9))) {
+    __pyx_t_41 = PyMethod_GET_SELF(__pyx_t_9);
+    if (likely(__pyx_t_41)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_9);
+      __Pyx_INCREF(__pyx_t_41);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_9, function);
+      __pyx_t_5 = 1;
+    }
+  }
+  #endif
+  {
+    PyObject *__pyx_callargs[2] = {__pyx_t_41, NULL};
+    __pyx_t_19 = __Pyx_PyObject_FastCall(__pyx_t_9, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
+    __Pyx_XDECREF(__pyx_t_41); __pyx_t_41 = 0;
+    if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 615, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_19);
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+  }
+  __pyx_t_9 = __Pyx_PyNumber_Divide(__pyx_v_imp_weight_arr, __pyx_t_19); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 615, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+  __pyx_v_imp_dens_arr = __pyx_t_9;
+  __pyx_t_9 = 0;
+
+  /* "impurity_transport.pyx":616
  *     # (units of 1/s) to return the density in m-3.
  *     imp_dens_arr = imp_weight_arr / imp_weight_arr.sum()
  *     dx = gkyl_x[1] - gkyl_x[0]             # <<<<<<<<<<<<<<
  *     dy = gkyl_y[1] - gkyl_y[0]
  *     dz = gkyl_z[1] - gkyl_z[0]
  */
-  __pyx_t_19 = __Pyx_GetItemInt(__pyx_v_gkyl_x, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 555, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_GetItemInt(__pyx_v_gkyl_x, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 616, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __pyx_t_19 = __Pyx_GetItemInt(__pyx_v_gkyl_x, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 616, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __pyx_t_18 = __Pyx_GetItemInt(__pyx_v_gkyl_x, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 555, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_30 = PyNumber_Subtract(__pyx_t_19, __pyx_t_18); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 555, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
+  __pyx_t_41 = PyNumber_Subtract(__pyx_t_9, __pyx_t_19); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 616, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_v_dx = __pyx_t_30;
-  __pyx_t_30 = 0;
+  __pyx_v_dx = __pyx_t_41;
+  __pyx_t_41 = 0;
 
-  /* "impurity_transport.pyx":556
+  /* "impurity_transport.pyx":617
  *     imp_dens_arr = imp_weight_arr / imp_weight_arr.sum()
  *     dx = gkyl_x[1] - gkyl_x[0]
  *     dy = gkyl_y[1] - gkyl_y[0]             # <<<<<<<<<<<<<<
  *     dz = gkyl_z[1] - gkyl_z[0]
  *     imp_dens_arr /= (dx * dy * dz)
  */
-  __pyx_t_30 = __Pyx_GetItemInt(__pyx_v_gkyl_y, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 556, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
-  __pyx_t_18 = __Pyx_GetItemInt(__pyx_v_gkyl_y, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 556, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_19 = PyNumber_Subtract(__pyx_t_30, __pyx_t_18); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 556, __pyx_L1_error)
+  __pyx_t_41 = __Pyx_GetItemInt(__pyx_v_gkyl_y, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 617, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  __pyx_t_19 = __Pyx_GetItemInt(__pyx_v_gkyl_y, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 617, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_v_dy = __pyx_t_19;
-  __pyx_t_19 = 0;
+  __pyx_t_9 = PyNumber_Subtract(__pyx_t_41, __pyx_t_19); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 617, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+  __pyx_v_dy = __pyx_t_9;
+  __pyx_t_9 = 0;
 
-  /* "impurity_transport.pyx":557
+  /* "impurity_transport.pyx":618
  *     dx = gkyl_x[1] - gkyl_x[0]
  *     dy = gkyl_y[1] - gkyl_y[0]
  *     dz = gkyl_z[1] - gkyl_z[0]             # <<<<<<<<<<<<<<
  *     imp_dens_arr /= (dx * dy * dz)
  *     imp_dens_arr *= imp_scaling_fact
  */
-  __pyx_t_19 = __Pyx_GetItemInt(__pyx_v_gkyl_z, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 557, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_GetItemInt(__pyx_v_gkyl_z, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 618, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __pyx_t_19 = __Pyx_GetItemInt(__pyx_v_gkyl_z, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 618, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_19);
-  __pyx_t_18 = __Pyx_GetItemInt(__pyx_v_gkyl_z, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 557, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  __pyx_t_30 = PyNumber_Subtract(__pyx_t_19, __pyx_t_18); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 557, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
+  __pyx_t_41 = PyNumber_Subtract(__pyx_t_9, __pyx_t_19); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 618, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __pyx_v_dz = __pyx_t_30;
-  __pyx_t_30 = 0;
+  __pyx_v_dz = __pyx_t_41;
+  __pyx_t_41 = 0;
 
-  /* "impurity_transport.pyx":558
+  /* "impurity_transport.pyx":619
  *     dy = gkyl_y[1] - gkyl_y[0]
  *     dz = gkyl_z[1] - gkyl_z[0]
  *     imp_dens_arr /= (dx * dy * dz)             # <<<<<<<<<<<<<<
  *     imp_dens_arr *= imp_scaling_fact
  * 
  */
-  __pyx_t_30 = PyNumber_Multiply(__pyx_v_dx, __pyx_v_dy); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 558, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
-  __pyx_t_18 = PyNumber_Multiply(__pyx_t_30, __pyx_v_dz); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 558, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-  __pyx_t_30 = __Pyx_PyNumber_InPlaceDivide(__pyx_v_imp_dens_arr, __pyx_t_18); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 558, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
-  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-  __Pyx_DECREF_SET(__pyx_v_imp_dens_arr, __pyx_t_30);
-  __pyx_t_30 = 0;
+  __pyx_t_41 = PyNumber_Multiply(__pyx_v_dx, __pyx_v_dy); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 619, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  __pyx_t_19 = PyNumber_Multiply(__pyx_t_41, __pyx_v_dz); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 619, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_19);
+  __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+  __pyx_t_41 = __Pyx_PyNumber_InPlaceDivide(__pyx_v_imp_dens_arr, __pyx_t_19); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 619, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+  __Pyx_DECREF_SET(__pyx_v_imp_dens_arr, __pyx_t_41);
+  __pyx_t_41 = 0;
 
-  /* "impurity_transport.pyx":559
+  /* "impurity_transport.pyx":620
  *     dz = gkyl_z[1] - gkyl_z[0]
  *     imp_dens_arr /= (dx * dy * dz)
  *     imp_dens_arr *= imp_scaling_fact             # <<<<<<<<<<<<<<
  * 
  *     # Divide by the counts in each cells for average velocity.
  */
-  __pyx_t_30 = PyFloat_FromDouble(__pyx_v_imp_scaling_fact); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 559, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
-  __pyx_t_18 = PyNumber_InPlaceMultiply(__pyx_v_imp_dens_arr, __pyx_t_30); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 559, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-  __Pyx_DECREF_SET(__pyx_v_imp_dens_arr, __pyx_t_18);
-  __pyx_t_18 = 0;
+  __pyx_t_41 = PyFloat_FromDouble(__pyx_v_imp_scaling_fact); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 620, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  __pyx_t_19 = PyNumber_InPlaceMultiply(__pyx_v_imp_dens_arr, __pyx_t_41); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 620, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_19);
+  __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+  __Pyx_DECREF_SET(__pyx_v_imp_dens_arr, __pyx_t_19);
+  __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":562
+  /* "impurity_transport.pyx":623
  * 
  *     # Divide by the counts in each cells for average velocity.
  *     with np.errstate(divide='ignore'):             # <<<<<<<<<<<<<<
@@ -26253,81 +27055,81 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *         imp_vy_arr /= imp_count_arr
  */
   /*with:*/ {
-    __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_np); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 562, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_18);
-    __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_errstate); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 562, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_30);
-    __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-    __pyx_t_18 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 562, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_18);
-    if (PyDict_SetItem(__pyx_t_18, __pyx_n_s_divide, __pyx_n_s_ignore) < 0) __PYX_ERR(0, 562, __pyx_L1_error)
-    __pyx_t_19 = __Pyx_PyObject_Call(__pyx_t_30, __pyx_empty_tuple, __pyx_t_18); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 562, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_19, __pyx_n_s_np); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 623, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
-    __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-    __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-    __pyx_t_41 = __Pyx_PyObject_LookupSpecial(__pyx_t_19, __pyx_n_s_exit_2); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 562, __pyx_L1_error)
+    __pyx_t_41 = __Pyx_PyObject_GetAttrStr(__pyx_t_19, __pyx_n_s_errstate); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 623, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_41);
-    __pyx_t_30 = __Pyx_PyObject_LookupSpecial(__pyx_t_19, __pyx_n_s_enter); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 562, __pyx_L53_error)
-    __Pyx_GOTREF(__pyx_t_30);
-    __pyx_t_9 = NULL;
+    __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+    __pyx_t_19 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 623, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_19);
+    if (PyDict_SetItem(__pyx_t_19, __pyx_n_s_divide, __pyx_n_s_ignore) < 0) __PYX_ERR(0, 623, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_41, __pyx_empty_tuple, __pyx_t_19); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 623, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+    __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+    __pyx_t_42 = __Pyx_PyObject_LookupSpecial(__pyx_t_9, __pyx_n_s_exit_2); if (unlikely(!__pyx_t_42)) __PYX_ERR(0, 623, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_42);
+    __pyx_t_41 = __Pyx_PyObject_LookupSpecial(__pyx_t_9, __pyx_n_s_enter); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 623, __pyx_L60_error)
+    __Pyx_GOTREF(__pyx_t_41);
+    __pyx_t_8 = NULL;
     __pyx_t_5 = 0;
     #if CYTHON_UNPACK_METHODS
-    if (likely(PyMethod_Check(__pyx_t_30))) {
-      __pyx_t_9 = PyMethod_GET_SELF(__pyx_t_30);
-      if (likely(__pyx_t_9)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_30);
-        __Pyx_INCREF(__pyx_t_9);
+    if (likely(PyMethod_Check(__pyx_t_41))) {
+      __pyx_t_8 = PyMethod_GET_SELF(__pyx_t_41);
+      if (likely(__pyx_t_8)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_41);
+        __Pyx_INCREF(__pyx_t_8);
         __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_30, function);
+        __Pyx_DECREF_SET(__pyx_t_41, function);
         __pyx_t_5 = 1;
       }
     }
     #endif
     {
-      PyObject *__pyx_callargs[2] = {__pyx_t_9, NULL};
-      __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_30, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
-      __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
-      if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 562, __pyx_L53_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+      PyObject *__pyx_callargs[2] = {__pyx_t_8, NULL};
+      __pyx_t_19 = __Pyx_PyObject_FastCall(__pyx_t_41, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
+      __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+      if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 623, __pyx_L60_error)
+      __Pyx_GOTREF(__pyx_t_19);
+      __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
     }
-    __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
     __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     /*try:*/ {
       {
         __Pyx_PyThreadState_declare
         __Pyx_PyThreadState_assign
-        __Pyx_ExceptionSave(&__pyx_t_42, &__pyx_t_43, &__pyx_t_44);
-        __Pyx_XGOTREF(__pyx_t_42);
+        __Pyx_ExceptionSave(&__pyx_t_43, &__pyx_t_44, &__pyx_t_45);
         __Pyx_XGOTREF(__pyx_t_43);
         __Pyx_XGOTREF(__pyx_t_44);
+        __Pyx_XGOTREF(__pyx_t_45);
         /*try:*/ {
 
-          /* "impurity_transport.pyx":563
+          /* "impurity_transport.pyx":624
  *     # Divide by the counts in each cells for average velocity.
  *     with np.errstate(divide='ignore'):
  *         imp_vx_arr /= imp_count_arr             # <<<<<<<<<<<<<<
  *         imp_vy_arr /= imp_count_arr
  * 
  */
-          __pyx_t_19 = __Pyx_PyNumber_InPlaceDivide(__pyx_v_imp_vx_arr, __pyx_v_imp_count_arr); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 563, __pyx_L57_error)
-          __Pyx_GOTREF(__pyx_t_19);
-          __Pyx_DECREF_SET(__pyx_v_imp_vx_arr, __pyx_t_19);
-          __pyx_t_19 = 0;
+          __pyx_t_9 = __Pyx_PyNumber_InPlaceDivide(__pyx_v_imp_vx_arr, __pyx_v_imp_count_arr); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 624, __pyx_L64_error)
+          __Pyx_GOTREF(__pyx_t_9);
+          __Pyx_DECREF_SET(__pyx_v_imp_vx_arr, __pyx_t_9);
+          __pyx_t_9 = 0;
 
-          /* "impurity_transport.pyx":564
+          /* "impurity_transport.pyx":625
  *     with np.errstate(divide='ignore'):
  *         imp_vx_arr /= imp_count_arr
  *         imp_vy_arr /= imp_count_arr             # <<<<<<<<<<<<<<
  * 
  *     # Average time following an impurity ion.
  */
-          __pyx_t_19 = __Pyx_PyNumber_InPlaceDivide(__pyx_v_imp_vy_arr, __pyx_v_imp_count_arr); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 564, __pyx_L57_error)
-          __Pyx_GOTREF(__pyx_t_19);
-          __Pyx_DECREF_SET(__pyx_v_imp_vy_arr, __pyx_t_19);
-          __pyx_t_19 = 0;
+          __pyx_t_9 = __Pyx_PyNumber_InPlaceDivide(__pyx_v_imp_vy_arr, __pyx_v_imp_count_arr); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 625, __pyx_L64_error)
+          __Pyx_GOTREF(__pyx_t_9);
+          __Pyx_DECREF_SET(__pyx_v_imp_vy_arr, __pyx_t_9);
+          __pyx_t_9 = 0;
 
-          /* "impurity_transport.pyx":562
+          /* "impurity_transport.pyx":623
  * 
  *     # Divide by the counts in each cells for average velocity.
  *     with np.errstate(divide='ignore'):             # <<<<<<<<<<<<<<
@@ -26335,11 +27137,11 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  *         imp_vy_arr /= imp_count_arr
  */
         }
-        __Pyx_XDECREF(__pyx_t_42); __pyx_t_42 = 0;
         __Pyx_XDECREF(__pyx_t_43); __pyx_t_43 = 0;
         __Pyx_XDECREF(__pyx_t_44); __pyx_t_44 = 0;
-        goto __pyx_L62_try_end;
-        __pyx_L57_error:;
+        __Pyx_XDECREF(__pyx_t_45); __pyx_t_45 = 0;
+        goto __pyx_L69_try_end;
+        __pyx_L64_error:;
         __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
         __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
         __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
@@ -26353,89 +27155,92 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
         __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
         __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
         __Pyx_XDECREF(__pyx_t_31); __pyx_t_31 = 0;
+        __Pyx_XDECREF(__pyx_t_39); __pyx_t_39 = 0;
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
         __Pyx_XDECREF(__pyx_t_40); __pyx_t_40 = 0;
+        __Pyx_XDECREF(__pyx_t_41); __pyx_t_41 = 0;
         __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
         __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
         __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
         /*except:*/ {
           __Pyx_AddTraceback("impurity_transport.follow_impurities", __pyx_clineno, __pyx_lineno, __pyx_filename);
-          if (__Pyx_GetException(&__pyx_t_19, &__pyx_t_18, &__pyx_t_30) < 0) __PYX_ERR(0, 562, __pyx_L59_except_error)
+          if (__Pyx_GetException(&__pyx_t_9, &__pyx_t_19, &__pyx_t_41) < 0) __PYX_ERR(0, 623, __pyx_L66_except_error)
+          __Pyx_XGOTREF(__pyx_t_9);
           __Pyx_XGOTREF(__pyx_t_19);
-          __Pyx_XGOTREF(__pyx_t_18);
-          __Pyx_XGOTREF(__pyx_t_30);
-          __pyx_t_9 = PyTuple_Pack(3, __pyx_t_19, __pyx_t_18, __pyx_t_30); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 562, __pyx_L59_except_error)
-          __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_45 = __Pyx_PyObject_Call(__pyx_t_41, __pyx_t_9, NULL);
-          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
-          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          if (unlikely(!__pyx_t_45)) __PYX_ERR(0, 562, __pyx_L59_except_error)
-          __Pyx_GOTREF(__pyx_t_45);
-          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_45);
-          __Pyx_DECREF(__pyx_t_45); __pyx_t_45 = 0;
-          if (__pyx_t_6 < 0) __PYX_ERR(0, 562, __pyx_L59_except_error)
+          __Pyx_XGOTREF(__pyx_t_41);
+          __pyx_t_8 = PyTuple_Pack(3, __pyx_t_9, __pyx_t_19, __pyx_t_41); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 623, __pyx_L66_except_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_46 = __Pyx_PyObject_Call(__pyx_t_42, __pyx_t_8, NULL);
+          __Pyx_DECREF(__pyx_t_42); __pyx_t_42 = 0;
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+          if (unlikely(!__pyx_t_46)) __PYX_ERR(0, 623, __pyx_L66_except_error)
+          __Pyx_GOTREF(__pyx_t_46);
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_46);
+          __Pyx_DECREF(__pyx_t_46); __pyx_t_46 = 0;
+          if (__pyx_t_6 < 0) __PYX_ERR(0, 623, __pyx_L66_except_error)
           __pyx_t_36 = (!__pyx_t_6);
           if (unlikely(__pyx_t_36)) {
+            __Pyx_GIVEREF(__pyx_t_9);
             __Pyx_GIVEREF(__pyx_t_19);
-            __Pyx_GIVEREF(__pyx_t_18);
-            __Pyx_XGIVEREF(__pyx_t_30);
-            __Pyx_ErrRestoreWithState(__pyx_t_19, __pyx_t_18, __pyx_t_30);
-            __pyx_t_19 = 0; __pyx_t_18 = 0; __pyx_t_30 = 0; 
-            __PYX_ERR(0, 562, __pyx_L59_except_error)
+            __Pyx_XGIVEREF(__pyx_t_41);
+            __Pyx_ErrRestoreWithState(__pyx_t_9, __pyx_t_19, __pyx_t_41);
+            __pyx_t_9 = 0; __pyx_t_19 = 0; __pyx_t_41 = 0; 
+            __PYX_ERR(0, 623, __pyx_L66_except_error)
           }
+          __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
           __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
-          __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
-          goto __pyx_L58_exception_handled;
+          __Pyx_XDECREF(__pyx_t_41); __pyx_t_41 = 0;
+          goto __pyx_L65_exception_handled;
         }
-        __pyx_L59_except_error:;
-        __Pyx_XGIVEREF(__pyx_t_42);
+        __pyx_L66_except_error:;
         __Pyx_XGIVEREF(__pyx_t_43);
         __Pyx_XGIVEREF(__pyx_t_44);
-        __Pyx_ExceptionReset(__pyx_t_42, __pyx_t_43, __pyx_t_44);
+        __Pyx_XGIVEREF(__pyx_t_45);
+        __Pyx_ExceptionReset(__pyx_t_43, __pyx_t_44, __pyx_t_45);
         goto __pyx_L1_error;
-        __pyx_L58_exception_handled:;
-        __Pyx_XGIVEREF(__pyx_t_42);
+        __pyx_L65_exception_handled:;
         __Pyx_XGIVEREF(__pyx_t_43);
         __Pyx_XGIVEREF(__pyx_t_44);
-        __Pyx_ExceptionReset(__pyx_t_42, __pyx_t_43, __pyx_t_44);
-        __pyx_L62_try_end:;
+        __Pyx_XGIVEREF(__pyx_t_45);
+        __Pyx_ExceptionReset(__pyx_t_43, __pyx_t_44, __pyx_t_45);
+        __pyx_L69_try_end:;
       }
     }
     /*finally:*/ {
       /*normal exit:*/{
-        if (__pyx_t_41) {
-          __pyx_t_44 = __Pyx_PyObject_Call(__pyx_t_41, __pyx_tuple__14, NULL);
-          __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
-          if (unlikely(!__pyx_t_44)) __PYX_ERR(0, 562, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_44);
-          __Pyx_DECREF(__pyx_t_44); __pyx_t_44 = 0;
+        if (__pyx_t_42) {
+          __pyx_t_45 = __Pyx_PyObject_Call(__pyx_t_42, __pyx_tuple__14, NULL);
+          __Pyx_DECREF(__pyx_t_42); __pyx_t_42 = 0;
+          if (unlikely(!__pyx_t_45)) __PYX_ERR(0, 623, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_45);
+          __Pyx_DECREF(__pyx_t_45); __pyx_t_45 = 0;
         }
-        goto __pyx_L56;
+        goto __pyx_L63;
       }
-      __pyx_L56:;
+      __pyx_L63:;
     }
-    goto __pyx_L66;
-    __pyx_L53_error:;
-    __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+    goto __pyx_L73;
+    __pyx_L60_error:;
+    __Pyx_DECREF(__pyx_t_42); __pyx_t_42 = 0;
     goto __pyx_L1_error;
-    __pyx_L66:;
+    __pyx_L73:;
   }
 
-  /* "impurity_transport.pyx":567
+  /* "impurity_transport.pyx":628
  * 
  *     # Average time following an impurity ion.
- *     avg_time_followed /= num_imps             # <<<<<<<<<<<<<<
+ *     avg_time_followed /= (num_imps + num_add_imps)             # <<<<<<<<<<<<<<
  * 
  *     # Print how many time we had an ionization or recombination warning.
  */
-  if (unlikely(__pyx_v_num_imps == 0)) {
+  __pyx_t_5 = (__pyx_v_num_imps + __pyx_v_num_add_imps);
+  if (unlikely(__pyx_t_5 == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 567, __pyx_L1_error)
+    __PYX_ERR(0, 628, __pyx_L1_error)
   }
-  __pyx_v_avg_time_followed = (__pyx_v_avg_time_followed / __pyx_v_num_imps);
+  __pyx_v_avg_time_followed = (__pyx_v_avg_time_followed / __pyx_t_5);
 
-  /* "impurity_transport.pyx":570
+  /* "impurity_transport.pyx":631
  * 
  *     # Print how many time we had an ionization or recombination warning.
  *     if iz_warn_count > 0:             # <<<<<<<<<<<<<<
@@ -26445,19 +27250,19 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   __pyx_t_36 = (__pyx_v_iz_warn_count > 0);
   if (__pyx_t_36) {
 
-    /* "impurity_transport.pyx":573
+    /* "impurity_transport.pyx":634
  *         print("Warning: The ionization probability (iz_prob) was " \
  *             ">1 {:} times, or {:.2e}% of the time. " \
  *             "Consider a smaller timestep.".format(iz_warn_count,             # <<<<<<<<<<<<<<
  *             iz_warn_count/loop_counts*100))
  *     if rc_warn_count > 0:
  */
-    __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Warning_The_ionization_probabili, __pyx_n_s_format); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 573, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_18);
-    __pyx_t_19 = __Pyx_PyInt_From_int(__pyx_v_iz_warn_count); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 573, __pyx_L1_error)
+    __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Warning_The_ionization_probabili, __pyx_n_s_format); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 634, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_19);
+    __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_iz_warn_count); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 634, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
 
-    /* "impurity_transport.pyx":574
+    /* "impurity_transport.pyx":635
  *             ">1 {:} times, or {:.2e}% of the time. " \
  *             "Consider a smaller timestep.".format(iz_warn_count,
  *             iz_warn_count/loop_counts*100))             # <<<<<<<<<<<<<<
@@ -26466,48 +27271,48 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
     if (unlikely(__pyx_v_loop_counts == 0)) {
       PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-      __PYX_ERR(0, 574, __pyx_L1_error)
+      __PYX_ERR(0, 635, __pyx_L1_error)
     }
-    __pyx_t_9 = PyFloat_FromDouble(((((double)__pyx_v_iz_warn_count) / ((double)__pyx_v_loop_counts)) * 100.0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 574, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_4 = NULL;
+    __pyx_t_8 = PyFloat_FromDouble(((((double)__pyx_v_iz_warn_count) / ((double)__pyx_v_loop_counts)) * 100.0)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 635, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_8);
+    __pyx_t_20 = NULL;
     __pyx_t_5 = 0;
     #if CYTHON_UNPACK_METHODS
-    if (likely(PyMethod_Check(__pyx_t_18))) {
-      __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_18);
-      if (likely(__pyx_t_4)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
-        __Pyx_INCREF(__pyx_t_4);
+    if (likely(PyMethod_Check(__pyx_t_19))) {
+      __pyx_t_20 = PyMethod_GET_SELF(__pyx_t_19);
+      if (likely(__pyx_t_20)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_19);
+        __Pyx_INCREF(__pyx_t_20);
         __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_18, function);
+        __Pyx_DECREF_SET(__pyx_t_19, function);
         __pyx_t_5 = 1;
       }
     }
     #endif
     {
-      PyObject *__pyx_callargs[3] = {__pyx_t_4, __pyx_t_19, __pyx_t_9};
-      __pyx_t_30 = __Pyx_PyObject_FastCall(__pyx_t_18, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
-      __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+      PyObject *__pyx_callargs[3] = {__pyx_t_20, __pyx_t_9, __pyx_t_8};
+      __pyx_t_41 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
+      __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 573, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_30);
-      __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+      if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 634, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_41);
+      __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
     }
 
-    /* "impurity_transport.pyx":571
+    /* "impurity_transport.pyx":632
  *     # Print how many time we had an ionization or recombination warning.
  *     if iz_warn_count > 0:
  *         print("Warning: The ionization probability (iz_prob) was " \             # <<<<<<<<<<<<<<
  *             ">1 {:} times, or {:.2e}% of the time. " \
  *             "Consider a smaller timestep.".format(iz_warn_count,
  */
-    __pyx_t_18 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_30); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 571, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_18);
-    __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-    __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+    __pyx_t_19 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_41); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 632, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_19);
+    __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+    __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
 
-    /* "impurity_transport.pyx":570
+    /* "impurity_transport.pyx":631
  * 
  *     # Print how many time we had an ionization or recombination warning.
  *     if iz_warn_count > 0:             # <<<<<<<<<<<<<<
@@ -26516,7 +27321,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   }
 
-  /* "impurity_transport.pyx":575
+  /* "impurity_transport.pyx":636
  *             "Consider a smaller timestep.".format(iz_warn_count,
  *             iz_warn_count/loop_counts*100))
  *     if rc_warn_count > 0:             # <<<<<<<<<<<<<<
@@ -26526,69 +27331,69 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   __pyx_t_36 = (__pyx_v_rc_warn_count > 0);
   if (__pyx_t_36) {
 
-    /* "impurity_transport.pyx":578
+    /* "impurity_transport.pyx":639
  *         print("Warning: The recombination probability (rc_prob) was " \
  *             ">1 {:} times, or {:.2e}% of the time. " \
  *             "Consider a smaller timestep.".format(rc_warn_count,             # <<<<<<<<<<<<<<
  *             rc_warn_count/loop_counts*100))
- * 
+ *     if coll_warn_count > 0:
  */
-    __pyx_t_30 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Warning_The_recombination_probab, __pyx_n_s_format); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 578, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_30);
-    __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_rc_warn_count); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 578, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
+    __pyx_t_41 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Warning_The_recombination_probab, __pyx_n_s_format); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 639, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_41);
+    __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_rc_warn_count); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 639, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_8);
 
-    /* "impurity_transport.pyx":579
+    /* "impurity_transport.pyx":640
  *             ">1 {:} times, or {:.2e}% of the time. " \
  *             "Consider a smaller timestep.".format(rc_warn_count,
  *             rc_warn_count/loop_counts*100))             # <<<<<<<<<<<<<<
- * 
- *     # For now just print this, not gonna bother making it all pretty since
+ *     if coll_warn_count > 0:
+ *         print("Warning: The collision probability (coll_prob) was " \
  */
     if (unlikely(__pyx_v_loop_counts == 0)) {
       PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-      __PYX_ERR(0, 579, __pyx_L1_error)
+      __PYX_ERR(0, 640, __pyx_L1_error)
     }
-    __pyx_t_19 = PyFloat_FromDouble(((((double)__pyx_v_rc_warn_count) / ((double)__pyx_v_loop_counts)) * 100.0)); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 579, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_19);
-    __pyx_t_4 = NULL;
+    __pyx_t_9 = PyFloat_FromDouble(((((double)__pyx_v_rc_warn_count) / ((double)__pyx_v_loop_counts)) * 100.0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 640, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __pyx_t_20 = NULL;
     __pyx_t_5 = 0;
     #if CYTHON_UNPACK_METHODS
-    if (likely(PyMethod_Check(__pyx_t_30))) {
-      __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_30);
-      if (likely(__pyx_t_4)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_30);
-        __Pyx_INCREF(__pyx_t_4);
+    if (likely(PyMethod_Check(__pyx_t_41))) {
+      __pyx_t_20 = PyMethod_GET_SELF(__pyx_t_41);
+      if (likely(__pyx_t_20)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_41);
+        __Pyx_INCREF(__pyx_t_20);
         __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_30, function);
+        __Pyx_DECREF_SET(__pyx_t_41, function);
         __pyx_t_5 = 1;
       }
     }
     #endif
     {
-      PyObject *__pyx_callargs[3] = {__pyx_t_4, __pyx_t_9, __pyx_t_19};
-      __pyx_t_18 = __Pyx_PyObject_FastCall(__pyx_t_30, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
-      __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+      PyObject *__pyx_callargs[3] = {__pyx_t_20, __pyx_t_8, __pyx_t_9};
+      __pyx_t_19 = __Pyx_PyObject_FastCall(__pyx_t_41, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
+      __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
+      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
-      if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 578, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+      if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 639, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_19);
+      __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
     }
 
-    /* "impurity_transport.pyx":576
+    /* "impurity_transport.pyx":637
  *             iz_warn_count/loop_counts*100))
  *     if rc_warn_count > 0:
  *         print("Warning: The recombination probability (rc_prob) was " \             # <<<<<<<<<<<<<<
  *             ">1 {:} times, or {:.2e}% of the time. " \
  *             "Consider a smaller timestep.".format(rc_warn_count,
  */
-    __pyx_t_30 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_18); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 576, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_30);
-    __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-    __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+    __pyx_t_41 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_19); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 637, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_41);
+    __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+    __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
 
-    /* "impurity_transport.pyx":575
+    /* "impurity_transport.pyx":636
  *             "Consider a smaller timestep.".format(iz_warn_count,
  *             iz_warn_count/loop_counts*100))
  *     if rc_warn_count > 0:             # <<<<<<<<<<<<<<
@@ -26597,102 +27402,183 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
  */
   }
 
-  /* "impurity_transport.pyx":583
+  /* "impurity_transport.pyx":641
+ *             "Consider a smaller timestep.".format(rc_warn_count,
+ *             rc_warn_count/loop_counts*100))
+ *     if coll_warn_count > 0:             # <<<<<<<<<<<<<<
+ *         print("Warning: The collision probability (coll_prob) was " \
+ *             ">1 {:} times, or {:.2e}% of the time. " \
+ */
+  __pyx_t_36 = (__pyx_v_coll_warn_count > 0);
+  if (__pyx_t_36) {
+
+    /* "impurity_transport.pyx":644
+ *         print("Warning: The collision probability (coll_prob) was " \
+ *             ">1 {:} times, or {:.2e}% of the time. " \
+ *             "Consider a smaller timestep.".format(coll_warn_count,             # <<<<<<<<<<<<<<
+ *             coll_warn_count/loop_counts*100))
+ * 
+ */
+    __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Warning_The_collision_probabilit, __pyx_n_s_format); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 644, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_19);
+    __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_coll_warn_count); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 644, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+
+    /* "impurity_transport.pyx":645
+ *             ">1 {:} times, or {:.2e}% of the time. " \
+ *             "Consider a smaller timestep.".format(coll_warn_count,
+ *             coll_warn_count/loop_counts*100))             # <<<<<<<<<<<<<<
+ * 
+ *     # For now just print this, not gonna bother making it all pretty since
+ */
+    if (unlikely(__pyx_v_loop_counts == 0)) {
+      PyErr_SetString(PyExc_ZeroDivisionError, "float division");
+      __PYX_ERR(0, 645, __pyx_L1_error)
+    }
+    __pyx_t_8 = PyFloat_FromDouble(((((double)__pyx_v_coll_warn_count) / ((double)__pyx_v_loop_counts)) * 100.0)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 645, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_8);
+    __pyx_t_20 = NULL;
+    __pyx_t_5 = 0;
+    #if CYTHON_UNPACK_METHODS
+    if (likely(PyMethod_Check(__pyx_t_19))) {
+      __pyx_t_20 = PyMethod_GET_SELF(__pyx_t_19);
+      if (likely(__pyx_t_20)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_19);
+        __Pyx_INCREF(__pyx_t_20);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_19, function);
+        __pyx_t_5 = 1;
+      }
+    }
+    #endif
+    {
+      PyObject *__pyx_callargs[3] = {__pyx_t_20, __pyx_t_9, __pyx_t_8};
+      __pyx_t_41 = __Pyx_PyObject_FastCall(__pyx_t_19, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
+      __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+      if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 644, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_41);
+      __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+    }
+
+    /* "impurity_transport.pyx":642
+ *             rc_warn_count/loop_counts*100))
+ *     if coll_warn_count > 0:
+ *         print("Warning: The collision probability (coll_prob) was " \             # <<<<<<<<<<<<<<
+ *             ">1 {:} times, or {:.2e}% of the time. " \
+ *             "Consider a smaller timestep.".format(coll_warn_count,
+ */
+    __pyx_t_19 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_41); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 642, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_19);
+    __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
+    __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+
+    /* "impurity_transport.pyx":641
+ *             "Consider a smaller timestep.".format(rc_warn_count,
+ *             rc_warn_count/loop_counts*100))
+ *     if coll_warn_count > 0:             # <<<<<<<<<<<<<<
+ *         print("Warning: The collision probability (coll_prob) was " \
+ *             ">1 {:} times, or {:.2e}% of the time. " \
+ */
+  }
+
+  /* "impurity_transport.pyx":649
  *     # For now just print this, not gonna bother making it all pretty since
  *     # I'm abandoning this version of the code soon.
  *     print("stat_dict")             # <<<<<<<<<<<<<<
  *     print(stat_dict)
  * 
  */
-  __pyx_t_30 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__15, NULL); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 583, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
-  __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+  __pyx_t_19 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__15, NULL); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 649, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_19);
+  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":584
+  /* "impurity_transport.pyx":650
  *     # I'm abandoning this version of the code soon.
  *     print("stat_dict")
  *     print(stat_dict)             # <<<<<<<<<<<<<<
  * 
  *     # Bundle up the things we care about and return.
  */
-  __pyx_t_30 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_v_stat_dict); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 584, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
-  __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+  __pyx_t_19 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_v_stat_dict); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 650, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_19);
+  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":588
+  /* "impurity_transport.pyx":654
  *     # Bundle up the things we care about and return.
  *     return_dict = {
  *         "imp_dens_arr": imp_dens_arr,             # <<<<<<<<<<<<<<
  *         "dt": dt,
  *         "avg_time_followed": avg_time_followed,
  */
-  __pyx_t_30 = __Pyx_PyDict_NewPresized(7); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 588, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_30);
-  if (PyDict_SetItem(__pyx_t_30, __pyx_n_s_imp_dens_arr, __pyx_v_imp_dens_arr) < 0) __PYX_ERR(0, 588, __pyx_L1_error)
+  __pyx_t_19 = __Pyx_PyDict_NewPresized(7); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 654, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_19);
+  if (PyDict_SetItem(__pyx_t_19, __pyx_n_s_imp_dens_arr, __pyx_v_imp_dens_arr) < 0) __PYX_ERR(0, 654, __pyx_L1_error)
 
-  /* "impurity_transport.pyx":589
+  /* "impurity_transport.pyx":655
  *     return_dict = {
  *         "imp_dens_arr": imp_dens_arr,
  *         "dt": dt,             # <<<<<<<<<<<<<<
  *         "avg_time_followed": avg_time_followed,
  *         "cpu_time_used": cpu_time_used,
  */
-  __pyx_t_18 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 589, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  if (PyDict_SetItem(__pyx_t_30, __pyx_n_s_dt, __pyx_t_18) < 0) __PYX_ERR(0, 588, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+  __pyx_t_41 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 655, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  if (PyDict_SetItem(__pyx_t_19, __pyx_n_s_dt, __pyx_t_41) < 0) __PYX_ERR(0, 654, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
 
-  /* "impurity_transport.pyx":590
+  /* "impurity_transport.pyx":656
  *         "imp_dens_arr": imp_dens_arr,
  *         "dt": dt,
  *         "avg_time_followed": avg_time_followed,             # <<<<<<<<<<<<<<
  *         "cpu_time_used": cpu_time_used,
  *         "imp_vx_arr": imp_vx_arr,
  */
-  __pyx_t_18 = PyFloat_FromDouble(__pyx_v_avg_time_followed); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 590, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_18);
-  if (PyDict_SetItem(__pyx_t_30, __pyx_n_s_avg_time_followed, __pyx_t_18) < 0) __PYX_ERR(0, 588, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+  __pyx_t_41 = PyFloat_FromDouble(__pyx_v_avg_time_followed); if (unlikely(!__pyx_t_41)) __PYX_ERR(0, 656, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_41);
+  if (PyDict_SetItem(__pyx_t_19, __pyx_n_s_avg_time_followed, __pyx_t_41) < 0) __PYX_ERR(0, 654, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_41); __pyx_t_41 = 0;
 
-  /* "impurity_transport.pyx":591
+  /* "impurity_transport.pyx":657
  *         "dt": dt,
  *         "avg_time_followed": avg_time_followed,
  *         "cpu_time_used": cpu_time_used,             # <<<<<<<<<<<<<<
  *         "imp_vx_arr": imp_vx_arr,
  *         "imp_vy_arr": imp_vy_arr,
  */
-  if (PyDict_SetItem(__pyx_t_30, __pyx_n_s_cpu_time_used, __pyx_v_cpu_time_used) < 0) __PYX_ERR(0, 588, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_19, __pyx_n_s_cpu_time_used, __pyx_v_cpu_time_used) < 0) __PYX_ERR(0, 654, __pyx_L1_error)
 
-  /* "impurity_transport.pyx":592
+  /* "impurity_transport.pyx":658
  *         "avg_time_followed": avg_time_followed,
  *         "cpu_time_used": cpu_time_used,
  *         "imp_vx_arr": imp_vx_arr,             # <<<<<<<<<<<<<<
  *         "imp_vy_arr": imp_vy_arr,
  *         "stat_dict": stat_dict}
  */
-  if (PyDict_SetItem(__pyx_t_30, __pyx_n_s_imp_vx_arr, __pyx_v_imp_vx_arr) < 0) __PYX_ERR(0, 588, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_19, __pyx_n_s_imp_vx_arr, __pyx_v_imp_vx_arr) < 0) __PYX_ERR(0, 654, __pyx_L1_error)
 
-  /* "impurity_transport.pyx":593
+  /* "impurity_transport.pyx":659
  *         "cpu_time_used": cpu_time_used,
  *         "imp_vx_arr": imp_vx_arr,
  *         "imp_vy_arr": imp_vy_arr,             # <<<<<<<<<<<<<<
  *         "stat_dict": stat_dict}
  * 
  */
-  if (PyDict_SetItem(__pyx_t_30, __pyx_n_s_imp_vy_arr, __pyx_v_imp_vy_arr) < 0) __PYX_ERR(0, 588, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_19, __pyx_n_s_imp_vy_arr, __pyx_v_imp_vy_arr) < 0) __PYX_ERR(0, 654, __pyx_L1_error)
 
-  /* "impurity_transport.pyx":594
+  /* "impurity_transport.pyx":660
  *         "imp_vx_arr": imp_vx_arr,
  *         "imp_vy_arr": imp_vy_arr,
  *         "stat_dict": stat_dict}             # <<<<<<<<<<<<<<
  * 
  *     return return_dict
  */
-  if (PyDict_SetItem(__pyx_t_30, __pyx_n_s_stat_dict, __pyx_v_stat_dict) < 0) __PYX_ERR(0, 588, __pyx_L1_error)
-  __pyx_v_return_dict = ((PyObject*)__pyx_t_30);
-  __pyx_t_30 = 0;
+  if (PyDict_SetItem(__pyx_t_19, __pyx_n_s_stat_dict, __pyx_v_stat_dict) < 0) __PYX_ERR(0, 654, __pyx_L1_error)
+  __pyx_v_return_dict = ((PyObject*)__pyx_t_19);
+  __pyx_t_19 = 0;
 
-  /* "impurity_transport.pyx":596
+  /* "impurity_transport.pyx":662
  *         "stat_dict": stat_dict}
  * 
  *     return return_dict             # <<<<<<<<<<<<<<
@@ -26728,7 +27614,9 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   __PYX_XCLEAR_MEMVIEW(&__pyx_t_27, 1);
   __Pyx_XDECREF(__pyx_t_30);
   __Pyx_XDECREF(__pyx_t_31);
+  __Pyx_XDECREF(__pyx_t_39);
   __Pyx_XDECREF(__pyx_t_40);
+  __Pyx_XDECREF(__pyx_t_41);
   __Pyx_AddTraceback("impurity_transport.follow_impurities", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -26782,8 +27670,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   __Pyx_XDECREF(__pyx_v_stat_dict);
   __Pyx_XDECREF(__pyx_v_imp_foll_tstart);
   __Pyx_XDECREF(__pyx_v_imp);
-  __Pyx_XDECREF(__pyx_v_coll_freq);
-  __Pyx_XDECREF(__pyx_v_coll_prob);
+  __Pyx_XDECREF(__pyx_v_additional_imps);
   __Pyx_XDECREF(__pyx_v_imp_foll_tend);
   __Pyx_XDECREF(__pyx_v_cpu_time_used);
   __Pyx_XDECREF(__pyx_v_imp_dens_arr);
@@ -26796,7 +27683,7 @@ static PyObject *__pyx_pf_18impurity_transport_follow_impurities(CYTHON_UNUSED P
   return __pyx_r;
 }
 
-/* "impurity_transport.pyx":602
+/* "impurity_transport.pyx":668
  * # zero division.
  * @cython.cdivision(True)
  * cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,             # <<<<<<<<<<<<<<
@@ -26831,7 +27718,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("imp_step", 1);
 
-  /* "impurity_transport.pyx":617
+  /* "impurity_transport.pyx":683
  *     """
  * 
  *     cdef float fx = 0.0             # <<<<<<<<<<<<<<
@@ -26840,7 +27727,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_fx = 0.0;
 
-  /* "impurity_transport.pyx":618
+  /* "impurity_transport.pyx":684
  * 
  *     cdef float fx = 0.0
  *     cdef float fy = 0.0             # <<<<<<<<<<<<<<
@@ -26849,7 +27736,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_fy = 0.0;
 
-  /* "impurity_transport.pyx":619
+  /* "impurity_transport.pyx":685
  *     cdef float fx = 0.0
  *     cdef float fy = 0.0
  *     cdef float fz = 0.0             # <<<<<<<<<<<<<<
@@ -26858,7 +27745,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_fz = 0.0;
 
-  /* "impurity_transport.pyx":620
+  /* "impurity_transport.pyx":686
  *     cdef float fy = 0.0
  *     cdef float fz = 0.0
  *     cdef float dx = 0.0             # <<<<<<<<<<<<<<
@@ -26867,7 +27754,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dx = 0.0;
 
-  /* "impurity_transport.pyx":621
+  /* "impurity_transport.pyx":687
  *     cdef float fz = 0.0
  *     cdef float dx = 0.0
  *     cdef float dy = 0.0             # <<<<<<<<<<<<<<
@@ -26876,7 +27763,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dy = 0.0;
 
-  /* "impurity_transport.pyx":622
+  /* "impurity_transport.pyx":688
  *     cdef float dx = 0.0
  *     cdef float dy = 0.0
  *     cdef float dz = 0.0             # <<<<<<<<<<<<<<
@@ -26885,7 +27772,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dz = 0.0;
 
-  /* "impurity_transport.pyx":623
+  /* "impurity_transport.pyx":689
  *     cdef float dy = 0.0
  *     cdef float dz = 0.0
  *     cdef float dvx = 0.0             # <<<<<<<<<<<<<<
@@ -26894,7 +27781,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dvx = 0.0;
 
-  /* "impurity_transport.pyx":624
+  /* "impurity_transport.pyx":690
  *     cdef float dz = 0.0
  *     cdef float dvx = 0.0
  *     cdef float dvy = 0.0             # <<<<<<<<<<<<<<
@@ -26903,7 +27790,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dvy = 0.0;
 
-  /* "impurity_transport.pyx":625
+  /* "impurity_transport.pyx":691
  *     cdef float dvx = 0.0
  *     cdef float dvy = 0.0
  *     cdef float dvz = 0.0             # <<<<<<<<<<<<<<
@@ -26912,33 +27799,33 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dvz = 0.0;
 
-  /* "impurity_transport.pyx":626
+  /* "impurity_transport.pyx":692
  *     cdef float dvy = 0.0
  *     cdef float dvz = 0.0
  *     cdef float imp_charge = imp.charge             # <<<<<<<<<<<<<<
  *     cdef float imp_mass = imp.mass
  *     cdef float q = imp_charge * ev
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 626, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_charge); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 692, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 626, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 692, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_imp_charge = __pyx_t_2;
 
-  /* "impurity_transport.pyx":627
+  /* "impurity_transport.pyx":693
  *     cdef float dvz = 0.0
  *     cdef float imp_charge = imp.charge
  *     cdef float imp_mass = imp.mass             # <<<<<<<<<<<<<<
  *     cdef float q = imp_charge * ev
  *     cdef float imp_vx = imp.vx
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 627, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 693, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 627, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 693, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_imp_mass = __pyx_t_2;
 
-  /* "impurity_transport.pyx":628
+  /* "impurity_transport.pyx":694
  *     cdef float imp_charge = imp.charge
  *     cdef float imp_mass = imp.mass
  *     cdef float q = imp_charge * ev             # <<<<<<<<<<<<<<
@@ -26947,46 +27834,46 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_q = (__pyx_v_imp_charge * __pyx_v_18impurity_transport_ev);
 
-  /* "impurity_transport.pyx":629
+  /* "impurity_transport.pyx":695
  *     cdef float imp_mass = imp.mass
  *     cdef float q = imp_charge * ev
  *     cdef float imp_vx = imp.vx             # <<<<<<<<<<<<<<
  *     cdef float imp_vy = imp.vy
  *     cdef float imp_vz = imp.vz
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 629, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 695, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 629, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 695, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_imp_vx = __pyx_t_2;
 
-  /* "impurity_transport.pyx":630
+  /* "impurity_transport.pyx":696
  *     cdef float q = imp_charge * ev
  *     cdef float imp_vx = imp.vx
  *     cdef float imp_vy = imp.vy             # <<<<<<<<<<<<<<
  *     cdef float imp_vz = imp.vz
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 630, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 696, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 630, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 696, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_imp_vy = __pyx_t_2;
 
-  /* "impurity_transport.pyx":631
+  /* "impurity_transport.pyx":697
  *     cdef float imp_vx = imp.vx
  *     cdef float imp_vy = imp.vy
  *     cdef float imp_vz = imp.vz             # <<<<<<<<<<<<<<
  * 
  *     # --------------------
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vz); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 631, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vz); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 697, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 631, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 697, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_imp_vz = __pyx_t_2;
 
-  /* "impurity_transport.pyx":637
+  /* "impurity_transport.pyx":703
  *     # --------------------
  *     # Electric field term
  *     fx += q * ex             # <<<<<<<<<<<<<<
@@ -26995,7 +27882,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_fx = (__pyx_v_fx + (__pyx_v_q * __pyx_v_ex));
 
-  /* "impurity_transport.pyx":641
+  /* "impurity_transport.pyx":707
  * 
  *     # Magnetic field term
  *     fx += q * imp_vy * bz             # <<<<<<<<<<<<<<
@@ -27004,7 +27891,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_fx = (__pyx_v_fx + ((__pyx_v_q * __pyx_v_imp_vy) * __pyx_v_bz));
 
-  /* "impurity_transport.pyx":645
+  /* "impurity_transport.pyx":711
  * 
  *     # Collisional forces.
  *     if coll_forces:             # <<<<<<<<<<<<<<
@@ -27014,7 +27901,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
   if (__pyx_v_coll_forces) {
   }
 
-  /* "impurity_transport.pyx":663
+  /* "impurity_transport.pyx":729
  *     # --------------------
  *     # Electric field term
  *     fy += q * ey             # <<<<<<<<<<<<<<
@@ -27023,7 +27910,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_fy = (__pyx_v_fy + (__pyx_v_q * __pyx_v_ey));
 
-  /* "impurity_transport.pyx":667
+  /* "impurity_transport.pyx":733
  * 
  *     # Magnetic field term
  *     fy += -q * imp_vx * bz             # <<<<<<<<<<<<<<
@@ -27032,7 +27919,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_fy = (__pyx_v_fy + (((-__pyx_v_q) * __pyx_v_imp_vx) * __pyx_v_bz));
 
-  /* "impurity_transport.pyx":670
+  /* "impurity_transport.pyx":736
  *     #print("fy_b {:.3e}".format(q * imp_vx * bz))
  * 
  *     if coll_forces:             # <<<<<<<<<<<<<<
@@ -27042,7 +27929,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
   if (__pyx_v_coll_forces) {
   }
 
-  /* "impurity_transport.pyx":688
+  /* "impurity_transport.pyx":754
  *     # --------------------
  *     # Electric field term
  *     fz += q * ez             # <<<<<<<<<<<<<<
@@ -27051,7 +27938,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_fz = (__pyx_v_fz + (__pyx_v_q * __pyx_v_ez));
 
-  /* "impurity_transport.pyx":691
+  /* "impurity_transport.pyx":757
  *     #print("fz_e {:.3e}".format(q * ez))
  * 
  *     if coll_forces:             # <<<<<<<<<<<<<<
@@ -27060,7 +27947,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   if (__pyx_v_coll_forces) {
 
-    /* "impurity_transport.pyx":696
+    /* "impurity_transport.pyx":762
  *         #print("z: feg = {:.3e}".format(alpha * dtedz))
  *         #print("z: fig = {:.3e}".format(beta * dtidz))
  *         fz += alpha * dtedz             # <<<<<<<<<<<<<<
@@ -27069,7 +27956,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
     __pyx_v_fz = (__pyx_v_fz + (__pyx_v_alpha * __pyx_v_dtedz));
 
-    /* "impurity_transport.pyx":698
+    /* "impurity_transport.pyx":764
  *         fz += alpha * dtedz
  *         #print("fz_feg {:.3e}".format(alpha * dtedz))
  *         fz += beta * dtidz             # <<<<<<<<<<<<<<
@@ -27078,7 +27965,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
     __pyx_v_fz = (__pyx_v_fz + (__pyx_v_beta * __pyx_v_dtidz));
 
-    /* "impurity_transport.pyx":706
+    /* "impurity_transport.pyx":772
  *         #print("     imp_vz = {:.3e}".format(imp_vz))
  *         #print("     stop_time = {:.3e}".format(stop_time))
  *         fz += imp_mass * (viz - imp_vz) / stop_time             # <<<<<<<<<<<<<<
@@ -27087,7 +27974,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
     __pyx_v_fz = (__pyx_v_fz + ((__pyx_v_imp_mass * (__pyx_v_viz - __pyx_v_imp_vz)) / __pyx_v_stop_time));
 
-    /* "impurity_transport.pyx":691
+    /* "impurity_transport.pyx":757
  *     #print("fz_e {:.3e}".format(q * ez))
  * 
  *     if coll_forces:             # <<<<<<<<<<<<<<
@@ -27096,7 +27983,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   }
 
-  /* "impurity_transport.pyx":710
+  /* "impurity_transport.pyx":776
  * 
  *     # Now calculate the step sizes.
  *     dvx = fx * dt / imp_mass             # <<<<<<<<<<<<<<
@@ -27105,7 +27992,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dvx = ((__pyx_v_fx * __pyx_v_dt) / __pyx_v_imp_mass);
 
-  /* "impurity_transport.pyx":711
+  /* "impurity_transport.pyx":777
  *     # Now calculate the step sizes.
  *     dvx = fx * dt / imp_mass
  *     dvy = fy * dt / imp_mass             # <<<<<<<<<<<<<<
@@ -27114,7 +28001,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dvy = ((__pyx_v_fy * __pyx_v_dt) / __pyx_v_imp_mass);
 
-  /* "impurity_transport.pyx":712
+  /* "impurity_transport.pyx":778
  *     dvx = fx * dt / imp_mass
  *     dvy = fy * dt / imp_mass
  *     dvz = fz * dt / imp_mass             # <<<<<<<<<<<<<<
@@ -27123,7 +28010,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dvz = ((__pyx_v_fz * __pyx_v_dt) / __pyx_v_imp_mass);
 
-  /* "impurity_transport.pyx":715
+  /* "impurity_transport.pyx":781
  *     #print("  dvx = {:.2e}  dvy = {:.2e}  dvz = {:.2e}".format(dvx,
  *     #    dvy, dvz))
  *     dx = (imp_vx + dvx) * dt             # <<<<<<<<<<<<<<
@@ -27132,7 +28019,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dx = ((__pyx_v_imp_vx + __pyx_v_dvx) * __pyx_v_dt);
 
-  /* "impurity_transport.pyx":716
+  /* "impurity_transport.pyx":782
  *     #    dvy, dvz))
  *     dx = (imp_vx + dvx) * dt
  *     dy = (imp_vy + dvy) * dt             # <<<<<<<<<<<<<<
@@ -27141,7 +28028,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dy = ((__pyx_v_imp_vy + __pyx_v_dvy) * __pyx_v_dt);
 
-  /* "impurity_transport.pyx":717
+  /* "impurity_transport.pyx":783
  *     dx = (imp_vx + dvx) * dt
  *     dy = (imp_vy + dvy) * dt
  *     dz = (imp_vz + dvz) * dt             # <<<<<<<<<<<<<<
@@ -27150,133 +28037,133 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
  */
   __pyx_v_dz = ((__pyx_v_imp_vz + __pyx_v_dvz) * __pyx_v_dt);
 
-  /* "impurity_transport.pyx":723
+  /* "impurity_transport.pyx":789
  * 
  *     # Update imp object with new values.
  *     imp.x += dx             # <<<<<<<<<<<<<<
  *     imp.y += dy
  *     imp.z += dz
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 723, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_x); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 789, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dx); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 723, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dx); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 789, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 723, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 789, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_x, __pyx_t_4) < 0) __PYX_ERR(0, 723, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_x, __pyx_t_4) < 0) __PYX_ERR(0, 789, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":724
+  /* "impurity_transport.pyx":790
  *     # Update imp object with new values.
  *     imp.x += dx
  *     imp.y += dy             # <<<<<<<<<<<<<<
  *     imp.z += dz
  *     imp.vx += dvx
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 724, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_y); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 790, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 724, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 790, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 724, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 790, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_y, __pyx_t_1) < 0) __PYX_ERR(0, 724, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_y, __pyx_t_1) < 0) __PYX_ERR(0, 790, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":725
+  /* "impurity_transport.pyx":791
  *     imp.x += dx
  *     imp.y += dy
  *     imp.z += dz             # <<<<<<<<<<<<<<
  *     imp.vx += dvx
  *     imp.vy += dvy
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 725, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_z); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 791, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dz); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 725, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dz); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 791, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 725, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 791, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_z, __pyx_t_4) < 0) __PYX_ERR(0, 725, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_z, __pyx_t_4) < 0) __PYX_ERR(0, 791, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":726
+  /* "impurity_transport.pyx":792
  *     imp.y += dy
  *     imp.z += dz
  *     imp.vx += dvx             # <<<<<<<<<<<<<<
  *     imp.vy += dvy
  *     imp.vz += dvz
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vx); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 726, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vx); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 792, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dvx); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 726, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dvx); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 792, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 726, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 792, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vx, __pyx_t_1) < 0) __PYX_ERR(0, 726, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vx, __pyx_t_1) < 0) __PYX_ERR(0, 792, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":727
+  /* "impurity_transport.pyx":793
  *     imp.z += dz
  *     imp.vx += dvx
  *     imp.vy += dvy             # <<<<<<<<<<<<<<
  *     imp.vz += dvz
  *     imp.t += dt
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 727, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 793, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dvy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 727, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dvy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 793, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 727, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 793, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vy, __pyx_t_4) < 0) __PYX_ERR(0, 727, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vy, __pyx_t_4) < 0) __PYX_ERR(0, 793, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":728
+  /* "impurity_transport.pyx":794
  *     imp.vx += dvx
  *     imp.vy += dvy
  *     imp.vz += dvz             # <<<<<<<<<<<<<<
  *     imp.t += dt
  * 
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vz); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 728, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vz); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 794, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dvz); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 728, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dvz); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 794, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 728, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 794, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vz, __pyx_t_1) < 0) __PYX_ERR(0, 728, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vz, __pyx_t_1) < 0) __PYX_ERR(0, 794, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":729
+  /* "impurity_transport.pyx":795
  *     imp.vy += dvy
  *     imp.vz += dvz
  *     imp.t += dt             # <<<<<<<<<<<<<<
  * 
  *     return None
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_t); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 729, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_t); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 795, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 729, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_dt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 795, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 729, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 795, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_t, __pyx_t_4) < 0) __PYX_ERR(0, 729, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_t, __pyx_t_4) < 0) __PYX_ERR(0, 795, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "impurity_transport.pyx":731
+  /* "impurity_transport.pyx":797
  *     imp.t += dt
  * 
  *     return None             # <<<<<<<<<<<<<<
@@ -27287,7 +28174,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
   __pyx_r = Py_None; __Pyx_INCREF(Py_None);
   goto __pyx_L0;
 
-  /* "impurity_transport.pyx":602
+  /* "impurity_transport.pyx":668
  * # zero division.
  * @cython.cdivision(True)
  * cdef imp_step(imp, float ex, float ey, float ez, float bz, float dt,             # <<<<<<<<<<<<<<
@@ -27308,7 +28195,7 @@ static PyObject *__pyx_f_18impurity_transport_imp_step(PyObject *__pyx_v_imp, fl
   return __pyx_r;
 }
 
-/* "impurity_transport.pyx":734
+/* "impurity_transport.pyx":800
  * 
  * 
  * def load_adas(input_opts):             # <<<<<<<<<<<<<<
@@ -27370,12 +28257,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 734, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 800, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "load_adas") < 0)) __PYX_ERR(0, 734, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "load_adas") < 0)) __PYX_ERR(0, 800, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -27386,7 +28273,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("load_adas", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 734, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("load_adas", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 800, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -27435,41 +28322,41 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("load_adas", 1);
 
-  /* "impurity_transport.pyx":747
+  /* "impurity_transport.pyx":813
  * 
  *     # Select the correct OpenADAS file based on the impurity Z.
  *     imp_atom_num = input_opts["imp_atom_num"]             # <<<<<<<<<<<<<<
  *     oa_dir = input_opts["openadas_dir"]
  *     if imp_atom_num == 74:
  */
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_atom_num); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 747, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_imp_atom_num); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 813, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_imp_atom_num = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":748
+  /* "impurity_transport.pyx":814
  *     # Select the correct OpenADAS file based on the impurity Z.
  *     imp_atom_num = input_opts["imp_atom_num"]
  *     oa_dir = input_opts["openadas_dir"]             # <<<<<<<<<<<<<<
  *     if imp_atom_num == 74:
  *         acd_file = "acd50_w.dat"
  */
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_openadas_dir); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 748, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_input_opts, __pyx_n_s_openadas_dir); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 814, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_oa_dir = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":749
+  /* "impurity_transport.pyx":815
  *     imp_atom_num = input_opts["imp_atom_num"]
  *     oa_dir = input_opts["openadas_dir"]
  *     if imp_atom_num == 74:             # <<<<<<<<<<<<<<
  *         acd_file = "acd50_w.dat"
  *         scd_file = "scd50_w.dat"
  */
-  __pyx_t_2 = (__Pyx_PyInt_BoolEqObjC(__pyx_v_imp_atom_num, __pyx_int_74, 74, 0)); if (unlikely((__pyx_t_2 < 0))) __PYX_ERR(0, 749, __pyx_L1_error)
+  __pyx_t_2 = (__Pyx_PyInt_BoolEqObjC(__pyx_v_imp_atom_num, __pyx_int_74, 74, 0)); if (unlikely((__pyx_t_2 < 0))) __PYX_ERR(0, 815, __pyx_L1_error)
   if (__pyx_t_2) {
 
-    /* "impurity_transport.pyx":750
+    /* "impurity_transport.pyx":816
  *     oa_dir = input_opts["openadas_dir"]
  *     if imp_atom_num == 74:
  *         acd_file = "acd50_w.dat"             # <<<<<<<<<<<<<<
@@ -27479,7 +28366,7 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
     __Pyx_INCREF(__pyx_kp_s_acd50_w_dat);
     __pyx_v_acd_file = __pyx_kp_s_acd50_w_dat;
 
-    /* "impurity_transport.pyx":751
+    /* "impurity_transport.pyx":817
  *     if imp_atom_num == 74:
  *         acd_file = "acd50_w.dat"
  *         scd_file = "scd50_w.dat"             # <<<<<<<<<<<<<<
@@ -27489,7 +28376,7 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
     __Pyx_INCREF(__pyx_kp_s_scd50_w_dat);
     __pyx_v_scd_file = __pyx_kp_s_scd50_w_dat;
 
-    /* "impurity_transport.pyx":749
+    /* "impurity_transport.pyx":815
  *     imp_atom_num = input_opts["imp_atom_num"]
  *     oa_dir = input_opts["openadas_dir"]
  *     if imp_atom_num == 74:             # <<<<<<<<<<<<<<
@@ -27499,7 +28386,7 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
     goto __pyx_L3;
   }
 
-  /* "impurity_transport.pyx":753
+  /* "impurity_transport.pyx":819
  *         scd_file = "scd50_w.dat"
  *     else:
  *         print("Error: Files for imp_atom_num = {} not hardcoded " \             # <<<<<<<<<<<<<<
@@ -27508,14 +28395,14 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
  */
   /*else*/ {
 
-    /* "impurity_transport.pyx":754
+    /* "impurity_transport.pyx":820
  *     else:
  *         print("Error: Files for imp_atom_num = {} not hardcoded " \
  *             "in yet!".format(imp_atom_num))             # <<<<<<<<<<<<<<
  *         sys.exit()
  *     acd_path = "{}/{}".format(oa_dir, acd_file)
  */
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_Files_for_imp_atom_num_not, __pyx_n_s_format); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 754, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Error_Files_for_imp_atom_num_not, __pyx_n_s_format); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 820, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_4 = NULL;
     __pyx_t_5 = 0;
@@ -27535,33 +28422,33 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
       PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_v_imp_atom_num};
       __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_3, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 754, __pyx_L1_error)
+      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 820, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     }
 
-    /* "impurity_transport.pyx":753
+    /* "impurity_transport.pyx":819
  *         scd_file = "scd50_w.dat"
  *     else:
  *         print("Error: Files for imp_atom_num = {} not hardcoded " \             # <<<<<<<<<<<<<<
  *             "in yet!".format(imp_atom_num))
  *         sys.exit()
  */
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 753, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_builtin_print, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 819, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "impurity_transport.pyx":755
+    /* "impurity_transport.pyx":821
  *         print("Error: Files for imp_atom_num = {} not hardcoded " \
  *             "in yet!".format(imp_atom_num))
  *         sys.exit()             # <<<<<<<<<<<<<<
  *     acd_path = "{}/{}".format(oa_dir, acd_file)
  *     scd_path = "{}/{}".format(oa_dir, scd_file)
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_sys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 755, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_sys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 821, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_exit); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 755, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_exit); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 821, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_1 = NULL;
@@ -27582,7 +28469,7 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
       PyObject *__pyx_callargs[2] = {__pyx_t_1, NULL};
       __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
       __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 755, __pyx_L1_error)
+      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 821, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     }
@@ -27590,16 +28477,16 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
   }
   __pyx_L3:;
 
-  /* "impurity_transport.pyx":756
+  /* "impurity_transport.pyx":822
  *             "in yet!".format(imp_atom_num))
  *         sys.exit()
  *     acd_path = "{}/{}".format(oa_dir, acd_file)             # <<<<<<<<<<<<<<
  *     scd_path = "{}/{}".format(oa_dir, scd_file)
  * 
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s__16, __pyx_n_s_format); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 756, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s__16, __pyx_n_s_format); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 822, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  if (unlikely(!__pyx_v_acd_file)) { __Pyx_RaiseUnboundLocalError("acd_file"); __PYX_ERR(0, 756, __pyx_L1_error) }
+  if (unlikely(!__pyx_v_acd_file)) { __Pyx_RaiseUnboundLocalError("acd_file"); __PYX_ERR(0, 822, __pyx_L1_error) }
   __pyx_t_1 = NULL;
   __pyx_t_5 = 0;
   #if CYTHON_UNPACK_METHODS
@@ -27618,23 +28505,23 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
     PyObject *__pyx_callargs[3] = {__pyx_t_1, __pyx_v_oa_dir, __pyx_v_acd_file};
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 756, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 822, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
   __pyx_v_acd_path = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":757
+  /* "impurity_transport.pyx":823
  *         sys.exit()
  *     acd_path = "{}/{}".format(oa_dir, acd_file)
  *     scd_path = "{}/{}".format(oa_dir, scd_file)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s__16, __pyx_n_s_format); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 757, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s__16, __pyx_n_s_format); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 823, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  if (unlikely(!__pyx_v_scd_file)) { __Pyx_RaiseUnboundLocalError("scd_file"); __PYX_ERR(0, 757, __pyx_L1_error) }
+  if (unlikely(!__pyx_v_scd_file)) { __Pyx_RaiseUnboundLocalError("scd_file"); __PYX_ERR(0, 823, __pyx_L1_error) }
   __pyx_t_1 = NULL;
   __pyx_t_5 = 0;
   #if CYTHON_UNPACK_METHODS
@@ -27653,23 +28540,23 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
     PyObject *__pyx_callargs[3] = {__pyx_t_1, __pyx_v_oa_dir, __pyx_v_scd_file};
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_4, __pyx_callargs+1-__pyx_t_5, 2+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 757, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 823, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
   __pyx_v_scd_path = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":761
+  /* "impurity_transport.pyx":827
  * 
  *     # Load the OpenADAS data into pandas DataFrames.
  *     oa = openadas.OpenADAS()             # <<<<<<<<<<<<<<
  *     rate_df_rc = oa.read_rate_coef_unres(acd_path)
  *     rate_df_iz = oa.read_rate_coef_unres(scd_path)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_openadas); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 761, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_openadas); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 827, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_OpenADAS); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 761, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_OpenADAS); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 827, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -27690,21 +28577,21 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
     PyObject *__pyx_callargs[2] = {__pyx_t_4, NULL};
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 0+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 761, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 827, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
   __pyx_v_oa = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":762
+  /* "impurity_transport.pyx":828
  *     # Load the OpenADAS data into pandas DataFrames.
  *     oa = openadas.OpenADAS()
  *     rate_df_rc = oa.read_rate_coef_unres(acd_path)             # <<<<<<<<<<<<<<
  *     rate_df_iz = oa.read_rate_coef_unres(scd_path)
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_oa, __pyx_n_s_read_rate_coef_unres); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 762, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_oa, __pyx_n_s_read_rate_coef_unres); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 828, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_4 = NULL;
   __pyx_t_5 = 0;
@@ -27724,21 +28611,21 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
     PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_v_acd_path};
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 762, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 828, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
   __pyx_v_rate_df_rc = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":763
+  /* "impurity_transport.pyx":829
  *     oa = openadas.OpenADAS()
  *     rate_df_rc = oa.read_rate_coef_unres(acd_path)
  *     rate_df_iz = oa.read_rate_coef_unres(scd_path)             # <<<<<<<<<<<<<<
  * 
  *     return oa, rate_df_rc, rate_df_iz
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_oa, __pyx_n_s_read_rate_coef_unres); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 763, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_oa, __pyx_n_s_read_rate_coef_unres); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 829, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_4 = NULL;
   __pyx_t_5 = 0;
@@ -27758,14 +28645,14 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
     PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_v_scd_path};
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_5, 1+__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 763, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 829, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
   __pyx_v_rate_df_iz = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":765
+  /* "impurity_transport.pyx":831
  *     rate_df_iz = oa.read_rate_coef_unres(scd_path)
  * 
  *     return oa, rate_df_rc, rate_df_iz             # <<<<<<<<<<<<<<
@@ -27773,22 +28660,22 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
  * def calc_coll_freq_arr(ne, ni, te, ti, imp_mass, imp_atom_num):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_3 = PyTuple_New(3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 765, __pyx_L1_error)
+  __pyx_t_3 = PyTuple_New(3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 831, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_INCREF(__pyx_v_oa);
   __Pyx_GIVEREF(__pyx_v_oa);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_v_oa)) __PYX_ERR(0, 765, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_v_oa)) __PYX_ERR(0, 831, __pyx_L1_error);
   __Pyx_INCREF(__pyx_v_rate_df_rc);
   __Pyx_GIVEREF(__pyx_v_rate_df_rc);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_v_rate_df_rc)) __PYX_ERR(0, 765, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_v_rate_df_rc)) __PYX_ERR(0, 831, __pyx_L1_error);
   __Pyx_INCREF(__pyx_v_rate_df_iz);
   __Pyx_GIVEREF(__pyx_v_rate_df_iz);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 2, __pyx_v_rate_df_iz)) __PYX_ERR(0, 765, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 2, __pyx_v_rate_df_iz)) __PYX_ERR(0, 831, __pyx_L1_error);
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "impurity_transport.pyx":734
+  /* "impurity_transport.pyx":800
  * 
  * 
  * def load_adas(input_opts):             # <<<<<<<<<<<<<<
@@ -27818,7 +28705,7 @@ static PyObject *__pyx_pf_18impurity_transport_2load_adas(CYTHON_UNUSED PyObject
   return __pyx_r;
 }
 
-/* "impurity_transport.pyx":767
+/* "impurity_transport.pyx":833
  *     return oa, rate_df_rc, rate_df_iz
  * 
  * def calc_coll_freq_arr(ne, ni, te, ti, imp_mass, imp_atom_num):             # <<<<<<<<<<<<<<
@@ -27895,7 +28782,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 767, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 833, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
         CYTHON_FALLTHROUGH;
         case  1:
@@ -27903,9 +28790,9 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[1]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 767, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 833, __pyx_L3_error)
         else {
-          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 1); __PYX_ERR(0, 767, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 1); __PYX_ERR(0, 833, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
@@ -27913,9 +28800,9 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[2]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 767, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 833, __pyx_L3_error)
         else {
-          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 2); __PYX_ERR(0, 767, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 2); __PYX_ERR(0, 833, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
@@ -27923,9 +28810,9 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[3]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 767, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 833, __pyx_L3_error)
         else {
-          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 3); __PYX_ERR(0, 767, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 3); __PYX_ERR(0, 833, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
@@ -27933,9 +28820,9 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[4]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 767, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 833, __pyx_L3_error)
         else {
-          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 4); __PYX_ERR(0, 767, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 4); __PYX_ERR(0, 833, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  5:
@@ -27943,14 +28830,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[5]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 767, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 833, __pyx_L3_error)
         else {
-          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 5); __PYX_ERR(0, 767, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, 5); __PYX_ERR(0, 833, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "calc_coll_freq_arr") < 0)) __PYX_ERR(0, 767, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "calc_coll_freq_arr") < 0)) __PYX_ERR(0, 833, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 6)) {
       goto __pyx_L5_argtuple_error;
@@ -27971,7 +28858,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, __pyx_nargs); __PYX_ERR(0, 767, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("calc_coll_freq_arr", 1, 6, 6, __pyx_nargs); __PYX_ERR(0, 833, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -28035,7 +28922,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("calc_coll_freq_arr", 1);
 
-  /* "impurity_transport.pyx":787
+  /* "impurity_transport.pyx":853
  * 
  *     # Load some constants up front.
  *     amu = 1.660e-27  # amu to kg factor             # <<<<<<<<<<<<<<
@@ -28044,7 +28931,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
  */
   __pyx_v_amu = 1.660e-27;
 
-  /* "impurity_transport.pyx":788
+  /* "impurity_transport.pyx":854
  *     # Load some constants up front.
  *     amu = 1.660e-27  # amu to kg factor
  *     mi = 2.014  # amu             # <<<<<<<<<<<<<<
@@ -28053,7 +28940,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
  */
   __pyx_v_mi = 2.014;
 
-  /* "impurity_transport.pyx":789
+  /* "impurity_transport.pyx":855
  *     amu = 1.660e-27  # amu to kg factor
  *     mi = 2.014  # amu
  *     mz = imp_mass # amu             # <<<<<<<<<<<<<<
@@ -28063,7 +28950,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
   __Pyx_INCREF(__pyx_v_imp_mass);
   __pyx_v_mz = __pyx_v_imp_mass;
 
-  /* "impurity_transport.pyx":790
+  /* "impurity_transport.pyx":856
  *     mi = 2.014  # amu
  *     mz = imp_mass # amu
  *     ev = 1.602e-19  # C             # <<<<<<<<<<<<<<
@@ -28072,7 +28959,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
  */
   __pyx_v_ev = 1.602e-19;
 
-  /* "impurity_transport.pyx":791
+  /* "impurity_transport.pyx":857
  *     mz = imp_mass # amu
  *     ev = 1.602e-19  # C
  *     eps0 = 8.85e-12             # <<<<<<<<<<<<<<
@@ -28081,7 +28968,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
  */
   __pyx_v_eps0 = 8.85e-12;
 
-  /* "impurity_transport.pyx":792
+  /* "impurity_transport.pyx":858
  *     ev = 1.602e-19  # C
  *     eps0 = 8.85e-12
  *     Zi = 1  # Deuterium             # <<<<<<<<<<<<<<
@@ -28091,24 +28978,24 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
   __Pyx_INCREF(__pyx_int_1);
   __pyx_v_Zi = __pyx_int_1;
 
-  /* "impurity_transport.pyx":796
+  /* "impurity_transport.pyx":862
  *     # Thermal velocities and reduced mass. v_fact is the factor out front such
  *     # that T is in eV and mass is in amu.
  *     v_fact = np.sqrt(2 * ev / amu)             # <<<<<<<<<<<<<<
  *     vtz = v_fact * np.sqrt(ti / mz)
  *     vti = v_fact * np.sqrt(ti / mi)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 796, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 862, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 796, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 862, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_4 = (2.0 * __pyx_v_ev);
   if (unlikely(__pyx_v_amu == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 796, __pyx_L1_error)
+    __PYX_ERR(0, 862, __pyx_L1_error)
   }
-  __pyx_t_2 = PyFloat_FromDouble((__pyx_t_4 / __pyx_v_amu)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 796, __pyx_L1_error)
+  __pyx_t_2 = PyFloat_FromDouble((__pyx_t_4 / __pyx_v_amu)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 862, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_5 = NULL;
   __pyx_t_6 = 0;
@@ -28129,26 +29016,26 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_3, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 796, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 862, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   }
   __pyx_v_v_fact = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":797
+  /* "impurity_transport.pyx":863
  *     # that T is in eV and mass is in amu.
  *     v_fact = np.sqrt(2 * ev / amu)
  *     vtz = v_fact * np.sqrt(ti / mz)             # <<<<<<<<<<<<<<
  *     vti = v_fact * np.sqrt(ti / mi)
  *     mr = mi * mz / (mi + mz)  # Still in amu.
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 797, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 863, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 797, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 863, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_v_ti, __pyx_v_mz); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 797, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_v_ti, __pyx_v_mz); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 863, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_5 = NULL;
   __pyx_t_6 = 0;
@@ -28169,31 +29056,31 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_2, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 797, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 863, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
-  __pyx_t_2 = PyNumber_Multiply(__pyx_v_v_fact, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 797, __pyx_L1_error)
+  __pyx_t_2 = PyNumber_Multiply(__pyx_v_v_fact, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 863, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_vtz = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "impurity_transport.pyx":798
+  /* "impurity_transport.pyx":864
  *     v_fact = np.sqrt(2 * ev / amu)
  *     vtz = v_fact * np.sqrt(ti / mz)
  *     vti = v_fact * np.sqrt(ti / mi)             # <<<<<<<<<<<<<<
  *     mr = mi * mz / (mi + mz)  # Still in amu.
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 798, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 864, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 798, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 864, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_mi); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 798, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_mi); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 864, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_v_ti, __pyx_t_1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 798, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_v_ti, __pyx_t_1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 864, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -28215,60 +29102,60 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_2 = __Pyx_PyObject_FastCall(__pyx_t_3, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 798, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 864, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   }
-  __pyx_t_3 = PyNumber_Multiply(__pyx_v_v_fact, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 798, __pyx_L1_error)
+  __pyx_t_3 = PyNumber_Multiply(__pyx_v_v_fact, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 864, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_vti = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":799
+  /* "impurity_transport.pyx":865
  *     vtz = v_fact * np.sqrt(ti / mz)
  *     vti = v_fact * np.sqrt(ti / mi)
  *     mr = mi * mz / (mi + mz)  # Still in amu.             # <<<<<<<<<<<<<<
  * 
  *     # This factor is all the constants out front of the lnalpha equation.
  */
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_mi); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 799, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_mi); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 865, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = PyNumber_Multiply(__pyx_t_3, __pyx_v_mz); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 799, __pyx_L1_error)
+  __pyx_t_2 = PyNumber_Multiply(__pyx_t_3, __pyx_v_mz); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 865, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_mi); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 799, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(__pyx_v_mi); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 865, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_5 = PyNumber_Add(__pyx_t_3, __pyx_v_mz); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 799, __pyx_L1_error)
+  __pyx_t_5 = PyNumber_Add(__pyx_t_3, __pyx_v_mz); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 865, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 799, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 865, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_v_mr = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":802
+  /* "impurity_transport.pyx":868
  * 
  *     # This factor is all the constants out front of the lnalpha equation.
  *     lnalpha_fact = np.log(np.power(eps0, 3/2) * 4.0 * np.pi * amu / \             # <<<<<<<<<<<<<<
  *         np.power(ev, 5/2))
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_log); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_log); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_power); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_power); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_eps0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_eps0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_8 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_8 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_t_9 = NULL;
   __pyx_t_6 = 0;
@@ -28290,44 +29177,44 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 802, __pyx_L1_error)
+    if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 868, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   }
-  __pyx_t_7 = PyNumber_Multiply(__pyx_t_5, __pyx_float_4_0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_7 = PyNumber_Multiply(__pyx_t_5, __pyx_float_4_0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_pi); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_pi); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_5 = PyNumber_Multiply(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_5 = PyNumber_Multiply(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = PyFloat_FromDouble(__pyx_v_amu); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_8 = PyFloat_FromDouble(__pyx_v_amu); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_7 = PyNumber_Multiply(__pyx_t_5, __pyx_t_8); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_7 = PyNumber_Multiply(__pyx_t_5, __pyx_t_8); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "impurity_transport.pyx":803
+  /* "impurity_transport.pyx":869
  *     # This factor is all the constants out front of the lnalpha equation.
  *     lnalpha_fact = np.log(np.power(eps0, 3/2) * 4.0 * np.pi * amu / \
  *         np.power(ev, 5/2))             # <<<<<<<<<<<<<<
  * 
  *     # Likewise, this factor goes out front of the collision frequency equation.
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 803, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 869, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_power); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 803, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_power); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 869, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_5 = PyFloat_FromDouble(__pyx_v_ev); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 803, __pyx_L1_error)
+  __pyx_t_5 = PyFloat_FromDouble(__pyx_v_ev); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 869, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_9 = PyFloat_FromDouble((5.0 / 2.0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 803, __pyx_L1_error)
+  __pyx_t_9 = PyFloat_FromDouble((5.0 / 2.0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 869, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __pyx_t_10 = NULL;
   __pyx_t_6 = 0;
@@ -28349,19 +29236,19 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 803, __pyx_L1_error)
+    if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 869, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
 
-  /* "impurity_transport.pyx":802
+  /* "impurity_transport.pyx":868
  * 
  *     # This factor is all the constants out front of the lnalpha equation.
  *     lnalpha_fact = np.log(np.power(eps0, 3/2) * 4.0 * np.pi * amu / \             # <<<<<<<<<<<<<<
  *         np.power(ev, 5/2))
  * 
  */
-  __pyx_t_1 = __Pyx_PyNumber_Divide(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 802, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyNumber_Divide(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 868, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
@@ -28384,26 +29271,26 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_2, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 802, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 868, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
   __pyx_v_lnalpha_fact = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":806
+  /* "impurity_transport.pyx":872
  * 
  *     # Likewise, this factor goes out front of the collision frequency equation.
  *     nu_corr_fact = np.power(ev, 4) * np.power(amu, 3/2) / (4 * np.pi * \             # <<<<<<<<<<<<<<
  *         np.square(eps0) * np.square(amu) * np.power(2 * ev, 3/2))
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_power); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_power); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = PyFloat_FromDouble(__pyx_v_ev); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_2 = PyFloat_FromDouble(__pyx_v_ev); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_8 = NULL;
   __pyx_t_6 = 0;
@@ -28424,18 +29311,18 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_6, 2+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 806, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 872, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_power); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_power); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = PyFloat_FromDouble(__pyx_v_amu); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_2 = PyFloat_FromDouble(__pyx_v_amu); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_7 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_7 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __pyx_t_9 = NULL;
   __pyx_t_6 = 0;
@@ -28457,36 +29344,36 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 806, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 872, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
-  __pyx_t_8 = PyNumber_Multiply(__pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_8 = PyNumber_Multiply(__pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_pi); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_pi); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_MultiplyCObj(__pyx_int_4, __pyx_t_3, 4, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_MultiplyCObj(__pyx_int_4, __pyx_t_3, 4, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":807
+  /* "impurity_transport.pyx":873
  *     # Likewise, this factor goes out front of the collision frequency equation.
  *     nu_corr_fact = np.power(ev, 4) * np.power(amu, 3/2) / (4 * np.pi * \
  *         np.square(eps0) * np.square(amu) * np.power(2 * ev, 3/2))             # <<<<<<<<<<<<<<
  * 
  *     # A list where each element is a 4D array [f,x,y,z] of the collision
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_square); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_square); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __pyx_t_7 = PyFloat_FromDouble(__pyx_v_eps0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_7 = PyFloat_FromDouble(__pyx_v_eps0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __pyx_t_9 = NULL;
   __pyx_t_6 = 0;
@@ -28507,36 +29394,36 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_2, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 807, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 873, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
 
-  /* "impurity_transport.pyx":806
+  /* "impurity_transport.pyx":872
  * 
  *     # Likewise, this factor goes out front of the collision frequency equation.
  *     nu_corr_fact = np.power(ev, 4) * np.power(amu, 3/2) / (4 * np.pi * \             # <<<<<<<<<<<<<<
  *         np.square(eps0) * np.square(amu) * np.power(2 * ev, 3/2))
  * 
  */
-  __pyx_t_2 = PyNumber_Multiply(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_2 = PyNumber_Multiply(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":807
+  /* "impurity_transport.pyx":873
  *     # Likewise, this factor goes out front of the collision frequency equation.
  *     nu_corr_fact = np.power(ev, 4) * np.power(amu, 3/2) / (4 * np.pi * \
  *         np.square(eps0) * np.square(amu) * np.power(2 * ev, 3/2))             # <<<<<<<<<<<<<<
  * 
  *     # A list where each element is a 4D array [f,x,y,z] of the collision
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_square); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_square); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_amu); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_amu); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_9 = NULL;
   __pyx_t_6 = 0;
@@ -28557,22 +29444,22 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_7, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 807, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 873, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   }
-  __pyx_t_7 = PyNumber_Multiply(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_7 = PyNumber_Multiply(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_power); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_power); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = PyFloat_FromDouble((2.0 * __pyx_v_ev)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_2 = PyFloat_FromDouble((2.0 * __pyx_v_ev)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_9 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_9 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __pyx_t_5 = NULL;
   __pyx_t_6 = 0;
@@ -28594,61 +29481,61 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 807, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 873, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
-  __pyx_t_1 = PyNumber_Multiply(__pyx_t_7, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 807, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_Multiply(__pyx_t_7, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 873, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":806
+  /* "impurity_transport.pyx":872
  * 
  *     # Likewise, this factor goes out front of the collision frequency equation.
  *     nu_corr_fact = np.power(ev, 4) * np.power(amu, 3/2) / (4 * np.pi * \             # <<<<<<<<<<<<<<
  *         np.square(eps0) * np.square(amu) * np.power(2 * ev, 3/2))
  * 
  */
-  __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_t_8, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 806, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_t_8, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 872, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_nu_corr_fact = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":812
+  /* "impurity_transport.pyx":878
  *     # frequency in order by charge state. So nu_imp_ion[0] is for the first
  *     # impurity charge state, and so on.
  *     nu_imp_ion = []             # <<<<<<<<<<<<<<
  * 
  *     # Loop across each atomic charge state (starting at 1).
  */
-  __pyx_t_3 = PyList_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 812, __pyx_L1_error)
+  __pyx_t_3 = PyList_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 878, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_v_nu_imp_ion = ((PyObject*)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "impurity_transport.pyx":815
+  /* "impurity_transport.pyx":881
  * 
  *     # Loop across each atomic charge state (starting at 1).
  *     for ZZ in tqdm(range(1, imp_atom_num+1)):             # <<<<<<<<<<<<<<
  * 
  *         # There is a small correction to lnalpha when considering impurity-ion
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_tqdm); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 815, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_tqdm); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 881, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_8 = __Pyx_PyInt_AddObjC(__pyx_v_imp_atom_num, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 815, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyInt_AddObjC(__pyx_v_imp_atom_num, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 881, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_7 = PyTuple_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 815, __pyx_L1_error)
+  __pyx_t_7 = PyTuple_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 881, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_INCREF(__pyx_int_1);
   __Pyx_GIVEREF(__pyx_int_1);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_int_1)) __PYX_ERR(0, 815, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_int_1)) __PYX_ERR(0, 881, __pyx_L1_error);
   __Pyx_GIVEREF(__pyx_t_8);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 1, __pyx_t_8)) __PYX_ERR(0, 815, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_7, 1, __pyx_t_8)) __PYX_ERR(0, 881, __pyx_L1_error);
   __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_builtin_range, __pyx_t_7, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 815, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_builtin_range, __pyx_t_7, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 881, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_t_7 = NULL;
@@ -28670,7 +29557,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 815, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 881, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
@@ -28679,9 +29566,9 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __pyx_t_11 = 0;
     __pyx_t_12 = NULL;
   } else {
-    __pyx_t_11 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 815, __pyx_L1_error)
+    __pyx_t_11 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 881, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_12 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_1); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 815, __pyx_L1_error)
+    __pyx_t_12 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_1); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 881, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   for (;;) {
@@ -28690,28 +29577,28 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
         {
           Py_ssize_t __pyx_temp = __Pyx_PyList_GET_SIZE(__pyx_t_1);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 815, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 881, __pyx_L1_error)
           #endif
           if (__pyx_t_11 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_3 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_11); __Pyx_INCREF(__pyx_t_3); __pyx_t_11++; if (unlikely((0 < 0))) __PYX_ERR(0, 815, __pyx_L1_error)
+        __pyx_t_3 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_11); __Pyx_INCREF(__pyx_t_3); __pyx_t_11++; if (unlikely((0 < 0))) __PYX_ERR(0, 881, __pyx_L1_error)
         #else
-        __pyx_t_3 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_11); __pyx_t_11++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 815, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_11); __pyx_t_11++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 881, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
         #endif
       } else {
         {
           Py_ssize_t __pyx_temp = __Pyx_PyTuple_GET_SIZE(__pyx_t_1);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 815, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 881, __pyx_L1_error)
           #endif
           if (__pyx_t_11 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_3 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_11); __Pyx_INCREF(__pyx_t_3); __pyx_t_11++; if (unlikely((0 < 0))) __PYX_ERR(0, 815, __pyx_L1_error)
+        __pyx_t_3 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_11); __Pyx_INCREF(__pyx_t_3); __pyx_t_11++; if (unlikely((0 < 0))) __PYX_ERR(0, 881, __pyx_L1_error)
         #else
-        __pyx_t_3 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_11); __pyx_t_11++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 815, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_11); __pyx_t_11++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 881, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
         #endif
       }
@@ -28721,7 +29608,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 815, __pyx_L1_error)
+          else __PYX_ERR(0, 881, __pyx_L1_error)
         }
         break;
       }
@@ -28730,24 +29617,24 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     __Pyx_XDECREF_SET(__pyx_v_ZZ, __pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "impurity_transport.pyx":823
+    /* "impurity_transport.pyx":889
  *         #    * 4 * np.pi * eps0 * mr * np.square(vtz) / (ZZ * Zi
  *         #    * np.square(ev)))
  *         lnalpha_corr = lnalpha_fact + np.log(np.sqrt(te / ne) * \             # <<<<<<<<<<<<<<
  *             np.square(vtz) * mr / (ZZ * Zi))
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 823, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 889, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_log); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 823, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_log); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 889, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 823, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 889, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 823, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 889, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = __Pyx_PyNumber_Divide(__pyx_v_te, __pyx_v_ne); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 823, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyNumber_Divide(__pyx_v_te, __pyx_v_ne); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 889, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __pyx_t_5 = NULL;
     __pyx_t_6 = 0;
@@ -28768,21 +29655,21 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_2, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 823, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 889, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
 
-    /* "impurity_transport.pyx":824
+    /* "impurity_transport.pyx":890
  *         #    * np.square(ev)))
  *         lnalpha_corr = lnalpha_fact + np.log(np.sqrt(te / ne) * \
  *             np.square(vtz) * mr / (ZZ * Zi))             # <<<<<<<<<<<<<<
  * 
  *         # Collision frequency from Freidberg Eq. 9.48 with small correction
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 824, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 890, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_square); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 824, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_square); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 890, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     __pyx_t_9 = NULL;
@@ -28803,36 +29690,36 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       PyObject *__pyx_callargs[2] = {__pyx_t_9, __pyx_v_vtz};
       __pyx_t_2 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
-      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 824, __pyx_L1_error)
+      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 890, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     }
 
-    /* "impurity_transport.pyx":823
+    /* "impurity_transport.pyx":889
  *         #    * 4 * np.pi * eps0 * mr * np.square(vtz) / (ZZ * Zi
  *         #    * np.square(ev)))
  *         lnalpha_corr = lnalpha_fact + np.log(np.sqrt(te / ne) * \             # <<<<<<<<<<<<<<
  *             np.square(vtz) * mr / (ZZ * Zi))
  * 
  */
-    __pyx_t_5 = PyNumber_Multiply(__pyx_t_8, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 823, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Multiply(__pyx_t_8, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 889, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-    /* "impurity_transport.pyx":824
+    /* "impurity_transport.pyx":890
  *         #    * np.square(ev)))
  *         lnalpha_corr = lnalpha_fact + np.log(np.sqrt(te / ne) * \
  *             np.square(vtz) * mr / (ZZ * Zi))             # <<<<<<<<<<<<<<
  * 
  *         # Collision frequency from Freidberg Eq. 9.48 with small correction
  */
-    __pyx_t_2 = PyNumber_Multiply(__pyx_t_5, __pyx_v_mr); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 824, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Multiply(__pyx_t_5, __pyx_v_mr); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 890, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = PyNumber_Multiply(__pyx_v_ZZ, __pyx_v_Zi); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 824, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Multiply(__pyx_v_ZZ, __pyx_v_Zi); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 890, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_8 = __Pyx_PyNumber_Divide(__pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 824, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyNumber_Divide(__pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 890, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -28855,39 +29742,39 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_7, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 823, __pyx_L1_error)
+      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 889, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     }
 
-    /* "impurity_transport.pyx":823
+    /* "impurity_transport.pyx":889
  *         #    * 4 * np.pi * eps0 * mr * np.square(vtz) / (ZZ * Zi
  *         #    * np.square(ev)))
  *         lnalpha_corr = lnalpha_fact + np.log(np.sqrt(te / ne) * \             # <<<<<<<<<<<<<<
  *             np.square(vtz) * mr / (ZZ * Zi))
  * 
  */
-    __pyx_t_7 = PyNumber_Add(__pyx_v_lnalpha_fact, __pyx_t_3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 823, __pyx_L1_error)
+    __pyx_t_7 = PyNumber_Add(__pyx_v_lnalpha_fact, __pyx_t_3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 889, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_XDECREF_SET(__pyx_v_lnalpha_corr, __pyx_t_7);
     __pyx_t_7 = 0;
 
-    /* "impurity_transport.pyx":829
+    /* "impurity_transport.pyx":895
  *         # to account for charge of impurity ion and the aforementioned
  *         # correction to lnalpha.
  *         nu_corr = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr / \             # <<<<<<<<<<<<<<
  *             (4 * np.pi * np.square(eps0) * mz * mr) / (np.power(vtz, 3) + \
  *             1.3 * np.power(vti, 3))
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_square); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_square); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_3 = PyFloat_FromDouble(__pyx_v_ev); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_3 = PyFloat_FromDouble(__pyx_v_ev); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_5 = PyNumber_Multiply(__pyx_v_ZZ, __pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Multiply(__pyx_v_ZZ, __pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_t_3 = NULL;
@@ -28909,18 +29796,18 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       __pyx_t_7 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 829, __pyx_L1_error)
+      if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 895, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
-    __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_square); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_square); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = PyFloat_FromDouble(__pyx_v_ev); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_5 = PyFloat_FromDouble(__pyx_v_ev); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_2 = PyNumber_Multiply(__pyx_v_Zi, __pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Multiply(__pyx_v_Zi, __pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_5 = NULL;
@@ -28942,42 +29829,42 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_3, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 829, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 895, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     }
-    __pyx_t_3 = PyNumber_Multiply(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_3 = PyNumber_Multiply(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __pyx_t_8 = PyNumber_Multiply(__pyx_t_3, __pyx_v_ni); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_8 = PyNumber_Multiply(__pyx_t_3, __pyx_v_ni); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_3 = PyNumber_Multiply(__pyx_t_8, __pyx_v_lnalpha_corr); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_3 = PyNumber_Multiply(__pyx_t_8, __pyx_v_lnalpha_corr); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":830
+    /* "impurity_transport.pyx":896
  *         # correction to lnalpha.
  *         nu_corr = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr / \
  *             (4 * np.pi * np.square(eps0) * mz * mr) / (np.power(vtz, 3) + \             # <<<<<<<<<<<<<<
  *             1.3 * np.power(vti, 3))
  *         #num = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_pi); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_pi); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __pyx_t_8 = __Pyx_PyInt_MultiplyCObj(__pyx_int_4, __pyx_t_7, 4, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyInt_MultiplyCObj(__pyx_int_4, __pyx_t_7, 4, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_square); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_square); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = PyFloat_FromDouble(__pyx_v_eps0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_2 = PyFloat_FromDouble(__pyx_v_eps0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_9 = NULL;
     __pyx_t_6 = 0;
@@ -28998,43 +29885,43 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       __pyx_t_7 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 830, __pyx_L1_error)
+      if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 896, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     }
-    __pyx_t_5 = PyNumber_Multiply(__pyx_t_8, __pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Multiply(__pyx_t_8, __pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_7 = PyNumber_Multiply(__pyx_t_5, __pyx_v_mz); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_7 = PyNumber_Multiply(__pyx_t_5, __pyx_v_mz); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = PyNumber_Multiply(__pyx_t_7, __pyx_v_mr); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Multiply(__pyx_t_7, __pyx_v_mr); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-    /* "impurity_transport.pyx":829
+    /* "impurity_transport.pyx":895
  *         # to account for charge of impurity ion and the aforementioned
  *         # correction to lnalpha.
  *         nu_corr = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr / \             # <<<<<<<<<<<<<<
  *             (4 * np.pi * np.square(eps0) * mz * mr) / (np.power(vtz, 3) + \
  *             1.3 * np.power(vti, 3))
  */
-    __pyx_t_7 = __Pyx_PyNumber_Divide(__pyx_t_3, __pyx_t_5); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 829, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyNumber_Divide(__pyx_t_3, __pyx_t_5); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 895, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-    /* "impurity_transport.pyx":830
+    /* "impurity_transport.pyx":896
  *         # correction to lnalpha.
  *         nu_corr = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr / \
  *             (4 * np.pi * np.square(eps0) * mz * mr) / (np.power(vtz, 3) + \             # <<<<<<<<<<<<<<
  *             1.3 * np.power(vti, 3))
  *         #num = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_power); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_power); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_t_3 = NULL;
@@ -29055,21 +29942,21 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       PyObject *__pyx_callargs[3] = {__pyx_t_3, __pyx_v_vtz, __pyx_int_3};
       __pyx_t_5 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_6, 2+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-      if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 830, __pyx_L1_error)
+      if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 896, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
 
-    /* "impurity_transport.pyx":831
+    /* "impurity_transport.pyx":897
  *         nu_corr = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr / \
  *             (4 * np.pi * np.square(eps0) * mz * mr) / (np.power(vtz, 3) + \
  *             1.3 * np.power(vti, 3))             # <<<<<<<<<<<<<<
  *         #num = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr
  *         #den1 = (4 * np.pi * np.square(eps0) * mz * mr)
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 831, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 897, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_power); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 831, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_power); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 897, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_t_3 = NULL;
@@ -29090,42 +29977,42 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       PyObject *__pyx_callargs[3] = {__pyx_t_3, __pyx_v_vti, __pyx_int_3};
       __pyx_t_8 = __Pyx_PyObject_FastCall(__pyx_t_2, __pyx_callargs+1-__pyx_t_6, 2+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 831, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 897, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_2 = PyNumber_Multiply(__pyx_float_1_3, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 831, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Multiply(__pyx_float_1_3, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 897, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "impurity_transport.pyx":830
+    /* "impurity_transport.pyx":896
  *         # correction to lnalpha.
  *         nu_corr = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr / \
  *             (4 * np.pi * np.square(eps0) * mz * mr) / (np.power(vtz, 3) + \             # <<<<<<<<<<<<<<
  *             1.3 * np.power(vti, 3))
  *         #num = np.square(ZZ*ev) * np.square(Zi*ev) * ni * lnalpha_corr
  */
-    __pyx_t_8 = PyNumber_Add(__pyx_t_5, __pyx_t_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_8 = PyNumber_Add(__pyx_t_5, __pyx_t_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = __Pyx_PyNumber_Divide(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 830, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyNumber_Divide(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 896, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_XDECREF_SET(__pyx_v_nu_corr, __pyx_t_2);
     __pyx_t_2 = 0;
 
-    /* "impurity_transport.pyx":839
+    /* "impurity_transport.pyx":905
  *         #print(ni[0,0,0,0])
  *         #print(lnalpha_corr[0,0,0,0])
  *         nu_corr = nu_corr_fact * np.square(ZZ) * np.square(Zi) * ni * \             # <<<<<<<<<<<<<<
  *             lnalpha_corr / (mz * mr) / (np.power(ti / mz, 3/2) + 1.3 * \
  *             np.power(ti / mi, 3/2))
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 839, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 905, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_square); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 839, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_square); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 905, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __pyx_t_8 = NULL;
@@ -29146,16 +30033,16 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       PyObject *__pyx_callargs[2] = {__pyx_t_8, __pyx_v_ZZ};
       __pyx_t_2 = __Pyx_PyObject_FastCall(__pyx_t_7, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 839, __pyx_L1_error)
+      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 905, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     }
-    __pyx_t_7 = PyNumber_Multiply(__pyx_v_nu_corr_fact, __pyx_t_2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 839, __pyx_L1_error)
+    __pyx_t_7 = PyNumber_Multiply(__pyx_v_nu_corr_fact, __pyx_t_2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 905, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 839, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 905, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_square); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 839, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_square); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 905, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __pyx_t_8 = NULL;
@@ -29176,42 +30063,42 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       PyObject *__pyx_callargs[2] = {__pyx_t_8, __pyx_v_Zi};
       __pyx_t_2 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 839, __pyx_L1_error)
+      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 905, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     }
-    __pyx_t_5 = PyNumber_Multiply(__pyx_t_7, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 839, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Multiply(__pyx_t_7, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 905, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = PyNumber_Multiply(__pyx_t_5, __pyx_v_ni); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 839, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Multiply(__pyx_t_5, __pyx_v_ni); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 905, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-    /* "impurity_transport.pyx":840
+    /* "impurity_transport.pyx":906
  *         #print(lnalpha_corr[0,0,0,0])
  *         nu_corr = nu_corr_fact * np.square(ZZ) * np.square(Zi) * ni * \
  *             lnalpha_corr / (mz * mr) / (np.power(ti / mz, 3/2) + 1.3 * \             # <<<<<<<<<<<<<<
  *             np.power(ti / mi, 3/2))
  * 
  */
-    __pyx_t_5 = PyNumber_Multiply(__pyx_t_2, __pyx_v_lnalpha_corr); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 839, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Multiply(__pyx_t_2, __pyx_v_lnalpha_corr); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 905, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = PyNumber_Multiply(__pyx_v_mz, __pyx_v_mr); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Multiply(__pyx_v_mz, __pyx_v_mr); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_7 = __Pyx_PyNumber_Divide(__pyx_t_5, __pyx_t_2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyNumber_Divide(__pyx_t_5, __pyx_t_2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_power); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_power); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_v_ti, __pyx_v_mz); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_v_ti, __pyx_v_mz); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_3 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __pyx_t_3 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_9 = NULL;
     __pyx_t_6 = 0;
@@ -29233,29 +30120,29 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 840, __pyx_L1_error)
+      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 906, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
 
-    /* "impurity_transport.pyx":841
+    /* "impurity_transport.pyx":907
  *         nu_corr = nu_corr_fact * np.square(ZZ) * np.square(Zi) * ni * \
  *             lnalpha_corr / (mz * mr) / (np.power(ti / mz, 3/2) + 1.3 * \
  *             np.power(ti / mi, 3/2))             # <<<<<<<<<<<<<<
  * 
- *         """
+ *         # Put into list.
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 841, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 907, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_power); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 841, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_power); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 907, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_3 = PyFloat_FromDouble(__pyx_v_mi); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 841, __pyx_L1_error)
+    __pyx_t_3 = PyFloat_FromDouble(__pyx_v_mi); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 907, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_9 = __Pyx_PyNumber_Divide(__pyx_v_ti, __pyx_t_3); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 841, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyNumber_Divide(__pyx_v_ti, __pyx_t_3); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 907, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_3 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 841, __pyx_L1_error)
+    __pyx_t_3 = PyFloat_FromDouble((3.0 / 2.0)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 907, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_10 = NULL;
     __pyx_t_6 = 0;
@@ -29277,42 +30164,42 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
       __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 841, __pyx_L1_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 907, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     }
 
-    /* "impurity_transport.pyx":840
+    /* "impurity_transport.pyx":906
  *         #print(lnalpha_corr[0,0,0,0])
  *         nu_corr = nu_corr_fact * np.square(ZZ) * np.square(Zi) * ni * \
  *             lnalpha_corr / (mz * mr) / (np.power(ti / mz, 3/2) + 1.3 * \             # <<<<<<<<<<<<<<
  *             np.power(ti / mi, 3/2))
  * 
  */
-    __pyx_t_5 = PyNumber_Multiply(__pyx_float_1_3, __pyx_t_8); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_Multiply(__pyx_float_1_3, __pyx_t_8); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __pyx_t_8 = PyNumber_Add(__pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __pyx_t_8 = PyNumber_Add(__pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 840, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 906, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF_SET(__pyx_v_nu_corr, __pyx_t_5);
     __pyx_t_5 = 0;
 
-    /* "impurity_transport.pyx":884
+    /* "impurity_transport.pyx":910
  * 
  *         # Put into list.
  *         nu_imp_ion.append(nu_corr)             # <<<<<<<<<<<<<<
  * 
  *     # Need to return as numpy array for cython to easily convert to memoryview.
  */
-    __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_nu_imp_ion, __pyx_v_nu_corr); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 884, __pyx_L1_error)
+    __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_nu_imp_ion, __pyx_v_nu_corr); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 910, __pyx_L1_error)
 
-    /* "impurity_transport.pyx":815
+    /* "impurity_transport.pyx":881
  * 
  *     # Loop across each atomic charge state (starting at 1).
  *     for ZZ in tqdm(range(1, imp_atom_num+1)):             # <<<<<<<<<<<<<<
@@ -29322,7 +30209,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":887
+  /* "impurity_transport.pyx":913
  * 
  *     # Need to return as numpy array for cython to easily convert to memoryview.
  *     return np.array(nu_imp_ion)             # <<<<<<<<<<<<<<
@@ -29330,9 +30217,9 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
  * @cython.cdivision(True)
  */
   __Pyx_XDECREF(__pyx_r);
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 887, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 913, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_array); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 887, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_array); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 913, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_5 = NULL;
@@ -29353,7 +30240,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
     PyObject *__pyx_callargs[2] = {__pyx_t_5, __pyx_v_nu_imp_ion};
     __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_8, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 887, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 913, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
@@ -29361,7 +30248,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "impurity_transport.pyx":767
+  /* "impurity_transport.pyx":833
  *     return oa, rate_df_rc, rate_df_iz
  * 
  * def calc_coll_freq_arr(ne, ni, te, ti, imp_mass, imp_atom_num):             # <<<<<<<<<<<<<<
@@ -29399,7 +30286,7 @@ static PyObject *__pyx_pf_18impurity_transport_4calc_coll_freq_arr(CYTHON_UNUSED
   return __pyx_r;
 }
 
-/* "impurity_transport.pyx":890
+/* "impurity_transport.pyx":916
  * 
  * @cython.cdivision(True)
  * cdef rotate_vel_vector(imp):             # <<<<<<<<<<<<<<
@@ -29448,137 +30335,137 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("rotate_vel_vector", 1);
 
-  /* "impurity_transport.pyx":907
+  /* "impurity_transport.pyx":933
  * 
  *     # New vector to be filled in.
  *     cdef float[:] old_vect = np.array([imp.vx, imp.vy, imp.vz],             # <<<<<<<<<<<<<<
  *         dtype=np.float32)
  *     cdef float[:] new_vect = np.array([0.0, 0.0, 0.0], dtype=np.float32)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_array); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_array); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vz); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_imp, __pyx_n_s_vz); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = PyList_New(3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __pyx_t_5 = PyList_New(3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_GIVEREF(__pyx_t_1);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_5, 0, __pyx_t_1)) __PYX_ERR(0, 907, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_5, 0, __pyx_t_1)) __PYX_ERR(0, 933, __pyx_L1_error);
   __Pyx_GIVEREF(__pyx_t_3);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_5, 1, __pyx_t_3)) __PYX_ERR(0, 907, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_5, 1, __pyx_t_3)) __PYX_ERR(0, 933, __pyx_L1_error);
   __Pyx_GIVEREF(__pyx_t_4);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_5, 2, __pyx_t_4)) __PYX_ERR(0, 907, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_5, 2, __pyx_t_4)) __PYX_ERR(0, 933, __pyx_L1_error);
   __pyx_t_1 = 0;
   __pyx_t_3 = 0;
   __pyx_t_4 = 0;
-  __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_GIVEREF(__pyx_t_5);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_5)) __PYX_ERR(0, 907, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_5)) __PYX_ERR(0, 933, __pyx_L1_error);
   __pyx_t_5 = 0;
 
-  /* "impurity_transport.pyx":908
+  /* "impurity_transport.pyx":934
  *     # New vector to be filled in.
  *     cdef float[:] old_vect = np.array([imp.vx, imp.vy, imp.vz],
  *         dtype=np.float32)             # <<<<<<<<<<<<<<
  *     cdef float[:] new_vect = np.array([0.0, 0.0, 0.0], dtype=np.float32)
  * 
  */
-  __pyx_t_5 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 908, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 934, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 908, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 934, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_float32); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 908, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_float32); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 934, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_dtype, __pyx_t_1) < 0) __PYX_ERR(0, 908, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_dtype, __pyx_t_1) < 0) __PYX_ERR(0, 934, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "impurity_transport.pyx":907
+  /* "impurity_transport.pyx":933
  * 
  *     # New vector to be filled in.
  *     cdef float[:] old_vect = np.array([imp.vx, imp.vy, imp.vz],             # <<<<<<<<<<<<<<
  *         dtype=np.float32)
  *     cdef float[:] new_vect = np.array([0.0, 0.0, 0.0], dtype=np.float32)
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_6 = __Pyx_PyObject_to_MemoryviewSlice_ds_float(__pyx_t_1, PyBUF_WRITABLE); if (unlikely(!__pyx_t_6.memview)) __PYX_ERR(0, 907, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_to_MemoryviewSlice_ds_float(__pyx_t_1, PyBUF_WRITABLE); if (unlikely(!__pyx_t_6.memview)) __PYX_ERR(0, 933, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_old_vect = __pyx_t_6;
   __pyx_t_6.memview = NULL;
   __pyx_t_6.data = NULL;
 
-  /* "impurity_transport.pyx":909
+  /* "impurity_transport.pyx":935
  *     cdef float[:] old_vect = np.array([imp.vx, imp.vy, imp.vz],
  *         dtype=np.float32)
  *     cdef float[:] new_vect = np.array([0.0, 0.0, 0.0], dtype=np.float32)             # <<<<<<<<<<<<<<
  * 
  *     # Will need 4 random numbers. No dtype argument so making it double.
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 909, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_array); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 909, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_array); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyList_New(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 909, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_float_0_0);
   __Pyx_GIVEREF(__pyx_float_0_0);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_1, 0, __pyx_float_0_0)) __PYX_ERR(0, 909, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_1, 0, __pyx_float_0_0)) __PYX_ERR(0, 935, __pyx_L1_error);
   __Pyx_INCREF(__pyx_float_0_0);
   __Pyx_GIVEREF(__pyx_float_0_0);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_1, 1, __pyx_float_0_0)) __PYX_ERR(0, 909, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_1, 1, __pyx_float_0_0)) __PYX_ERR(0, 935, __pyx_L1_error);
   __Pyx_INCREF(__pyx_float_0_0);
   __Pyx_GIVEREF(__pyx_float_0_0);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_1, 2, __pyx_float_0_0)) __PYX_ERR(0, 909, __pyx_L1_error);
-  __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 909, __pyx_L1_error)
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_1, 2, __pyx_float_0_0)) __PYX_ERR(0, 935, __pyx_L1_error);
+  __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_GIVEREF(__pyx_t_1);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_1)) __PYX_ERR(0, 909, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_1)) __PYX_ERR(0, 935, __pyx_L1_error);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 909, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 909, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_float32); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 909, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_float32); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, __pyx_t_3) < 0) __PYX_ERR(0, 909, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, __pyx_t_3) < 0) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 909, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_6 = __Pyx_PyObject_to_MemoryviewSlice_ds_float(__pyx_t_3, PyBUF_WRITABLE); if (unlikely(!__pyx_t_6.memview)) __PYX_ERR(0, 909, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_to_MemoryviewSlice_ds_float(__pyx_t_3, PyBUF_WRITABLE); if (unlikely(!__pyx_t_6.memview)) __PYX_ERR(0, 935, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_new_vect = __pyx_t_6;
   __pyx_t_6.memview = NULL;
   __pyx_t_6.data = NULL;
 
-  /* "impurity_transport.pyx":912
+  /* "impurity_transport.pyx":938
  * 
  *     # Will need 4 random numbers. No dtype argument so making it double.
  *     cdef double [:] rans = np.random.random(2)             # <<<<<<<<<<<<<<
  * 
  *     # Pick two random direction and assign them random values. Do this by
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 912, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 938, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_random); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 912, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_random); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 938, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_random); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 912, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_random); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 938, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -29599,44 +30486,44 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     PyObject *__pyx_callargs[2] = {__pyx_t_4, __pyx_int_2};
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_1, __pyx_callargs+1-__pyx_t_7, 1+__pyx_t_7);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 912, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 938, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
-  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_3, PyBUF_WRITABLE); if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 912, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_3, PyBUF_WRITABLE); if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 938, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_rans = __pyx_t_8;
   __pyx_t_8.memview = NULL;
   __pyx_t_8.data = NULL;
 
-  /* "impurity_transport.pyx":917
+  /* "impurity_transport.pyx":943
  *     # shuffling 0, 1, 2 (corresponding to x, y, z), and then the first two get
  *     # random numbers and the last is the equation.
  *     cdef int[:] comps = np.array(random.sample([0, 1, 2], 3), dtype=np.intc)             # <<<<<<<<<<<<<<
  *     for i in range(2):
  *         new_vect[comps[i]] = rans[i]
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_array); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_array); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_random); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_random); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_sample); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_sample); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = PyList_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __pyx_t_4 = PyList_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_INCREF(__pyx_int_0);
   __Pyx_GIVEREF(__pyx_int_0);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_4, 0, __pyx_int_0)) __PYX_ERR(0, 917, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_4, 0, __pyx_int_0)) __PYX_ERR(0, 943, __pyx_L1_error);
   __Pyx_INCREF(__pyx_int_1);
   __Pyx_GIVEREF(__pyx_int_1);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_4, 1, __pyx_int_1)) __PYX_ERR(0, 917, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_4, 1, __pyx_int_1)) __PYX_ERR(0, 943, __pyx_L1_error);
   __Pyx_INCREF(__pyx_int_2);
   __Pyx_GIVEREF(__pyx_int_2);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_4, 2, __pyx_int_2)) __PYX_ERR(0, 917, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_4, 2, __pyx_int_2)) __PYX_ERR(0, 943, __pyx_L1_error);
   __pyx_t_2 = NULL;
   __pyx_t_7 = 0;
   #if CYTHON_UNPACK_METHODS
@@ -29656,36 +30543,36 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_7, 2+__pyx_t_7);
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 917, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 943, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
-  __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_GIVEREF(__pyx_t_3);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_3)) __PYX_ERR(0, 917, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_3)) __PYX_ERR(0, 943, __pyx_L1_error);
   __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_intc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_intc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_dtype, __pyx_t_2) < 0) __PYX_ERR(0, 917, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_dtype, __pyx_t_2) < 0) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_5, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_5, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_ds_int(__pyx_t_2, PyBUF_WRITABLE); if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 917, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_ds_int(__pyx_t_2, PyBUF_WRITABLE); if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 943, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_comps = __pyx_t_9;
   __pyx_t_9.memview = NULL;
   __pyx_t_9.data = NULL;
 
-  /* "impurity_transport.pyx":918
+  /* "impurity_transport.pyx":944
  *     # random numbers and the last is the equation.
  *     cdef int[:] comps = np.array(random.sample([0, 1, 2], 3), dtype=np.intc)
  *     for i in range(2):             # <<<<<<<<<<<<<<
@@ -29695,7 +30582,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   for (__pyx_t_10 = 0; __pyx_t_10 < 2; __pyx_t_10+=1) {
     __pyx_v_i = __pyx_t_10;
 
-    /* "impurity_transport.pyx":919
+    /* "impurity_transport.pyx":945
  *     cdef int[:] comps = np.array(random.sample([0, 1, 2], 3), dtype=np.intc)
  *     for i in range(2):
  *         new_vect[comps[i]] = rans[i]             # <<<<<<<<<<<<<<
@@ -29710,7 +30597,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     } else if (unlikely(__pyx_t_11 >= __pyx_v_rans.shape[0])) __pyx_t_7 = 0;
     if (unlikely(__pyx_t_7 != -1)) {
       __Pyx_RaiseBufferIndexError(__pyx_t_7);
-      __PYX_ERR(0, 919, __pyx_L1_error)
+      __PYX_ERR(0, 945, __pyx_L1_error)
     }
     __pyx_t_12 = __pyx_v_i;
     __pyx_t_7 = -1;
@@ -29720,7 +30607,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     } else if (unlikely(__pyx_t_12 >= __pyx_v_comps.shape[0])) __pyx_t_7 = 0;
     if (unlikely(__pyx_t_7 != -1)) {
       __Pyx_RaiseBufferIndexError(__pyx_t_7);
-      __PYX_ERR(0, 919, __pyx_L1_error)
+      __PYX_ERR(0, 945, __pyx_L1_error)
     }
     __pyx_t_13 = (*((int *) ( /* dim=0 */ (__pyx_v_comps.data + __pyx_t_12 * __pyx_v_comps.strides[0]) )));
     __pyx_t_7 = -1;
@@ -29730,12 +30617,12 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     } else if (unlikely(__pyx_t_13 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
     if (unlikely(__pyx_t_7 != -1)) {
       __Pyx_RaiseBufferIndexError(__pyx_t_7);
-      __PYX_ERR(0, 919, __pyx_L1_error)
+      __PYX_ERR(0, 945, __pyx_L1_error)
     }
     *((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_13 * __pyx_v_new_vect.strides[0]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_rans.data + __pyx_t_11 * __pyx_v_rans.strides[0]) )));
   }
 
-  /* "impurity_transport.pyx":923
+  /* "impurity_transport.pyx":949
  *     # Assign the third so it is perpendicular. Protect against divide by zero
  *     # errors by just assigning a small velocity.
  *     for i in range(len(old_vect)):             # <<<<<<<<<<<<<<
@@ -29747,7 +30634,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_14; __pyx_t_15+=1) {
     __pyx_v_i = __pyx_t_15;
 
-    /* "impurity_transport.pyx":924
+    /* "impurity_transport.pyx":950
  *     # errors by just assigning a small velocity.
  *     for i in range(len(old_vect)):
  *         if old_vect[i] == 0.0:             # <<<<<<<<<<<<<<
@@ -29762,12 +30649,12 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     } else if (unlikely(__pyx_t_11 >= __pyx_v_old_vect.shape[0])) __pyx_t_7 = 0;
     if (unlikely(__pyx_t_7 != -1)) {
       __Pyx_RaiseBufferIndexError(__pyx_t_7);
-      __PYX_ERR(0, 924, __pyx_L1_error)
+      __PYX_ERR(0, 950, __pyx_L1_error)
     }
     __pyx_t_16 = ((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_11 * __pyx_v_old_vect.strides[0]) ))) == 0.0);
     if (__pyx_t_16) {
 
-      /* "impurity_transport.pyx":925
+      /* "impurity_transport.pyx":951
  *     for i in range(len(old_vect)):
  *         if old_vect[i] == 0.0:
  *             old_vect[i] = 1e-30             # <<<<<<<<<<<<<<
@@ -29782,11 +30669,11 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
       } else if (unlikely(__pyx_t_11 >= __pyx_v_old_vect.shape[0])) __pyx_t_7 = 0;
       if (unlikely(__pyx_t_7 != -1)) {
         __Pyx_RaiseBufferIndexError(__pyx_t_7);
-        __PYX_ERR(0, 925, __pyx_L1_error)
+        __PYX_ERR(0, 951, __pyx_L1_error)
       }
       *((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_11 * __pyx_v_old_vect.strides[0]) )) = 1e-30;
 
-      /* "impurity_transport.pyx":924
+      /* "impurity_transport.pyx":950
  *     # errors by just assigning a small velocity.
  *     for i in range(len(old_vect)):
  *         if old_vect[i] == 0.0:             # <<<<<<<<<<<<<<
@@ -29796,7 +30683,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     }
   }
 
-  /* "impurity_transport.pyx":926
+  /* "impurity_transport.pyx":952
  *         if old_vect[i] == 0.0:
  *             old_vect[i] = 1e-30
  *     new_vect[comps[2]] = -(old_vect[comps[0]] * new_vect[comps[0]] + \             # <<<<<<<<<<<<<<
@@ -29811,7 +30698,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_11 >= __pyx_v_comps.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 926, __pyx_L1_error)
+    __PYX_ERR(0, 952, __pyx_L1_error)
   }
   __pyx_t_12 = (*((int *) ( /* dim=0 */ (__pyx_v_comps.data + __pyx_t_11 * __pyx_v_comps.strides[0]) )));
   __pyx_t_7 = -1;
@@ -29821,7 +30708,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_12 >= __pyx_v_old_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 926, __pyx_L1_error)
+    __PYX_ERR(0, 952, __pyx_L1_error)
   }
   __pyx_t_13 = 0;
   __pyx_t_7 = -1;
@@ -29831,7 +30718,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_13 >= __pyx_v_comps.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 926, __pyx_L1_error)
+    __PYX_ERR(0, 952, __pyx_L1_error)
   }
   __pyx_t_17 = (*((int *) ( /* dim=0 */ (__pyx_v_comps.data + __pyx_t_13 * __pyx_v_comps.strides[0]) )));
   __pyx_t_7 = -1;
@@ -29841,10 +30728,10 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_17 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 926, __pyx_L1_error)
+    __PYX_ERR(0, 952, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":927
+  /* "impurity_transport.pyx":953
  *             old_vect[i] = 1e-30
  *     new_vect[comps[2]] = -(old_vect[comps[0]] * new_vect[comps[0]] + \
  *         old_vect[comps[1]] * new_vect[comps[1]]) / old_vect[comps[2]]             # <<<<<<<<<<<<<<
@@ -29859,7 +30746,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_18 >= __pyx_v_comps.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 927, __pyx_L1_error)
+    __PYX_ERR(0, 953, __pyx_L1_error)
   }
   __pyx_t_19 = (*((int *) ( /* dim=0 */ (__pyx_v_comps.data + __pyx_t_18 * __pyx_v_comps.strides[0]) )));
   __pyx_t_7 = -1;
@@ -29869,7 +30756,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_19 >= __pyx_v_old_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 927, __pyx_L1_error)
+    __PYX_ERR(0, 953, __pyx_L1_error)
   }
   __pyx_t_20 = 1;
   __pyx_t_7 = -1;
@@ -29879,7 +30766,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_20 >= __pyx_v_comps.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 927, __pyx_L1_error)
+    __PYX_ERR(0, 953, __pyx_L1_error)
   }
   __pyx_t_21 = (*((int *) ( /* dim=0 */ (__pyx_v_comps.data + __pyx_t_20 * __pyx_v_comps.strides[0]) )));
   __pyx_t_7 = -1;
@@ -29889,10 +30776,10 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_21 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 927, __pyx_L1_error)
+    __PYX_ERR(0, 953, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":926
+  /* "impurity_transport.pyx":952
  *         if old_vect[i] == 0.0:
  *             old_vect[i] = 1e-30
  *     new_vect[comps[2]] = -(old_vect[comps[0]] * new_vect[comps[0]] + \             # <<<<<<<<<<<<<<
@@ -29907,10 +30794,10 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_22 >= __pyx_v_comps.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 927, __pyx_L1_error)
+    __PYX_ERR(0, 953, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":927
+  /* "impurity_transport.pyx":953
  *             old_vect[i] = 1e-30
  *     new_vect[comps[2]] = -(old_vect[comps[0]] * new_vect[comps[0]] + \
  *         old_vect[comps[1]] * new_vect[comps[1]]) / old_vect[comps[2]]             # <<<<<<<<<<<<<<
@@ -29925,10 +30812,10 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_23 >= __pyx_v_old_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 927, __pyx_L1_error)
+    __PYX_ERR(0, 953, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":926
+  /* "impurity_transport.pyx":952
  *         if old_vect[i] == 0.0:
  *             old_vect[i] = 1e-30
  *     new_vect[comps[2]] = -(old_vect[comps[0]] * new_vect[comps[0]] + \             # <<<<<<<<<<<<<<
@@ -29943,7 +30830,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_24 >= __pyx_v_comps.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 926, __pyx_L1_error)
+    __PYX_ERR(0, 952, __pyx_L1_error)
   }
   __pyx_t_25 = (*((int *) ( /* dim=0 */ (__pyx_v_comps.data + __pyx_t_24 * __pyx_v_comps.strides[0]) )));
   __pyx_t_7 = -1;
@@ -29953,20 +30840,20 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_25 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 926, __pyx_L1_error)
+    __PYX_ERR(0, 952, __pyx_L1_error)
   }
   *((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_25 * __pyx_v_new_vect.strides[0]) )) = ((-(((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_12 * __pyx_v_old_vect.strides[0]) ))) * (*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_17 * __pyx_v_new_vect.strides[0]) )))) + ((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_19 * __pyx_v_old_vect.strides[0]) ))) * (*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_21 * __pyx_v_new_vect.strides[0]) )))))) / (*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_23 * __pyx_v_old_vect.strides[0]) ))));
 
-  /* "impurity_transport.pyx":931
+  /* "impurity_transport.pyx":957
  *     # Normalize and multiply by magnitude of the original vector. We want to
  *     # chnage direction, not magnitude.
  *     cdef float old_vect_len = np.sqrt(old_vect[0]**2 + old_vect[1]**2 + \             # <<<<<<<<<<<<<<
  *         old_vect[2]**2)
  *     cdef float new_vect_len = np.sqrt(new_vect[0]**2 + new_vect[1]**2 + \
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 931, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 957, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 931, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 957, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_22 = 0;
@@ -29977,7 +30864,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_22 >= __pyx_v_old_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 931, __pyx_L1_error)
+    __PYX_ERR(0, 957, __pyx_L1_error)
   }
   __pyx_t_23 = 1;
   __pyx_t_7 = -1;
@@ -29987,10 +30874,10 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_23 >= __pyx_v_old_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 931, __pyx_L1_error)
+    __PYX_ERR(0, 957, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":932
+  /* "impurity_transport.pyx":958
  *     # chnage direction, not magnitude.
  *     cdef float old_vect_len = np.sqrt(old_vect[0]**2 + old_vect[1]**2 + \
  *         old_vect[2]**2)             # <<<<<<<<<<<<<<
@@ -30005,17 +30892,17 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_20 >= __pyx_v_old_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 932, __pyx_L1_error)
+    __PYX_ERR(0, 958, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":931
+  /* "impurity_transport.pyx":957
  *     # Normalize and multiply by magnitude of the original vector. We want to
  *     # chnage direction, not magnitude.
  *     cdef float old_vect_len = np.sqrt(old_vect[0]**2 + old_vect[1]**2 + \             # <<<<<<<<<<<<<<
  *         old_vect[2]**2)
  *     cdef float new_vect_len = np.sqrt(new_vect[0]**2 + new_vect[1]**2 + \
  */
-  __pyx_t_3 = PyFloat_FromDouble(((powf((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_22 * __pyx_v_old_vect.strides[0]) ))), 2.0) + powf((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_23 * __pyx_v_old_vect.strides[0]) ))), 2.0)) + powf((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_20 * __pyx_v_old_vect.strides[0]) ))), 2.0))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 931, __pyx_L1_error)
+  __pyx_t_3 = PyFloat_FromDouble(((powf((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_22 * __pyx_v_old_vect.strides[0]) ))), 2.0) + powf((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_23 * __pyx_v_old_vect.strides[0]) ))), 2.0)) + powf((*((float *) ( /* dim=0 */ (__pyx_v_old_vect.data + __pyx_t_20 * __pyx_v_old_vect.strides[0]) ))), 2.0))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 957, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_1 = NULL;
   __pyx_t_7 = 0;
@@ -30036,24 +30923,24 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     __pyx_t_2 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_7, 1+__pyx_t_7);
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 931, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 957, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
-  __pyx_t_26 = __pyx_PyFloat_AsFloat(__pyx_t_2); if (unlikely((__pyx_t_26 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 931, __pyx_L1_error)
+  __pyx_t_26 = __pyx_PyFloat_AsFloat(__pyx_t_2); if (unlikely((__pyx_t_26 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 957, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_old_vect_len = __pyx_t_26;
 
-  /* "impurity_transport.pyx":933
+  /* "impurity_transport.pyx":959
  *     cdef float old_vect_len = np.sqrt(old_vect[0]**2 + old_vect[1]**2 + \
  *         old_vect[2]**2)
  *     cdef float new_vect_len = np.sqrt(new_vect[0]**2 + new_vect[1]**2 + \             # <<<<<<<<<<<<<<
  *         new_vect[2]**2)
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 933, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 959, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 933, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 959, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_20 = 0;
@@ -30064,7 +30951,7 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_20 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 933, __pyx_L1_error)
+    __PYX_ERR(0, 959, __pyx_L1_error)
   }
   __pyx_t_23 = 1;
   __pyx_t_7 = -1;
@@ -30074,10 +30961,10 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_23 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 933, __pyx_L1_error)
+    __PYX_ERR(0, 959, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":934
+  /* "impurity_transport.pyx":960
  *         old_vect[2]**2)
  *     cdef float new_vect_len = np.sqrt(new_vect[0]**2 + new_vect[1]**2 + \
  *         new_vect[2]**2)             # <<<<<<<<<<<<<<
@@ -30092,17 +30979,17 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_22 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 934, __pyx_L1_error)
+    __PYX_ERR(0, 960, __pyx_L1_error)
   }
 
-  /* "impurity_transport.pyx":933
+  /* "impurity_transport.pyx":959
  *     cdef float old_vect_len = np.sqrt(old_vect[0]**2 + old_vect[1]**2 + \
  *         old_vect[2]**2)
  *     cdef float new_vect_len = np.sqrt(new_vect[0]**2 + new_vect[1]**2 + \             # <<<<<<<<<<<<<<
  *         new_vect[2]**2)
  * 
  */
-  __pyx_t_5 = PyFloat_FromDouble(((powf((*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_20 * __pyx_v_new_vect.strides[0]) ))), 2.0) + powf((*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_23 * __pyx_v_new_vect.strides[0]) ))), 2.0)) + powf((*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_22 * __pyx_v_new_vect.strides[0]) ))), 2.0))); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 933, __pyx_L1_error)
+  __pyx_t_5 = PyFloat_FromDouble(((powf((*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_20 * __pyx_v_new_vect.strides[0]) ))), 2.0) + powf((*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_23 * __pyx_v_new_vect.strides[0]) ))), 2.0)) + powf((*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_22 * __pyx_v_new_vect.strides[0]) ))), 2.0))); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 959, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_1 = NULL;
   __pyx_t_7 = 0;
@@ -30123,15 +31010,15 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
     __pyx_t_2 = __Pyx_PyObject_FastCall(__pyx_t_3, __pyx_callargs+1-__pyx_t_7, 1+__pyx_t_7);
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 933, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 959, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   }
-  __pyx_t_26 = __pyx_PyFloat_AsFloat(__pyx_t_2); if (unlikely((__pyx_t_26 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 933, __pyx_L1_error)
+  __pyx_t_26 = __pyx_PyFloat_AsFloat(__pyx_t_2); if (unlikely((__pyx_t_26 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 959, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_new_vect_len = __pyx_t_26;
 
-  /* "impurity_transport.pyx":937
+  /* "impurity_transport.pyx":963
  * 
  *     # Assign the normalized components to the impurity's velocity vector.
  *     imp.vx = old_vect_len * new_vect[0] / new_vect_len             # <<<<<<<<<<<<<<
@@ -30146,14 +31033,14 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_22 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 937, __pyx_L1_error)
+    __PYX_ERR(0, 963, __pyx_L1_error)
   }
-  __pyx_t_2 = PyFloat_FromDouble(((__pyx_v_old_vect_len * (*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_22 * __pyx_v_new_vect.strides[0]) )))) / __pyx_v_new_vect_len)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 937, __pyx_L1_error)
+  __pyx_t_2 = PyFloat_FromDouble(((__pyx_v_old_vect_len * (*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_22 * __pyx_v_new_vect.strides[0]) )))) / __pyx_v_new_vect_len)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 963, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vx, __pyx_t_2) < 0) __PYX_ERR(0, 937, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vx, __pyx_t_2) < 0) __PYX_ERR(0, 963, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "impurity_transport.pyx":938
+  /* "impurity_transport.pyx":964
  *     # Assign the normalized components to the impurity's velocity vector.
  *     imp.vx = old_vect_len * new_vect[0] / new_vect_len
  *     imp.vy = old_vect_len * new_vect[1] / new_vect_len             # <<<<<<<<<<<<<<
@@ -30168,14 +31055,14 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_22 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 938, __pyx_L1_error)
+    __PYX_ERR(0, 964, __pyx_L1_error)
   }
-  __pyx_t_2 = PyFloat_FromDouble(((__pyx_v_old_vect_len * (*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_22 * __pyx_v_new_vect.strides[0]) )))) / __pyx_v_new_vect_len)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 938, __pyx_L1_error)
+  __pyx_t_2 = PyFloat_FromDouble(((__pyx_v_old_vect_len * (*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_22 * __pyx_v_new_vect.strides[0]) )))) / __pyx_v_new_vect_len)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 964, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vy, __pyx_t_2) < 0) __PYX_ERR(0, 938, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vy, __pyx_t_2) < 0) __PYX_ERR(0, 964, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "impurity_transport.pyx":939
+  /* "impurity_transport.pyx":965
  *     imp.vx = old_vect_len * new_vect[0] / new_vect_len
  *     imp.vy = old_vect_len * new_vect[1] / new_vect_len
  *     imp.vz = old_vect_len * new_vect[2] / new_vect_len             # <<<<<<<<<<<<<<
@@ -30190,14 +31077,14 @@ static PyObject *__pyx_f_18impurity_transport_rotate_vel_vector(PyObject *__pyx_
   } else if (unlikely(__pyx_t_22 >= __pyx_v_new_vect.shape[0])) __pyx_t_7 = 0;
   if (unlikely(__pyx_t_7 != -1)) {
     __Pyx_RaiseBufferIndexError(__pyx_t_7);
-    __PYX_ERR(0, 939, __pyx_L1_error)
+    __PYX_ERR(0, 965, __pyx_L1_error)
   }
-  __pyx_t_2 = PyFloat_FromDouble(((__pyx_v_old_vect_len * (*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_22 * __pyx_v_new_vect.strides[0]) )))) / __pyx_v_new_vect_len)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 939, __pyx_L1_error)
+  __pyx_t_2 = PyFloat_FromDouble(((__pyx_v_old_vect_len * (*((float *) ( /* dim=0 */ (__pyx_v_new_vect.data + __pyx_t_22 * __pyx_v_new_vect.strides[0]) )))) / __pyx_v_new_vect_len)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 965, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vz, __pyx_t_2) < 0) __PYX_ERR(0, 939, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_imp, __pyx_n_s_vz, __pyx_t_2) < 0) __PYX_ERR(0, 965, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "impurity_transport.pyx":890
+  /* "impurity_transport.pyx":916
  * 
  * @cython.cdivision(True)
  * cdef rotate_vel_vector(imp):             # <<<<<<<<<<<<<<
@@ -31196,6 +32083,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_kp_u_, __pyx_k_, sizeof(__pyx_k_), 0, 1, 0, 0},
     {&__pyx_kp_s_1_000_particles_were_input_To_a, __pyx_k_1_000_particles_were_input_To_a, sizeof(__pyx_k_1_000_particles_were_input_To_a), 0, 0, 1, 0},
     {&__pyx_n_s_ASCII, __pyx_k_ASCII, sizeof(__pyx_k_ASCII), 0, 0, 1, 1},
+    {&__pyx_kp_s_Additional_split_impurities_foll, __pyx_k_Additional_split_impurities_foll, sizeof(__pyx_k_Additional_split_impurities_foll), 0, 0, 1, 0},
     {&__pyx_kp_s_All_dimensions_preceding_dimensi, __pyx_k_All_dimensions_preceding_dimensi, sizeof(__pyx_k_All_dimensions_preceding_dimensi), 0, 0, 1, 0},
     {&__pyx_n_s_AssertionError, __pyx_k_AssertionError, sizeof(__pyx_k_AssertionError), 0, 0, 1, 1},
     {&__pyx_kp_s_Beginning_impurity_following, __pyx_k_Beginning_impurity_following, sizeof(__pyx_k_Beginning_impurity_following), 0, 0, 1, 0},
@@ -31211,6 +32099,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_kp_s_Empty_shape_tuple_for_cython_arr, __pyx_k_Empty_shape_tuple_for_cython_arr, sizeof(__pyx_k_Empty_shape_tuple_for_cython_arr), 0, 0, 1, 0},
     {&__pyx_kp_s_Error_Files_for_imp_atom_num_not, __pyx_k_Error_Files_for_imp_atom_num_not, sizeof(__pyx_k_Error_Files_for_imp_atom_num_not), 0, 0, 1, 0},
     {&__pyx_kp_s_Error_coll_forces_and_collisions, __pyx_k_Error_coll_forces_and_collisions, sizeof(__pyx_k_Error_coll_forces_and_collisions), 0, 0, 1, 0},
+    {&__pyx_kp_s_Error_coll_prob_1, __pyx_k_Error_coll_prob_1, sizeof(__pyx_k_Error_coll_prob_1), 0, 0, 1, 0},
     {&__pyx_kp_s_Error_imp_charge, __pyx_k_Error_imp_charge, sizeof(__pyx_k_Error_imp_charge), 0, 0, 1, 0},
     {&__pyx_kp_s_Error_imp_charge_0, __pyx_k_Error_imp_charge_0, sizeof(__pyx_k_Error_imp_charge_0), 0, 0, 1, 0},
     {&__pyx_kp_s_Error_imp_zstart_input_not_recog, __pyx_k_Error_imp_zstart_input_not_recog, sizeof(__pyx_k_Error_imp_zstart_input_not_recog), 0, 0, 1, 0},
@@ -31238,6 +32127,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_kp_s_Unable_to_convert_item_to_object, __pyx_k_Unable_to_convert_item_to_object, sizeof(__pyx_k_Unable_to_convert_item_to_object), 0, 0, 1, 0},
     {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
     {&__pyx_n_s_View_MemoryView, __pyx_k_View_MemoryView, sizeof(__pyx_k_View_MemoryView), 0, 0, 1, 1},
+    {&__pyx_kp_s_Warning_The_collision_probabilit, __pyx_k_Warning_The_collision_probabilit, sizeof(__pyx_k_Warning_The_collision_probabilit), 0, 0, 1, 0},
     {&__pyx_kp_s_Warning_The_ionization_probabili, __pyx_k_Warning_The_ionization_probabili, sizeof(__pyx_k_Warning_The_ionization_probabili), 0, 0, 1, 0},
     {&__pyx_kp_s_Warning_The_recombination_probab, __pyx_k_Warning_The_recombination_probab, sizeof(__pyx_k_Warning_The_recombination_probab), 0, 0, 1, 0},
     {&__pyx_kp_s_Warning_imp_xyz_tracks_is_set_to, __pyx_k_Warning_imp_xyz_tracks_is_set_to, sizeof(__pyx_k_Warning_imp_xyz_tracks_is_set_to), 0, 0, 1, 0},
@@ -31254,6 +32144,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_kp_s_acd50_w_dat, __pyx_k_acd50_w_dat, sizeof(__pyx_k_acd50_w_dat), 0, 0, 1, 0},
     {&__pyx_n_s_acd_file, __pyx_k_acd_file, sizeof(__pyx_k_acd_file), 0, 0, 1, 1},
     {&__pyx_n_s_acd_path, __pyx_k_acd_path, sizeof(__pyx_k_acd_path), 0, 0, 1, 1},
+    {&__pyx_n_s_additional_imps, __pyx_k_additional_imps, sizeof(__pyx_k_additional_imps), 0, 0, 1, 1},
     {&__pyx_n_s_allocate_buffer, __pyx_k_allocate_buffer, sizeof(__pyx_k_allocate_buffer), 0, 0, 1, 1},
     {&__pyx_n_s_alpha, __pyx_k_alpha, sizeof(__pyx_k_alpha), 0, 0, 1, 1},
     {&__pyx_n_s_amu, __pyx_k_amu, sizeof(__pyx_k_amu), 0, 0, 1, 1},
@@ -31284,6 +32175,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_coll_occured, __pyx_k_coll_occured, sizeof(__pyx_k_coll_occured), 0, 0, 1, 1},
     {&__pyx_n_s_coll_prob, __pyx_k_coll_prob, sizeof(__pyx_k_coll_prob), 0, 0, 1, 1},
     {&__pyx_n_s_coll_shape, __pyx_k_coll_shape, sizeof(__pyx_k_coll_shape), 0, 0, 1, 1},
+    {&__pyx_n_s_coll_warn_count, __pyx_k_coll_warn_count, sizeof(__pyx_k_coll_warn_count), 0, 0, 1, 1},
     {&__pyx_n_s_collections, __pyx_k_collections, sizeof(__pyx_k_collections), 0, 0, 1, 1},
     {&__pyx_kp_s_collections_abc, __pyx_k_collections_abc, sizeof(__pyx_k_collections_abc), 0, 0, 1, 0},
     {&__pyx_n_s_collisions, __pyx_k_collisions, sizeof(__pyx_k_collisions), 0, 0, 1, 1},
@@ -31447,6 +32339,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
     {&__pyx_n_s_mass, __pyx_k_mass, sizeof(__pyx_k_mass), 0, 0, 1, 1},
     {&__pyx_n_s_max, __pyx_k_max, sizeof(__pyx_k_max), 0, 0, 1, 1},
+    {&__pyx_n_s_median, __pyx_k_median, sizeof(__pyx_k_median), 0, 0, 1, 1},
     {&__pyx_n_s_memview, __pyx_k_memview, sizeof(__pyx_k_memview), 0, 0, 1, 1},
     {&__pyx_n_s_mi, __pyx_k_mi, sizeof(__pyx_k_mi), 0, 0, 1, 1},
     {&__pyx_n_s_min, __pyx_k_min, sizeof(__pyx_k_min), 0, 0, 1, 1},
@@ -31462,10 +32355,12 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_new, __pyx_k_new, sizeof(__pyx_k_new), 0, 0, 1, 1},
     {&__pyx_n_s_ni, __pyx_k_ni, sizeof(__pyx_k_ni), 0, 0, 1, 1},
     {&__pyx_kp_s_no_default___reduce___due_to_non, __pyx_k_no_default___reduce___due_to_non, sizeof(__pyx_k_no_default___reduce___due_to_non), 0, 0, 1, 0},
+    {&__pyx_n_s_nonzero, __pyx_k_nonzero, sizeof(__pyx_k_nonzero), 0, 0, 1, 1},
     {&__pyx_n_s_np, __pyx_k_np, sizeof(__pyx_k_np), 0, 0, 1, 1},
     {&__pyx_n_s_nu_corr, __pyx_k_nu_corr, sizeof(__pyx_k_nu_corr), 0, 0, 1, 1},
     {&__pyx_n_s_nu_corr_fact, __pyx_k_nu_corr_fact, sizeof(__pyx_k_nu_corr_fact), 0, 0, 1, 1},
     {&__pyx_n_s_nu_imp_ion, __pyx_k_nu_imp_ion, sizeof(__pyx_k_nu_imp_ion), 0, 0, 1, 1},
+    {&__pyx_n_s_num_add_imps, __pyx_k_num_add_imps, sizeof(__pyx_k_num_add_imps), 0, 0, 1, 1},
     {&__pyx_n_s_num_imps, __pyx_k_num_imps, sizeof(__pyx_k_num_imps), 0, 0, 1, 1},
     {&__pyx_n_s_numpy, __pyx_k_numpy, sizeof(__pyx_k_numpy), 0, 0, 1, 1},
     {&__pyx_n_s_oa, __pyx_k_oa, sizeof(__pyx_k_oa), 0, 0, 1, 1},
@@ -31478,6 +32373,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_perc_done, __pyx_k_perc_done, sizeof(__pyx_k_perc_done), 0, 0, 1, 1},
     {&__pyx_n_s_pi, __pyx_k_pi, sizeof(__pyx_k_pi), 0, 0, 1, 1},
     {&__pyx_n_s_pickle, __pyx_k_pickle, sizeof(__pyx_k_pickle), 0, 0, 1, 1},
+    {&__pyx_n_s_pop, __pyx_k_pop, sizeof(__pyx_k_pop), 0, 0, 1, 1},
     {&__pyx_n_s_power, __pyx_k_power, sizeof(__pyx_k_power), 0, 0, 1, 1},
     {&__pyx_n_s_print, __pyx_k_print, sizeof(__pyx_k_print), 0, 0, 1, 1},
     {&__pyx_n_s_print_percent, __pyx_k_print_percent, sizeof(__pyx_k_print_percent), 0, 0, 1, 1},
@@ -31504,6 +32400,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_reduce_ex, __pyx_k_reduce_ex, sizeof(__pyx_k_reduce_ex), 0, 0, 1, 1},
     {&__pyx_n_s_register, __pyx_k_register, sizeof(__pyx_k_register), 0, 0, 1, 1},
     {&__pyx_n_s_return_dict, __pyx_k_return_dict, sizeof(__pyx_k_return_dict), 0, 0, 1, 1},
+    {&__pyx_n_s_round, __pyx_k_round, sizeof(__pyx_k_round), 0, 0, 1, 1},
     {&__pyx_n_s_sample, __pyx_k_sample, sizeof(__pyx_k_sample), 0, 0, 1, 1},
     {&__pyx_kp_s_scd50_w_dat, __pyx_k_scd50_w_dat, sizeof(__pyx_k_scd50_w_dat), 0, 0, 1, 0},
     {&__pyx_n_s_scd_file, __pyx_k_scd_file, sizeof(__pyx_k_scd_file), 0, 0, 1, 1},
@@ -31544,6 +32441,13 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_update, __pyx_k_update, sizeof(__pyx_k_update), 0, 0, 1, 1},
     {&__pyx_n_s_v_fact, __pyx_k_v_fact, sizeof(__pyx_k_v_fact), 0, 0, 1, 1},
     {&__pyx_n_s_values, __pyx_k_values, sizeof(__pyx_k_values), 0, 0, 1, 1},
+    {&__pyx_kp_s_var_count_qualifier, __pyx_k_var_count_qualifier, sizeof(__pyx_k_var_count_qualifier), 0, 0, 1, 0},
+    {&__pyx_n_s_var_count_qualifier_2, __pyx_k_var_count_qualifier_2, sizeof(__pyx_k_var_count_qualifier_2), 0, 0, 1, 1},
+    {&__pyx_n_s_var_red_part_count, __pyx_k_var_red_part_count, sizeof(__pyx_k_var_red_part_count), 0, 0, 1, 1},
+    {&__pyx_n_s_var_red_part_freq, __pyx_k_var_red_part_freq, sizeof(__pyx_k_var_red_part_freq), 0, 0, 1, 1},
+    {&__pyx_n_s_var_reduction, __pyx_k_var_reduction, sizeof(__pyx_k_var_reduction), 0, 0, 1, 1},
+    {&__pyx_n_s_var_reduction_freq, __pyx_k_var_reduction_freq, sizeof(__pyx_k_var_reduction_freq), 0, 0, 1, 1},
+    {&__pyx_n_s_var_reduction_min_weight, __pyx_k_var_reduction_min_weight, sizeof(__pyx_k_var_reduction_min_weight), 0, 0, 1, 1},
     {&__pyx_n_s_version_info, __pyx_k_version_info, sizeof(__pyx_k_version_info), 0, 0, 1, 1},
     {&__pyx_n_s_viz, __pyx_k_viz, sizeof(__pyx_k_viz), 0, 0, 1, 1},
     {&__pyx_n_s_vti, __pyx_k_vti, sizeof(__pyx_k_vti), 0, 0, 1, 1},
@@ -31551,6 +32455,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_vx, __pyx_k_vx, sizeof(__pyx_k_vx), 0, 0, 1, 1},
     {&__pyx_n_s_vy, __pyx_k_vy, sizeof(__pyx_k_vy), 0, 0, 1, 1},
     {&__pyx_n_s_vz, __pyx_k_vz, sizeof(__pyx_k_vz), 0, 0, 1, 1},
+    {&__pyx_n_s_weight, __pyx_k_weight, sizeof(__pyx_k_weight), 0, 0, 1, 1},
     {&__pyx_n_s_x, __pyx_k_x, sizeof(__pyx_k_x), 0, 0, 1, 1},
     {&__pyx_n_s_x_bins, __pyx_k_x_bins, sizeof(__pyx_k_x_bins), 0, 0, 1, 1},
     {&__pyx_n_s_x_idx, __pyx_k_x_idx, sizeof(__pyx_k_x_idx), 0, 0, 1, 1},
@@ -31578,8 +32483,9 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
 }
 /* #### Code section: cached_builtins ### */
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_print = __Pyx_GetBuiltinName(__pyx_n_s_print); if (!__pyx_builtin_print) __PYX_ERR(0, 75, __pyx_L1_error)
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 113, __pyx_L1_error)
+  __pyx_builtin_print = __Pyx_GetBuiltinName(__pyx_n_s_print); if (!__pyx_builtin_print) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 103, __pyx_L1_error)
+  __pyx_builtin_round = __Pyx_GetBuiltinName(__pyx_n_s_round); if (!__pyx_builtin_round) __PYX_ERR(0, 306, __pyx_L1_error)
   __pyx_builtin___import__ = __Pyx_GetBuiltinName(__pyx_n_s_import); if (!__pyx_builtin___import__) __PYX_ERR(1, 100, __pyx_L1_error)
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(1, 141, __pyx_L1_error)
   __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(1, 156, __pyx_L1_error)
@@ -31635,70 +32541,70 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__8);
   __Pyx_GIVEREF(__pyx_tuple__8);
 
-  /* "impurity_transport.pyx":75
- *     # both on. In theory the latter captures the other.
+  /* "impurity_transport.pyx":76
+ *     # approximation.
  *     if coll_forces and collisions:
  *         print("Error! coll_forces and collisions cannot both be on. Choose one")             # <<<<<<<<<<<<<<
  *         sys.exit()
  * 
  */
-  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_s_Error_coll_forces_and_collisions); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 75, __pyx_L1_error)
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_s_Error_coll_forces_and_collisions); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 76, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__9);
   __Pyx_GIVEREF(__pyx_tuple__9);
 
-  /* "impurity_transport.pyx":220
+  /* "impurity_transport.pyx":207
  *     oa, rate_df_rc, rate_df_iz = load_adas(input_opts)
  * 
  *     def create_interps(df, atom_num):             # <<<<<<<<<<<<<<
  *         interps = []
  * 
  */
-  __pyx_tuple__10 = PyTuple_Pack(8, __pyx_n_s_df, __pyx_n_s_atom_num, __pyx_n_s_interps, __pyx_n_s_charge, __pyx_n_s_tes, __pyx_n_s_nes, __pyx_n_s_rates, __pyx_n_s_interp); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_tuple__10 = PyTuple_Pack(8, __pyx_n_s_df, __pyx_n_s_atom_num, __pyx_n_s_interps, __pyx_n_s_charge, __pyx_n_s_tes, __pyx_n_s_nes, __pyx_n_s_rates, __pyx_n_s_interp); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__10);
   __Pyx_GIVEREF(__pyx_tuple__10);
-  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_impurity_transport_pyx, __pyx_n_s_create_interps, 220, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_impurity_transport_pyx, __pyx_n_s_create_interps, 207, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 207, __pyx_L1_error)
 
-  /* "impurity_transport.pyx":253
- *         # the non-cythonized arrays to make life easier in the function. Doesn't
- *         # matter much since this is only called once.
+  /* "impurity_transport.pyx":240
+ *         # pass the non-cythonized arrays to make life easier in the function.
+ *         # Doesn't matter much since this is only called once and we use numpy.
  *         print("Calculating collision frequencies...")             # <<<<<<<<<<<<<<
  *         coll_freq_arr_py = calc_coll_freq_arr(gkyl_bkg["ne"], gkyl_bkg["ni"],
  *             gkyl_bkg["te"], gkyl_bkg["ti"], input_opts["imp_mass"], imp_atom_num)
  */
-  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_kp_s_Calculating_collision_frequencie); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_kp_s_Calculating_collision_frequencie); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 240, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__12);
   __Pyx_GIVEREF(__pyx_tuple__12);
 
-  /* "impurity_transport.pyx":316
+  /* "impurity_transport.pyx":333
  * 
  *     # Loop through tracking the full path of one impurity at a time.
  *     print("Beginning impurity following...")             # <<<<<<<<<<<<<<
+ *     for i in tqdm(range(0, num_imps)):
  * 
- *     # We have two different loops, depending on if we want to run in
  */
-  __pyx_tuple__13 = PyTuple_Pack(1, __pyx_kp_s_Beginning_impurity_following); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 316, __pyx_L1_error)
+  __pyx_tuple__13 = PyTuple_Pack(1, __pyx_kp_s_Beginning_impurity_following); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 333, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__13);
   __Pyx_GIVEREF(__pyx_tuple__13);
 
-  /* "impurity_transport.pyx":562
+  /* "impurity_transport.pyx":623
  * 
  *     # Divide by the counts in each cells for average velocity.
  *     with np.errstate(divide='ignore'):             # <<<<<<<<<<<<<<
  *         imp_vx_arr /= imp_count_arr
  *         imp_vy_arr /= imp_count_arr
  */
-  __pyx_tuple__14 = PyTuple_Pack(3, Py_None, Py_None, Py_None); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 562, __pyx_L1_error)
+  __pyx_tuple__14 = PyTuple_Pack(3, Py_None, Py_None, Py_None); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 623, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__14);
   __Pyx_GIVEREF(__pyx_tuple__14);
 
-  /* "impurity_transport.pyx":583
+  /* "impurity_transport.pyx":649
  *     # For now just print this, not gonna bother making it all pretty since
  *     # I'm abandoning this version of the code soon.
  *     print("stat_dict")             # <<<<<<<<<<<<<<
  *     print(stat_dict)
  * 
  */
-  __pyx_tuple__15 = PyTuple_Pack(1, __pyx_n_s_stat_dict); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(0, 583, __pyx_L1_error)
+  __pyx_tuple__15 = PyTuple_Pack(1, __pyx_n_s_stat_dict); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(0, 649, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__15);
   __Pyx_GIVEREF(__pyx_tuple__15);
 
@@ -31810,37 +32716,37 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *     """
  *     This function contains the primary impurity ion following routine.
  */
-  __pyx_tuple__28 = PyTuple_Pack(137, __pyx_n_s_input_opts, __pyx_n_s_gkyl_bkg, __pyx_n_s_parallel, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_imp_zstart_int, __pyx_n_s_x_idx, __pyx_n_s_y_idx, __pyx_n_s_z_idx, __pyx_n_s_fstart, __pyx_n_s_fend, __pyx_n_s_f, __pyx_n_s_loop_counts, __pyx_n_s_iz_warn_count, __pyx_n_s_rc_warn_count, __pyx_n_s_coll_count, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_z, __pyx_n_s_local_ne, __pyx_n_s_local_te, __pyx_n_s_local_ti, __pyx_n_s_local_ni, __pyx_n_s_local_ex, __pyx_n_s_local_ey, __pyx_n_s_local_ez, __pyx_n_s_iz_coef, __pyx_n_s_rc_coef, __pyx_n_s_iz_prob, __pyx_n_s_rc_prob, __pyx_n_s_ran, __pyx_n_s_local_bz, __pyx_n_s_print_percent, __pyx_n_s_perc_done, __pyx_n_s_avg_time_followed, __pyx_n_s_local_dtedx, __pyx_n_s_local_dtedy, __pyx_n_s_local_dtedz, __pyx_n_s_local_dtidx, __pyx_n_s_local_dtidy, __pyx_n_s_local_dtidz, __pyx_n_s_local_viz, __pyx_n_s_local_stop_time, __pyx_n_s_fstart_fl, __pyx_n_s_fend_fl, __pyx_n_s_coll_occured, __pyx_n_s_imp_amu, __pyx_n_s_imp_mass, __pyx_n_s_imp_init_charge, __pyx_n_s_num_imps, __pyx_n_s_imp_xmin, __pyx_n_s_imp_xmax, __pyx_n_s_gkyl_fstart, __pyx_n_s_gkyl_fend, __pyx_n_s_imp_atom_num, __pyx_n_s_imp_scaling_fact, __pyx_n_s_imp_zstart_val, __pyx_n_s_coll_forces, __pyx_n_s_collisions, __pyx_n_s_imp_xyz_tracks, __pyx_n_s_xwidth, __pyx_n_s_x_bins, __pyx_n_s_ywidth, __pyx_n_s_y_bins, __pyx_n_s_zwidth, __pyx_n_s_z_bins, __pyx_n_s_imp_zstart_opt, __pyx_n_s_zstart_cdf, __pyx_n_s_gkyl_x, __pyx_n_s_gkyl_y, __pyx_n_s_gkyl_z, __pyx_n_s_gkyl_xmin, __pyx_n_s_gkyl_xmax, __pyx_n_s_gkyl_ymin, __pyx_n_s_gkyl_ymax, __pyx_n_s_gkyl_zmin, __pyx_n_s_gkyl_zmax, __pyx_n_s_dt, __pyx_n_s_gkyl_ne, __pyx_n_s_gkyl_te, __pyx_n_s_gkyl_ni, __pyx_n_s_gkyl_ti, __pyx_n_s_gkyl_elecx, __pyx_n_s_gkyl_elecy, __pyx_n_s_gkyl_elecz, __pyx_n_s_gkyl_viz, __pyx_n_s_gkyl_b, __pyx_n_s_gkyl_dtedx, __pyx_n_s_gkyl_dtedy, __pyx_n_s_gkyl_dtedz, __pyx_n_s_gkyl_dtidx, __pyx_n_s_gkyl_dtidy, __pyx_n_s_gkyl_dtidz, __pyx_n_s_stop_time, __pyx_n_s_alpha, __pyx_n_s_beta, __pyx_n_s_ln_alpha, __pyx_n_s_ion_amu, __pyx_n_s_tmp_stop_time, __pyx_n_s_mu, __pyx_n_s_xstart_rans, __pyx_n_s_ystart_rans, __pyx_n_s_zstart_rans_coarse, __pyx_n_s_zstart_rans_fine, __pyx_n_s_fstart_rans, __pyx_n_s_oa, __pyx_n_s_rate_df_rc, __pyx_n_s_rate_df_iz, __pyx_n_s_create_interps, __pyx_n_s_create_interps, __pyx_n_s_interps_rc, __pyx_n_s_interps_iz, __pyx_n_s_coll_freq_arr_py, __pyx_n_s_coll_shape, __pyx_n_s_coll_freq_arr, __pyx_n_s_imp_weight_arr, __pyx_n_s_imp_count_arr, __pyx_n_s_imp_vx_arr, __pyx_n_s_imp_vy_arr, __pyx_n_s_xyz_lists_x, __pyx_n_s_xyz_lists_y, __pyx_n_s_xyz_lists_z, __pyx_n_s_stat_dict, __pyx_n_s_imp_foll_tstart, __pyx_n_s_imp, __pyx_n_s_coll_freq, __pyx_n_s_coll_prob, __pyx_n_s_imp_foll_tend, __pyx_n_s_cpu_time_used, __pyx_n_s_imp_dens_arr, __pyx_n_s_dx, __pyx_n_s_dy, __pyx_n_s_dz, __pyx_n_s_return_dict, __pyx_n_s_i, __pyx_n_s_i, __pyx_n_s_i); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 33, __pyx_L1_error)
+  __pyx_tuple__28 = PyTuple_Pack(147, __pyx_n_s_input_opts, __pyx_n_s_gkyl_bkg, __pyx_n_s_parallel, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_imp_zstart_int, __pyx_n_s_x_idx, __pyx_n_s_y_idx, __pyx_n_s_z_idx, __pyx_n_s_fstart, __pyx_n_s_fend, __pyx_n_s_f, __pyx_n_s_loop_counts, __pyx_n_s_iz_warn_count, __pyx_n_s_rc_warn_count, __pyx_n_s_coll_count, __pyx_n_s_var_count_qualifier_2, __pyx_n_s_num_add_imps, __pyx_n_s_coll_warn_count, __pyx_n_s_charge, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_z, __pyx_n_s_local_ne, __pyx_n_s_local_te, __pyx_n_s_local_ti, __pyx_n_s_local_ni, __pyx_n_s_local_ex, __pyx_n_s_local_ey, __pyx_n_s_local_ez, __pyx_n_s_iz_coef, __pyx_n_s_rc_coef, __pyx_n_s_iz_prob, __pyx_n_s_rc_prob, __pyx_n_s_ran, __pyx_n_s_local_bz, __pyx_n_s_print_percent, __pyx_n_s_perc_done, __pyx_n_s_avg_time_followed, __pyx_n_s_local_dtedx, __pyx_n_s_local_dtedy, __pyx_n_s_local_dtedz, __pyx_n_s_local_dtidx, __pyx_n_s_local_dtidy, __pyx_n_s_local_dtidz, __pyx_n_s_local_viz, __pyx_n_s_local_stop_time, __pyx_n_s_fstart_fl, __pyx_n_s_fend_fl, __pyx_n_s_coll_occured, __pyx_n_s_imp_amu, __pyx_n_s_imp_mass, __pyx_n_s_imp_init_charge, __pyx_n_s_num_imps, __pyx_n_s_imp_xmin, __pyx_n_s_imp_xmax, __pyx_n_s_gkyl_fstart, __pyx_n_s_gkyl_fend, __pyx_n_s_imp_atom_num, __pyx_n_s_imp_scaling_fact, __pyx_n_s_imp_zstart_val, __pyx_n_s_coll_forces, __pyx_n_s_collisions, __pyx_n_s_imp_xyz_tracks, __pyx_n_s_var_reduction, __pyx_n_s_var_reduction_freq, __pyx_n_s_var_reduction_min_weight, __pyx_n_s_xwidth, __pyx_n_s_x_bins, __pyx_n_s_ywidth, __pyx_n_s_y_bins, __pyx_n_s_zwidth, __pyx_n_s_z_bins, __pyx_n_s_imp_zstart_opt, __pyx_n_s_zstart_cdf, __pyx_n_s_gkyl_x, __pyx_n_s_gkyl_y, __pyx_n_s_gkyl_z, __pyx_n_s_gkyl_xmin, __pyx_n_s_gkyl_xmax, __pyx_n_s_gkyl_ymin, __pyx_n_s_gkyl_ymax, __pyx_n_s_gkyl_zmin, __pyx_n_s_gkyl_zmax, __pyx_n_s_dt, __pyx_n_s_gkyl_ne, __pyx_n_s_gkyl_te, __pyx_n_s_gkyl_ni, __pyx_n_s_gkyl_ti, __pyx_n_s_gkyl_elecx, __pyx_n_s_gkyl_elecy, __pyx_n_s_gkyl_elecz, __pyx_n_s_gkyl_viz, __pyx_n_s_gkyl_b, __pyx_n_s_gkyl_dtedx, __pyx_n_s_gkyl_dtedy, __pyx_n_s_gkyl_dtedz, __pyx_n_s_gkyl_dtidx, __pyx_n_s_gkyl_dtidy, __pyx_n_s_gkyl_dtidz, __pyx_n_s_stop_time, __pyx_n_s_alpha, __pyx_n_s_beta, __pyx_n_s_ln_alpha, __pyx_n_s_ion_amu, __pyx_n_s_tmp_stop_time, __pyx_n_s_mu, __pyx_n_s_xstart_rans, __pyx_n_s_ystart_rans, __pyx_n_s_zstart_rans_coarse, __pyx_n_s_zstart_rans_fine, __pyx_n_s_fstart_rans, __pyx_n_s_oa, __pyx_n_s_rate_df_rc, __pyx_n_s_rate_df_iz, __pyx_n_s_create_interps, __pyx_n_s_create_interps, __pyx_n_s_interps_rc, __pyx_n_s_interps_iz, __pyx_n_s_coll_freq_arr_py, __pyx_n_s_coll_shape, __pyx_n_s_coll_freq_arr, __pyx_n_s_imp_weight_arr, __pyx_n_s_imp_count_arr, __pyx_n_s_imp_vx_arr, __pyx_n_s_imp_vy_arr, __pyx_n_s_xyz_lists_x, __pyx_n_s_xyz_lists_y, __pyx_n_s_xyz_lists_z, __pyx_n_s_var_red_part_freq, __pyx_n_s_var_red_part_count, __pyx_n_s_stat_dict, __pyx_n_s_imp_foll_tstart, __pyx_n_s_imp, __pyx_n_s_additional_imps, __pyx_n_s_coll_freq, __pyx_n_s_coll_prob, __pyx_n_s_imp_foll_tend, __pyx_n_s_cpu_time_used, __pyx_n_s_imp_dens_arr, __pyx_n_s_dx, __pyx_n_s_dy, __pyx_n_s_dz, __pyx_n_s_return_dict, __pyx_n_s_i, __pyx_n_s_i, __pyx_n_s_i); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 33, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__28);
   __Pyx_GIVEREF(__pyx_tuple__28);
-  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(3, 0, 0, 137, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_impurity_transport_pyx, __pyx_n_s_follow_impurities, 33, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 33, __pyx_L1_error)
+  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(3, 0, 0, 147, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_impurity_transport_pyx, __pyx_n_s_follow_impurities, 33, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 33, __pyx_L1_error)
   __pyx_tuple__30 = PyTuple_Pack(1, ((PyObject *)Py_False)); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 33, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__30);
   __Pyx_GIVEREF(__pyx_tuple__30);
 
-  /* "impurity_transport.pyx":734
+  /* "impurity_transport.pyx":800
  * 
  * 
  * def load_adas(input_opts):             # <<<<<<<<<<<<<<
  *     """
  *     Function to load the required OpenADAS files to keep track of
  */
-  __pyx_tuple__31 = PyTuple_Pack(10, __pyx_n_s_input_opts, __pyx_n_s_imp_atom_num, __pyx_n_s_oa_dir, __pyx_n_s_acd_file, __pyx_n_s_scd_file, __pyx_n_s_acd_path, __pyx_n_s_scd_path, __pyx_n_s_oa, __pyx_n_s_rate_df_rc, __pyx_n_s_rate_df_iz); if (unlikely(!__pyx_tuple__31)) __PYX_ERR(0, 734, __pyx_L1_error)
+  __pyx_tuple__31 = PyTuple_Pack(10, __pyx_n_s_input_opts, __pyx_n_s_imp_atom_num, __pyx_n_s_oa_dir, __pyx_n_s_acd_file, __pyx_n_s_scd_file, __pyx_n_s_acd_path, __pyx_n_s_scd_path, __pyx_n_s_oa, __pyx_n_s_rate_df_rc, __pyx_n_s_rate_df_iz); if (unlikely(!__pyx_tuple__31)) __PYX_ERR(0, 800, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__31);
   __Pyx_GIVEREF(__pyx_tuple__31);
-  __pyx_codeobj__32 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 10, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__31, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_impurity_transport_pyx, __pyx_n_s_load_adas, 734, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__32)) __PYX_ERR(0, 734, __pyx_L1_error)
+  __pyx_codeobj__32 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 10, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__31, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_impurity_transport_pyx, __pyx_n_s_load_adas, 800, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__32)) __PYX_ERR(0, 800, __pyx_L1_error)
 
-  /* "impurity_transport.pyx":767
+  /* "impurity_transport.pyx":833
  *     return oa, rate_df_rc, rate_df_iz
  * 
  * def calc_coll_freq_arr(ne, ni, te, ti, imp_mass, imp_atom_num):             # <<<<<<<<<<<<<<
  *     """
  *     Calculate and return an array of the impurity-ion collision frequency.
  */
-  __pyx_tuple__33 = PyTuple_Pack(22, __pyx_n_s_ne, __pyx_n_s_ni, __pyx_n_s_te, __pyx_n_s_ti, __pyx_n_s_imp_mass, __pyx_n_s_imp_atom_num, __pyx_n_s_amu, __pyx_n_s_mi, __pyx_n_s_mz, __pyx_n_s_ev, __pyx_n_s_eps0, __pyx_n_s_Zi, __pyx_n_s_v_fact, __pyx_n_s_vtz, __pyx_n_s_vti, __pyx_n_s_mr, __pyx_n_s_lnalpha_fact, __pyx_n_s_nu_corr_fact, __pyx_n_s_nu_imp_ion, __pyx_n_s_ZZ, __pyx_n_s_lnalpha_corr, __pyx_n_s_nu_corr); if (unlikely(!__pyx_tuple__33)) __PYX_ERR(0, 767, __pyx_L1_error)
+  __pyx_tuple__33 = PyTuple_Pack(22, __pyx_n_s_ne, __pyx_n_s_ni, __pyx_n_s_te, __pyx_n_s_ti, __pyx_n_s_imp_mass, __pyx_n_s_imp_atom_num, __pyx_n_s_amu, __pyx_n_s_mi, __pyx_n_s_mz, __pyx_n_s_ev, __pyx_n_s_eps0, __pyx_n_s_Zi, __pyx_n_s_v_fact, __pyx_n_s_vtz, __pyx_n_s_vti, __pyx_n_s_mr, __pyx_n_s_lnalpha_fact, __pyx_n_s_nu_corr_fact, __pyx_n_s_nu_imp_ion, __pyx_n_s_ZZ, __pyx_n_s_lnalpha_corr, __pyx_n_s_nu_corr); if (unlikely(!__pyx_tuple__33)) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__33);
   __Pyx_GIVEREF(__pyx_tuple__33);
-  __pyx_codeobj__34 = (PyObject*)__Pyx_PyCode_New(6, 0, 0, 22, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__33, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_impurity_transport_pyx, __pyx_n_s_calc_coll_freq_arr, 767, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__34)) __PYX_ERR(0, 767, __pyx_L1_error)
+  __pyx_codeobj__34 = (PyObject*)__Pyx_PyCode_New(6, 0, 0, 22, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__33, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_impurity_transport_pyx, __pyx_n_s_calc_coll_freq_arr, 833, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__34)) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -31850,8 +32756,11 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 /* #### Code section: init_constants ### */
 
 static CYTHON_SMALL_CODE int __Pyx_InitConstants(void) {
+  __pyx_umethod_PyList_Type_pop.type = (PyObject*)&PyList_Type;
+  __pyx_umethod_PyList_Type_pop.method_name = &__pyx_n_s_pop;
   if (__Pyx_CreateStringTabAndInitStrings() < 0) __PYX_ERR(0, 1, __pyx_L1_error);
   __pyx_float_0_0 = PyFloat_FromDouble(0.0); if (unlikely(!__pyx_float_0_0)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_float_1_0 = PyFloat_FromDouble(1.0); if (unlikely(!__pyx_float_1_0)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_float_1_1 = PyFloat_FromDouble(1.1); if (unlikely(!__pyx_float_1_1)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_float_1_3 = PyFloat_FromDouble(1.3); if (unlikely(!__pyx_float_1_3)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_float_1e6 = PyFloat_FromDouble(1e6); if (unlikely(!__pyx_float_1e6)) __PYX_ERR(0, 1, __pyx_L1_error)
@@ -33090,28 +33999,28 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_follow_impurities, __pyx_t_7) < 0) __PYX_ERR(0, 33, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-  /* "impurity_transport.pyx":734
+  /* "impurity_transport.pyx":800
  * 
  * 
  * def load_adas(input_opts):             # <<<<<<<<<<<<<<
  *     """
  *     Function to load the required OpenADAS files to keep track of
  */
-  __pyx_t_7 = __Pyx_CyFunction_New(&__pyx_mdef_18impurity_transport_3load_adas, 0, __pyx_n_s_load_adas, NULL, __pyx_n_s_impurity_transport, __pyx_d, ((PyObject *)__pyx_codeobj__32)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 734, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_CyFunction_New(&__pyx_mdef_18impurity_transport_3load_adas, 0, __pyx_n_s_load_adas, NULL, __pyx_n_s_impurity_transport, __pyx_d, ((PyObject *)__pyx_codeobj__32)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 800, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_load_adas, __pyx_t_7) < 0) __PYX_ERR(0, 734, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_load_adas, __pyx_t_7) < 0) __PYX_ERR(0, 800, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-  /* "impurity_transport.pyx":767
+  /* "impurity_transport.pyx":833
  *     return oa, rate_df_rc, rate_df_iz
  * 
  * def calc_coll_freq_arr(ne, ni, te, ti, imp_mass, imp_atom_num):             # <<<<<<<<<<<<<<
  *     """
  *     Calculate and return an array of the impurity-ion collision frequency.
  */
-  __pyx_t_7 = __Pyx_CyFunction_New(&__pyx_mdef_18impurity_transport_5calc_coll_freq_arr, 0, __pyx_n_s_calc_coll_freq_arr, NULL, __pyx_n_s_impurity_transport, __pyx_d, ((PyObject *)__pyx_codeobj__34)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 767, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_CyFunction_New(&__pyx_mdef_18impurity_transport_5calc_coll_freq_arr, 0, __pyx_n_s_calc_coll_freq_arr, NULL, __pyx_n_s_impurity_transport, __pyx_d, ((PyObject *)__pyx_codeobj__34)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_calc_coll_freq_arr, __pyx_t_7) < 0) __PYX_ERR(0, 767, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_calc_coll_freq_arr, __pyx_t_7) < 0) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
   /* "impurity_transport.pyx":1
@@ -37564,6 +38473,227 @@ static CYTHON_INLINE PyObject *__Pyx_PyUnicode_ConcatInPlaceImpl(PyObject **p_le
   }
 #endif
 
+/* PyObjectCallNoArg */
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
+    PyObject *arg[2] = {NULL, NULL};
+    return __Pyx_PyObject_FastCall(func, arg + 1, 0 | __Pyx_PY_VECTORCALL_ARGUMENTS_OFFSET);
+}
+
+/* PyObjectGetMethod */
+static int __Pyx_PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method) {
+    PyObject *attr;
+#if CYTHON_UNPACK_METHODS && CYTHON_COMPILING_IN_CPYTHON && CYTHON_USE_PYTYPE_LOOKUP
+    __Pyx_TypeName type_name;
+    PyTypeObject *tp = Py_TYPE(obj);
+    PyObject *descr;
+    descrgetfunc f = NULL;
+    PyObject **dictptr, *dict;
+    int meth_found = 0;
+    assert (*method == NULL);
+    if (unlikely(tp->tp_getattro != PyObject_GenericGetAttr)) {
+        attr = __Pyx_PyObject_GetAttrStr(obj, name);
+        goto try_unpack;
+    }
+    if (unlikely(tp->tp_dict == NULL) && unlikely(PyType_Ready(tp) < 0)) {
+        return 0;
+    }
+    descr = _PyType_Lookup(tp, name);
+    if (likely(descr != NULL)) {
+        Py_INCREF(descr);
+#if defined(Py_TPFLAGS_METHOD_DESCRIPTOR) && Py_TPFLAGS_METHOD_DESCRIPTOR
+        if (__Pyx_PyType_HasFeature(Py_TYPE(descr), Py_TPFLAGS_METHOD_DESCRIPTOR))
+#elif PY_MAJOR_VERSION >= 3
+        #ifdef __Pyx_CyFunction_USED
+        if (likely(PyFunction_Check(descr) || __Pyx_IS_TYPE(descr, &PyMethodDescr_Type) || __Pyx_CyFunction_Check(descr)))
+        #else
+        if (likely(PyFunction_Check(descr) || __Pyx_IS_TYPE(descr, &PyMethodDescr_Type)))
+        #endif
+#else
+        #ifdef __Pyx_CyFunction_USED
+        if (likely(PyFunction_Check(descr) || __Pyx_CyFunction_Check(descr)))
+        #else
+        if (likely(PyFunction_Check(descr)))
+        #endif
+#endif
+        {
+            meth_found = 1;
+        } else {
+            f = Py_TYPE(descr)->tp_descr_get;
+            if (f != NULL && PyDescr_IsData(descr)) {
+                attr = f(descr, obj, (PyObject *)Py_TYPE(obj));
+                Py_DECREF(descr);
+                goto try_unpack;
+            }
+        }
+    }
+    dictptr = _PyObject_GetDictPtr(obj);
+    if (dictptr != NULL && (dict = *dictptr) != NULL) {
+        Py_INCREF(dict);
+        attr = __Pyx_PyDict_GetItemStr(dict, name);
+        if (attr != NULL) {
+            Py_INCREF(attr);
+            Py_DECREF(dict);
+            Py_XDECREF(descr);
+            goto try_unpack;
+        }
+        Py_DECREF(dict);
+    }
+    if (meth_found) {
+        *method = descr;
+        return 1;
+    }
+    if (f != NULL) {
+        attr = f(descr, obj, (PyObject *)Py_TYPE(obj));
+        Py_DECREF(descr);
+        goto try_unpack;
+    }
+    if (likely(descr != NULL)) {
+        *method = descr;
+        return 0;
+    }
+    type_name = __Pyx_PyType_GetName(tp);
+    PyErr_Format(PyExc_AttributeError,
+#if PY_MAJOR_VERSION >= 3
+                 "'" __Pyx_FMT_TYPENAME "' object has no attribute '%U'",
+                 type_name, name);
+#else
+                 "'" __Pyx_FMT_TYPENAME "' object has no attribute '%.400s'",
+                 type_name, PyString_AS_STRING(name));
+#endif
+    __Pyx_DECREF_TypeName(type_name);
+    return 0;
+#else
+    attr = __Pyx_PyObject_GetAttrStr(obj, name);
+    goto try_unpack;
+#endif
+try_unpack:
+#if CYTHON_UNPACK_METHODS
+    if (likely(attr) && PyMethod_Check(attr) && likely(PyMethod_GET_SELF(attr) == obj)) {
+        PyObject *function = PyMethod_GET_FUNCTION(attr);
+        Py_INCREF(function);
+        Py_DECREF(attr);
+        *method = function;
+        return 1;
+    }
+#endif
+    *method = attr;
+    return 0;
+}
+
+/* PyObjectCallMethod0 */
+static PyObject* __Pyx_PyObject_CallMethod0(PyObject* obj, PyObject* method_name) {
+    PyObject *method = NULL, *result = NULL;
+    int is_method = __Pyx_PyObject_GetMethod(obj, method_name, &method);
+    if (likely(is_method)) {
+        result = __Pyx_PyObject_CallOneArg(method, obj);
+        Py_DECREF(method);
+        return result;
+    }
+    if (unlikely(!method)) goto bad;
+    result = __Pyx_PyObject_CallNoArg(method);
+    Py_DECREF(method);
+bad:
+    return result;
+}
+
+/* UnpackUnboundCMethod */
+static PyObject *__Pyx_SelflessCall(PyObject *method, PyObject *args, PyObject *kwargs) {
+    PyObject *result;
+    PyObject *selfless_args = PyTuple_GetSlice(args, 1, PyTuple_Size(args));
+    if (unlikely(!selfless_args)) return NULL;
+    result = PyObject_Call(method, selfless_args, kwargs);
+    Py_DECREF(selfless_args);
+    return result;
+}
+static PyMethodDef __Pyx_UnboundCMethod_Def = {
+     "CythonUnboundCMethod",
+     __PYX_REINTERPRET_FUNCION(PyCFunction, __Pyx_SelflessCall),
+     METH_VARARGS | METH_KEYWORDS,
+     NULL
+};
+static int __Pyx_TryUnpackUnboundCMethod(__Pyx_CachedCFunction* target) {
+    PyObject *method;
+    method = __Pyx_PyObject_GetAttrStr(target->type, *target->method_name);
+    if (unlikely(!method))
+        return -1;
+    target->method = method;
+#if CYTHON_COMPILING_IN_CPYTHON
+    #if PY_MAJOR_VERSION >= 3
+    if (likely(__Pyx_TypeCheck(method, &PyMethodDescr_Type)))
+    #else
+    if (likely(!__Pyx_CyOrPyCFunction_Check(method)))
+    #endif
+    {
+        PyMethodDescrObject *descr = (PyMethodDescrObject*) method;
+        target->func = descr->d_method->ml_meth;
+        target->flag = descr->d_method->ml_flags & ~(METH_CLASS | METH_STATIC | METH_COEXIST | METH_STACKLESS);
+    } else
+#endif
+#if CYTHON_COMPILING_IN_PYPY
+#else
+    if (PyCFunction_Check(method))
+#endif
+    {
+        PyObject *self;
+        int self_found;
+#if CYTHON_COMPILING_IN_LIMITED_API || CYTHON_COMPILING_IN_PYPY
+        self = PyObject_GetAttrString(method, "__self__");
+        if (!self) {
+            PyErr_Clear();
+        }
+#else
+        self = PyCFunction_GET_SELF(method);
+#endif
+        self_found = (self && self != Py_None);
+#if CYTHON_COMPILING_IN_LIMITED_API || CYTHON_COMPILING_IN_PYPY
+        Py_XDECREF(self);
+#endif
+        if (self_found) {
+            PyObject *unbound_method = PyCFunction_New(&__Pyx_UnboundCMethod_Def, method);
+            if (unlikely(!unbound_method)) return -1;
+            Py_DECREF(method);
+            target->method = unbound_method;
+        }
+    }
+    return 0;
+}
+
+/* CallUnboundCMethod0 */
+static PyObject* __Pyx__CallUnboundCMethod0(__Pyx_CachedCFunction* cfunc, PyObject* self) {
+    PyObject *args, *result = NULL;
+    if (unlikely(!cfunc->method) && unlikely(__Pyx_TryUnpackUnboundCMethod(cfunc) < 0)) return NULL;
+#if CYTHON_ASSUME_SAFE_MACROS
+    args = PyTuple_New(1);
+    if (unlikely(!args)) goto bad;
+    Py_INCREF(self);
+    PyTuple_SET_ITEM(args, 0, self);
+#else
+    args = PyTuple_Pack(1, self);
+    if (unlikely(!args)) goto bad;
+#endif
+    result = __Pyx_PyObject_Call(cfunc->method, args, NULL);
+    Py_DECREF(args);
+bad:
+    return result;
+}
+
+/* pop */
+static CYTHON_INLINE PyObject* __Pyx__PyObject_Pop(PyObject* L) {
+    if (__Pyx_IS_TYPE(L, &PySet_Type)) {
+        return PySet_Pop(L);
+    }
+    return __Pyx_PyObject_CallMethod0(L, __pyx_n_s_pop);
+}
+#if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
+static CYTHON_INLINE PyObject* __Pyx_PyList_Pop(PyObject* L) {
+    if (likely(PyList_GET_SIZE(L) > (((PyListObject*)L)->allocated >> 1))) {
+        __Pyx_SET_SIZE(L, Py_SIZE(L) - 1);
+        return PyList_GET_ITEM(L, PyList_GET_SIZE(L));
+    }
+    return __Pyx_CallUnboundCMethod0(&__pyx_umethod_PyList_Type_pop, L);
+}
+#endif
+
 /* BufferIndexError */
 static void __Pyx_RaiseBufferIndexError(int axis) {
   PyErr_Format(PyExc_IndexError,
@@ -37731,129 +38861,6 @@ static PyObject* __Pyx_PyObject_GenericGetAttr(PyObject* obj, PyObject* attr_nam
     return __Pyx_PyObject_GenericGetAttrNoDict(obj, attr_name);
 }
 #endif
-
-/* PyObjectCallNoArg */
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
-    PyObject *arg[2] = {NULL, NULL};
-    return __Pyx_PyObject_FastCall(func, arg + 1, 0 | __Pyx_PY_VECTORCALL_ARGUMENTS_OFFSET);
-}
-
-/* PyObjectGetMethod */
-static int __Pyx_PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method) {
-    PyObject *attr;
-#if CYTHON_UNPACK_METHODS && CYTHON_COMPILING_IN_CPYTHON && CYTHON_USE_PYTYPE_LOOKUP
-    __Pyx_TypeName type_name;
-    PyTypeObject *tp = Py_TYPE(obj);
-    PyObject *descr;
-    descrgetfunc f = NULL;
-    PyObject **dictptr, *dict;
-    int meth_found = 0;
-    assert (*method == NULL);
-    if (unlikely(tp->tp_getattro != PyObject_GenericGetAttr)) {
-        attr = __Pyx_PyObject_GetAttrStr(obj, name);
-        goto try_unpack;
-    }
-    if (unlikely(tp->tp_dict == NULL) && unlikely(PyType_Ready(tp) < 0)) {
-        return 0;
-    }
-    descr = _PyType_Lookup(tp, name);
-    if (likely(descr != NULL)) {
-        Py_INCREF(descr);
-#if defined(Py_TPFLAGS_METHOD_DESCRIPTOR) && Py_TPFLAGS_METHOD_DESCRIPTOR
-        if (__Pyx_PyType_HasFeature(Py_TYPE(descr), Py_TPFLAGS_METHOD_DESCRIPTOR))
-#elif PY_MAJOR_VERSION >= 3
-        #ifdef __Pyx_CyFunction_USED
-        if (likely(PyFunction_Check(descr) || __Pyx_IS_TYPE(descr, &PyMethodDescr_Type) || __Pyx_CyFunction_Check(descr)))
-        #else
-        if (likely(PyFunction_Check(descr) || __Pyx_IS_TYPE(descr, &PyMethodDescr_Type)))
-        #endif
-#else
-        #ifdef __Pyx_CyFunction_USED
-        if (likely(PyFunction_Check(descr) || __Pyx_CyFunction_Check(descr)))
-        #else
-        if (likely(PyFunction_Check(descr)))
-        #endif
-#endif
-        {
-            meth_found = 1;
-        } else {
-            f = Py_TYPE(descr)->tp_descr_get;
-            if (f != NULL && PyDescr_IsData(descr)) {
-                attr = f(descr, obj, (PyObject *)Py_TYPE(obj));
-                Py_DECREF(descr);
-                goto try_unpack;
-            }
-        }
-    }
-    dictptr = _PyObject_GetDictPtr(obj);
-    if (dictptr != NULL && (dict = *dictptr) != NULL) {
-        Py_INCREF(dict);
-        attr = __Pyx_PyDict_GetItemStr(dict, name);
-        if (attr != NULL) {
-            Py_INCREF(attr);
-            Py_DECREF(dict);
-            Py_XDECREF(descr);
-            goto try_unpack;
-        }
-        Py_DECREF(dict);
-    }
-    if (meth_found) {
-        *method = descr;
-        return 1;
-    }
-    if (f != NULL) {
-        attr = f(descr, obj, (PyObject *)Py_TYPE(obj));
-        Py_DECREF(descr);
-        goto try_unpack;
-    }
-    if (likely(descr != NULL)) {
-        *method = descr;
-        return 0;
-    }
-    type_name = __Pyx_PyType_GetName(tp);
-    PyErr_Format(PyExc_AttributeError,
-#if PY_MAJOR_VERSION >= 3
-                 "'" __Pyx_FMT_TYPENAME "' object has no attribute '%U'",
-                 type_name, name);
-#else
-                 "'" __Pyx_FMT_TYPENAME "' object has no attribute '%.400s'",
-                 type_name, PyString_AS_STRING(name));
-#endif
-    __Pyx_DECREF_TypeName(type_name);
-    return 0;
-#else
-    attr = __Pyx_PyObject_GetAttrStr(obj, name);
-    goto try_unpack;
-#endif
-try_unpack:
-#if CYTHON_UNPACK_METHODS
-    if (likely(attr) && PyMethod_Check(attr) && likely(PyMethod_GET_SELF(attr) == obj)) {
-        PyObject *function = PyMethod_GET_FUNCTION(attr);
-        Py_INCREF(function);
-        Py_DECREF(attr);
-        *method = function;
-        return 1;
-    }
-#endif
-    *method = attr;
-    return 0;
-}
-
-/* PyObjectCallMethod0 */
-static PyObject* __Pyx_PyObject_CallMethod0(PyObject* obj, PyObject* method_name) {
-    PyObject *method = NULL, *result = NULL;
-    int is_method = __Pyx_PyObject_GetMethod(obj, method_name, &method);
-    if (likely(is_method)) {
-        result = __Pyx_PyObject_CallOneArg(method, obj);
-        Py_DECREF(method);
-        return result;
-    }
-    if (unlikely(!method)) goto bad;
-    result = __Pyx_PyObject_CallNoArg(method);
-    Py_DECREF(method);
-bad:
-    return result;
-}
 
 /* ValidateBasesTuple */
 #if CYTHON_COMPILING_IN_CPYTHON || CYTHON_COMPILING_IN_LIMITED_API || CYTHON_USE_TYPE_SPECS

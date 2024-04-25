@@ -35,9 +35,12 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     This function contains the primary impurity ion following routine.
     """
     
-    # Define variables to use as much C++ as possible here.
+    # Define variables to use as much C++ as possible here. Some more variables
+    # are defined later since there is not strong convention to define them
+    # all up front or as they're introduced. 
     cdef int i, j, imp_zstart_int, x_idx, y_idx, z_idx, fstart, fend, f
     cdef int loop_counts, iz_warn_count, rc_warn_count, coll_count
+    cdef int var_count_qualifier, num_add_imps, coll_warn_count, charge
     cdef float x, y, z, local_ne, local_te, local_ti, local_ni
     cdef float local_ex, local_ey, local_ez, iz_coef, rc_coef, iz_prob
     cdef float rc_prob, ran, local_bz, print_percent, perc_done
@@ -61,16 +64,14 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     cdef bint coll_forces = input_opts["coll_forces"]
     cdef bint collisions = input_opts["collisions"]
     cdef bint imp_xyz_tracks = input_opts["imp_xyz_tracks"]
-    
-    # If we interpolated frames the end frame for our context will be
-    # larger by gkyl_num_interp + 1. See read_gkyl.interp_frames for
-    # more info. 
-    #gkyl_num_interp = input_opts["gkyl_num_interp"]
-    #if gkyl_num_interp is not None:
-    #    gkyl_fend *= (gkyl_num_interp + 1)
-    
+    cdef bint var_reduction = input_opts["var_reduction"]
+    cdef float var_reduction_freq = input_opts["var_reduction_freq"]
+    cdef float var_reduction_min_weight = input_opts["var_reduction_min_weight"]
+        
     # Check the both collisional forces and fully kinetic collisions are not
-    # both on. In theory the latter captures the other.
+    # both on. In theory the latter captures the other. Eventually should
+    # remove anything with coll_forces since it is a (probably bad) 
+    # approximation.
     if coll_forces and collisions:
         print("Error! coll_forces and collisions cannot both be on. Choose one")
         sys.exit()
@@ -87,12 +88,9 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     z_bins = np.arange(gkyl_bkg["z"][0] - zwidth / 2, 
         gkyl_bkg["z"][-1] + zwidth / 2, zwidth)
 
-
-    # Other options where it isn't a big deal if they aren't C types.
-    imp_zstart_opt = input_opts["imp_zstart_opt"]
-    imp_zstart_int = 0
-    
     # Convert the imp_zstart option into an integer - just easier.
+    imp_zstart_int = 0
+    imp_zstart_opt = input_opts["imp_zstart_opt"]
     if imp_zstart_opt == "proportional_to_ni":
         imp_zstart_int = 1
         
@@ -100,15 +98,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
         # CDFs that we will choose from later. This is tricky to
         # visualize in your head, but we are creating a normalized
         # PDF along the z direction for each x,y coordinate, and then
-        # using cumsum to convert it to a CDF. 
-        #zstart_cdf = np.zeros(gkyl_bkg["ni_avg"].shape)
-        #for i in range(zstart_cdf.shape[0]):
-        #    for j in range(zstart_cdf.shape[1]):
-        #        zstart_cdf[i,j] = np.cumsum(gkyl_bkg["ni_avg"][i,j] / 
-        #            gkyl_bkg["ni_avg"][i,j].sum())
-
-
-        # Do it for each frame.
+        # using cumsum to convert it to a CDF. Do it for each frame.
         zstart_cdf = np.zeros(gkyl_bkg["ni"].shape)
         for f in range(zstart_cdf.shape[0]):
             for i in range(zstart_cdf.shape[1]):
@@ -125,9 +115,6 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
         sys.exit()
     
     # Get the dimensions of the Gkeyll volume.
-    #nx = len(gkyl_bkg["x"])
-    #ny = len(gkyl_bkg["y"])
-    #nz = len(gkyl_bkg["z"])
     gkyl_x = gkyl_bkg["x"] 
     gkyl_y = gkyl_bkg["y"]
     gkyl_z = gkyl_bkg["z"]
@@ -142,7 +129,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     cdef float dt = gkyl_bkg["time"][1] - gkyl_bkg["time"][0]
     print("Simulation timestep: {:.2e} s".format(dt))
     
-    # Load the Gkeyll background into memory views. 
+    # Load the Gkeyll background into memory views, which have faster access. 
     cdef float[:,:,:,:] gkyl_ne = gkyl_bkg["ne"]
     cdef float[:,:,:,:] gkyl_te = gkyl_bkg["te"]
     cdef float[:,:,:,:] gkyl_ni = gkyl_bkg["ni"]
@@ -153,7 +140,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     cdef float[:,:,:,:] gkyl_viz = gkyl_bkg["viz"]
     cdef float[:,:,:] gkyl_b = gkyl_bkg["b"]
     
-    # These need to be converted from eV/m to J/m.
+    # These need to be converted from eV/m to J/m. 
     cdef float[:,:,:,:] gkyl_dtedx = gkyl_bkg["dtedx"] * constants.ev
     cdef float[:,:,:,:] gkyl_dtedy = gkyl_bkg["dtedy"] * constants.ev
     cdef float[:,:,:,:] gkyl_dtedz = gkyl_bkg["dtedz"] * constants.ev
@@ -239,7 +226,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
             
         return interps
     
-    # Remember, these lists are 0-index, so for a specific charge number
+    # Remember, these lists are 0-indexed, so for a specific charge number
     # we will want to index it with charge-1. The functions are called
     # with interps[charge-1](local_te, local_ne).
     interps_rc = create_interps(rate_df_rc, imp_atom_num)
@@ -247,9 +234,9 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     
     if collisions:
 
-        # Calculate the collision frequency arrays up front. We intentionally pass
-        # the non-cythonized arrays to make life easier in the function. Doesn't
-        # matter much since this is only called once.
+        # Calculate the collision frequency arrays up front. We intentionally 
+        # pass the non-cythonized arrays to make life easier in the function. 
+        # Doesn't matter much since this is only called once and we use numpy.
         print("Calculating collision frequencies...")
         coll_freq_arr_py = calc_coll_freq_arr(gkyl_bkg["ne"], gkyl_bkg["ni"], 
             gkyl_bkg["te"], gkyl_bkg["ti"], input_opts["imp_mass"], imp_atom_num) 
@@ -268,6 +255,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     # There doesn't seem to be any effect on the simulation from them. 
     coll_freq_arr_py[np.isnan(coll_freq_arr_py)] = 0.0
 
+    # Create memory view of it for faster access.
     cdef float[:,:,:,:,:] coll_freq_arr = np.array(coll_freq_arr_py, 
         dtype=np.float32)
 
@@ -286,8 +274,8 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     imp_vy_arr = np.zeros(gkyl_bkg["ne"].shape)
     
     # Lists to record the impurity ion tracks. I am going to hardcode
-    # a safegaurd in here for now, since I don't want to accidentaly run
-    # this and make a massive output file. I think you shoul dbe able to
+    # a safegaurd in here for now, since I don't want to accidentally run
+    # this and make a massive output file. I think you should be able to
     # accomplish any goals you need with 1,000 particles anyways.
     if imp_xyz_tracks:
         if num_imps > 1000:
@@ -299,101 +287,141 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
         xyz_lists_x = [[] for i in range(num_imps)]
         xyz_lists_y = [[] for i in range(num_imps)]
         xyz_lists_z = [[] for i in range(num_imps)]
+
+    # Determine after how often variance reduction should be recalculated in
+    # terms of every X particles. This may seem like a verbose way to implement
+    # this, but just modulo'ing the impurity number is not general enough. If 
+    # you have 7 particles and var_reduction_freq = 0.1, then the statement:
+    #   if i / num_imp == var_reduction_freq
+    # will never execute. 
+    cdef int var_red_part_freq = 0
+    cdef int var_red_part_count = 0
+
+    # Fringe and silly case, but nonetheless. 
+    if num_imps * var_reduction_freq < 1:
+        var_red_part_freq = 1
+
+    # Round to nearest integer.
+    else:
+        var_red_part_freq = round(num_imps * var_reduction_freq)
    
-    # Dictionary containing some statistics.
+    # Debugging dictionary containing some statistics.
     stat_dict = {"low_xbound_count":0, "high_xbound_count":0, 
         "low_zbound_count":0, "high_zbound_count":0, 
         "low_xbound_time":0.0, "coll_events":0, "total_imp_time":0.0}
+
+    # Initialize to avoid compiler warning.
+    local_dtedx = 0.0
+    local_dtedy = 0.0
+    local_dtedz = 0.0
+    local_dtidx = 0.0
+    local_dtidy = 0.0
+    local_dtidz = 0.0
 
     # Initialize some loop variables.
     loop_counts = 0
     iz_warn_count = 0
     rc_warn_count = 0
+    coll_warn_count = 0
     avg_time_followed = 0.0
+    var_count_qualifier = 0
+    num_add_imps = 0
+    z = 0.0
     imp_foll_tstart = time.time()
 
     # Loop through tracking the full path of one impurity at a time.
     print("Beginning impurity following...")
-    
-    # We have two different loops, depending on if we want to run in 
-    # parallel. This is because cython parallel loops have the 
-    # limitation of requiring "nogil", which long story short means no
-    # python operations (e.g., np.argmin) are allowed. I think this
-    # also include python classes, so we do away with PyImpurity too.
-    if parallel:
+    for i in tqdm(range(0, num_imps)):
+
+        # Before starting an impurity, check if variance reduction needs to
+        # be recalculated. We use a scheme based on splitting particles using
+        # the collision probability in high variance (low count) regions. 
+        if var_red_part_count == var_red_part_freq:
+
+            # Use the median number of counts so far as the criteria for if a
+            # particle is split (below median indicates the particle is in a 
+            # low count region, which means it's important). 
+            var_count_qualifier = np.median(
+                imp_count_arr[np.nonzero(imp_count_arr)])
+            print("var_count_qualifier: {}".format(var_count_qualifier))
+            var_red_part_count = 0
+        else:
+            var_red_part_count += 1
+ 
+        # Assume impurity can start at any frame (this means we are 
+        # assuming a constant impurity source). This could lead to 
+        # low statistics at the starting frames, should be studied. 
+        fstart_fl = fend_fl * fstart_rans[i]
+        fstart = np.floor(fstart_fl)
+
+        # Determine random starting location. First is uniform between
+        # xmin and xmax. 
+        x = imp_xmin + (imp_xmax - imp_xmin) * xstart_rans[i]
         
-        pass
-        #for i in prange(num_imps, nogil=True):
-        #    pass
+        # We assume symmetry in the y direction, so uniformily
+        # distributed between those as well.
+        y = gkyl_ymin + (gkyl_ymax - gkyl_ymin) * ystart_rans[i]
         
-    else:
-        for i in tqdm(range(0, num_imps)):
-            
-            # Assume impurity can start at any frame (this means we are 
-            # assuming a constant impurity source). This could lead to 
-            # low statistics at the starting frames, should be studied. 
-            #fstart_fl = gkyl_fstart_fl + (gkyl_fend_fl - gkyl_fstart_fl) * \
-            #    fstart_rans[i]
-            #fstart = np.round(fstart_fl)
-            fstart_fl = fend_fl * fstart_rans[i]
-            fstart = np.floor(fstart_fl)
+        # Next determine starting z location. 
+        #   1: This will be the closest value in the CDF, proportional
+        #        to the ion density.
+        #   2: Value specified. 
+        if imp_zstart_int == 1:
+            x_idx = np.argmin(np.abs(x - gkyl_x))
+            y_idx = np.argmin(np.abs(y - gkyl_y))
+            z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx] 
+                - zstart_rans_coarse[i]))
 
-            # Determine random starting location. First is uniform between
-            # xmin and xmax. 
-            x = imp_xmin + (imp_xmax - imp_xmin) * xstart_rans[i]
-            
-            # We assume symmetry in the y direction, so uniformily
-            # distributed between those as well.
-            y = gkyl_ymin + (gkyl_ymax - gkyl_ymin) * ystart_rans[i]
-            
-            # Next determine starting z location. 
-            #   1: This will be the closest value in the CDF, proportional
-            #        to the ion density.
-            #   2: Value specified. 
-            # Assign z = 0.0 to suppress compiler warning. 
-            z = 0.0
-            if imp_zstart_int == 1:
-                x_idx = np.argmin(np.abs(x - gkyl_x))
-                y_idx = np.argmin(np.abs(y - gkyl_y))
-                z_idx = np.argmin(np.abs(zstart_cdf[fstart, x_idx, y_idx] 
-                    - zstart_rans_coarse[i]))
+            # To avoid picking at the same z location, chose uniformly
+            # between each bounding z value.
+            z = (gkyl_z[z_idx] - zwidth / 2) + zwidth * zstart_rans_fine[i]
 
-                # To avoid picking at the same z location, chose uniformly
-                # between each bounding z value.
-                #if z_idx < len(gkyl_z) - 1:
-                #    z = gkyl_z[z_idx] + (gkyl_z[z_idx + 1] - gkyl_z[z_idx]) \
-                #        * zstart_rans_fine[i]
-                #else:
-                #    z = gkyl_z[z_idx] + (gkyl_z[z_idx - 1] - gkyl_z[z_idx]) \
-                #        * zstart_rans_fine[i]
-                z = (gkyl_z[z_idx] - zwidth / 2) + zwidth * zstart_rans_fine[i]
+        elif imp_zstart_int == 2:
+            z = imp_zstart_val
+                       
+        # Now create our Impurity object. Starts with weight = 1.0.
+        imp = PyImpurity(imp_atom_num, imp_mass, x, y, z, imp_init_charge, 
+            fstart, 1.0)
 
-                #z = gkyl_z[z_idx]
-            elif imp_zstart_int == 2:
-                z = imp_zstart_val
-                        
-            # Now create our Impurity object. 
-            imp = PyImpurity(imp_atom_num, imp_mass, x, y, z, 
-                imp_init_charge, fstart)
+        # Counter to track how many collisions the ion had.
+        coll_count = 0
 
-            # Counter to track how many collisions the ion had.
-            coll_count = 0
-            
-            # Debug print statement to get a sense of where impurities are
-            # being born.
-            #if i > 0 and i % (num_imps / print_percent) == 0:
-            #    print("  x = {:.4f}".format(x))
-            #    print("  y = {:.4f}".format(y))
-            #    print("  z = {:.4f}".format(z))
-            #    print("  f = {:}".format(fstart))
-            
-            # Track transport of ions one frame at a time. Not all 
-            # impurities will start at the first Gkeyll frame by design. The
-            # first frame an impurity starts at is fstart, which when 
-            # 0-indexed is fstart - gkyl_fstart, and the final frame it can
-            # reach is gkyl_end-gkyl_fstart when 0-indexed.
-            #for f in range(fstart-gkyl_fstart, gkyl_fend-gkyl_fstart):
-            for f in range(fstart, fend):
+        # Put impurity into a list. At first this may seem confusing, why put 
+        # it in a list by itself? But if particles are split then we would add 
+        # that additional split particle to this list. The idea then is to
+        # only move onto the next particle once this list is empty. You can
+        # think of the number of particles as:
+        # Particle #1
+        # Particle #2 - Split
+        #   Particle #2a - The split particle, added to list.
+        # Particle #3 - Split
+        #   Particle #3a - The split particle, added to list, which gets split 
+        #                   again
+        #       Particle #3b - The split particle, added to list
+        # And so on...
+        additional_imps = [imp]
+        
+        # Debug print statement to get a sense of where impurities are
+        # being born.
+        #if i > 0 and i % (num_imps / print_percent) == 0:
+        #    print("  x = {:.4f}".format(x))
+        #    print("  y = {:.4f}".format(y))
+        #    print("  z = {:.4f}".format(z))
+        #    print("  f = {:}".format(fstart))
+        
+        # Track transport of ions one frame at a time. Not all 
+        # impurities will start at the first Gkeyll frame by design. The
+        # first frame an impurity starts at is fstart, which when 
+        # 0-indexed is fstart - gkyl_fstart, and the final frame it can
+        # reach is gkyl_end-gkyl_fstart when 0-indexed.
+        #for f in range(fstart, fend):
+        while additional_imps:
+
+            # Pop the ion from the list (this removes it from the list). 
+            # Therefore the "while additional_imps:" loop will not execute
+            # once this list is empty.
+            imp = additional_imps.pop()
+            for f in range(imp.fstart, fend):
                 
                 # Update nearest index values.
                 x_idx = np.argmin(np.abs(imp.x - gkyl_x))
@@ -401,10 +429,10 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                 z_idx = np.argmin(np.abs(imp.z - gkyl_z))
 
                 # Add particle weight and count in our arrays. The particle
-                # weights is just the timestep. You can think of this as
-                # a particle in a cell is really only dt / (1 s) of a 
-                # particle.
-                imp_weight_arr[f, x_idx, y_idx, z_idx] += dt
+                # weight is multiplied by the timestep. You can think of this as
+                # a particle in a cell is really only dt / (1 s) of a particle.
+                #print(imp.weight)
+                imp_weight_arr[f, x_idx, y_idx, z_idx] += imp.weight * dt
                 imp_count_arr[f, x_idx, y_idx, z_idx] += 1
                 
                 # Likewise for particle velocity.
@@ -438,14 +466,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                     local_dtidx = gkyl_dtidx[f, x_idx, y_idx, z_idx]
                     local_dtidy = gkyl_dtidy[f, x_idx, y_idx, z_idx]
                     local_dtidz = gkyl_dtidz[f, x_idx, y_idx, z_idx]
-                else:
-                    local_dtedx = 0.0
-                    local_dtedy = 0.0
-                    local_dtedz = 0.0
-                    local_dtidx = 0.0
-                    local_dtidy = 0.0
-                    local_dtidz = 0.0
-                
+                                    
                 # Use ADAS to determine ionization/recombination 
                 # probabilities, then pull a random number and see if we
                 # are doing either of those. First load the rate 
@@ -453,8 +474,9 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                 # that we already loaded before the main loop.
                 #print("te={:.2f}  ti={:.2f}  ne={:.2e}  charge={}".format(
                 #    local_te, local_ti, local_ne, imp.charge))
-                rc_coef = interps_rc[imp.charge-1]((local_te, local_ne))
-                iz_coef = interps_iz[imp.charge-1]((local_te, local_ne))
+                charge = imp.charge
+                rc_coef = interps_rc[charge-1]((local_te, local_ne))
+                iz_coef = interps_iz[charge-1]((local_te, local_ne))
                     
                 # The probability of a ion ionizing/recombining during the 
                 # timestep is then: 
@@ -463,9 +485,9 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                 rc_prob = rc_coef * local_ne * dt
                 
                 # Pull random number, if it is less than the probability
-                # then we have an event. Unfortunately we are pulling a
-                # random number every loop, so this could probably be
-                # optimized a bit. We go maybe a little faster 
+                # then we have an event. Unfortunately we are pulling two
+                # random numbers every loop here, so this could probably be
+                # optimized a bit.
                 ran = np.random.random()
                 if ran < iz_prob and imp.charge < imp_atom_num:
                     imp.charge += 1
@@ -489,32 +511,68 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                     rc_warn_count += 1
                     
                 # Perform step. imp object is updated within.
-                #print("Before imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} {:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx, 
-                #    imp.vy, imp.vz))
+                #print("Before imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} " \
+                #   "{:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx, 
+                #   imp.vy, imp.vz))
                 imp_step(imp, local_ex, local_ey, local_ez, local_bz, dt, 
                     local_dtedx, local_dtedy, local_dtedz, local_dtidx, 
                     local_dtidy, local_dtidz, local_viz, local_stop_time, 
                     alpha, beta, coll_forces)
-                #print("After imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} {:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx, 
-                #    imp.vy, imp.vz))
+                #print("After imp_step: {:.6f}  {:.6f}  {:.6f} ({:.3e} " \
+                #   "{:.3e}  {:.3e})".format(imp.x, imp.y, imp.z, imp.vx, 
+                #   imp.vy, imp.vz))
                 #print("{}-{}: x={:.4f}  y={:.4f}  z={:.4f}  ({}, {}, {})"
                 #    .format(i, f, imp.x, imp.y, imp.z, x_idx, y_idx, z_idx))
 
                 if collisions:
                     
                     # Test for a collision. If a collision occurs, the velocity
-                    # vector will be shifted by 90 degrees in a random direction.
+                    # vector will be shifted by 90 degrees in a random 
+                    # direction.
                     ran = np.random.random()
-                    coll_freq = coll_freq_arr[imp.charge-1, f, x_idx, y_idx, z_idx]
+                    charge = imp.charge
+                    coll_freq = coll_freq_arr[charge-1, f, x_idx, y_idx, z_idx]
                     coll_prob = coll_freq * dt
-                    #print("{:} {:} {:} {:} {:} Coll: {:.2e}  Prob = {:.3e}".format(imp.charge, f, x_idx, y_idx, z_idx, coll_freq, coll_prob))
+                    #print("{:} {:} {:} {:} {:} Coll: {:.2e}  " \
+                    #   "Prob = {:.3e}".format(imp.charge, f, x_idx, y_idx, 
+                    #   z_idx, coll_freq, coll_prob))
+                    if coll_prob > 1:
+                        print("Error: coll_prob > 1 ({})".format(coll_prob))
+                        coll_warn_count += 1
 
                     # Collision occured! Rotate velocity vector 90 degrees.
                     if ran < coll_prob:
                         rotate_vel_vector(imp)
                         coll_count += 1
                         stat_dict["coll_events"] += 1
-                    
+
+                    # If a collision does not occur, we can still leverage the
+                    # probability of a collision to split the particle in low
+                    # count (high important) regions to improve statistics. 
+                    # Sorry for the ugly if statements, I blame the deep
+                    # indentation!
+                    elif var_reduction and (imp.weight > 
+                        var_reduction_min_weight):
+                        if (imp_count_arr[f,x_idx,y_idx,z_idx] <=
+                            var_count_qualifier):
+
+                            # Split the particle. Each new particle weight is 
+                            # proportional to the collision probability. One 
+                            # will just be a continuation of the current 
+                            # particle with reduced weight, while the other is 
+                            # added to the list to be followed later. Its 
+                            # weight is the original particle weight times the 
+                            # collision probability. You can think of this as
+                            # there is still only the original total weight to
+                            # keep track of, now it's just split between two
+                            # particles. The accounting all adds up to the same
+                            # in the end.
+                            imp.weight = imp.weight * (1 - coll_prob)
+                            additional_imps.append(PyImpurity(imp_atom_num, 
+                                imp_mass, imp.x, imp.y, imp.z, imp.charge, f, 
+                                imp.weight * coll_prob))
+                            num_add_imps += 1
+              
                 loop_counts += 1
                 avg_time_followed += dt
                 stat_dict["total_imp_time"] += dt
@@ -547,6 +605,9 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     cpu_time_used = imp_foll_tend - imp_foll_tstart
     print("Time spent following impurities: {:.1f} s".format(cpu_time_used))
 
+    # Print how many additional impurities were printed.
+    print("Additional split impurities followed: {}".format(num_add_imps))
+
     # Calculate the impurity density. This is only for 3D cartesian
     # grid. Normalize to the sum then divide by the volume of each cell
     # to get values in s/m3. Finally multiply by the scaling factor
@@ -564,7 +625,7 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
         imp_vy_arr /= imp_count_arr
     
     # Average time following an impurity ion.
-    avg_time_followed /= num_imps
+    avg_time_followed /= (num_imps + num_add_imps)
     
     # Print how many time we had an ionization or recombination warning.
     if iz_warn_count > 0:
@@ -577,7 +638,12 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
             ">1 {:} times, or {:.2e}% of the time. " \
             "Consider a smaller timestep.".format(rc_warn_count, 
             rc_warn_count/loop_counts*100))
-    
+    if coll_warn_count > 0:
+        print("Warning: The collision probability (coll_prob) was " \
+            ">1 {:} times, or {:.2e}% of the time. " \
+            "Consider a smaller timestep.".format(coll_warn_count, 
+            coll_warn_count/loop_counts*100))
+
     # For now just print this, not gonna bother making it all pretty since
     # I'm abandoning this version of the code soon.
     print("stat_dict")
@@ -840,46 +906,6 @@ def calc_coll_freq_arr(ne, ni, te, ti, imp_mass, imp_atom_num):
             lnalpha_corr / (mz * mr) / (np.power(ti / mz, 3/2) + 1.3 * \
             np.power(ti / mi, 3/2))
 
-        """
-        if ZZ == 5:
-            print("term1")
-            print((4 * np.pi * np.square(eps0) * mz * mr))
-            print("term2")
-            print((np.power(vtz[0,0,0,0], 3) + 1.3 * np.power(vti[0,0,0,0], 3)))
-            print("term3")
-            print(np.square(ZZ*ev) * np.square(Zi*ev) * ni[0,0,0,0] * lnalpha_corr[0,0,0,0])
-            print("ZZ")
-            print(ZZ)
-            print("Zi")
-            print(Zi)
-            print("ni")
-            print(ni[0,0,0,0])
-            print("te")
-            print(te[0,0,0,0])
-            print("ne")
-            print(ne[0,0,0,0])
-            print("vtz")
-            print(vtz[0,0,0,0])
-            print("vti")
-            print(vti[0,0,0,0])
-            print("eps0")
-            print(eps0)
-            print("lnalpha_corr")
-            print(lnalpha_corr[0,0,0,0])
-            print("nu_corr")
-            print(nu_corr[0,0,0,0])
-            print("num = {:.2e}".format(num[0,0,0,0]))
-            print("den1 = {:.2e}".format(den1))
-            print("den2 = {:.2e}".format(den2[0,0,0,0]))
-            print(num[0,0,0,0] / den1 / den2[0,0,0,0])
-            print("num breakdown")
-            print(" np.square(ZZ*ev) = {:.2e}".format(np.square(ZZ*ev)))
-            print(" np.square(Zi*ev) = {:.2e}".format(np.square(Zi*ev)))
-            print(" ni = {:.2e}".format(ni[0,0,0,0]))
-            print(" lnalpha_corr = {:.2e}".format(lnalpha_corr[0,0,0,0]))
-        """
-
-
         # Put into list.
         nu_imp_ion.append(nu_corr)
 
@@ -944,3 +970,7 @@ cdef rotate_vel_vector(imp):
     #print("{:7.1f} {:7.1f}".format(old_vect[2], imp.vz))
     #dp = old_vect[0]*imp.vx + old_vect[1]*imp.vy + old_vect[2]*imp.vz
     #print("Dot product: {:.3e}".format(dp))
+
+
+
+
