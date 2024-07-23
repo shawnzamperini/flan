@@ -3,7 +3,7 @@ if [ `dirname "$0"` == "." ]
   then
     cd ..
 fi
-export FLANSOFT=$HOME/gkylsoft
+export FLANSOFT=$HOME/flansoft
 export MACHINE_NAME='macos'
 cd install-deps
 

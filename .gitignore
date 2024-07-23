@@ -6,6 +6,6 @@ src/impurity_transport.cpp
 src/imp_cpp.cpp
 .DS_Store
 *.vim
-install-deps/*
 build/*
 python/__pycache__
+install-deps/adios*
