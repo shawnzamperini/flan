@@ -84,6 +84,14 @@ cdef class PyImpurity:
     
     # Attribute access
     @property
+    def tz(self):
+        return self.c_imp.tz
+    @tz.setter
+    def tz(self, tz):
+        self.c_imp.tz = tz
+
+    # Attribute access
+    @property
     def mass(self):
         return self.c_imp.mass
     @mass.setter

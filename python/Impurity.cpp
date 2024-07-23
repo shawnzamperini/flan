@@ -24,6 +24,7 @@ namespace impurities {
         this->vx=0;
         this->vy=0;
         this->vz=0;
+        this->tz=0;
         this->t=0;
     
     }

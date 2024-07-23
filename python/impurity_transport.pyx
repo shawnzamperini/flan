@@ -114,6 +114,22 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
             .format(imp_zstart_opt))
         sys.exit()
     
+    # Convert the tz_opt into an int, easier to work with that way. 
+    # 0: tz_opt = "equal_to_ti"
+    # 1: tz_opt = "based_on_vz"
+    tz_opt_int = 0
+    tz_opt = input_opts["tz_opt"]
+    print(tz_opt)
+    if tz_opt == "equal_to_ti":
+        tz_opt_int = 0
+    elif tz_opt == "based_on_vz":
+        tz_opt_int = 1
+    else:
+        print("Error: tz_opt input not recognized: {}"
+                .format(tz_opt))
+        sys.exit()
+    print(tz_opt_int)
+
     # Get the dimensions of the Gkeyll volume.
     gkyl_x = gkyl_bkg["x"] 
     gkyl_y = gkyl_bkg["y"]
@@ -232,7 +248,10 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     interps_rc = create_interps(rate_df_rc, imp_atom_num)
     interps_iz = create_interps(rate_df_iz, imp_atom_num)
     
-    if collisions:
+    # We can only calculate the collision frequency up front if we assume Tz = Ti.
+    # Otherwise we need to calculate it on the fly in the main particle following
+    # loop. 
+    if collisions and tz_opt_int == 0:
 
         # Calculate the collision frequency arrays up front. We intentionally 
         # pass the non-cythonized arrays to make life easier in the function. 
@@ -273,6 +292,9 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
     imp_vx_arr = np.zeros(gkyl_bkg["ne"].shape)
     imp_vy_arr = np.zeros(gkyl_bkg["ne"].shape)
     
+    # Array to track average particle temperature. 
+    imp_tz_arr = np.zeros(gkyl_bkg["ne"].shape)
+
     # Lists to record the impurity ion tracks. I am going to hardcode
     # a safegaurd in here for now, since I don't want to accidentally run
     # this and make a massive output file. I think you should be able to
@@ -439,6 +461,10 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                 imp_vx_arr[f, x_idx, y_idx, z_idx] += imp.vx
                 imp_vy_arr[f, x_idx, y_idx, z_idx] += imp.vy
                 
+                # And again for particle temperature. The temperature gets set
+                # later, depends on the options. 
+                imp_tz_arr[f, x_idx, y_idx, z_idx] += imp.tz
+                
                 # If desired, save the tracks of each impurity in (x,y,z)
                 # and/or (vx,vy,vz) space.
                 #if imp_xyz_tracks:
@@ -458,6 +484,18 @@ def follow_impurities(input_opts, gkyl_bkg, parallel=False):
                 local_viz = gkyl_viz[f, x_idx, y_idx, z_idx]
                 local_stop_time = stop_time[f, x_idx, y_idx, z_idx]
                 
+                # Assign/calculate the impurity temperature.
+                if tz_opt_int == 0:
+                    imp.tz = local_ti
+                elif tz_opt_int == 1:
+
+                    # Calculated based on the perpendicular particle
+                    # motion: v_perp = sqrt(2Tz / mz)
+                    # Tz here is in eV.
+                    imp.tz = (imp.vx*imp.vx + imp.vy*imp.vy) * \
+                        imp.mass / 2.0 / constants.ev
+                    print("{}: ({:.4f}, {:.4f}, {:.4f})  imp.tz = {:.2f}  (ti = {:.2f})".format(i, imp.x, imp.y, imp.z, imp.tz, local_ti))
+
                 # Only need these if the collisional forces are on.
                 if coll_forces:
                     local_dtedx = gkyl_dtedx[f, x_idx, y_idx, z_idx]

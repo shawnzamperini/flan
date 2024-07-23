@@ -1,0 +1,13 @@
+# Input file for Flan testcase01. Lines starting with a # are ignored.
+# Input options are specified with their name and value separated by a |, e.g.,
+#    variable_name | 5
+# Any additional spaces (except those surrounding the |) are ignored. 
+
+# The Gkeyll casename that provides the background plasma, as well as the 
+# frames to load in. 
+gkyl_casename           | gk-sheath
+gkyl_frame_start        | 0
+gkyl_frame_end          | 5
+
+# Impurity ion mass (amu)
+imp_mass                | 183.84

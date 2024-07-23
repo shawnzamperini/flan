@@ -3,12 +3,6 @@
 /* BEGIN: Cython Metadata
 {
     "distutils": {
-        "extra_compile_args": [
-            "-fopenmp"
-        ],
-        "extra_link_args": [
-            "-fopenmp"
-        ],
         "include_dirs": [
             "/Users/zamperini/opt/anaconda3/envs/pgkyl/lib/python3.11/site-packages/numpy/core/include"
         ],

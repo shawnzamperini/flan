@@ -14,5 +14,5 @@ cdef extern from "Impurity.h" namespace "impurities":
         Impurity() except +
         Impurity(int, float, float, float, float, int, int, float) except +
         int fstart, imp_atom_num, charge;
-        float mass, x, y, z, vx, vy, vz, t, xstart, zstart, weight;
+        float mass, x, y, z, vx, vy, vz, tz, t, xstart, zstart, weight;
         vector[float] xhist, yhist, zhist, vxhist, vyhist, vzhist;

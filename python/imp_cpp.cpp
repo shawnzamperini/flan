@@ -2213,6 +2213,8 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_2vy___get__(struct __pyx_obj_7im
 static int __pyx_pf_7imp_cpp_10PyImpurity_2vy_2__set__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self, PyObject *__pyx_v_vy); /* proto */
 static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_2vz___get__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self); /* proto */
 static int __pyx_pf_7imp_cpp_10PyImpurity_2vz_2__set__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self, PyObject *__pyx_v_vz); /* proto */
+static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_2tz___get__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self); /* proto */
+static int __pyx_pf_7imp_cpp_10PyImpurity_2tz_2__set__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self, PyObject *__pyx_v_tz); /* proto */
 static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_4mass___get__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self); /* proto */
 static int __pyx_pf_7imp_cpp_10PyImpurity_4mass_2__set__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self, PyObject *__pyx_v_mass); /* proto */
 static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_1t___get__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self); /* proto */
@@ -3784,6 +3786,129 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_2vz_2__set__(struct __pyx_obj_7imp_cpp
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
+ *     def tz(self):
+ *         return self.c_imp.tz
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_7imp_cpp_10PyImpurity_2tz_1__get__(PyObject *__pyx_v_self); /*proto*/
+static PyObject *__pyx_pw_7imp_cpp_10PyImpurity_2tz_1__get__(PyObject *__pyx_v_self) {
+  CYTHON_UNUSED PyObject *const *__pyx_kwvalues;
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__ (wrapper)", 0);
+  __pyx_kwvalues = __Pyx_KwValues_VARARGS(__pyx_args, __pyx_nargs);
+  __pyx_r = __pyx_pf_7imp_cpp_10PyImpurity_2tz___get__(((struct __pyx_obj_7imp_cpp_PyImpurity *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_2tz___get__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("__get__", 1);
+
+  /* "imp_cpp.pyx":88
+ *     @property
+ *     def tz(self):
+ *         return self.c_imp.tz             # <<<<<<<<<<<<<<
+ *     @tz.setter
+ *     def tz(self, tz):
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.tz); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 88, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "imp_cpp.pyx":86
+ * 
+ *     # Attribute access
+ *     @property             # <<<<<<<<<<<<<<
+ *     def tz(self):
+ *         return self.c_imp.tz
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("imp_cpp.PyImpurity.tz.__get__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "imp_cpp.pyx":89
+ *     def tz(self):
+ *         return self.c_imp.tz
+ *     @tz.setter             # <<<<<<<<<<<<<<
+ *     def tz(self, tz):
+ *         self.c_imp.tz = tz
+ */
+
+/* Python wrapper */
+static int __pyx_pw_7imp_cpp_10PyImpurity_2tz_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_tz); /*proto*/
+static int __pyx_pw_7imp_cpp_10PyImpurity_2tz_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_tz) {
+  CYTHON_UNUSED PyObject *const *__pyx_kwvalues;
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__ (wrapper)", 0);
+  __pyx_kwvalues = __Pyx_KwValues_VARARGS(__pyx_args, __pyx_nargs);
+  __pyx_r = __pyx_pf_7imp_cpp_10PyImpurity_2tz_2__set__(((struct __pyx_obj_7imp_cpp_PyImpurity *)__pyx_v_self), ((PyObject *)__pyx_v_tz));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_7imp_cpp_10PyImpurity_2tz_2__set__(struct __pyx_obj_7imp_cpp_PyImpurity *__pyx_v_self, PyObject *__pyx_v_tz) {
+  int __pyx_r;
+  float __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+
+  /* "imp_cpp.pyx":91
+ *     @tz.setter
+ *     def tz(self, tz):
+ *         self.c_imp.tz = tz             # <<<<<<<<<<<<<<
+ * 
+ *     # Attribute access
+ */
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_tz); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 91, __pyx_L1_error)
+  __pyx_v_self->c_imp.tz = __pyx_t_1;
+
+  /* "imp_cpp.pyx":89
+ *     def tz(self):
+ *         return self.c_imp.tz
+ *     @tz.setter             # <<<<<<<<<<<<<<
+ *     def tz(self, tz):
+ *         self.c_imp.tz = tz
+ */
+
+  /* function exit code */
+  __pyx_r = 0;
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("imp_cpp.PyImpurity.tz.__set__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  __pyx_L0:;
+  return __pyx_r;
+}
+
+/* "imp_cpp.pyx":94
+ * 
+ *     # Attribute access
+ *     @property             # <<<<<<<<<<<<<<
  *     def mass(self):
  *         return self.c_imp.mass
  */
@@ -3812,7 +3937,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_4mass___get__(struct __pyx_obj_7
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 1);
 
-  /* "imp_cpp.pyx":88
+  /* "imp_cpp.pyx":96
  *     @property
  *     def mass(self):
  *         return self.c_imp.mass             # <<<<<<<<<<<<<<
@@ -3820,13 +3945,13 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_4mass___get__(struct __pyx_obj_7
  *     def mass(self, mass):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 88, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.mass); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 96, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "imp_cpp.pyx":86
+  /* "imp_cpp.pyx":94
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -3845,7 +3970,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_4mass___get__(struct __pyx_obj_7
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":89
+/* "imp_cpp.pyx":97
  *     def mass(self):
  *         return self.c_imp.mass
  *     @mass.setter             # <<<<<<<<<<<<<<
@@ -3875,17 +4000,17 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_4mass_2__set__(struct __pyx_obj_7imp_c
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "imp_cpp.pyx":91
+  /* "imp_cpp.pyx":99
  *     @mass.setter
  *     def mass(self, mass):
  *         self.c_imp.mass = mass             # <<<<<<<<<<<<<<
  * 
  *     # Attribute access
  */
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_mass); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 91, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_mass); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 99, __pyx_L1_error)
   __pyx_v_self->c_imp.mass = __pyx_t_1;
 
-  /* "imp_cpp.pyx":89
+  /* "imp_cpp.pyx":97
  *     def mass(self):
  *         return self.c_imp.mass
  *     @mass.setter             # <<<<<<<<<<<<<<
@@ -3903,7 +4028,7 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_4mass_2__set__(struct __pyx_obj_7imp_c
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":94
+/* "imp_cpp.pyx":102
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -3935,7 +4060,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_1t___get__(struct __pyx_obj_7imp
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 1);
 
-  /* "imp_cpp.pyx":96
+  /* "imp_cpp.pyx":104
  *     @property
  *     def t(self):
  *         return self.c_imp.t             # <<<<<<<<<<<<<<
@@ -3943,13 +4068,13 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_1t___get__(struct __pyx_obj_7imp
  *     def t(self, t):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.t); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 96, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.t); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 104, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "imp_cpp.pyx":94
+  /* "imp_cpp.pyx":102
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -3968,7 +4093,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_1t___get__(struct __pyx_obj_7imp
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":97
+/* "imp_cpp.pyx":105
  *     def t(self):
  *         return self.c_imp.t
  *     @t.setter             # <<<<<<<<<<<<<<
@@ -3998,17 +4123,17 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_1t_2__set__(struct __pyx_obj_7imp_cpp_
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "imp_cpp.pyx":99
+  /* "imp_cpp.pyx":107
  *     @t.setter
  *     def t(self, t):
  *         self.c_imp.t = t             # <<<<<<<<<<<<<<
  * 
  *     # Attribute access
  */
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_t); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 99, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_t); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 107, __pyx_L1_error)
   __pyx_v_self->c_imp.t = __pyx_t_1;
 
-  /* "imp_cpp.pyx":97
+  /* "imp_cpp.pyx":105
  *     def t(self):
  *         return self.c_imp.t
  *     @t.setter             # <<<<<<<<<<<<<<
@@ -4026,7 +4151,7 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_1t_2__set__(struct __pyx_obj_7imp_cpp_
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":102
+/* "imp_cpp.pyx":110
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -4058,7 +4183,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6xstart___get__(struct __pyx_obj
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 1);
 
-  /* "imp_cpp.pyx":104
+  /* "imp_cpp.pyx":112
  *     @property
  *     def xstart(self):
  *         return self.c_imp.xstart             # <<<<<<<<<<<<<<
@@ -4066,13 +4191,13 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6xstart___get__(struct __pyx_obj
  *     def xstart(self, xstart):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.xstart); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 104, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.xstart); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 112, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "imp_cpp.pyx":102
+  /* "imp_cpp.pyx":110
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -4091,7 +4216,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6xstart___get__(struct __pyx_obj
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":105
+/* "imp_cpp.pyx":113
  *     def xstart(self):
  *         return self.c_imp.xstart
  *     @xstart.setter             # <<<<<<<<<<<<<<
@@ -4121,17 +4246,17 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_6xstart_2__set__(struct __pyx_obj_7imp
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "imp_cpp.pyx":107
+  /* "imp_cpp.pyx":115
  *     @xstart.setter
  *     def xstart(self, xstart):
  *         self.c_imp.xstart = xstart             # <<<<<<<<<<<<<<
  * 
  *     # Attribute access
  */
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_xstart); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 107, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_xstart); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 115, __pyx_L1_error)
   __pyx_v_self->c_imp.xstart = __pyx_t_1;
 
-  /* "imp_cpp.pyx":105
+  /* "imp_cpp.pyx":113
  *     def xstart(self):
  *         return self.c_imp.xstart
  *     @xstart.setter             # <<<<<<<<<<<<<<
@@ -4149,7 +4274,7 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_6xstart_2__set__(struct __pyx_obj_7imp
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":110
+/* "imp_cpp.pyx":118
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -4181,7 +4306,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6zstart___get__(struct __pyx_obj
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 1);
 
-  /* "imp_cpp.pyx":112
+  /* "imp_cpp.pyx":120
  *     @property
  *     def zstart(self):
  *         return self.c_imp.zstart             # <<<<<<<<<<<<<<
@@ -4189,13 +4314,13 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6zstart___get__(struct __pyx_obj
  *     def zstart(self, zstart):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.zstart); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 112, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.zstart); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 120, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "imp_cpp.pyx":110
+  /* "imp_cpp.pyx":118
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -4214,7 +4339,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6zstart___get__(struct __pyx_obj
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":113
+/* "imp_cpp.pyx":121
  *     def zstart(self):
  *         return self.c_imp.zstart
  *     @zstart.setter             # <<<<<<<<<<<<<<
@@ -4244,17 +4369,17 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_6zstart_2__set__(struct __pyx_obj_7imp
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "imp_cpp.pyx":115
+  /* "imp_cpp.pyx":123
  *     @zstart.setter
  *     def zstart(self, zstart):
  *         self.c_imp.zstart = zstart             # <<<<<<<<<<<<<<
  * 
  *     # Attribute access
  */
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_zstart); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 115, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_zstart); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 123, __pyx_L1_error)
   __pyx_v_self->c_imp.zstart = __pyx_t_1;
 
-  /* "imp_cpp.pyx":113
+  /* "imp_cpp.pyx":121
  *     def zstart(self):
  *         return self.c_imp.zstart
  *     @zstart.setter             # <<<<<<<<<<<<<<
@@ -4272,7 +4397,7 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_6zstart_2__set__(struct __pyx_obj_7imp
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":118
+/* "imp_cpp.pyx":126
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -4304,7 +4429,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6fstart___get__(struct __pyx_obj
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 1);
 
-  /* "imp_cpp.pyx":120
+  /* "imp_cpp.pyx":128
  *     @property
  *     def fstart(self):
  *         return self.c_imp.fstart             # <<<<<<<<<<<<<<
@@ -4312,13 +4437,13 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6fstart___get__(struct __pyx_obj
  *     def fstart(self, fstart):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->c_imp.fstart); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 120, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->c_imp.fstart); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 128, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "imp_cpp.pyx":118
+  /* "imp_cpp.pyx":126
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -4337,7 +4462,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6fstart___get__(struct __pyx_obj
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":121
+/* "imp_cpp.pyx":129
  *     def fstart(self):
  *         return self.c_imp.fstart
  *     @fstart.setter             # <<<<<<<<<<<<<<
@@ -4367,17 +4492,17 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_6fstart_2__set__(struct __pyx_obj_7imp
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "imp_cpp.pyx":123
+  /* "imp_cpp.pyx":131
  *     @fstart.setter
  *     def fstart(self, fstart):
  *         self.c_imp.fstart = fstart             # <<<<<<<<<<<<<<
  * 
  *     # Attribute access
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_fstart); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 123, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_fstart); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 131, __pyx_L1_error)
   __pyx_v_self->c_imp.fstart = __pyx_t_1;
 
-  /* "imp_cpp.pyx":121
+  /* "imp_cpp.pyx":129
  *     def fstart(self):
  *         return self.c_imp.fstart
  *     @fstart.setter             # <<<<<<<<<<<<<<
@@ -4395,7 +4520,7 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_6fstart_2__set__(struct __pyx_obj_7imp
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":126
+/* "imp_cpp.pyx":134
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -4427,7 +4552,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6weight___get__(struct __pyx_obj
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 1);
 
-  /* "imp_cpp.pyx":128
+  /* "imp_cpp.pyx":136
  *     @property
  *     def weight(self):
  *         return self.c_imp.weight             # <<<<<<<<<<<<<<
@@ -4435,13 +4560,13 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6weight___get__(struct __pyx_obj
  *     def weight(self, weight):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 128, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->c_imp.weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 136, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "imp_cpp.pyx":126
+  /* "imp_cpp.pyx":134
  * 
  *     # Attribute access
  *     @property             # <<<<<<<<<<<<<<
@@ -4460,7 +4585,7 @@ static PyObject *__pyx_pf_7imp_cpp_10PyImpurity_6weight___get__(struct __pyx_obj
   return __pyx_r;
 }
 
-/* "imp_cpp.pyx":129
+/* "imp_cpp.pyx":137
  *     def weight(self):
  *         return self.c_imp.weight
  *     @weight.setter             # <<<<<<<<<<<<<<
@@ -4490,15 +4615,15 @@ static int __pyx_pf_7imp_cpp_10PyImpurity_6weight_2__set__(struct __pyx_obj_7imp
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "imp_cpp.pyx":131
+  /* "imp_cpp.pyx":139
  *     @weight.setter
  *     def weight(self, weight):
  *         self.c_imp.weight = weight             # <<<<<<<<<<<<<<
  */
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_weight); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 131, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_weight); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(1, 139, __pyx_L1_error)
   __pyx_v_self->c_imp.weight = __pyx_t_1;
 
-  /* "imp_cpp.pyx":129
+  /* "imp_cpp.pyx":137
  *     def weight(self):
  *         return self.c_imp.weight
  *     @weight.setter             # <<<<<<<<<<<<<<
@@ -4881,6 +5006,20 @@ static int __pyx_setprop_7imp_cpp_10PyImpurity_vz(PyObject *o, PyObject *v, CYTH
   }
 }
 
+static PyObject *__pyx_getprop_7imp_cpp_10PyImpurity_tz(PyObject *o, CYTHON_UNUSED void *x) {
+  return __pyx_pw_7imp_cpp_10PyImpurity_2tz_1__get__(o);
+}
+
+static int __pyx_setprop_7imp_cpp_10PyImpurity_tz(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
+  if (v) {
+    return __pyx_pw_7imp_cpp_10PyImpurity_2tz_3__set__(o, v);
+  }
+  else {
+    PyErr_SetString(PyExc_NotImplementedError, "__del__");
+    return -1;
+  }
+}
+
 static PyObject *__pyx_getprop_7imp_cpp_10PyImpurity_mass(PyObject *o, CYTHON_UNUSED void *x) {
   return __pyx_pw_7imp_cpp_10PyImpurity_4mass_1__get__(o);
 }
@@ -4980,6 +5119,7 @@ static struct PyGetSetDef __pyx_getsets_7imp_cpp_PyImpurity[] = {
   {(char *)"vx", __pyx_getprop_7imp_cpp_10PyImpurity_vx, __pyx_setprop_7imp_cpp_10PyImpurity_vx, (char *)0, 0},
   {(char *)"vy", __pyx_getprop_7imp_cpp_10PyImpurity_vy, __pyx_setprop_7imp_cpp_10PyImpurity_vy, (char *)0, 0},
   {(char *)"vz", __pyx_getprop_7imp_cpp_10PyImpurity_vz, __pyx_setprop_7imp_cpp_10PyImpurity_vz, (char *)0, 0},
+  {(char *)"tz", __pyx_getprop_7imp_cpp_10PyImpurity_tz, __pyx_setprop_7imp_cpp_10PyImpurity_tz, (char *)0, 0},
   {(char *)"mass", __pyx_getprop_7imp_cpp_10PyImpurity_mass, __pyx_setprop_7imp_cpp_10PyImpurity_mass, (char *)0, 0},
   {(char *)"t", __pyx_getprop_7imp_cpp_10PyImpurity_t, __pyx_setprop_7imp_cpp_10PyImpurity_t, (char *)0, 0},
   {(char *)"xstart", __pyx_getprop_7imp_cpp_10PyImpurity_xstart, __pyx_setprop_7imp_cpp_10PyImpurity_xstart, (char *)0, 0},
