@@ -14,7 +14,7 @@ MPICXX=mpicxx
 BUILD_GKYLZERO=
 BUILD_LUAJIT=
 BUILD_LUAROCKS=
-BUILD_ADIOS=
+BUILD_ADIOS2=
 BUILD_OPENMPI=
 BUILD_ZMQ=
 BUILD_CZMQ=
@@ -53,7 +53,7 @@ and C++ compilers to use.
 --build-luajit-beta3        Should we build LuaJIT-beta3?
 --build-luajit-ppcle        Should we build LuaJIT for PPC64 LE?
 --build-luarocks            Should we build Luarocks?
---build-adios               Should we build ADIOS?
+--build-adios2               Should we build ADIOS?
 --build-openmpi             Should we build OpenMPI?
 --build-zmq                 Should we build ZeroMQ?
 --build-czmq                Should we build C interface to ZeroMQ?
@@ -141,9 +141,9 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_LUAJIT="$value"
       ;;
-   --build-adios)
+   --build-adios2)
       [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_ADIOS="$value"
+      BUILD_ADIOS2="$value"
       ;;
    --build-luarocks)
       [ -n "$value" ] || die "Missing value in flag $key."
@@ -214,11 +214,11 @@ build_luajit() {
     fi
 }
 
-build_adios() {
-    if [[ ! "$BUILD_ADIOS" = "no" && ("$BUILD_ADIOS" = "yes" || ! -f $PREFIX/adios/include/adios.h) ]]
+build_adios2() {
+    if [[ ! "$BUILD_ADIOS2" = "no" && ("$BUILD_ADIOS2" = "yes" || ! -f $PREFIX/adios/include/adios.h) ]]
     then    
-	echo "Building ADIOS"
-	./build-adios.sh
+	echo "Building ADIOS2"
+	./build-adios2.sh
     fi
 }
 
@@ -252,6 +252,6 @@ echo "Installations will be in $PREFIX"
 #build_gkylzero
 #build_luajit
 #build_luarocks
-build_adios
+build_adios2
 #build_zmq
 #build_czmq
