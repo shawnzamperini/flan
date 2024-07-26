@@ -1,7 +1,9 @@
 #include <iostream>
 #include <string>
-#include <adios2.h>
-
+/*
+ * Opting out of ADIOS2 since I think it's going to get removed...
+	#include <adios2.h>
+*/
 #include "read_input.h"
 
 namespace Gkyl

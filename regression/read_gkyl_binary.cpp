@@ -2,15 +2,19 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <type_traits>
+#include <variant>
 #include "msgpack.hpp"
 
+template <typename T>
+using vector4d = std::vector<std::vector<std::vector<std::vector<T>>>>;
 
 // function to reshape a 1D vector into a 4D
 template <typename T>
-std::vector<std::vector<std::vector<std::vector<T>>>> 
-	reshape_4D(const std::vector<T> vec, int dim1, int dim2, int dim3, int dim4)
+vector4d<T> reshape_4D(const std::vector<T> vec, int dim1, int dim2, int dim3, 
+					   int dim4)
 {
-	std::vector<std::vector<std::vector<std::vector<T>>>> result(dim1,
+	vector4d result(dim1,
 		std::vector<std::vector<std::vector<T>>>(dim2,
         std::vector<std::vector<T>>(dim3,
 		std::vector<T>(dim4))));
@@ -28,170 +32,288 @@ std::vector<std::vector<std::vector<std::vector<T>>>>
     }
 
     return result;
-	
 }
 
-int main()
+std::ifstream open_gkyl_file(const std::string& fname)
 {
-	std::string fname {"d3d-167196-v6-gpu-elc_M0_26.gkyl"};
+	//std::string fname {"d3d-167196-v6-gpu-elc_M0_26.gkyl"};
 	std::cout << "Reading: " << fname << '\n';
-	std::ifstream gkyl_stream {fname, std::ios::binary};
+	std::ifstream stream {fname, std::ios::binary};
 
-	// Read in the first 5 magic numbers (they are char codes for gkyl0).
-	char c {};
-	for (int i {}; i < 5; ++i)
+	if (!stream.is_open())
 	{
-		gkyl_stream.read(&c, 1);
-		std::cout << c << '\n';
+		std::cerr << "Error! Could not open file: " << fname << '\n';
 	}
 
-	// Next is the version, stored as 8 bytes.
-	uint64_t ver {};
-	gkyl_stream.read(reinterpret_cast<char*>(&ver), 8);
-	std::cout << "ver = " << ver << '\n';
+	return stream;
+}
 
-	// Next is the filetype
-	uint64_t filetype {};
-	gkyl_stream.read(reinterpret_cast<char*>(&filetype), 8);
-	std::cout << "filetype = " << filetype << '\n';
+void read_magic_numbers(std::ifstream& stream)
+{
+	// The first 5 chars are "magic numbers" (they are char codes for the 
+	// word "gkyl0").
+	char c {};
+	std::string magic_in {};
+	std::string magic {"gkyl0"};
+	for (int i {}; i < 5; ++i)
+	{
+		stream.read(&c, 1);
+		magic_in.push_back(c);
+	}
 
-	// Meta data size, number of bytes of meta data
-	uint64_t meta_size {};
-	gkyl_stream.read(reinterpret_cast<char*>(&meta_size), 8);
-	std::cout << "meta_size = " << meta_size << '\n';
+	// Check that the correct chars (or string) was read in.
+	if (magic_in != magic)
+	{
+		std::cerr << "Error! Magic characters read in do not match " 
+			"\"gkyl0\": " << magic_in << '\n';
+	}
+}
 
-	// load	serialized data into buffer
-	std::vector<char> buffer (meta_size);
-	gkyl_stream.read(buffer.data(), meta_size);
+// Read an unsigned 64-bit int from stream and return as an int
+int read_uint64_int(std::ifstream& stream)
+{
+	uint64_t var {};
 
-	// create unpacked object
+	// Read in 8 bytes (64 bits) into an uint64_t
+	stream.read(reinterpret_cast<char*>(&var), 8);
+	return static_cast<int>(var);
+}
+
+// Read a double from stream
+double read_double(std::ifstream& stream)
+{
+	double var {};
+
+	// Read in 8 bytes (64 bits) into an double
+	stream.read(reinterpret_cast<char*>(&var), 8);
+	return var;
+}
+
+void read_double_vec(std::ifstream& stream, std::vector<double>& vec, const int num_vals)
+{
+	// Ensure vector is the right size (this is probably unnecessary for how 
+	// we use this, but the performance penalty is negligible compared to
+	// the safety it brings).
+	vec.resize(num_vals);
+	for (int i {}; i < num_vals; ++i)
+	{
+		vec[i] = read_double(stream);
+	}
+}
+
+// Alias this long thing for an msgpack_map type
+typedef std::map<std::string, msgpack::type::variant> Msgpack_map;
+
+Msgpack_map read_msgpack_map(std::ifstream& stream, const int byte_size)
+{
+	// Load	serialized data into buffer
+	std::vector<char> buffer (byte_size);
+	stream.read(buffer.data(), byte_size);
+
+	// Create unpacked object
 	msgpack::object_handle oh = msgpack::unpack(buffer.data(), buffer.size());
 
-	// access root object
+	// Access root object
 	msgpack::object obj = oh.get();
 
-	// output the unpacked data
+	// Output the unpacked data (debugging)
 	std::cout << obj << '\n';
-
 	std::cout << obj.type << '\n';
 	std::cout << msgpack::type::MAP << '\n';
 
-	// Access data based on the type of the object
-	if (obj.type == msgpack::type::STR) {
-		// If it's a string, access the string value
-		std::string str = obj.as<std::string>();
-		std::cout << "String value: " << str << std::endl;
-	} else if (obj.type == msgpack::type::POSITIVE_INTEGER) {
-		// If it's a positive integer, access the integer value
-		uint64_t integer = obj.as<uint64_t>();
-		std::cout << "Integer value: " << integer << std::endl;
-	} else if (obj.type == msgpack::type::FLOAT32 || obj.type == msgpack::type::FLOAT64) {
-		// If it's a float, access the float value
-		double floating_point = obj.as<double>();
-		std::cout << "Float value: " << floating_point << std::endl;
-	} else if (obj.type == msgpack::type::ARRAY) {
-		// If it's an array, access elements using array handle
-		auto array = obj.via.array;
-		for (auto const& element : array) {
-			std::cout << "Element: " << element << std::endl;
-		}
-	} else if (obj.type == msgpack::type::MAP) {
-		// If it's a map, access elements using map handle
-		std::map<std::string, msgpack::type::variant> map = obj.convert();
-		//auto map = obj.via.map;
-		for (auto const& kv : map) {
-			//std::cout << "Key: " << kv.first << ", Value: " << kv.second << std::endl;
-			if (kv.second.is_string())
+	// Ensure the data is a map type. SHould add error detection here.
+	if (obj.type != msgpack::type::MAP) 
+	{
+		std::cerr << "Error! msgpack header info is not a map type.\n";
+		std::cerr << "  obj.type = " << obj.type << '\n';
+		std::cerr << "  msgpack::type::MAP" << msgpack::type::MAP << '\n';
+	}	
+	
+	return obj.convert();
+}
+
+// Return a double entry from an msgpack_map object
+double from_msgpack_map_dbl(const Msgpack_map msgpack_map, const std::string& key)
+{
+	for (auto const& kv : msgpack_map) 
+	{
+		if (kv.first == key)
+		{
+			if (kv.second.is_double())
 			{
-				std::cout << "Key: " << kv.first << ", Value: " << kv.second.as_string() << std::endl;
+				std::cout << "Key: " << kv.first << ", Value: " << 
+					kv.second.as_double() << std::endl;
+				return kv.second.as_double();
 			}
-			else if (kv.second.is_double())
+			else
 			{
-				std::cout << "Key: " << kv.first << ", Value: " << kv.second.as_double() << std::endl;
+				std::cerr << "Error! " << key << " is not a double in "
+					"msgpack_map.\n";
+				return 0.0;
+			}
+		}	
+	}
+
+	std::cerr << "Error! " << key << " was not found in msgpack_map.\n";
+	return 0.0;
+}
+
+// Return an integer entry from an msgpack_map object
+int from_msgpack_map_int(const Msgpack_map msgpack_map, const std::string& key)
+{
+	for (auto const& kv : msgpack_map) 
+	{
+		if (kv.first == key)
+		{
+			if (kv.second.is_uint64_t())
+			{
+				std::cout << "Key: " << kv.first << ", Value: " << 
+					kv.second.as_uint64_t() << std::endl;
+				return static_cast<int>(kv.second.as_uint64_t());
 			}
 			else if (kv.second.is_int64_t())
 			{
-				std::cout << "Key: " << kv.first << ", Value: " << kv.second.as_int64_t() << std::endl;
+				std::cout << "Key: " << kv.first << ", Value: " << 
+					kv.second.as_int64_t() << std::endl;
+				return static_cast<int>(kv.second.as_int64_t());
 			}
-			else if (kv.second.is_uint64_t())
+			else
 			{
-				std::cout << "Key: " << kv.first << ", Value: " << kv.second.as_uint64_t() << std::endl;
+				std::cerr << "Error! " << key << " is not a int64_t/uint64_t "
+					"in msgpack_map.\n";
+				return 0;
 			}
-			//std::cout << "Key: " << kv.first << " " << kv.second.is_string() << std::endl;
 		}	
-	
-		//std::cout << "time: " << map["time"] << '\n';
 	}
 
-	// Okay, now the header info has been loaded. What follows next depends on the file type. 
-	if (filetype == 3)
+	std::cerr << "Error! " << key << " was not found in msgpack_map.\n";
+	return 0;
+}
+
+// Return a string entry from an msgpack_map object
+std::string from_msgpack_map_str(const Msgpack_map msgpack_map, 
+	const std::string& key)
+{
+	for (auto const& kv : msgpack_map) 
 	{
-		// I am mostly sure that real_type = 1 is a 4-byte float, and 2 is an 8-byte float (a double).
-		uint64_t real_type {};
-		gkyl_stream.read(reinterpret_cast<char*>(&real_type), 8);
+		if (kv.first == key)
+		{
+			if (kv.second.is_string())
+			{
+				std::cout << "Key: " << kv.first << ", Value: " << 
+					kv.second.as_string() << std::endl;
+				return kv.second.as_string();
+			}
+			else
+			{
+				std::cerr << "Error! " << key << " is not a string in "
+					"msgpack_map.\n";
+				return "";
+			}
+		}	
+	}
+
+	std::cerr << "Error! " << key << " was not found in msgpack_map.\n";
+	return "";
+}
+
+
+int main()
+{
+	// We make the assumption that a double is 8 bytes just to not get bogged
+	// down in implementation details in the start. If you encounter this
+	// error, it's easily fixed just ask Shawn.
+	if (sizeof(double) != 8)
+	{
+		std::cerr << "Error! double is not 8 bytes on this machine. Ask"
+			" Shawn to fix this\n";
+		return -1;
+	}
+
+	// Load file (stream)
+	std::ifstream gkyl_stream {open_gkyl_file("d3d-167196-v6-gpu-elc_M0_26.gkyl")};
+
+	// Read the first 5 chars, i.e., the "magic numbers"
+	read_magic_numbers(gkyl_stream);
+
+	// Next is the version
+	int version {read_uint64_int(gkyl_stream)};
+	std::cout << "version = " << version << '\n';
+
+	// Next is the filetype
+	int file_type {read_uint64_int(gkyl_stream)};
+	std::cout << "file_type = " << file_type << '\n';
+
+	// Meta data size, number of bytes of meta data
+	int meta_size {read_uint64_int(gkyl_stream)};
+	std::cout << "meta_size = " << meta_size << '\n';
+
+	// The next section of data is stored in an msgpack map object
+	Msgpack_map msgpack_map {read_msgpack_map(gkyl_stream, meta_size)};
+
+	// Load info from the msgpack_map into normal variables
+	double time {from_msgpack_map_dbl(msgpack_map, "time")};
+	int frame {from_msgpack_map_int(msgpack_map, "frame")};
+	int poly_order {from_msgpack_map_int(msgpack_map, "polyOrder")};
+	std::string basis_type {from_msgpack_map_str(msgpack_map, "basisType")};
+
+	// Okay, now the header info has been loaded. What follows next depends on 
+	// the file type. 
+	if (file_type == 3)
+	{
+		// real_type = 1 is a 4-byte float, and 2 is an 8-byte float (a double).
+		int real_type {read_uint64_int(gkyl_stream)};
 		std::cout << "real_type = " << real_type << '\n';
 
-		uint64_t ndim {};
-		gkyl_stream.read(reinterpret_cast<char*>(&ndim), 8);
+		int ndim {read_uint64_int(gkyl_stream)};
 		std::cout << "ndim = " << ndim << '\n';
 
-		// we want to follow the pgkyl function read_domain_t1a3_v1 then read_data_t3_v1
-		// grid dimensions
-		//uint64_t num_dims {};
-		//gkyl_stream.read(reinterpret_cast<char*>(&num_dims), 8);
-		//std::cout << "num_dims = " << num_dims << '\n';
-
-		// grid shape. this read in num_dims ints
-		std::vector<uint64_t> cells {};
-		uint64_t tmp_cell {};
-		for (uint64_t i {}; i < ndim; ++i)
+		// grid shape. this read in ndim ints
+		std::vector<int> cells {};
+		int tmp_cell {};
+		for (int i {}; i < ndim; ++i)
 		{
-			gkyl_stream.read(reinterpret_cast<char*>(&tmp_cell), 8);
-			std::cout << "tmp_cell = " << tmp_cell << '\n';
+			tmp_cell = read_uint64_int(gkyl_stream);
 			cells.push_back(tmp_cell);
 		}
 
 		// lower bounds of grid float64[ndim]
-		std::cout << "sizeof(double) = " << sizeof(double) << '\n';
-		double lower {};
-		for (uint64_t i {}; i < ndim; ++i)
+		std::vector<double> lower {};
+		for (int i {}; i < ndim; ++i)
 		{
-			gkyl_stream.read(reinterpret_cast<char*>(&lower), 8);
-			std::cout << "lower = " << lower << '\n';
+			lower.push_back(read_double(gkyl_stream));
 		}
 
 		// upper bounds of grid float64[ndim]
-		double upper {};
-		for (uint64_t i {}; i < ndim; ++i)
+		std::vector<double> upper {};
+		for (int i {}; i < ndim; ++i)
 		{
-			gkyl_stream.read(reinterpret_cast<char*>(&upper), 8);
-			std::cout << "upper = " << upper << '\n';
+			upper.push_back(read_double(gkyl_stream));
 		}
 
 		// element size * number of components in field. divide
 		// by sizeof(real_type), probably a 8 byte float, to get
 		// size of elements
-		uint64_t esznc {};
-		gkyl_stream.read(reinterpret_cast<char*>(&esznc), 8);
+		int esznc {read_uint64_int(gkyl_stream)};
 		std::cout << "esznc = " << esznc << '\n';
 
 		// number of elements is esznc / sizeof(double), so divide by 8.
-		uint64_t num_comps {esznc / 8};
+		int num_comps {esznc / 8};
 		std::cout << "num_comps = " << num_comps << '\n';
 
 		// total number of cells in field
-		uint64_t size {};
-		gkyl_stream.read(reinterpret_cast<char*>(&size), 8);
+		int size {read_uint64_int(gkyl_stream)};
 		std::cout << "size = " << size << '\n';
 
 		// number of ranges stored in file
-		uint64_t nrange {};
-		gkyl_stream.read(reinterpret_cast<char*>(&nrange), 8);
+		int nrange {read_uint64_int(gkyl_stream)};
 		std::cout << "nrange = " << nrange << '\n';
 
-		// create an array for data of the final shape, gshape
-		std::vector<uint64_t> gshape {};
-		for (uint64_t i {}; i < ndim; ++i)
+		// gshape is going to be the shape of the data array that we eventually
+		// return. it contains the number of cells in each direction and the
+		// last element is the number of components.
+		std::vector<int> gshape {};
+		for (int i {}; i < ndim; ++i)
 		{
 			gshape.push_back(cells[i]);
 		}
@@ -203,27 +325,27 @@ int main()
 		}
 		std::cout << '\n';
 
-		// assemble the (probably 4D) array
+		// Assemble the (probably 4D) array
 		std::cout << "creating data vector\n";
-		std::vector<std::vector<std::vector<std::vector<double>>>> data {};
+		vector4d<double> data {};
 
 		// Resize the 4D vector to match the dimensions
 		data.resize(gshape[0]);
-		for (uint64_t i = 0; i < gshape[0]; ++i) {
+		for (int i = 0; i < gshape[0]; ++i) {
 			data[i].resize(gshape[1]);
-			for (uint64_t j = 0; j < gshape[1]; ++j) {
+			for (int j = 0; j < gshape[1]; ++j) {
 				data[i][j].resize(gshape[2]);
-				for (uint64_t k = 0; k < gshape[2]; ++k) {
+				for (int k = 0; k < gshape[2]; ++k) {
 					data[i][j][k].resize(gshape[3]);
 				}
 			}
 		}
 
 		// Get the size of each dimension
-		int size1 = data.size();                // Size of the 1st dimension (dim1)
-		int size2 = data[0].size();             // Size of the 2nd dimension (dim2)
-		int size3 = data[0][0].size();          // Size of the 3rd dimension (dim3)
-		int size4 = data[0][0][0].size();       // Size of the 4th dimension (dim4)
+		int size1 = data.size();
+		int size2 = data[0].size();
+		int size3 = data[0][0].size();
+		int size4 = data[0][0][0].size();
 
 		// Output the sizes
 		std::cout << "Size of the 4D vector:" << std::endl;
@@ -232,89 +354,78 @@ int main()
 		std::cout << "Dimension 3: " << size3 << std::endl;
 		std::cout << "Dimension 4: " << size4 << std::endl;
 
-		uint64_t tmp_loidx {};
-		uint64_t tmp_upidx {};
-		uint64_t asize {};
 		std::vector<double> raw_data {};
-		for (uint64_t i {}; i < nrange; ++i)
+		for (int i {}; i < nrange; ++i)
 		{
 			// each range starts with an uint64_t loidx and upidx which
 			// are the index of lower-left and upper-right corner of the
 			// range (what does this mean...?)
-			std::vector<uint64_t> loidx {};
-			std::vector<uint64_t> upidx {};
-			for (uint64_t j {}; j < ndim; ++j)
+			std::vector<int> loidx {};
+			std::vector<int> upidx {};
+			for (int j {}; j < ndim; ++j)
 			{
-				gkyl_stream.read(reinterpret_cast<char*>(&tmp_loidx), 8);
-				std::cout << "tmp_loidx = " << tmp_loidx << '\n';
-				loidx.push_back(tmp_loidx);
+				loidx.push_back(read_uint64_int(gkyl_stream));
 			}
-			for (uint64_t j {}; j < ndim; ++j)
+			for (int j {}; j < ndim; ++j)
 			{
-				gkyl_stream.read(reinterpret_cast<char*>(&tmp_upidx), 8);
-				std::cout << "tmp_upidx = " << tmp_upidx << '\n';
-				upidx.push_back(tmp_upidx);
+				upidx.push_back(read_uint64_int(gkyl_stream));
 			}
 
 			// Total number of cells in range
-			gkyl_stream.read(reinterpret_cast<char*>(&asize), 8);
+			int asize {read_uint64_int(gkyl_stream)};
 			std::cout << "asize = " << asize << '\n';
 
 			// read asize*esznc bytes of data
-			raw_data.resize(asize * num_comps);
-			for (uint64_t j {}; j < asize * num_comps; ++j)
-			{
-				gkyl_stream.read(reinterpret_cast<char*>(&raw_data[j]), 8);
-			}
+			//raw_data.resize(asize * num_comps);
+			//for (int j {}; j < asize * num_comps; ++j)
+			//{
+			//	gkyl_stream.read(reinterpret_cast<char*>(&raw_data[j]), 8);
+			//}
+			read_double_vec(gkyl_stream, raw_data, asize * num_comps);
 
-			// redefine gshape
-			for (uint64_t j {}; j < ndim; ++j)
+			// Redefine gshape. This will be the shape of raw_data when we
+			// reshape it
+			for (int j {}; j < ndim; ++j)
 			{
 				gshape[j] = upidx[j] - loidx[j] + 1;
 				std::cout << "gshape[" << j << "] = " << gshape[j] << '\n';
 			}
 
-			// reshape raw_data to be put into data. after this they have the same shape
+			// reshape raw_data so it can be mapped to data
 			std::cout << "raw_data.size() = " << raw_data.size() << '\n';
-			auto raw_data_4d {reshape_4D(raw_data, gshape[0], gshape[1], gshape[2], gshape[3])};
+			vector4d<double> raw_data_4d {reshape_4D(raw_data, gshape[0], 
+				gshape[1], gshape[2], gshape[3])};
 
-			// For 4D data, loidx[d] and upidx[d] are the ranges where raw_data gets put
-			// into data. This can probably be done more efficiently, but here's a simple
-			// strightforward approach: loop through the whole data array, placing the
-			// corresponding raw_data element into data if the index is within
-			// the corresponding bounds.
-			for (uint64_t i0 {loidx[0]-1}; i0 < upidx[0]; ++i0)
+			// For 4D data, loidx[d] and upidx[d] are the ranges where raw_data 
+			// gets put into data. So loop through all those elements in data
+			// and place the corresponding raw_data component into data
+			for (int i0 {loidx[0]-1}; i0 < upidx[0]; ++i0)
 			{
-				for (uint64_t i1 {loidx[1]-1}; i1 < upidx[1]; ++i1)
+				for (int i1 {loidx[1]-1}; i1 < upidx[1]; ++i1)
 				{
-					for (uint64_t i2 {loidx[2]-1}; i2 < loidx[2]; ++i2)
+					for (int i2 {loidx[2]-1}; i2 < upidx[2]; ++i2)
 					{
 
-						// We've index the part of data that this raw_data corresponds to,
-						// so now we are placing raw into data.
-						for (uint64_t j0 {}; j0 < raw_data_4d.size(); ++j0)
+						// Put all the components into the data array. raw_data
+						// is not the same size as data, but you can think of
+						// it as a subset of data that has been reindexed to
+						// start at zero in each dimension. loidx[0]-1 is just
+						// how we access an element in raw_data that matches
+						// data.
+						//std::cout << "i0,i1,i2 = " << i0 << ", " << i1 << 
+						//	", " << i2 << '\n';
+						for (int c {}; c < num_comps; ++c)
 						{
-							for (uint64_t j1 {}; j1 < raw_data_4d[0].size(); ++j1)
-							{
-								for (uint64_t j2 {}; j2 < raw_data_4d[0][0].size(); ++j2)
-								{
-
-									// Put all the components into the data array.
-									//std::cout << "i0,i1,i2 = " << i0 << ", " << i1 << ", " << i2 << '\n';
-									for (uint64_t c {}; c < num_comps; ++c)
-									{
-										data[i0][i1][i2][c] = raw_data_4d[j0][j1][j2][c];
-									}
-								}
-							}
+							data[i0][i1][i2][c] = raw_data_4d[i0-(loidx[0]-1)]
+								[i1-(loidx[1]-1)][i2-(loidx[2]-1)][c];
 						}
 					}
 				}
 			}
 		}
 
-		// At this point we have our data array (for this time slice)! Let's save it to a
-		// binary file so we can validate it in python.
+		// At this point we have our data array (for this time slice)! Let's 
+		// save it to a binary file so we can validate it in python.
 		std::ofstream outfile {"data.bin", std::ios::binary};
 
 		// Save the dimensions
@@ -340,7 +451,6 @@ int main()
 				}
 			}
 		}
-
 
 		outfile.close();
 

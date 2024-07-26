@@ -11,13 +11,10 @@ MPICXX=mpicxx
 
 # by default, don't build anything. will check later to see if things
 # should be installed.
-BUILD_GKYLZERO=
-BUILD_LUAJIT=
-BUILD_LUAROCKS=
 BUILD_ADIOS2=
 BUILD_OPENMPI=
-BUILD_ZMQ=
-BUILD_CZMQ=
+BUILD_BOOST=
+BUILD_MSGPACK=
 
 # ----------------------------------------------------------------------------
 # FUNCTION DEFINITIONS
@@ -53,7 +50,7 @@ and C++ compilers to use.
 --build-luajit-beta3        Should we build LuaJIT-beta3?
 --build-luajit-ppcle        Should we build LuaJIT for PPC64 LE?
 --build-luarocks            Should we build Luarocks?
---build-adios2               Should we build ADIOS?
+--build-adios2              Should we build ADIOS?
 --build-openmpi             Should we build OpenMPI?
 --build-zmq                 Should we build ZeroMQ?
 --build-czmq                Should we build C interface to ZeroMQ?
@@ -133,29 +130,17 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_OPENMPI="$value"
       ;;
-   --build-gkylzero)
-      [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_GKYLZERO="$value"
-      ;;
-   --build-luajit)
-      [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_LUAJIT="$value"
-      ;;
    --build-adios2)
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_ADIOS2="$value"
       ;;
-   --build-luarocks)
+   --build-boost)
       [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_LUAROCKS="$value"
+      BUILD_BOOST="$value"
       ;;
-   --build-czmq)
+   --build-msgpack)
       [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_CZMQ="$value"
-      ;;   
-   --build-zmq)
-      [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_ZMQ="$value"
+      BUILD_MSGPACK="$value"
       ;;
    *)
       die "Error: Unknown flag: $1"
@@ -181,7 +166,7 @@ cat <<EOF1 > build-opts.sh
 # Generated automatically! Do not edit
 
 # Installation directory
-GKYLSOFT=$PREFIX
+FLANSOFT=$PREFIX
 # Various compilers
 CC=$CC
 CXX=$CXX
@@ -246,6 +231,22 @@ build_czmq() {
     fi
 }
 
+build_boost() {
+   if [ "$BUILD_BOOST" = "yes" ]
+   then
+      echo "Building boost"
+      ./build-boost.sh
+   fi
+}
+
+build_msgpack() {
+   if [ "$BUILD_MSGPACK" = "yes" ]
+   then
+      echo "Building msgpack"
+      ./build-msgpack.sh
+   fi
+}
+
 echo "Installations will be in $PREFIX"
 
 #build_openmpi
@@ -255,3 +256,5 @@ echo "Installations will be in $PREFIX"
 build_adios2
 #build_zmq
 #build_czmq
+build_boost
+build_msgpack
