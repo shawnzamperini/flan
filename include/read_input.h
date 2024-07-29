@@ -27,6 +27,7 @@ namespace Input
 	// the options array defined in read_input.cpp. 
 	enum Names
 	{
+		gkyl_dir,
 		gkyl_casename,
 		gkyl_frame_start,
 		gkyl_frame_end,
@@ -34,8 +35,14 @@ namespace Input
 		max_input_opts,
 	};
 
+	extern std::array<OptionBase*, max_input_opts> options;
+
 	// Provide a string and return the corresponding enumerator in Names
 	int str_to_name(std::string_view input_str);
+
+	std::string_view get_opt_str(Names name);
+	int get_opt_int(Names name);
+	double get_opt_dbl(Names name);
 
 	// Takes in a line from an input file as a stringstream object and returns
 	// it as a normal string for further manipulation. 

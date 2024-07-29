@@ -5,7 +5,8 @@
 
 # The Gkeyll casename that provides the background plasma, as well as the 
 # frames to load in. 
-gkyl_casename           | gk-sheath
+gkyl_dir                | /Users/zamperini/gkyldir/d3d-167196-v6-gpu
+gkyl_casename           | d3d-167196-v6-gpu
 gkyl_frame_start        | 0
 gkyl_frame_end          | 5
 

@@ -4,6 +4,7 @@
 #include <map>
 #include <tuple>
 #include "msgpack.hpp"
+#include "read_gkyl_binary.h"
 
 namespace GkylBinary
 {
@@ -51,6 +52,8 @@ namespace GkylBinary
 	template <typename T>
 	using vector4d = std::vector<std::vector<std::vector<std::vector<T>>>>;
 
+=======
+>>>>>>> 47debbf651216df5e010c7edcbf5c799002aa8ea
 	// function to reshape a 1D vector into a 4D
 	template <typename T>
 	vector4d<T> reshape_4D(const std::vector<T> vec, int dim1, int dim2, int dim3, 
@@ -75,6 +78,7 @@ namespace GkylBinary
 
 	    return result;
 	}
+<<<<<<< HEAD
 */
 	std::ifstream open_gkyl_file(const std::string_view fname)
 	{
@@ -290,7 +294,9 @@ namespace GkylBinary
 		// The next section of data is stored in an msgpack map object
 		Msgpack_map msgpack_map {read_msgpack_map(gkyl_stream, meta_size)};
 
-		// Load info from the msgpack_map into normal variables
+		// Load info from the msgpack_map into normal variables. Currently we
+		// doing anything with frame, poly_order and nasis_type but we probably
+		// will eventually. 
 		double time {from_msgpack_map_dbl(msgpack_map, "time")};
 		[[maybe_unused]] int frame {from_msgpack_map_int(msgpack_map, "frame")};
 		[[maybe_unused]] int poly_order {from_msgpack_map_int(msgpack_map, "polyOrder")};
@@ -302,12 +308,20 @@ namespace GkylBinary
 		Vector4D data {};
 
 		// Okay, now the header info has been loaded. What follows next depends on 
-		// the file type. 
+		// the file type. Only file_type 3 is supported for now.
 		if (file_type == 3)
 		{
-			// real_type = 1 is a 4-byte float, and 2 is an 8-byte float (a double).
+			// real_type = 1 is a 4-byte float, and 2 is an 8-byte 
+			// float (a double). Currently we assume real_type = 2
+			// since it impacts how many bytes we read in at a time.
+			// Support can be added later for 1, but for now throw error. 
 			int real_type {read_uint64_int(gkyl_stream)};
 			std::cout << "real_type = " << real_type << '\n';
+			if (real_type != 2)
+			{
+				std::cerr << "Error! Only real_type = 2 is supported.\n";
+				std::cerr << "  real_type = " << real_type << '\n';
+			}
 
 			int ndim {read_uint64_int(gkyl_stream)};
 			std::cout << "ndim = " << ndim << '\n';
@@ -498,13 +512,16 @@ namespace GkylBinary
 			}
 			*/
 			outfile.close();
+			gkyl_stream.close();
 
+			// Bundle up in a tuple and return
+			return std::make_tuple(time, data);
 		}
-
-		gkyl_stream.close();
-
-		// Bundle up in a tuple and return
-		return std::make_tuple(time, data);
+		else
+		{
+			std::cerr << "Error! only file_type 3 is supported at this point.\n";
+			std::cerr << "  file_type = " << file_type << '\n';
+			return std::make_tuple(0, vector4d<double> {});
+		}
 	}
-
 }

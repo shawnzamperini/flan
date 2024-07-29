@@ -15,6 +15,7 @@ namespace Input
 	// Array containing all the input options along with default values.
 	std::array<OptionBase*, max_input_opts> options 
 	{
+		new OptionStr{"gkyl_dir",            "undefined"},
 		new OptionStr{"gkyl_casename",       "undefined"},
 		new OptionInt{"gkyl_frame_start",              0},
 		new OptionInt{"gkyl_frame_end",                1},
@@ -24,7 +25,7 @@ namespace Input
 	// Provide a string and return the corresponding enumerator in Names
 	int str_to_name(std::string_view input_str)
 	{
-		std::cout << "input_str.size() = " << input_str.size() << '\n';
+		if (input_str == "gkyl_dir")           return gkyl_dir;
 		if (input_str == "gkyl_casename")      return gkyl_casename;
 		if (input_str == "gkyl_frame_start")   return gkyl_frame_start;
 		if (input_str == "gkyl_frame_end")     return gkyl_frame_end;
