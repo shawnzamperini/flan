@@ -7,10 +7,46 @@
 
 namespace GkylBinary
 {
+	class Vector4D
+	{
+	private:
+		std::vector<double> data;
+		int dim1 {};
+		int dim2 {};
+		int dim3 {};
+		int dim4 {};
+	public:
+		Vector4D(std::vector<double> data_in, int dim1, int dim2, int dim3, int dim4)
+			: dim1 {dim1}
+			, dim2 {dim2}
+			, dim3 {dim3}
+			, dim4 {dim4}
+		{
+			// Resize data to hold everything, then copy over into the class
+			// Note: Expensive! Could we use move semantics instead?
+			data.resize(dim1 * dim2 * dim3 * dim4);
+			data = data_in;
+		}
+	
+		Vector4D(int dim1, int dim2, int dim3, int dim4)
+		{
+			data.resize(dim1 * dim2 * dim3 * dim4);
+		}
+	
+		// Default constructor
+		Vector4D()
+		{}
+
+		double& operator()(int i, int j, int k, int l)
+		{
+			int index = i * (dim2 * dim3 * dim4) + j * (dim3 * dim4) + k * dim4 + l;
+			return data[index];
+		}
+	};
 
 	// Alias this long thing for an msgpack_map type
 	using Msgpack_map = std::map<std::string, msgpack::type::variant>;
-
+/*
 	// Alias for 4D vector
 	template <typename T>
 	using vector4d = std::vector<std::vector<std::vector<std::vector<T>>>>;
@@ -39,15 +75,16 @@ namespace GkylBinary
 
 	    return result;
 	}
-
-	std::ifstream open_gkyl_file(const std::string& fname)
+*/
+	std::ifstream open_gkyl_file(const std::string_view fname)
 	{
-		std::cout << "Reading: " << fname << '\n';
-		std::ifstream stream {fname, std::ios::binary};
+		std::string fname_str {fname};
+		std::cout << "Reading: " << fname_str << '\n';
+		std::ifstream stream {fname_str, std::ios::binary};
 
 		if (!stream.is_open())
 		{
-			std::cerr << "Error! Could not open file: " << fname << '\n';
+			std::cerr << "Error! Could not open file: " << fname_str << '\n';
 		}
 
 		return stream;
@@ -220,7 +257,7 @@ namespace GkylBinary
 	}
 
 
-	std::tuple<double, vector4d> load_frame(std::string_view fname)
+	std::tuple<double, Vector4D> load_frame(std::string_view fname)
 	{
 		// We make the assumption that a double is 8 bytes just to not get bogged
 		// down in implementation details in the start. If you encounter this
@@ -229,7 +266,7 @@ namespace GkylBinary
 		{
 			std::cerr << "Error! double is not 8 bytes on this machine. Ask"
 				" Shawn to fix this\n";
-			return std::make_tuple(0, vector4d {});
+			return std::make_tuple(0, Vector4D {});
 		}
 
 		// Load file (stream)
@@ -255,9 +292,14 @@ namespace GkylBinary
 
 		// Load info from the msgpack_map into normal variables
 		double time {from_msgpack_map_dbl(msgpack_map, "time")};
-		int frame {from_msgpack_map_int(msgpack_map, "frame")};
-		int poly_order {from_msgpack_map_int(msgpack_map, "polyOrder")};
+		[[maybe_unused]] int frame {from_msgpack_map_int(msgpack_map, "frame")};
+		[[maybe_unused]] int poly_order {from_msgpack_map_int(msgpack_map, "polyOrder")};
 		std::string basis_type {from_msgpack_map_str(msgpack_map, "basisType")};
+
+		// Assemble the (probably 4D) array
+		std::cout << "creating data vector\n";
+		//vector4d<double> data {};
+		Vector4D data {};
 
 		// Okay, now the header info has been loaded. What follows next depends on 
 		// the file type. 
@@ -327,10 +369,7 @@ namespace GkylBinary
 			}
 			std::cout << '\n';
 
-			// Assemble the (probably 4D) array
-			std::cout << "creating data vector\n";
-			vector4d<double> data {};
-
+			/*
 			// Resize the 4D vector to match the dimensions
 			data.resize(gshape[0]);
 			for (int i = 0; i < gshape[0]; ++i) {
@@ -342,7 +381,10 @@ namespace GkylBinary
 					}
 				}
 			}
+			*/
+			Vector4D data {gshape[0], gshape[1], gshape[2], gshape[3]};
 
+			/*
 			// Get the size of each dimension
 			int size1 = data.size();
 			int size2 = data[0].size();
@@ -355,6 +397,7 @@ namespace GkylBinary
 			std::cout << "Dimension 2: " << size2 << std::endl;
 			std::cout << "Dimension 3: " << size3 << std::endl;
 			std::cout << "Dimension 4: " << size4 << std::endl;
+			*/
 
 			std::vector<double> raw_data {};
 			for (int i {}; i < nrange; ++i)
@@ -390,8 +433,10 @@ namespace GkylBinary
 
 				// reshape raw_data so it can be mapped to data
 				std::cout << "raw_data.size() = " << raw_data.size() << '\n';
-				vector4d<double> raw_data_4d {reshape_4D(raw_data, gshape[0], 
-					gshape[1], gshape[2], gshape[3])};
+				//vector4d<double> raw_data_4d {reshape_4D(raw_data, gshape[0], 
+				//		gshape[1], gshape[2], gshape[3])};
+				Vector4D raw_data_4d {raw_data, gshape[0], gshape[1], gshape[2], 
+					gshape[3]};
 
 				// For 4D data, loidx[d] and upidx[d] are the ranges where raw_data 
 				// gets put into data. So loop through all those elements in data
@@ -413,8 +458,10 @@ namespace GkylBinary
 							//	", " << i2 << '\n';
 							for (int c {}; c < num_comps; ++c)
 							{
-								data[i0][i1][i2][c] = raw_data_4d[i0-(loidx[0]-1)]
-									[i1-(loidx[1]-1)][i2-(loidx[2]-1)][c];
+								//data[i0][i1][i2][c] = raw_data_4d[i0-(loidx[0]-1)]
+								//	[i1-(loidx[1]-1)][i2-(loidx[2]-1)][c];
+								data(i0, i1, i2, c) = raw_data_4d(i0-(loidx[0]-1), 
+									i1-(loidx[1]-1), i2-(loidx[2]-1), c);
 							}
 						}
 					}
@@ -425,6 +472,7 @@ namespace GkylBinary
 			// save it to a binary file so we can validate it in python.
 			std::ofstream outfile {"data.bin", std::ios::binary};
 
+			/*
 			// Save the dimensions
 			std::cout << "Writing array dimensions...\n";
 			uint64_t d0 {std::size(data)};
@@ -448,7 +496,7 @@ namespace GkylBinary
 					}
 				}
 			}
-
+			*/
 			outfile.close();
 
 		}

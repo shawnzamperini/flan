@@ -1,6 +1,7 @@
 #ifndef READ_INPUT_H
 #define READ_INPUT_H
 
+#include <array>
 #include "input_classes.h"
 
 /*
