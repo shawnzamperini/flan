@@ -9,12 +9,15 @@ CXX=g++
 MPICC=mpicc
 MPICXX=mpicxx
 
-# by default, don't build anything. will check later to see if things
+# By default, don't build anything. Will check later to see if things
 # should be installed.
 BUILD_ADIOS2=
 BUILD_OPENMPI=
 BUILD_BOOST=
 BUILD_MSGPACK=
+
+# By default make a new build-opts.sh file.
+NEW_BUILD_OPTS="yes"
 
 # ----------------------------------------------------------------------------
 # FUNCTION DEFINITIONS
@@ -39,6 +42,7 @@ MPICXX                      C, C++, MPI C and MPI C++ compilers to use
 --help                      This help.
 --prefix=DIR                Prefix where dependencies should be installed.
                             Default is $HOME/gkylsoft
+--boost-inc-dir             Directory where boost is installed (for msgpack)
 
 The following flags specify which libraries to build. By default, only
 builds libraries that haven't yet been built or can't be found. 
@@ -46,14 +50,9 @@ If you build libraries that depend on MPI please specify the MPI C
 and C++ compilers to use.
 
 --build-gkylzero            Should we build Gkylzero?
---build-luajit              Should we build LuaJIT?
---build-luajit-beta3        Should we build LuaJIT-beta3?
---build-luajit-ppcle        Should we build LuaJIT for PPC64 LE?
---build-luarocks            Should we build Luarocks?
 --build-adios2              Should we build ADIOS?
 --build-openmpi             Should we build OpenMPI?
---build-zmq                 Should we build ZeroMQ?
---build-czmq                Should we build C interface to ZeroMQ?
+--new-build-opts            Should we create a new build-opts.sh file?
 
 The behavior of the flags for library xxx is as follows:
 --build-xxx=no              Don't build xxx, even if it can't be found in PREFIXDIR
@@ -142,6 +141,10 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_MSGPACK="$value"
       ;;
+   --new-build-opts)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      NEW_BUILD_OPTS="$value"
+      ;;
    *)
       die "Error: Unknown flag: $1"
       ;;
@@ -161,7 +164,9 @@ then
     BUILD_OPENMPI="yes"
 fi
 
-# Write out build options for scripts to use
+# Write out build options for scripts to use if specified
+if [ "$NEW_BUILD_OPTS" = "yes" ]
+then
 cat <<EOF1 > build-opts.sh
 # Generated automatically! Do not edit
 
@@ -174,6 +179,7 @@ MPICC=$MPICC
 MPICXX=$MPICXX
 
 EOF1
+fi
 
 build_openmpi() {
     if [ "$BUILD_OPENMPI" = "yes" ]
