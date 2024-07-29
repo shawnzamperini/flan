@@ -4,16 +4,10 @@
 #include <map>
 #include <tuple>
 #include "msgpack.hpp"
+#include "read_gkyl_binary.h"
 
 namespace GkylBinary
 {
-
-	// Alias this long thing for an msgpack_map type
-	using Msgpack_map = std::map<std::string, msgpack::type::variant>;
-
-	// Alias for 4D vector
-	template <typename T>
-	using vector4d = std::vector<std::vector<std::vector<std::vector<T>>>>;
 
 	// function to reshape a 1D vector into a 4D
 	template <typename T>
@@ -40,14 +34,17 @@ namespace GkylBinary
 	    return result;
 	}
 
-	std::ifstream open_gkyl_file(const std::string& fname)
+	std::ifstream open_gkyl_file(const std::string_view fname)
 	{
-		std::cout << "Reading: " << fname << '\n';
-		std::ifstream stream {fname, std::ios::binary};
+		// fstream cannot be initialized with a string_view, need to convert
+		// toa  string first
+		std::string fname_str {fname};
+		std::cout << "Reading: " << fname_str << '\n';
+		std::ifstream stream {fname_str, std::ios::binary};
 
 		if (!stream.is_open())
 		{
-			std::cerr << "Error! Could not open file: " << fname << '\n';
+			std::cerr << "Error! Could not open file: " << fname_str << '\n';
 		}
 
 		return stream;
@@ -220,7 +217,7 @@ namespace GkylBinary
 	}
 
 
-	std::tuple<double, vector4d> load_frame(std::string_view fname)
+	std::tuple<double, vector4d<double>> load_frame(std::string_view fname)
 	{
 		// We make the assumption that a double is 8 bytes just to not get bogged
 		// down in implementation details in the start. If you encounter this
@@ -229,7 +226,7 @@ namespace GkylBinary
 		{
 			std::cerr << "Error! double is not 8 bytes on this machine. Ask"
 				" Shawn to fix this\n";
-			return std::make_tuple(0, vector4d {});
+			return std::make_tuple(0, vector4d<double> {});
 		}
 
 		// Load file (stream)
@@ -253,19 +250,29 @@ namespace GkylBinary
 		// The next section of data is stored in an msgpack map object
 		Msgpack_map msgpack_map {read_msgpack_map(gkyl_stream, meta_size)};
 
-		// Load info from the msgpack_map into normal variables
+		// Load info from the msgpack_map into normal variables. Currently we
+		// doing anything with frame, poly_order and nasis_type but we probably
+		// will eventually. 
 		double time {from_msgpack_map_dbl(msgpack_map, "time")};
-		int frame {from_msgpack_map_int(msgpack_map, "frame")};
-		int poly_order {from_msgpack_map_int(msgpack_map, "polyOrder")};
-		std::string basis_type {from_msgpack_map_str(msgpack_map, "basisType")};
+		[[maybe_unused]] int frame {from_msgpack_map_int(msgpack_map, "frame")};
+		[[maybe_unused]] int poly_order {from_msgpack_map_int(msgpack_map, "polyOrder")};
+		[[maybe_unused]] std::string basis_type {from_msgpack_map_str(msgpack_map, "basisType")};
 
 		// Okay, now the header info has been loaded. What follows next depends on 
-		// the file type. 
+		// the file type. Only file_type 3 is supported for now.
 		if (file_type == 3)
 		{
-			// real_type = 1 is a 4-byte float, and 2 is an 8-byte float (a double).
+			// real_type = 1 is a 4-byte float, and 2 is an 8-byte 
+			// float (a double). Currently we assume real_type = 2
+			// since it impacts how many bytes we read in at a time.
+			// Support can be added later for 1, but for now throw error. 
 			int real_type {read_uint64_int(gkyl_stream)};
 			std::cout << "real_type = " << real_type << '\n';
+			if (real_type != 2)
+			{
+				std::cerr << "Error! Only real_type = 2 is supported.\n";
+				std::cerr << "  real_type = " << real_type << '\n';
+			}
 
 			int ndim {read_uint64_int(gkyl_stream)};
 			std::cout << "ndim = " << ndim << '\n';
@@ -450,13 +457,16 @@ namespace GkylBinary
 			}
 
 			outfile.close();
+			gkyl_stream.close();
 
+			// Bundle up in a tuple and return
+			return std::make_tuple(time, data);
 		}
-
-		gkyl_stream.close();
-
-		// Bundle up in a tuple and return
-		return std::make_tuple(time, data);
+		else
+		{
+			std::cerr << "Error! only file_type 3 is supported at this point.\n";
+			std::cerr << "  file_type = " << file_type << '\n';
+			return std::make_tuple(0, vector4d<double> {});
+		}
 	}
-
 }
