@@ -9,3 +9,5 @@ src/imp_cpp.cpp
 build/*
 python/__pycache__
 install-deps/adios*
+install-deps/boost*
+install-deps/msgpack-c*

@@ -2,8 +2,9 @@
 #include <fstream>
 #include <string>
 
-#include "read_gkyl.h"
 #include "read_input.h"
+#include "read_gkyl.h"
+#include "impurity_transport.h"
 
 int main(int argc, char *argv[])
 {
@@ -34,8 +35,20 @@ int main(int argc, char *argv[])
 	// options are in OptionStr classes, int options in OptionInt, etc.).
 	Input::load_input_opts(input_stream);
 	
-	// Load in a Gkeyll run for the background plasma.
-	Gkyl::read_gkyl();
+	// Load in a Gkeyll run for the background plasma, returns a Background
+	// class object.
+	Gkyl::Background bkg {Gkyl::read_gkyl()};
+	
+	// Interpolate additional frames between each Gkeyll frame to artificially
+	// increase the time resolution of the simulation.
+	// To-do: Implement this later once I have an easier way to test it.
+	
+
+	// Begin main particle following loop.
+	Impurity::follow_impurities(bkg);
+
+	// Save simulation results.
+	
 
 	return 0;
 }

@@ -1,23 +1,19 @@
+#ifndef READ_GKYL_BINARY_H
+#define READ_GKYL_BINARY_H
+
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <map>
 #include <tuple>
+
+#include "vectors.h"
 #include "msgpack.hpp"
 
 namespace GkylBinary
 {
 	// Alias this long thing for an msgpack_map type
 	using Msgpack_map = std::map<std::string, msgpack::type::variant>;
-
-	// Alias for 4D vector
-	template <typename T>
-	using vector4d = std::vector<std::vector<std::vector<std::vector<T>>>>;
-
-	// Reshape a 1D vector into a 4D vector
-	template <typename T>
-	vector4d<T> reshape_4D(const std::vector<T> vec, int dim1, int dim2, 
-		int dim3, int dim4);
 
 	// Open a Gkeyll binary file and retun the stream object
 	std::ifstream open_gkyl_file(const std::string_view fname);
@@ -50,5 +46,7 @@ namespace GkylBinary
 	// Primary function. Read in a .gkyl binary file (a frame) and return a
 	// tuple of the time and the 4D data within. This should only be used with
 	// move semantics. 
-	std::tuple<double, vector4d<double>> load_frame(std::string_view fname);
+	std::tuple<double, Vectors::Vector4D> load_frame(std::string_view fname);
 }
+
+#endif

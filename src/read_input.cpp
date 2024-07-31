@@ -19,6 +19,9 @@ namespace Input
 		new OptionStr{"gkyl_casename",       "undefined"},
 		new OptionInt{"gkyl_frame_start",              0},
 		new OptionInt{"gkyl_frame_end",                1},
+		new OptionStr{"gkyl_elec_name",            "elc"},
+		new OptionStr{"gkyl_ion_name",             "ion"},
+		new OptionStr{"gkyl_file_type",         "binary"},
 		new OptionDbl{"imp_mass",                      0}
 	};
 
@@ -29,6 +32,9 @@ namespace Input
 		if (input_str == "gkyl_casename")      return gkyl_casename;
 		if (input_str == "gkyl_frame_start")   return gkyl_frame_start;
 		if (input_str == "gkyl_frame_end")     return gkyl_frame_end;
+		if (input_str == "gkyl_elec_name")     return gkyl_elec_name;
+		if (input_str == "gkyl_ion_name")      return gkyl_ion_name;
+		if (input_str == "gkyl_file_type")     return gkyl_file_type;
 		if (input_str == "imp_mass")           return imp_mass;
 		else return -1;
 	}

@@ -1,6 +1,10 @@
 #ifndef READ_INPUT_H
 #define READ_INPUT_H
 
+#include <array>
+#include <string>
+#include <fstream>
+
 #include "input_classes.h"
 
 /*
@@ -31,6 +35,9 @@ namespace Input
 		gkyl_casename,
 		gkyl_frame_start,
 		gkyl_frame_end,
+		gkyl_elec_name,
+		gkyl_ion_name,
+		gkyl_file_type,
 		imp_mass,
 		max_input_opts,
 	};

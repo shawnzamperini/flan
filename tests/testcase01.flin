@@ -4,11 +4,18 @@
 # Any additional spaces (except those surrounding the |) are ignored. 
 
 # The Gkeyll casename that provides the background plasma, as well as the 
-# frames to load in. 
+# frames to load in
 gkyl_dir                | /Users/zamperini/gkyldir/d3d-167196-v6-gpu
 gkyl_casename           | d3d-167196-v6-gpu
 gkyl_frame_start        | 0
 gkyl_frame_end          | 5
+gkyl_elec_name          | elc
+gkyl_ion_name           | ion
+
+# The type of Gkyell files to read in. Currently binary
+# is the only option (which is the default, so technically
+# not needed here but included for completeness for now).
+gkyl_file_type          | binary
 
 # Impurity ion mass (amu)
 imp_mass                | 183.84
