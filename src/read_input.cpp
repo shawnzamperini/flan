@@ -22,20 +22,40 @@ namespace Input
 		new OptionStr{"gkyl_elec_name",            "elc"},
 		new OptionStr{"gkyl_ion_name",             "ion"},
 		new OptionStr{"gkyl_file_type",         "binary"},
-		new OptionDbl{"imp_mass",                      0}
+		new OptionInt{"imp_atom_num",                 74},
+		new OptionDbl{"imp_mass_amu",             183.84},
+		new OptionInt{"imp_init_charge",               1},
+		new OptionInt{"imp_num",                       1},
+		new OptionDbl{"imp_xmin",                    0.0},
+		new OptionDbl{"imp_xmax",                    0.0},
+		new OptionStr{"imp_zstart_opt",   "single_value"},
+		new OptionStr{"imp_collisions",            "off"},
+		new OptionStr{"imp_var_reduct",            "off"},
+		new OptionDbl{"imp_var_reduct_freq",         0.1},
+		new OptionDbl{"imp_var_reduct_min_weight",   0.1}
 	};
 
 	// Provide a string and return the corresponding enumerator in Names
 	int str_to_name(std::string_view input_str)
 	{
-		if (input_str == "gkyl_dir")           return gkyl_dir;
-		if (input_str == "gkyl_casename")      return gkyl_casename;
-		if (input_str == "gkyl_frame_start")   return gkyl_frame_start;
-		if (input_str == "gkyl_frame_end")     return gkyl_frame_end;
-		if (input_str == "gkyl_elec_name")     return gkyl_elec_name;
-		if (input_str == "gkyl_ion_name")      return gkyl_ion_name;
-		if (input_str == "gkyl_file_type")     return gkyl_file_type;
-		if (input_str == "imp_mass")           return imp_mass;
+		if (input_str == "gkyl_dir")                   return gkyl_dir;
+		if (input_str == "gkyl_casename")              return gkyl_casename;
+		if (input_str == "gkyl_frame_start")           return gkyl_frame_start;
+		if (input_str == "gkyl_frame_end")             return gkyl_frame_end;
+		if (input_str == "gkyl_elec_name")             return gkyl_elec_name;
+		if (input_str == "gkyl_ion_name")              return gkyl_ion_name;
+		if (input_str == "gkyl_file_type")             return gkyl_file_type;
+		if (input_str == "imp_atom_num")               return imp_atom_num;
+		if (input_str == "imp_mass_amu")               return imp_mass_amu;
+		if (input_str == "imp_init_charge")            return imp_init_charge;
+		if (input_str == "imp_num")                    return imp_num;
+		if (input_str == "imp_xmin")                   return imp_xmin;
+		if (input_str == "imp_xmax")                   return imp_xmax;
+		if (input_str == "imp_zstart_opt")             return imp_zstart_opt;
+		if (input_str == "imp_collisions")             return imp_collisions;
+		if (input_str == "imp_var_reduct")             return imp_var_reduct;
+		if (input_str == "imp_var_reduct_freq")        return imp_var_reduct_freq;
+		if (input_str == "imp_var_reduct_min_weight")  return imp_var_reduct_min_weight;
 		else return -1;
 	}
 

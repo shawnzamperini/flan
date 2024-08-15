@@ -5,7 +5,7 @@
 
 namespace Impurity
 {
-	void follow_impurities(Gkyl::Background bkg);
+	void follow_impurities(Gkyl::Background& bkg);
 }
 
 #endif

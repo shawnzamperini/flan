@@ -5,17 +5,39 @@
 
 # The Gkeyll casename that provides the background plasma, as well as the 
 # frames to load in
-gkyl_dir                | /Users/zamperini/gkyldir/d3d-167196-v6-gpu
-gkyl_casename           | d3d-167196-v6-gpu
-gkyl_frame_start        | 0
-gkyl_frame_end          | 5
-gkyl_elec_name          | elc
-gkyl_ion_name           | ion
+gkyl_dir                     | /Users/zamperini/gkyldir/d3d-167196-v6-gpu
+gkyl_casename                | d3d-167196-v6-gpu
+gkyl_frame_start             | 0
+gkyl_frame_end               | 5
+gkyl_elec_name               | elc
+gkyl_ion_name                | ion
 
 # The type of Gkyell files to read in. Currently binary
 # is the only option (which is the default, so technically
 # not needed here but included for completeness for now).
-gkyl_file_type          | binary
+gkyl_file_type               | binary
 
 # Impurity ion mass (amu)
-imp_mass                | 183.84
+imp_atom_num                 | 74
+imp_mass_amu                 | 183.84
+imp_init_charge              | 1
+imp_num                      | 1000
+
+# Impurity x starting location (m)
+imp_xmin                     | 0.0
+imp_xmax                     | 0.0
+
+# Option determining how the impurities are born along the
+# z coordinate, i.e., along the field line. 
+# single_value: Ions start at a given z value
+# proportional_to_ni: Ions are randomly started along z 
+#	to the main ion density
+imp_zstart_opt               | single_value
+
+# Whether or not to turn kinetic collisions on
+imp_collisions               | on
+
+# Whether or not to use the variance reduction scheme
+imp_var_reduct               | on
+imp_var_reduct_freq          | 0.10
+imp_var_reduct_min_weight    | 0.10

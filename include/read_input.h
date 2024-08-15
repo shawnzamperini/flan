@@ -38,7 +38,17 @@ namespace Input
 		gkyl_elec_name,
 		gkyl_ion_name,
 		gkyl_file_type,
-		imp_mass,
+		imp_atom_num,
+		imp_mass_amu,
+		imp_init_charge,
+		imp_num,
+		imp_xmin,
+		imp_xmax,
+		imp_zstart_opt,
+		imp_collisions,
+		imp_var_reduct,
+		imp_var_reduct_freq,
+		imp_var_reduct_min_weight,
 		max_input_opts,
 	};
 

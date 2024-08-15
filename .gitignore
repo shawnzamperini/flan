@@ -11,3 +11,4 @@ python/__pycache__
 install-deps/adios*
 install-deps/boost*
 install-deps/msgpack-c*
+*.swp

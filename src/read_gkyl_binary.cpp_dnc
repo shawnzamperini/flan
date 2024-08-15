@@ -111,7 +111,17 @@ namespace GkylBinary
 		{
 			if (kv.first == key)
 			{
-				if (kv.second.is_double())
+				// We allow an integer to be read here because we can
+				// validly cast it to double. This exists because 0 gets
+				// stored as an int even when the rest of that variable in
+				// later entries are a double.
+				if (kv.second.is_uint64_t())
+				{
+					std::cout << "Key: " << kv.first << ", Value: " << 
+						kv.second.as_uint64_t() << std::endl;
+					return static_cast<double>(kv.second.as_uint64_t());
+				}
+				else if (kv.second.is_double())
 				{
 					std::cout << "Key: " << kv.first << ", Value: " << 
 						kv.second.as_double() << std::endl;
@@ -215,6 +225,11 @@ namespace GkylBinary
 		// Next is the filetype
 		int file_type {read_uint64_int(gkyl_stream)};
 		std::cout << "file_type = " << file_type << '\n';
+		if (file_type == 2)
+		{
+			std::cerr << "Error! Only file_type 1 and 3 supported.\n";
+			std::cerr << "  file_type = " << file_type << '\n';
+		}
 
 		// Meta data size, number of bytes of meta data
 		int meta_size {read_uint64_int(gkyl_stream)};
@@ -231,31 +246,31 @@ namespace GkylBinary
 		[[maybe_unused]] int poly_order {from_msgpack_map_int(msgpack_map, "polyOrder")};
 		std::string basis_type {from_msgpack_map_str(msgpack_map, "basisType")};
 
-		// Assemble the (probably 4D) array
-		std::cout << "creating data vector\n";
-		Vectors::Vector4D data {};
-
-		// Okay, now the header info has been loaded. What follows next depends on 
-		// the file type. Only file_type 3 is supported for now.
-		if (file_type == 3)
+		// real_type = 1 is a 4-byte float, and 2 is an 8-byte 
+		// float (a double). Currently we assume real_type = 2
+		// since it impacts how many bytes we read in at a time.
+		// Support can be added later for 1, but for now throw error. 
+		int real_type {read_uint64_int(gkyl_stream)};
+		std::cout << "real_type = " << real_type << '\n';
+		if (real_type != 2)
 		{
-			// real_type = 1 is a 4-byte float, and 2 is an 8-byte 
-			// float (a double). Currently we assume real_type = 2
-			// since it impacts how many bytes we read in at a time.
-			// Support can be added later for 1, but for now throw error. 
-			int real_type {read_uint64_int(gkyl_stream)};
-			std::cout << "real_type = " << real_type << '\n';
-			if (real_type != 2)
-			{
-				std::cerr << "Error! Only real_type = 2 is supported.\n";
-				std::cerr << "  real_type = " << real_type << '\n';
-			}
-
-			int ndim {read_uint64_int(gkyl_stream)};
+			std::cerr << "Error! Only real_type = 2 is supported.\n";
+			std::cerr << "  real_type = " << real_type << '\n';
+		}
+	
+		// Okay, now the header info has been loaded. What follows next 
+		// depends on the file type.
+		int ndim {};
+		std::vector<int> cells {};
+		std::vector<double> lower {};
+		std::vector<double> upper {};
+		if (file_type == 1 || file_type == 3)
+		{
+			// Read number of dimensions
+			ndim = read_uint64_int(gkyl_stream);
 			std::cout << "ndim = " << ndim << '\n';
 
 			// grid shape. this read in ndim ints
-			std::vector<int> cells {};
 			int tmp_cell {};
 			for (int i {}; i < ndim; ++i)
 			{
@@ -264,54 +279,77 @@ namespace GkylBinary
 			}
 
 			// lower bounds of grid float64[ndim]
-			std::vector<double> lower {};
 			for (int i {}; i < ndim; ++i)
 			{
 				lower.push_back(read_double(gkyl_stream));
 			}
 
 			// upper bounds of grid float64[ndim]
-			std::vector<double> upper {};
 			for (int i {}; i < ndim; ++i)
 			{
 				upper.push_back(read_double(gkyl_stream));
 			}
+		}
 
-			// element size * number of components in field. divide
-			// by sizeof(real_type), probably a 8 byte float, to get
-			// size of elements
-			int esznc {read_uint64_int(gkyl_stream)};
-			std::cout << "esznc = " << esznc << '\n';
+		// element size * number of components in field. divide
+		// by sizeof(real_type), probably a 8 byte float, to get
+		// size of elements
+		int esznc {read_uint64_int(gkyl_stream)};
+		std::cout << "esznc = " << esznc << '\n';
 
-			// number of elements is esznc / sizeof(double), so divide by 8.
-			int num_comps {esznc / 8};
-			std::cout << "num_comps = " << num_comps << '\n';
+		// number of elements is esznc / sizeof(double), so divide by 8.
+		int num_comps {esznc / 8};
+		std::cout << "num_comps = " << num_comps << '\n';
 
-			// total number of cells in field
-			int size {read_uint64_int(gkyl_stream)};
-			std::cout << "size = " << size << '\n';
+		// total number of cells in field
+		int size {read_uint64_int(gkyl_stream)};
+		std::cout << "size = " << size << '\n';
 
-			// number of ranges stored in file
-			int nrange {read_uint64_int(gkyl_stream)};
+		if (file_type == 2)
+		{
+			// Read in TIME_DATA
+			// To-do... 
+		}
+
+		// number of ranges stored for file_type 3
+		int nrange {};
+		if (file_type == 3)
+		{
+			nrange = read_uint64_int(gkyl_stream);
 			std::cout << "nrange = " << nrange << '\n';
+		}
 
-			// gshape is going to be the shape of the data array that we eventually
-			// return. it contains the number of cells in each direction and the
-			// last element is the number of components.
-			std::vector<int> gshape {};
-			for (int i {}; i < ndim; ++i)
-			{
-				gshape.push_back(cells[i]);
-			}
-			gshape.push_back(num_comps);
-			std::cout << "gshape: ";
-			for (auto g : gshape)
-			{
-				std::cout << g << " ";
-			}
-			std::cout << '\n';
-			Vectors::Vector4D data {gshape[0], gshape[1], gshape[2], gshape[3]};
+		// gshape is going to be the shape of the data array that we eventually
+		// return. it contains the number of cells in each direction and the
+		// last element is the number of components.
+		std::vector<int> gshape {};
+		for (int i {}; i < ndim; ++i)
+		{
+			gshape.push_back(cells[i]);
+		}
+		gshape.push_back(num_comps);
+		std::cout << "gshape: ";
+		for (auto g : gshape)
+		{
+			std::cout << g << " ";
+		}
+		std::cout << '\n';
 
+		// Create the 4D vector that will be returned
+		Vectors::Vector4D data {gshape[0], gshape[1], gshape[2], gshape[3]};
+
+		// file_type 1 is pretty easy, just read in the data as a 1D array
+		// and pass it into a 4D array constructor.
+		if (file_type == 1)
+		{
+			std::vector<double> raw_data {};
+			read_double_vec(gkyl_stream, raw_data, size * num_comps);
+			data.move_into_data(std::move(raw_data));
+		}
+
+		// file_type 3 is a bit more complex because it read ranges
+		else if (file_type == 3)
+		{
 			std::vector<double> raw_data {};
 			for (int i {}; i < nrange; ++i)
 			{
@@ -376,52 +414,45 @@ namespace GkylBinary
 					}
 				}
 			}
+		}
+		// At this point we have our data array (for this time slice)! Let's 
+		// save it to a binary file so we can validate it in python.
+		/*
+		std::ofstream outfile {"data.bin", std::ios::binary};
 
-			// At this point we have our data array (for this time slice)! Let's 
-			// save it to a binary file so we can validate it in python.
-			/*
-			std::ofstream outfile {"data.bin", std::ios::binary};
+		// Save the dimensions
+		std::cout << "Writing array dimensions...\n";
+		uint64_t d0 {data.get_dim1()};
+		uint64_t d1 {data.get_dim2()};
+		uint64_t d2 {data.get_dim3()};
+		uint64_t d3 {data.get_dim4()};
+		outfile.write(reinterpret_cast<const char*>(&d0), sizeof(uint64_t));
+		outfile.write(reinterpret_cast<const char*>(&d1), sizeof(uint64_t));
+		outfile.write(reinterpret_cast<const char*>(&d2), sizeof(uint64_t));
+		outfile.write(reinterpret_cast<const char*>(&d3), sizeof(uint64_t));
 
-			// Save the dimensions
-			std::cout << "Writing array dimensions...\n";
-			uint64_t d0 {data.get_dim1()};
-			uint64_t d1 {data.get_dim2()};
-			uint64_t d2 {data.get_dim3()};
-			uint64_t d3 {data.get_dim4()};
-			outfile.write(reinterpret_cast<const char*>(&d0), sizeof(uint64_t));
-			outfile.write(reinterpret_cast<const char*>(&d1), sizeof(uint64_t));
-			outfile.write(reinterpret_cast<const char*>(&d2), sizeof(uint64_t));
-			outfile.write(reinterpret_cast<const char*>(&d3), sizeof(uint64_t));
-
-			// Write out array
-			std::cout << "Writing array...\n";
-			for (int i {}; i < d0; ++i)
+		// Write out array
+		std::cout << "Writing array...\n";
+		for (int i {}; i < d0; ++i)
+		{
+			for (int j {}; j < d1; ++j)
 			{
-				for (int j {}; j < d1; ++j)
+				for (int k {}; k < d2; ++k)
 				{
-					for (int k {}; k < d2; ++k)
+					for (int l {}; l < d3; ++l)
 					{
-						for (int l {}; l < d3; ++l)
-						{
-							outfile.write(reinterpret_cast<const char*>(&data(i,j,k,l)), 
-								sizeof(data(i,j,k,l)));
-						}
+						outfile.write(reinterpret_cast<const char*>(&data(i,j,k,l)), 
+							sizeof(data(i,j,k,l)));
 					}
 				}
 			}
-
-			outfile.close();
-			*/
-			gkyl_stream.close();
-
-			// Bundle up in a tuple and return
-			return std::make_tuple(time, data);
 		}
-		else
-		{
-			std::cerr << "Error! only file_type 3 is supported at this point.\n";
-			std::cerr << "  file_type = " << file_type << '\n';
-			return std::make_tuple(0, Vectors::Vector4D {});
-		}
+
+		outfile.close();
+		*/
+		gkyl_stream.close();
+
+		// Bundle up in a tuple and return
+		return std::make_tuple(time, data);
 	}
 }
