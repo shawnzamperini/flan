@@ -15,6 +15,9 @@ BUILD_ADIOS2=
 BUILD_OPENMPI=
 BUILD_BOOST=
 BUILD_MSGPACK=
+BUILD_ZLIB=
+BUILD_HDF5=
+BUILD_NETCDF_C=
 
 # By default make a new build-opts.sh file.
 NEW_BUILD_OPTS="yes"
@@ -52,6 +55,9 @@ and C++ compilers to use.
 --build-gkylzero            Should we build Gkylzero?
 --build-adios2              Should we build ADIOS?
 --build-openmpi             Should we build OpenMPI?
+--build-zlib                SHould we build zlib? Needed for HDF5 and NetCDF-C
+--build-hdf5                Should we build HDF5? Needed for NetCDF-C
+--build-netcdf-c            Should we build netCDF?
 --new-build-opts            Should we create a new build-opts.sh file?
 
 The behavior of the flags for library xxx is as follows:
@@ -140,6 +146,18 @@ do
    --build-msgpack)
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_MSGPACK="$value"
+      ;;
+   --build-zlib)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      BUILD_ZLIB="$value"
+      ;;
+   --build-hdf5)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      BUILD_HDF5="$value"
+      ;;
+   --build-netcdf-c)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      BUILD_NETCDF_C="$value"
       ;;
    --new-build-opts)
       [ -n "$value" ] || die "Missing value in flag $key."
@@ -253,6 +271,30 @@ build_msgpack() {
    fi
 }
 
+build_zlib() {
+   if [ "$BUILD_ZLIB" = "yes" ]
+   then
+      echo "Building zlib"
+      ./build-zlib.sh
+   fi
+}
+
+build_hdf5() {
+   if [ "$BUILD_HDF5" = "yes" ]
+   then
+      echo "Building HDF5"
+      ./build-hdf5.sh
+   fi
+}
+
+build_netcdf-c() {
+   if [ "$BUILD_NETCDF_C" = "yes" ]
+   then
+      echo "Building netCDF-c"
+      ./build-netcdf-c.sh
+   fi
+}
+
 echo "Installations will be in $PREFIX"
 
 #build_openmpi
@@ -264,3 +306,6 @@ build_adios2
 #build_czmq
 build_boost
 build_msgpack
+build_zlib  # HDF5 (and thus netcdf-c) dependency
+build_hdf5  # netcdf-c dependency, so do this first
+build_netcdf-c

@@ -41,6 +41,19 @@ namespace Vectors
 			// Note: Expensive! Could we use move semantics instead?
 			m_data = data_in;
 		}
+
+		// Artificial constructor to allow us to compile read_gkyl.load_values.
+		// That function selectively returns a brace-enclosed initializer list
+		// for either a Vector3D or Vector4D based on the template parameter.
+		// The compiler nonetheless needs to see a constructor for Vector3D
+		// that accepts 5 inputs, since that is what Vector4D uses. This
+		// constructor should never get used.
+		Vector3D(std::vector<double> data_in, int dim1, int dim2, int dim3, 
+				int dim4)
+		{
+			std::cerr << "Error! Vector3D was called with 4 dimensions. This"
+				<< " is a programming error. Please fix\n";
+		}
 	
 		// Accessors
 		int get_dim1() {return m_dim1;}
@@ -54,6 +67,19 @@ namespace Vectors
 		{
 			int index = i * (m_dim2 * m_dim3) + j * m_dim3 + k;
 			return m_data[index];
+		}
+
+		// Move the passed in vector to data. Hmmm... this is really
+		// some sort of abstraction of operator=...
+		void move_into_data(Vectors::Vector3D& vec)
+		{
+			// Copy over the dimensions
+			m_dim1 = vec.get_dim1();
+			m_dim2 = vec.get_dim2();
+			m_dim3 = vec.get_dim3();
+
+			// Move the data into this
+			m_data = std::move(vec.m_data);
 		}
 	};
 
@@ -91,6 +117,18 @@ namespace Vectors
 			// Copy over into the class
 			// Note: Expensive! Could we use move semantics instead?
 			m_data = data_in;
+		}
+
+		// Artificial constructor to allow us to compile read_gkyl.load_values.
+		// That function selectively returns a brace-enclosed initializer list
+		// for either a Vector3D or Vector4D based on the template parameter.
+		// The compiler nonetheless needs to see a constructor for Vector4D
+		// that accepts these inputs, since that is what Vector3D uses. This
+		// constructor should never get used.
+		Vector4D(std::vector<double> data_in, int dim1, int dim2, int dim3)
+		{
+			std::cerr << "Error! Vector4D was called with 3 dimensions. This"
+				<< " is a programming error. Please fix\n";
 		}
 
 		// We are making the copy copy constructor yell at us since we 

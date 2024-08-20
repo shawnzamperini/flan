@@ -5,6 +5,8 @@
 #include "read_input.h"
 #include "read_gkyl.h"
 #include "impurity_transport.h"
+#include "save_results.h"
+#include "background.h"
 
 int main(int argc, char *argv[])
 {
@@ -37,7 +39,7 @@ int main(int argc, char *argv[])
 	
 	// Load in a Gkeyll run for the background plasma, returns a Background
 	// class object.
-	Gkyl::Background bkg {Gkyl::read_gkyl()};
+	Background::Background bkg {Gkyl::read_gkyl()};
 	
 	// Interpolate additional frames between each Gkeyll frame to artificially
 	// increase the time resolution of the simulation.
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
 	Impurity::follow_impurities(bkg);
 
 	// Save simulation results.
-	
+	SaveResults::save_results(bkg);
 
 	return 0;
 }

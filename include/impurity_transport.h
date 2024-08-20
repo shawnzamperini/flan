@@ -1,11 +1,11 @@
 #ifndef IMPURITY_TRANSPORT_H
 #define IMPURITY_TRANSPORT_H
 
-#include "read_gkyl.h"  // For Background
+#include "background.h"
 
 namespace Impurity
 {
-	void follow_impurities(Gkyl::Background& bkg);
+	void follow_impurities(Background::Background& bkg);
 }
 
 #endif

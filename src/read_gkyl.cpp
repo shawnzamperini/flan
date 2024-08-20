@@ -2,6 +2,9 @@
 #include <string>
 #include <sstream>
 #include <tuple>
+#include <type_traits> // For std::is_same
+#include <numeric>     // For std::accumulate
+#include <functional>  // For std::multiplies
 /*
  * Opting out of ADIOS2 since I think it's going to get removed...
 #include <adios2.h>
@@ -11,6 +14,7 @@
 //#include "read_gkyl_binary.h"
 #include "vectors.h"
 #include "constants.h"
+#include "background.h"
 
 namespace Gkyl
 {
@@ -21,18 +25,21 @@ namespace Gkyl
 	Vectors::Vector4D gkyl_te {};
 	Vectors::Vector4D gkyl_ti {};
 	Vectors::Vector4D gkyl_vp {};
-	Vectors::Vector3D gkyl_b {};  // Note: Vector3D (x,y,z), electrostatic
+	Vectors::Vector4D gkyl_b {};  // If electrostatic the first dimension is only 1 long
 
 	// Entry point for reading Gkeyll data into Flan. 
-	Background read_gkyl()
+	Background::Background read_gkyl()
 	{	
 		// Load each needed dataset from Gkeyll
 		read_elec_density();
 		read_elec_temperature();
+		read_ion_temperature();
+		read_potential();
+		read_magnetic_field();
 
 		// With all our arrays assembled, encapsulate them into a Background
 		// class object with move semantics then return.
-		Background bkg {create_bkg()};
+		Background::Background bkg {create_bkg()};
 		return bkg;
 	}
 	
@@ -112,6 +119,7 @@ namespace Gkyl
 		return times;
 	}
 
+	// Reads in the x, y, z grid nodes using pgkyl.
 	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> 
 		load_grid()
 	{
@@ -176,7 +184,6 @@ namespace Gkyl
 				{
 					// Append to each vector accordingly
 					double grid_value {std::stod(line)};
-					std::cout << "count = " << count << "\n";
 					if (count < dims[0]) 
 						grid_x.push_back(grid_value);
 					else if (count >= dims[0] && count < dims[0] + dims[1]) 
@@ -206,6 +213,7 @@ namespace Gkyl
 		return std::make_tuple(grid_x, grid_y, grid_z);
 	}
 
+	// Read in data values using pgkyl, returning as a Vector4D.
 	Vectors::Vector4D load_values(const std::string& data_type)
 	{
 		// Filename is treated as a constant.
@@ -226,9 +234,9 @@ namespace Gkyl
 			// If line starts with #, then it's a comment and ignore
 			if (!line.starts_with("#"))
 			{
-				// The first line is 4 integers telling us how many
-				// times (frames) and the x, y, z dimension sizes. The
-				// x, y, z dimensions are one smaller than grid_x, y, z
+				// The first number is how many times (frames) there
+				// are then the x, y, z sizes. 
+				// The x, y, z dimensions are one smaller than grid_x, y, z
 				// because these are the data values at the cell centers.
 				if (!ndata_read)
 				{
@@ -244,9 +252,10 @@ namespace Gkyl
 					// went wrong.
 					if (dims.size() != 4)
 					{
-						std::cerr << "Error! More than 4 dimensions were read"
-							<< " in from " << filename << ". Check that this "
-							<< " file is being generated correctly.\n";
+						std::cerr << "Error! More than 4" 
+							<< " dimensions were read in from " << filename 
+							<< ". Check that this file is being generated " 
+							<< "correctly.\n";
 						std::cerr << "dims: ";
 						for (auto i : dims) std::cerr << i << " ";
 						std::cerr << '\n';
@@ -254,8 +263,8 @@ namespace Gkyl
 				
 					// nvalues is the total number of points in the file. The
 					// data is flattened using C-style indexing, so as a 1D 
-					// vector there are t*x*y*z values to read in.
-					ndata = dims[0] * dims[1] * dims[2] * dims[3];
+					// vector there are t*x*y*z values to read in. 
+					ndata = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
 					ndata_read = true;
 					std::cout << "Reading " << ndata << " data values\n";
 
@@ -273,9 +282,12 @@ namespace Gkyl
 						std::cerr << "Error! There appears to be too many "
 							<< "values in " << filename << ". Check that "
 							<< "this file is being generated correctly.\n";
-						std::cerr << "count = " << count << "dims = "
-							<< dims[0] << ", " << dims[1] << ", " << dims[2]
-							<< dims[3] << '\n';
+						std::cerr << "count = " << count << "dims = ";
+						for (std::size_t i {}; i < dims.size()-1; ++i)
+						{
+							std::cerr << dims[i] << ", ";
+						}
+						std::cerr << dims[dims.size()-1] << "\n";
 					}
 
 					++count;
@@ -286,6 +298,30 @@ namespace Gkyl
 
 		// Move the data into a 4D vector and return it
 		return {data_flattened, dims[0], dims[1], dims[2], dims[3]};
+	}
+
+	std::vector<std::string> load_interp_settings()
+	{
+		// Filename is treated as a constant.
+		std::string filename {"bkg_from_pgkyl_interp_settings.csv"};
+		std::ifstream fstream {filename};
+
+		// The interpolation settings in a vector. FIrst element is
+		// basis type, second is the poly order.
+		std::vector<std::string> interp_settings {};
+
+		// Go through one line at a time
+		std::string line {};
+		while(std::getline(fstream, line))
+		{
+			// If line starts with #, then it's a comment and ignore
+			if (!line.starts_with("#"))
+			{
+				interp_settings.push_back(line);
+			}
+		}
+
+		return interp_settings;
 	}
 
 	// Function to read in Gkeyll data using a python interface to postgkyl
@@ -320,6 +356,18 @@ namespace Gkyl
 			<< " --gkyl_species=" << species
 			<< " --gkyl_data_type=" << data_type;
 
+		// The bmag files don't include the needed DG interpolation data,
+		// so we need to pass those in manually. To avoid user-error, we
+		// will just rely on any of the other data file being created first,
+		// where they will create a _interp_settings.csv file with the 
+		// basis type and poly order that we need to pass in.
+		if (data_type == "magnetic_field")
+		{
+			std::vector<std::string> interp_settings = load_interp_settings();
+			read_gkyl_cmd_ss << " --gkyl_basis_type=" << interp_settings[0]
+				<< " --gkyl_poly_order=" << interp_settings[1];
+		}
+
 		// Execute the command to save the files
 		std::string tmp_str {read_gkyl_cmd_ss.str()};
 		const char* read_gkyl_cmd {tmp_str.c_str()};
@@ -341,7 +389,6 @@ namespace Gkyl
 		std::cout << "Loading " << data_type << "...\n";
 		Vectors::Vector4D tmp_data {load_values(data_type)};
 		gkyl_data.move_into_data(tmp_data);
-		
 	}
 /*
 	// General function to read in data from Gkeyll into the relevant
@@ -395,13 +442,48 @@ namespace Gkyl
 		read_data_pgkyl(gkyl_elec_name, "temperature", gkyl_te);
 	}
 
-	Background create_bkg()
+	// Read ion temperature into gkyl_ti.
+	void read_ion_temperature()
 	{
-		Background bkg {};
+		// Load into local variables so code is easier to read.
+		std::string gkyl_ion_name {Input::get_opt_str(Input::gkyl_ion_name)};
+
+		// Call pgkyl to load data into gkyl_ti
+		read_data_pgkyl(gkyl_ion_name, "temperature", gkyl_ti);
+	}
+
+	// Read plasma potential into gkyl_vp.
+	void read_potential()
+	{
+		using namespace std::string_literals;
+
+		// Call pgkyl to load data into gkyl_vp. There is no species
+		// name with the potential file so just putting a placeholder
+		// string. The script handles things.
+		read_data_pgkyl("null"s, "potential", gkyl_vp);
+	}
+
+	// Read magnetic field into gkyl_b.
+	void read_magnetic_field()
+	{
+		using namespace std::string_literals;
+
+		// Call pgkyl to load data into gkyl_b. There is no species
+		// name with the potential file so just putting a placeholder
+		// string. The script handles things.
+		read_data_pgkyl("null"s, "magnetic_field", gkyl_b);
+	}
+
+	Background::Background create_bkg()
+	{
+		Background::Background bkg {};
 
 		// Move each of the vectors we've created into our bkg object
 		bkg.move_into_ne(gkyl_ne);
-		//bkg.move_into_te(gkyl_te);
+		bkg.move_into_te(gkyl_te);
+		bkg.move_into_ti(gkyl_ti);
+		bkg.move_into_vp(gkyl_vp);
+		bkg.move_into_b(gkyl_b);
 		
 		// Okay to return by value since C++11 uses move semantics here.
 		return bkg;

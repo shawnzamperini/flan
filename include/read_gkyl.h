@@ -5,40 +5,14 @@
 #include <vector>
 
 #include "vectors.h"
+#include "background.h"
 
 namespace Gkyl
 {
-	// Encapsulating class containing the Gkeyll background.
-	class Background
-	{
-	private:
-		std::vector<double> m_times {};
-		Vectors::Vector4D m_ne {};
-
-	public:
-
-		// Accessors
-		Vectors::Vector4D& get_ne() {return m_ne;}
-
-		// Setters
-		void move_into_ne(Vectors::Vector4D& ne) 
-		{
-			m_ne.move_into_data(ne);
-		}
-
-		// TBD
-		void resize_vectors(int nframes, int dim1, int dim2, int dim3)
-		{
-			
-		}
-	};
 
 	// Entry point for reading Gkeyll data into Flan. 
-	Background read_gkyl();
+	Background::Background read_gkyl();
 	
-	// Resize vectors so we aren't constantly doing this in the loop.
-	//void resize_gkyl_data();
-
 	// Simple helper function to return a string of the full path to a Gkeyll
 	// file using it's file name convention.
 	std::string assemble_path(const std::string& species, 
@@ -50,6 +24,16 @@ namespace Gkyl
 	// before Flan is run.
 	std::string get_read_gkyl_py();
 
+	// Reads in a 1D vector of times corresponding to each frame.
+	std::vector<double> load_times();
+
+	// Reads in the x, y, z grid nodes using pgkyl.
+	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> 
+		load_grid();
+
+	// Read in data values using pgkyl, returning as a Vector4D.
+	Vectors::Vector4D load_values(const std::string& data_type);
+
 	// Function to read in Gkeyll data using a python interface to postgkyl
 	// via read_gkyl.py. This produces the following csv files:
 	//   bkg_from_pgkyl_times.csv : The time for each frame
@@ -59,12 +43,12 @@ namespace Gkyl
 	// The data is loaded and placed into gkyl_data accordingly.
 	void read_data_pgkyl(const std::string& species, 
 		const std::string& data_type,
-		std::vector<Vectors::Vector3D>& gkyl_data);
+		std::vector<Vectors::Vector4D>& gkyl_data);
 
 	// General function to read in data from Gkeyll into the relevant
 	// vector specified by gkyl_data.
-	void read_data(const std::string& species, const std::string& ftype,
-		std::vector<Vectors::Vector3D>& gkyl_data, int comp);
+	//void read_data(const std::string& species, const std::string& ftype,
+	//	std::vector<Vectors::Vector3D>& gkyl_data, int comp);
 
 	// Read in the corresponding Gkeyll data into vectors.
 	void read_elec_density();
@@ -73,7 +57,7 @@ namespace Gkyl
 	void read_potential();
 	void read_magnetic_field();
 
-	Background create_bkg();
+	Background::Background create_bkg();
 }
 
 #endif

@@ -21,12 +21,50 @@ def read_binary(args, comp, value_scale=1.0):
             data_dname = "M0"
         elif (args.gkyl_data_type == "temperature"):
             data_dname = "prim_moms"
-        path = args.gkyl_dir + "/" + args.gkyl_case_name + "-" + \
-            args.gkyl_species + "_" + data_dname + "_" + str(frame) + ".gkyl"
+        elif (args.gkyl_data_type == "potential"):
+            data_dname = "field"
+        elif (args.gkyl_data_type == "magnetic_field"):
+            data_dname = "bmag"
+        
+        # Some different ways each file name is constructed
+        if (args.gkyl_data_type in ["density", "temperature"]):
+            path = args.gkyl_dir + "/" + args.gkyl_case_name + "-" + \
+                args.gkyl_species + "_" + data_dname + "_" + str(frame) \
+                + ".gkyl"
+        elif (args.gkyl_data_type == "potential"):
+            path = args.gkyl_dir + "/" + args.gkyl_case_name + \
+                "-" + data_dname + "_" + str(frame) \
+                + ".gkyl"
+        elif (args.gkyl_data_type == "magnetic_field"):
+            path = args.gkyl_dir + "/" + args.gkyl_case_name + \
+                "-" + data_dname \
+                + ".gkyl"
+
+            # It seems the bmag file does not include this info, so it needs to
+            # be passed in. This conditional statement allows this.
+            if(args.gkyl_basis_type != "serendipity" or not  args.gkyl_poly_order):
+                print("Error! Must pass in the interpolation basis type" + \
+                    " (gkyl_basis_type) and poly order (gkyl_poly_order)" + \
+                    " when saving the magnetic field data. Only " + \
+                    "serendipity is supported so far.")
         
         # Note: This accepts a comp argument but it is ignored for binary
         # filetypes. Very tricky. It is passed in below during interpolate. 
         data = pgkyl.data.GData(path)
+
+        # Set the basis_type and poly_order if not included. It's really on
+        # the user to ensure this matches among files until this information
+        # is included in the bmag file.
+        if (data.ctx["basis_type"] is None):
+            data.ctx["basis_type"] = args.gkyl_basis_type
+        if (data.ctx["poly_order"] is None):
+            data.ctx["poly_order"] = args.gkyl_poly_order
+
+        # Assign the values in data to the args. They should match. This allows
+        # them to be written out later since we're using args to carry
+        # everything around.
+        args.gkyl_basis_type = data.ctx["basis_type"]
+        args.gkyl_poly_order = data.ctx["poly_order"]
 
         # Perform interpolation - add more options as I come across them
         if (data.ctx["basis_type"] == "serendipity"):
@@ -35,7 +73,8 @@ def read_binary(args, comp, value_scale=1.0):
             print("Error! basis_type = {:} not supported yet.".format(data.ctx["basis_type"]))
 
         # Add time
-        times.append(data.ctx["time"])
+        if (args.gkyl_data_type != "magnetic_field"):
+            times.append(data.ctx["time"])
 
         # Get grid and values. For each dimension, grid is one element larger
         # than values because it is the edges of each grid. Later in Flan we
@@ -48,6 +87,11 @@ def read_binary(args, comp, value_scale=1.0):
         # to convert from velocity to temperature. 
         value *= value_scale
         values.append(value)
+
+        # If using doing magnetic field, this is only to be done once since
+        # we otherwise would be repeating the same information each frame.
+        if (args.gkyl_data_type == "magnetic_field"):
+            break
 
     # Note: We intentionally just return grid and not grids since it is the
     # same for each time slice. If this changes, we can revisit but keep it 
@@ -63,17 +107,20 @@ def save_csv(args, times, grid, values):
     # Use this as just a standard filename, no need to make it unique
     fname_base = "bkg_from_pgkyl_"
 
-    # Add an informative header just for clarity's sake
-    header = (
-             "# The times of each Gkeyll frame. The first line is an\n"
-             "# integer telling how many values follow.\n"
-             )
-             
-    with open(fname_base + "times.csv", "w") as f:
-        f.write(header)
-        num_vals = "{:d}\n".format(len(times))
-        f.write(num_vals)
-        np.savetxt(f, times)
+    # Add an informative header just for clarity's sake. The magnetic field
+    # is just one array (electrostatic approximation for now), so there
+    # are no times to write.
+    if (args.gkyl_data_type != "magnetic_field"):
+        header = (
+                 "# The times of each Gkeyll frame. The first line is an\n"
+                 "# integer telling how many values follow.\n"
+                 )
+                 
+        with open(fname_base + "times.csv", "w") as f:
+            f.write(header)
+            num_vals = "{:d}\n".format(len(times))
+            f.write(num_vals)
+            np.savetxt(f, times)
 
     # Add an informative header just for clarity's sake
     header = (
@@ -109,9 +156,20 @@ def save_csv(args, times, grid, values):
         for i in range(0, len(values)):
             np.savetxt(f, values[i].flatten())
 
-def main(gkyl_dir=None, gkyl_case_name=None, gkyl_file_type=None, 
-    gkyl_frame_start=None, gkyl_frame_end=None, gkyl_species=None,
-    gkyl_data_type=None):
+    # Save the interpolation settings
+    header = (
+            "# The DG interpolation options used. These should probably\n"
+            "# be the same for each data type in a run, so in theory this\n"
+            "# will be overwriting a file with the same data each time.\n"
+            "# The first line is the basis type, second is the poly order.\n"
+            )
+    with open(fname_base + "interp_settings.csv", "w") as f:
+        f.write(header)
+        f.write(args.gkyl_basis_type + "\n")
+        f.write(str(args.gkyl_poly_order) + "\n")
+
+
+def main():
     """
     Can optionally call this with standard arguments, they'll override anything
     passed in with the command line.
@@ -127,26 +185,19 @@ def main(gkyl_dir=None, gkyl_case_name=None, gkyl_file_type=None,
     parser.add_argument("--gkyl_frame_start", type=int, help="first Gkyell frame to read in")
     parser.add_argument("--gkyl_frame_end", type=int, help="last Gkyell frame to read in")
     parser.add_argument("--gkyl_species", type=str, help="name of the species to load")
-    parser.add_argument("--gkyl_data_type", type=str, help="name of the type of data file to load", choices=["density", "temperature"])
+    parser.add_argument("--gkyl_data_type", type=str, help="name of the type of data file to load", choices=["density", "temperature", "potential", "magnetic_field"])
+    parser.add_argument("--gkyl_basis_type", type=str, help="DG basis type", choices=["serendipity"])
+    parser.add_argument("--gkyl_poly_order", type=int, help="DG poly order")
 
     # Parse arguments
     args = parser.parse_args()
-
-    # Replace command line arguments with normal arguments.
-    if gkyl_dir is not None: args.gkyl_dir = gkyl_dir
-    if gkyl_case_name is not None: args.gkyl_case_name = gkyl_case_name
-    if gkyl_file_type is not None: args.gkyl_file_type = gkyl_file_type
-    if gkyl_frame_start is not None: args.gkyl_frame_start = int(gkyl_frame_start)
-    if gkyl_frame_end is not None: args.gkyl_frame_end = int(gkyl_frame_end)
-    if gkyl_species is not None: args.gkyl_species = gkyl_species
-    if gkyl_data_type is not None: args.gkyl_data_type = gkyl_data_type
 
     # Load binary file, specifying which components in the binary file has
     # the data we're after.
     if (args.gkyl_file_type == "binary"):
 
         # Load density
-        if (args.gkyl_data_type == "density"):
+        if (args.gkyl_data_type in ["density", "potential", "magnetic_field"]):
             value_scale = 1.0
             comp = 0
 
@@ -163,7 +214,7 @@ def main(gkyl_dir=None, gkyl_case_name=None, gkyl_file_type=None,
         times, grid, values = read_binary(args, comp, value_scale)
 
     else:
-        print("Error! Only binary Gkyell files are currently supported.")
+        print("Error! Only binary Gkyell files (.gkyl) are currently supported.")
 
     # Save to csv file with numpy.
     print("Saving .csv files...")
