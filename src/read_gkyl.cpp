@@ -215,7 +215,7 @@ namespace Gkyl
 			}
 		}
 		fstream.close();
-
+		
 		// Pack up into tuple and return
 		return std::make_tuple(grid_x, grid_y, grid_z);
 	}
@@ -336,10 +336,11 @@ namespace Gkyl
 	// grids, just in case that isn't obvious throughout the whole code.
 	std::vector<double> cell_centers(std::vector<double>& grid)
 	{
+
 		std::vector<double> centers (std::ssize(grid) - 1);
 		for (std::size_t i {}; i < grid.size() - 1; ++i)
 		{
-			centers[i] = (grid[i+1] - grid[i]) / 2.0;
+			centers[i] = grid[i] + (grid[i+1] - grid[i]) / 2.0;
 		}
 		return centers;
 	}

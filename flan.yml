@@ -1,0 +1,7 @@
+name: flan
+dependencies:
+  - python=3.12.4
+  - numpy
+  - matplotlib
+  - conda-forge::netcdf4
+  - ipython

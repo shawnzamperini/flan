@@ -2,6 +2,7 @@
 
 # Defaults
 PREFIX=$HOME/flansoft
+FLANROOT="NOT DEFINED"
 
 # default build options
 CC=gcc
@@ -19,6 +20,7 @@ BUILD_ZLIB=
 BUILD_HDF5=
 BUILD_NETCDF_C=
 BUILD_NETCDF_CXX=
+SETUP_PYTHON_ENV=
 
 # By default make a new build-opts.sh file.
 NEW_BUILD_OPTS="yes"
@@ -45,7 +47,10 @@ MPICXX                      C, C++, MPI C and MPI C++ compilers to use
 -h
 --help                      This help.
 --prefix=DIR                Prefix where dependencies should be installed.
-                            Default is $HOME/gkylsoft
+                            Default is $HOME/flansoft
+--flanroot=DIR              Flanroot is the top-level directory of Flan. This
+                            should be taken care of automatically and the
+                            user should nto need to specify it.
 --boost-inc-dir             Directory where boost is installed (for msgpack)
 
 The following flags specify which libraries to build. By default, only
@@ -60,6 +65,7 @@ and C++ compilers to use.
 --build-hdf5                Should we build HDF5? Needed for NetCDF-C
 --build-netcdf-c            Should we build netCDF?
 --build-netcdf-cxx          Should we build the netCDF C++ interface?
+--setup-python-env          SHould we setup the python environment?
 --new-build-opts            Should we create a new build-opts.sh file?
 
 The behavior of the flags for library xxx is as follows:
@@ -133,6 +139,10 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       PREFIX="$value"
       ;;
+   --flanroot)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      FLANROOT="$value"
+      ;;
    --build-openmpi)
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_OPENMPI="$value"
@@ -169,6 +179,10 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       NEW_BUILD_OPTS="$value"
       ;;
+   --setup-python-env)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      SETUP_PYTHON_ENV="$value"
+      ;;
    *)
       die "Error: Unknown flag: $1"
       ;;
@@ -196,6 +210,7 @@ cat <<EOF1 > build-opts.sh
 
 # Installation directory
 FLANSOFT=$PREFIX
+FLANROOT=$FLANROOT
 # Various compilers
 CC=$CC
 CXX=$CXX
@@ -261,15 +276,25 @@ build_netcdf-cxx() {
    fi
 }
 
+setup_python_env() {
+   if [ "$SETUP_PYTHON_ENV" = "yes" ]
+   then
+      echo "Setting up python environment"
+      ./setup-python-env.sh
+   fi
+}
+
 echo "Installations will be in $PREFIX"
 
 # On the chopping block
-build_adios2
-build_boost
-build_msgpack
+#build_adios2
+#build_boost
+#build_msgpack
 
-# Order matters for these three
+# Order matters for these four
 build_zlib  # HDF5 (and thus netcdf-c) dependency
 build_hdf5  # netcdf-c dependency
 build_netcdf-c
 build_netcdf-cxx
+
+setup_python_env

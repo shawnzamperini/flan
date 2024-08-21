@@ -2,6 +2,7 @@
 
 # Installation directory
 FLANSOFT=/home/zamp/flansoft
+FLANROOT=/home/zamp/github/flan
 # Various compilers
 CC=gcc
 CXX=g++
