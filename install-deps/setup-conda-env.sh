@@ -41,3 +41,8 @@ conda install ipython -y
 # scripts as well).
 cd $FLANROOT
 pip install -e . 
+
+# 7. Flan is coupled to postgkyl via the script python/read_gkyl.py. Therefore,
+# Flan needs to know where to find this script. This is implemented via an
+# environment variable called READ_GKYL_PY. 
+conda env config vars set READ_GKYL_PY=$FLANROOT/python/read_gkyl.py

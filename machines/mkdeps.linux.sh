@@ -15,4 +15,4 @@ export MACHINE_NAME='linux'
 cd install-deps
 
 # Build all the goodies
-./mkdeps.sh CC=gcc CXX=g++ --prefix=$FLANSOFT --flanroot=$FLANROOT --build-zlib=yes --build-hdf5=yes --build-netcdf-c=yes --build-netcdf-cxx=yes --setup-python-env=yes
+./mkdeps.sh CC=gcc CXX=g++ --prefix=$FLANSOFT --flanroot=$FLANROOT --build-zlib=yes --build-hdf5=yes --build-netcdf-c=yes --build-netcdf-cxx=yes --setup-conda-env=yes

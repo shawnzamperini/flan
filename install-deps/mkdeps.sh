@@ -20,7 +20,7 @@ BUILD_ZLIB=
 BUILD_HDF5=
 BUILD_NETCDF_C=
 BUILD_NETCDF_CXX=
-SETUP_PYTHON_ENV=
+SETUP_CONDA_ENV=
 
 # By default make a new build-opts.sh file.
 NEW_BUILD_OPTS="yes"
@@ -65,7 +65,7 @@ and C++ compilers to use.
 --build-hdf5                Should we build HDF5? Needed for NetCDF-C
 --build-netcdf-c            Should we build netCDF?
 --build-netcdf-cxx          Should we build the netCDF C++ interface?
---setup-python-env          SHould we setup the python environment?
+--setup-conda-env           Should we setup the conda environment?
 --new-build-opts            Should we create a new build-opts.sh file?
 
 The behavior of the flags for library xxx is as follows:
@@ -179,9 +179,9 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       NEW_BUILD_OPTS="$value"
       ;;
-   --setup-python-env)
+   --setup-conda-env)
       [ -n "$value" ] || die "Missing value in flag $key."
-      SETUP_PYTHON_ENV="$value"
+      SETUP_CONDA_ENV="$value"
       ;;
    *)
       die "Error: Unknown flag: $1"
@@ -276,11 +276,11 @@ build_netcdf-cxx() {
    fi
 }
 
-setup_python_env() {
-   if [ "$SETUP_PYTHON_ENV" = "yes" ]
+setup_conda_env() {
+   if [ "$SETUP_CONDA_ENV" = "yes" ]
    then
-      echo "Setting up python environment"
-      ./setup-python-env.sh
+      echo "Setting up conda environment"
+      ./setup-conda-env.sh
    fi
 }
 
@@ -297,4 +297,4 @@ build_hdf5  # netcdf-c dependency
 build_netcdf-c
 build_netcdf-cxx
 
-setup_python_env
+setup_conda_env
