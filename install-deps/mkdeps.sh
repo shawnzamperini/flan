@@ -18,6 +18,7 @@ BUILD_MSGPACK=
 BUILD_ZLIB=
 BUILD_HDF5=
 BUILD_NETCDF_C=
+BUILD_NETCDF_CXX=
 
 # By default make a new build-opts.sh file.
 NEW_BUILD_OPTS="yes"
@@ -58,6 +59,7 @@ and C++ compilers to use.
 --build-zlib                SHould we build zlib? Needed for HDF5 and NetCDF-C
 --build-hdf5                Should we build HDF5? Needed for NetCDF-C
 --build-netcdf-c            Should we build netCDF?
+--build-netcdf-cxx          Should we build the netCDF C++ interface?
 --new-build-opts            Should we create a new build-opts.sh file?
 
 The behavior of the flags for library xxx is as follows:
@@ -159,6 +161,10 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_NETCDF_C="$value"
       ;;
+   --build-netcdf-cxx)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      BUILD_NETCDF_CXX="$value"
+      ;;
    --new-build-opts)
       [ -n "$value" ] || die "Missing value in flag $key."
       NEW_BUILD_OPTS="$value"
@@ -199,59 +205,11 @@ MPICXX=$MPICXX
 EOF1
 fi
 
-build_openmpi() {
-    if [ "$BUILD_OPENMPI" = "yes" ]
-    then
-	echo "Building OpenMPI"
-	./build-openmpi.sh
-    fi
-}
-
-build_gkylzero() {
-    if [[ ! "$BUILD_GKYLZERO" = "no" && ("$BUILD_GKYLZERO" = "yes" || ! -f $PREFIX/gkylzero/include/gkylzero.h) ]]
-    then   
-   echo "Building Gkylzero"
-   ./build-gkylzero.sh 
-    fi
-}
-
-build_luajit() {
-    if [[ ! "$BUILD_LUAJIT" = "no" && ("$BUILD_LUAJIT" = "yes" || ! -f $PREFIX/luajit/include/luajit-2.1/lua.hpp) ]]
-    then    
-   echo "Building LuaJIT"
-   ./build-luajit.sh
-    fi
-}
-
 build_adios2() {
     if [[ ! "$BUILD_ADIOS2" = "no" && ("$BUILD_ADIOS2" = "yes" || ! -f $PREFIX/adios/include/adios.h) ]]
     then    
 	echo "Building ADIOS2"
 	./build-adios2.sh
-    fi
-}
-
-build_luarocks() {
-    if [ "$BUILD_LUAROCKS" = "yes" ]
-    then    
-	echo "Building Luarocks"
-	./build-luarocks.sh
-    fi
-}
-
-build_zmq() {
-    if [ "$BUILD_ZMQ" = "yes" ]
-    then    
-	echo "Building ZMQ"
-	./build-zmq.sh
-    fi
-}
-
-build_czmq() {
-    if [ "$BUILD_CZMQ" = "yes" ]
-    then    
-	echo "Building CZMQ"
-	./build-czmq.sh
     fi
 }
 
@@ -295,17 +253,23 @@ build_netcdf-c() {
    fi
 }
 
+build_netcdf-cxx() {
+   if [ "$BUILD_NETCDF_CXX" = "yes" ]
+   then
+      echo "Building netCDF-cxx"
+      ./build-netcdf-cxx.sh
+   fi
+}
+
 echo "Installations will be in $PREFIX"
 
-#build_openmpi
-#build_gkylzero
-#build_luajit
-#build_luarocks
+# On the chopping block
 build_adios2
-#build_zmq
-#build_czmq
 build_boost
 build_msgpack
+
+# Order matters for these three
 build_zlib  # HDF5 (and thus netcdf-c) dependency
-build_hdf5  # netcdf-c dependency, so do this first
+build_hdf5  # netcdf-c dependency
 build_netcdf-c
+build_netcdf-cxx

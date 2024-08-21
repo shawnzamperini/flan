@@ -27,4 +27,4 @@ cd install-deps
 #./mkdeps.sh CC=gcc CXX=g++ --prefix=$FLANSOFT --build-netcdf-c=no --build-adios2=no --build-msgpack=no --build-boost=no --build-hdf5=yes
 
 # Build netCDF-c
-./mkdeps.sh CC=gcc CXX=g++ --prefix=$FLANSOFT --build-adios2=no --build-msgpack=no --build-boost=no --build-zlib=yes --build-hdf5=yes --build-netcdf-c=yes
+./mkdeps.sh CC=gcc CXX=g++ --prefix=$FLANSOFT --build-netcdf-c=yes --build-adios2=no --build-msgpack=no --build-boost=no --build-zlib=yes --build-hdf5=yes --build-netcdf-c=yes --build-netcdf-cxx=yes

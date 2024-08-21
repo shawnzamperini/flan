@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 	Impurity::follow_impurities(bkg);
 
 	// Save simulation results.
-	SaveResults::save_results(bkg);
+	SaveResults::save_results(case_name, bkg);
 
 	return 0;
 }

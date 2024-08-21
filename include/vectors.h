@@ -150,19 +150,28 @@ namespace Vectors
 		//Vector4D(const Vector4D& v) = delete;
 	
 		// Accessors
-		int get_dim1() {return m_dim1;}
-		int get_dim2() {return m_dim2;}
-		int get_dim3() {return m_dim3;}
-		int get_dim4() {return m_dim4;}
-		int get_size() {return m_size;}
-		std::vector<double> get_data() {return m_data;}
+		int get_dim1() const {return m_dim1;}
+		int get_dim2() const {return m_dim2;}
+		int get_dim3() const {return m_dim3;}
+		int get_dim4() const {return m_dim4;}
+
+		// Currently not working because we aren't recalculating m_size when
+		// using the move semantics functions below. Use get_data().size()
+		// instead.
+		//int get_size() const {return m_size;}
+		std::vector<double> get_data() const {return m_data;}
+
+		// Convert from 4D index to the 1D one used in the underlying m_data.
+		int calc_index(int i, int j, int k, int l) const
+		{
+			return i * (m_dim2 * m_dim3 * m_dim4) + j 
+				* (m_dim3 * m_dim4) + k * m_dim4 + l;
+		}
 
 		// Overload parentheses to act as indexing.
 		double& operator()(int i, int j, int k, int l)
 		{
-			int index = i * (m_dim2 * m_dim3 * m_dim4) + j * (m_dim3 * m_dim4)
-				+ k * m_dim4 + l;
-			return m_data[index];
+			return m_data[calc_index(i, j, k, l)];
 		}
 
 		// Assignment operator moves data from one Vector4D into this one.
@@ -208,6 +217,46 @@ namespace Vectors
 				}
 			}
 			return vec;
+		}
+
+		// Represent that data as an actual 4D vector. Unsure if this is
+		// needed but doesn't hurt to include.
+		std::vector<std::vector<std::vector<std::vector<double>>>> as_4d() const
+		{
+
+			// Size check
+			if (std::ssize(m_data) != m_dim1 * m_dim2 * m_dim3 * m_dim4)
+			{
+				std::cerr << "Error! The number of elements does not match" 
+				<< " the specified dimensions.\n";	
+			}
+
+			// Create an actual 4D vector, fill in one element at a time. Must
+			// initialize vector with the dimensions. Incredibly messy.
+			std::vector<std::vector<std::vector<std::vector<double>>>> vec(
+        		m_dim1, std::vector<std::vector<std::vector<double>>>(
+            	m_dim2, std::vector<std::vector<double>>(
+                m_dim3, std::vector<double>(m_dim4, 0.0))));
+			std::cout << "as_4d dim1 = " << vec.size() << "\n";
+			std::cout << "as_4d dim2 = " << vec[0].size() << "\n";
+			std::cout << "as_4d dim3 = " << vec[0][0].size() << "\n";
+			std::cout << "as_4d dim4 = " << vec[0][0][0].size() << "\n";
+			for (int i {}; i < m_dim1; ++i)
+			{
+				for (int j {}; j < m_dim2; ++j)
+				{
+					for (int k {}; k < m_dim3; ++k)
+					{
+						for (int l {}; l < m_dim4; ++l)
+						{
+							vec[i][j][k][l] = m_data[calc_index(i,j,k,l)];
+						}
+					}
+				}
+			}
+
+			// Return
+			return vec;	
 		}
 	};
 }

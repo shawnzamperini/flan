@@ -21,6 +21,13 @@ namespace Gkyl
 	// Vectors to hold density, temperature, potential and magnetic field
 	// for each frame (assuming electrostatic so only one magnetic field
 	// entry is needed. Dimensions are (time, x, y, z). 
+	std::vector<double> gkyl_times {};
+	std::vector<double> gkyl_x {};  // Cell centers
+	std::vector<double> gkyl_y {};
+	std::vector<double> gkyl_z {};
+	std::vector<double> gkyl_grid_x {};  // Grid edges
+	std::vector<double> gkyl_grid_y {};
+	std::vector<double> gkyl_grid_z {};
 	Vectors::Vector4D gkyl_ne {};
 	Vectors::Vector4D gkyl_te {};
 	Vectors::Vector4D gkyl_ti {};
@@ -324,6 +331,19 @@ namespace Gkyl
 		return interp_settings;
 	}
 
+	// Calculate the cell centers for the given grid points. This returns a
+	// vector one shorter than the grid point. This only works for uniform
+	// grids, just in case that isn't obvious throughout the whole code.
+	std::vector<double> cell_centers(std::vector<double>& grid)
+	{
+		std::vector<double> centers (std::ssize(grid) - 1);
+		for (std::size_t i {}; i < grid.size() - 1; ++i)
+		{
+			centers[i] = (grid[i+1] - grid[i]) / 2.0;
+		}
+		return centers;
+	}
+
 	// Function to read in Gkeyll data using a python interface to postgkyl
 	// via read_gkyl.py. This produces the following csv files:
 	//   bkg_from_pgkyl_times.csv : The time for each frame
@@ -375,10 +395,17 @@ namespace Gkyl
 		[[maybe_unused]] int sys_result {system(read_gkyl_cmd)};
 
 		// Load the times for each frame in a vector<double>
-		std::vector<double> times {load_times()};
+		//std::vector<double> times {load_times()};
+		gkyl_times = {load_times()};
 
 		// Load the x, y, z grids each as their own vector<double>
-		auto [grid_x, grid_y, grid_z] = load_grid();
+		//auto [grid_x, grid_y, grid_z] = load_grid();
+		std::tie(gkyl_grid_x, gkyl_grid_y, gkyl_grid_z) = load_grid();
+
+		// Calculate the cell centers.
+		gkyl_x = cell_centers(gkyl_grid_x);
+		gkyl_y = cell_centers(gkyl_grid_y);
+		gkyl_z = cell_centers(gkyl_grid_z);
 
 		// Load the values at each t, x, y, z into a Vector4D. We use
 		// a tmp variable here instead of passing into move_into_data
@@ -479,6 +506,13 @@ namespace Gkyl
 		Background::Background bkg {};
 
 		// Move each of the vectors we've created into our bkg object
+		bkg.move_into_times(gkyl_times);
+		bkg.move_into_x(gkyl_x);
+		bkg.move_into_y(gkyl_y);
+		bkg.move_into_z(gkyl_z);
+		bkg.move_into_grid_x(gkyl_grid_x);
+		bkg.move_into_grid_y(gkyl_grid_y);
+		bkg.move_into_grid_z(gkyl_grid_z);
 		bkg.move_into_ne(gkyl_ne);
 		bkg.move_into_te(gkyl_te);
 		bkg.move_into_ti(gkyl_ti);
