@@ -1,4 +1,4 @@
-# Flan
+# Flan (under active development)
 ## Fully kinetic Monte Carlo trace impurity following code to be run on top of a turbulent Gkeyll simulation. 
 
 Flan is named after my dog, Flannery. It does not stand for anything. 
@@ -10,7 +10,7 @@ The code can be considered an extension to [Gkeyll](https://gkeyll.readthedocs.i
 - The particles are tracked according to Lorentz force:
     $$\vec{F}=m(\vec{E} + \vec{v} \times \vec{B})$$
 - Particle ionization and recombination is tracked via coupling to ADAS
-- Collisions are tracked using the 90-degree collision frequency:
+- (Depreciated, upgrade inbound) Collisions are tracked using the 90-degree collision frequency:
   
     $$\nu_{zi} = \left( \frac{q_z^2 q_i^2 n_i \ln \Lambda}{4 \pi \epsilon_0^2 m_z m_r} \right) \frac{1}{v_{Tz}^3 + 1.3 v_{Ti}^3}$$
 
@@ -23,12 +23,19 @@ The code can be considered an extension to [Gkeyll](https://gkeyll.readthedocs.i
 
 ## Installing Flan
 
-### Dependencies
+To-do.
+
+## Dependencies
+
+To-do.
 
 ## Regression Cases
 
+To-do
+
 ## Upcoming Changes
 
-- Rewrite code in C++ to take advantage of parallel architecture
-- Probably excessive, but add in GPU support to C++ version of code. May become useful in the future.
+- Rewrite code in C++ to take advantage of parallel architecture (OpenMP + MPI)
+- Implement a fully kinetic collision model
+- Investigate GPU support to C++ version of code. May become useful in the future.
 - Expand code to non-Cartesian geometries
