@@ -1,4 +1,4 @@
-# Flan
+# Flan (under active development)
 ## Fully kinetic Monte Carlo trace impurity following code to be run on top of a turbulent Gkeyll simulation. 
 
 Flan is named after my dog, Flannery. It does not stand for anything. 
@@ -23,9 +23,15 @@ The code can be considered an extension to [Gkeyll](https://gkeyll.readthedocs.i
 
 ## Installing Flan
 
-### Dependencies
+To-do.
+
+## Dependencies
+
+To-do.
 
 ## Regression Cases
+
+To-do
 
 ## Upcoming Changes
 
