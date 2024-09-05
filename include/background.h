@@ -17,11 +17,11 @@ namespace Background
 		std::vector<double> m_grid_x {};
 		std::vector<double> m_grid_y {};
 		std::vector<double> m_grid_z {};
-		Vectors::Vector4D m_ne {};
-		Vectors::Vector4D m_te {};
-		Vectors::Vector4D m_ti {};
-		Vectors::Vector4D m_vp {};
-		Vectors::Vector4D m_b {};
+		Vectors::Vector4D<double> m_ne {};
+		Vectors::Vector4D<double> m_te {};
+		Vectors::Vector4D<double> m_ti {};
+		Vectors::Vector4D<double> m_vp {};
+		Vectors::Vector4D<double> m_b {};
 		int m_dim1 {};
 		int m_dim2 {};
 		int m_dim3 {};
@@ -37,11 +37,11 @@ namespace Background
 		std::vector<double> get_grid_x() const {return m_grid_x;}
 		std::vector<double> get_grid_y() const {return m_grid_y;}
 		std::vector<double> get_grid_z() const {return m_grid_z;}
-		const Vectors::Vector4D& get_ne() const {return m_ne;}
-		const Vectors::Vector4D& get_te() const {return m_te;}
-		const Vectors::Vector4D& get_ti() const {return m_ti;}
-		const Vectors::Vector4D& get_vp() const {return m_vp;}
-		const Vectors::Vector4D& get_b() const {return m_b;}
+		const Vectors::Vector4D<double>& get_ne() const {return m_ne;}
+		const Vectors::Vector4D<double>& get_te() const {return m_te;}
+		const Vectors::Vector4D<double>& get_ti() const {return m_ti;}
+		const Vectors::Vector4D<double>& get_vp() const {return m_vp;}
+		const Vectors::Vector4D<double>& get_b() const {return m_b;}
 		int get_dim1() const {return m_dim1;}
 		int get_dim2() const {return m_dim2;}
 		int get_dim3() const {return m_dim3;}
@@ -73,7 +73,8 @@ namespace Background
 
 		// Function to ensure dimensions are consistent across the different
 		// vectors.
-		void set_dims(Vectors::Vector4D& v, const std::string_view data)
+		template <typename T>
+		void set_dims(Vectors::Vector4D<T>& v, const std::string_view data)
 		{
 			// Check dimensions first, printing errors if something ain't
 			// right.
@@ -102,6 +103,16 @@ namespace Background
 			}
 
 		}
+
+		// Helper functions to get the start/end times of the simulation.
+		double get_t_min() const {return m_times.front();}
+		double get_t_max() const {return m_times.back();}
+		double get_x_min() const {return m_x.front();}
+		double get_x_max() const {return m_x.back();}
+		double get_y_min() const {return m_y.front();}
+		double get_y_max() const {return m_y.back();}
+		double get_z_min() const {return m_z.front();}
+		double get_z_max() const {return m_z.back();}
 
 		// Setters using move semantics. No idea if this is the proper
 		// way to do it but it works.
@@ -133,27 +144,27 @@ namespace Background
 		{
 			m_grid_z = std::move(grid_z);	
 		}
-		void move_into_ne(Vectors::Vector4D& ne) 
+		void move_into_ne(Vectors::Vector4D<double>& ne) 
 		{
 			set_dims(ne, "ne");
 			m_ne.move_into_data(ne);
 		}
-		void move_into_te(Vectors::Vector4D& te) 
+		void move_into_te(Vectors::Vector4D<double>& te) 
 		{
 			set_dims(te, "te");
 			m_te.move_into_data(te);
 		}
-		void move_into_ti(Vectors::Vector4D& ti) 
+		void move_into_ti(Vectors::Vector4D<double>& ti) 
 		{
 			set_dims(ti, "ti");
 			m_ti.move_into_data(ti);
 		}
-		void move_into_vp(Vectors::Vector4D& vp) 
+		void move_into_vp(Vectors::Vector4D<double>& vp) 
 		{
 			set_dims(vp, "vp");
 			m_vp.move_into_data(vp);
 		}
-		void move_into_b(Vectors::Vector4D& b) 
+		void move_into_b(Vectors::Vector4D<double>& b) 
 		{
 			// This is skipped for now since elctrostatic so the time dimension
 			// is always just one long.

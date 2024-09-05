@@ -32,7 +32,8 @@ namespace Gkyl
 		load_grid();
 
 	// Read in data values using pgkyl, returning as a Vector4D.
-	Vectors::Vector4D load_values(const std::string& data_type);
+	template <typename T>
+	Vectors::Vector4D<T> load_values(const std::string& data_type);
 
 	// Function to read in Gkeyll data using a python interface to postgkyl
 	// via read_gkyl.py. This produces the following csv files:
@@ -41,9 +42,10 @@ namespace Gkyl
 	//   bkg_from_pgkyl_density.csv : Density arrays for all frames
 	//   bkg_from_pgkyl_temperature.csv : Temperature arrays for all frames 
 	// The data is loaded and placed into gkyl_data accordingly.
+	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
 		const std::string& data_type,
-		std::vector<Vectors::Vector4D>& gkyl_data);
+		Vectors::Vector4D<T>& gkyl_data);
 
 	// General function to read in data from Gkeyll into the relevant
 	// vector specified by gkyl_data.

@@ -45,6 +45,7 @@ namespace Input
 		imp_xmin,
 		imp_xmax,
 		imp_zstart_opt,
+		imp_zstart_val,
 		imp_collisions,
 		imp_var_reduct,
 		imp_var_reduct_freq,

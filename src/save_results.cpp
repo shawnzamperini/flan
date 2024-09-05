@@ -57,8 +57,9 @@ namespace SaveResults
 	}
 
 	// Save a 4D vector into nc_file. dims must be matched by the programmer.
-	// Currently all Vector4D's hold double, so no template.
-	void save_vector_4d(const netCDF::NcFile& nc_file, const Vectors::Vector4D& vec, 
+	template <typename T>
+	void save_vector_4d(const netCDF::NcFile& nc_file, 
+		const Vectors::Vector4D<T>& vec, 
 		const std::string& var_name, const netCDF::NcDim& dim1,
 		const netCDF::NcDim& dim2, const netCDF::NcDim& dim3, 
 		const netCDF::NcDim& dim4, const std::string& description, 

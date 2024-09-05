@@ -83,10 +83,11 @@ namespace Vectors
 		}
 	};
 
+	template <typename T>
 	class Vector4D
 	{
 	private:
-		std::vector<double> m_data {};
+		std::vector<T> m_data {};
 		int m_dim1 {};
 		int m_dim2 {};
 		int m_dim3 {};
@@ -110,7 +111,7 @@ namespace Vectors
 		}
 
 		// Constructor to create vector and fill with the data passed on
-		Vector4D(std::vector<double> data_in, int dim1, int dim2, int dim3, 
+		Vector4D(std::vector<T> data_in, int dim1, int dim2, int dim3, 
 			int dim4)
 			: Vector4D(dim1, dim2, dim3, dim4)
 		{
@@ -125,7 +126,7 @@ namespace Vectors
 		// The compiler nonetheless needs to see a constructor for Vector4D
 		// that accepts these inputs, since that is what Vector3D uses. This
 		// constructor should never get used.
-		Vector4D(std::vector<double> data_in, int dim1, int dim2, int dim3)
+		Vector4D(std::vector<T> data_in, int dim1, int dim2, int dim3)
 		{
 			std::cerr << "Error! Vector4D was called with 3 dimensions. This"
 				<< " is a programming error. Please fix\n";
@@ -155,11 +156,15 @@ namespace Vectors
 		int get_dim3() const {return m_dim3;}
 		int get_dim4() const {return m_dim4;}
 
+		// Setup a Vector4D. This generally would be done via a constructor
+		// in the first place, but in Impurity::Statistics we define empty
+		// Vector4D's that need to be resized after the fact.
+
 		// Currently not working because we aren't recalculating m_size when
 		// using the move semantics functions below. Use get_data().size()
 		// instead.
 		//int get_size() const {return m_size;}
-		std::vector<double> get_data() const {return m_data;}
+		std::vector<T> get_data() const {return m_data;}
 
 		// Convert from 4D index to the 1D one used in the underlying m_data.
 		int calc_index(int i, int j, int k, int l) const
@@ -169,7 +174,7 @@ namespace Vectors
 		}
 
 		// Overload parentheses to act as indexing.
-		double& operator()(int i, int j, int k, int l)
+		T& operator()(int i, int j, int k, int l)
 		{
 			return m_data[calc_index(i, j, k, l)];
 		}
@@ -187,7 +192,7 @@ namespace Vectors
 			
 		// Move the passed in vector to data. Hmmm... this is really
 		// some sort of abstraction of operator=...
-		void move_into_data(Vectors::Vector4D& vec)
+		void move_into_data(Vectors::Vector4D<T>& vec)
 		{
 			// Copy over the dimensions
 			m_dim1 = vec.get_dim1();
@@ -221,7 +226,7 @@ namespace Vectors
 
 		// Represent that data as an actual 4D vector. Unsure if this is
 		// needed but doesn't hurt to include.
-		std::vector<std::vector<std::vector<std::vector<double>>>> as_4d() const
+		std::vector<std::vector<std::vector<std::vector<T>>>> as_4d() const
 		{
 
 			// Size check
@@ -233,10 +238,10 @@ namespace Vectors
 
 			// Create an actual 4D vector, fill in one element at a time. Must
 			// initialize vector with the dimensions. Incredibly messy.
-			std::vector<std::vector<std::vector<std::vector<double>>>> vec(
-        		m_dim1, std::vector<std::vector<std::vector<double>>>(
-            	m_dim2, std::vector<std::vector<double>>(
-                m_dim3, std::vector<double>(m_dim4, 0.0))));
+			std::vector<std::vector<std::vector<std::vector<T>>>> vec(
+        		m_dim1, std::vector<std::vector<std::vector<T>>>(
+            	m_dim2, std::vector<std::vector<T>>(
+                m_dim3, std::vector<T>(m_dim4, 0.0))));
 			std::cout << "as_4d dim1 = " << vec.size() << "\n";
 			std::cout << "as_4d dim2 = " << vec[0].size() << "\n";
 			std::cout << "as_4d dim3 = " << vec[0][0].size() << "\n";

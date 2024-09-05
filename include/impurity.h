@@ -4,21 +4,42 @@ namespace Impurity
 	class Impurity
 	{
 	private:
-		double m_weight {};
+		double m_t {};
 		double m_x {};
 		double m_y {};
 		double m_z {};
 		double m_vx {};
 		double m_vy {};
 		double m_vz {};
+		double m_weight {};
+		int m_charge {};
 	
 	public:
 
+		// Constructor: Start impurity at rest and at (0,0,0)
+		Impurity()
+		{}
+	
 		// Constructor: Start impurity at rest
 		Impurity(double x, double y, double z)
 			: m_x {x}
 			, m_y {y}
 			, m_z {z}
+		{}
+
+		// Constructor: Fully specify each member variable
+		Impurity(const double t, const double x, 
+			const double y, const double z, const double vx, const double vy, 
+			const double vz, const double weight, const int charge)
+			: m_t {t}
+			, m_x {x}
+			, m_y {y}
+			, m_z {z}
+			, m_vx {vx}
+			, m_vy {vy}
+			, m_vz {vz} 
+			, m_weight {weight}
+			, m_charge {charge}
 		{}
 		
 		// Accessors

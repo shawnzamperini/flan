@@ -28,11 +28,11 @@ namespace Gkyl
 	std::vector<double> gkyl_grid_x {};  // Grid edges
 	std::vector<double> gkyl_grid_y {};
 	std::vector<double> gkyl_grid_z {};
-	Vectors::Vector4D gkyl_ne {};
-	Vectors::Vector4D gkyl_te {};
-	Vectors::Vector4D gkyl_ti {};
-	Vectors::Vector4D gkyl_vp {};
-	Vectors::Vector4D gkyl_b {};  // If electrostatic the first dimension is only 1 long
+	Vectors::Vector4D<double> gkyl_ne {};
+	Vectors::Vector4D<double> gkyl_te {};
+	Vectors::Vector4D<double> gkyl_ti {};
+	Vectors::Vector4D<double> gkyl_vp {};
+	Vectors::Vector4D<double> gkyl_b {};  // If electrostatic the first dimension is only 1 long
 
 	// Entry point for reading Gkeyll data into Flan. 
 	Background::Background read_gkyl()
@@ -221,7 +221,8 @@ namespace Gkyl
 	}
 
 	// Read in data values using pgkyl, returning as a Vector4D.
-	Vectors::Vector4D load_values(const std::string& data_type)
+	template <typename T>
+	Vectors::Vector4D<T> load_values(const std::string& data_type)
 	{
 		// Filename is treated as a constant.
 		std::string filename {"bkg_from_pgkyl_" + data_type + ".csv"};
@@ -352,9 +353,10 @@ namespace Gkyl
 	//   bkg_from_pgkyl_density.csv : Density arrays for all frames
 	//   bkg_from_pgkyl_temperature.csv : Temperature arrays for all frames 
 	// The data is loaded and placed into gkyl_data accordingly.
+	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
 		const std::string& data_type,
-		Vectors::Vector4D& gkyl_data)
+		Vectors::Vector4D<T>& gkyl_data)
 	{
 		// Load into local variables so code is easier to read.
 		const std::string gkyl_dir {Input::get_opt_str(Input::gkyl_dir)};
@@ -415,7 +417,7 @@ namespace Gkyl
 		// the tmp rvalue and then pass it in, where the data is then
 		// moved from tmp into gkyl_data. 
 		std::cout << "Loading " << data_type << "...\n";
-		Vectors::Vector4D tmp_data {load_values(data_type)};
+		Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
 		gkyl_data.move_into_data(tmp_data);
 	}
 /*

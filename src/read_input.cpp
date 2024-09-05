@@ -29,6 +29,7 @@ namespace Input
 		new OptionDbl{"imp_xmin",                    0.0},
 		new OptionDbl{"imp_xmax",                    0.0},
 		new OptionStr{"imp_zstart_opt",   "single_value"},
+		new OptionDbl{"imp_zstart_val",              0.0},
 		new OptionStr{"imp_collisions",            "off"},
 		new OptionStr{"imp_var_reduct",            "off"},
 		new OptionDbl{"imp_var_reduct_freq",         0.1},
@@ -52,6 +53,7 @@ namespace Input
 		if (input_str == "imp_xmin")                   return imp_xmin;
 		if (input_str == "imp_xmax")                   return imp_xmax;
 		if (input_str == "imp_zstart_opt")             return imp_zstart_opt;
+		if (input_str == "imp_zstart_val")             return imp_zstart_val;
 		if (input_str == "imp_collisions")             return imp_collisions;
 		if (input_str == "imp_var_reduct")             return imp_var_reduct;
 		if (input_str == "imp_var_reduct_freq")        return imp_var_reduct_freq;
