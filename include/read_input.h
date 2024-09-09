@@ -50,7 +50,8 @@ namespace Input
 		imp_var_reduct,
 		imp_var_reduct_freq,
 		imp_var_reduct_min_weight,
-		max_input_opts,
+		imp_time_step,
+		max_input_opts,  // Always leave this at the end of Names
 	};
 
 	extern std::array<OptionBase*, max_input_opts> options;

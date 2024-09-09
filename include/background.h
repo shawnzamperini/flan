@@ -30,13 +30,13 @@ namespace Background
 	public:
 
 		// Accessors
-		std::vector<double> get_times() const {return m_times;}
-		std::vector<double> get_x() const {return m_x;}
-		std::vector<double> get_y() const {return m_y;}
-		std::vector<double> get_z() const {return m_z;}
-		std::vector<double> get_grid_x() const {return m_grid_x;}
-		std::vector<double> get_grid_y() const {return m_grid_y;}
-		std::vector<double> get_grid_z() const {return m_grid_z;}
+		const std::vector<double>& get_times() const {return m_times;}
+		const std::vector<double>& get_x() const {return m_x;}
+		const std::vector<double>& get_y() const {return m_y;}
+		const std::vector<double>& get_z() const {return m_z;}
+		const std::vector<double>& get_grid_x() const {return m_grid_x;}
+		const std::vector<double>& get_grid_y() const {return m_grid_y;}
+		const std::vector<double>& get_grid_z() const {return m_grid_z;}
 		const Vectors::Vector4D<double>& get_ne() const {return m_ne;}
 		const Vectors::Vector4D<double>& get_te() const {return m_te;}
 		const Vectors::Vector4D<double>& get_ti() const {return m_ti;}

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <iostream>
+#include <iomanip>
 
 // This file contains some simple implementations of multidimensional vectors.
 // Instead of storing them as actual mutlidimensional vectors, they are stored
@@ -167,14 +168,14 @@ namespace Vectors
 		std::vector<T> get_data() const {return m_data;}
 
 		// Convert from 4D index to the 1D one used in the underlying m_data.
-		int calc_index(int i, int j, int k, int l) const
+		int calc_index(const int i, const int j, const int k, const int l) const
 		{
 			return i * (m_dim2 * m_dim3 * m_dim4) + j 
 				* (m_dim3 * m_dim4) + k * m_dim4 + l;
 		}
 
 		// Overload parentheses to act as indexing.
-		T& operator()(int i, int j, int k, int l)
+		T& operator()(const int i, const int j, const int k, const int l)
 		{
 			return m_data[calc_index(i, j, k, l)];
 		}
@@ -188,6 +189,52 @@ namespace Vectors
 				m_data = std::move(other.m_data);
 			}
 			return *this;
+		}
+
+		// Helper function that checks if other is of the same shape as this
+		// Vector4D.
+		bool check_same_shape(const Vector4D& other) const
+		{
+			if (m_dim1 != other.m_dim1 || m_dim2 != other.m_dim2 || 
+				m_dim3 != other.m_dim3 || m_dim4 != other.m_dim4)
+			{
+				std::cerr << "Error! Vector4D's are not of the same shape.\n";
+				std::cerr << "  this   other\n";
+				std::cerr << std::setw(6) << m_dim1 << std::setw(8) 
+					<< other.m_dim1 << '\n'; 
+				std::cerr << std::setw(6) << m_dim2 << std::setw(8) 
+					<< other.m_dim2 << '\n'; 
+				std::cerr << std::setw(6) << m_dim3 << std::setw(8) 
+					<< other.m_dim3 << '\n'; 
+				std::cerr << std::setw(6) << m_dim4 << std::setw(8) 
+					<< other.m_dim4 << '\n'; 
+				
+				return false;
+			}
+			return true;
+		}
+
+		// Addition operator just adds two vectors together.
+		Vector4D operator+(const Vector4D& other) const
+		{
+			// Safety check to make sure the two Vector4D's are the same shape.
+			bool same_shape {check_same_shape(other)};
+
+			if (same_shape)
+			{
+				// Use the standard library transform function to apply the
+				// addition function and store into a new vector (ret_data). 
+				std::vector<T> ret_data (m_data.size());
+				std::transform(m_data.begin(), m_data.end(), 
+					other.m_data.begin(), ret_data.begin(), std::plus<T>());
+				return {ret_data, m_dim1, m_dim2, m_dim3, m_dim4};	
+			}
+			else
+			{
+				std::cerr << "Error! The two Vector4D's are not the same size."
+					<< " See previous error message for details.\n";
+				return {};
+			}
 		}
 			
 		// Move the passed in vector to data. Hmmm... this is really

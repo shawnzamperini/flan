@@ -33,7 +33,8 @@ namespace Input
 		new OptionStr{"imp_collisions",            "off"},
 		new OptionStr{"imp_var_reduct",            "off"},
 		new OptionDbl{"imp_var_reduct_freq",         0.1},
-		new OptionDbl{"imp_var_reduct_min_weight",   0.1}
+		new OptionDbl{"imp_var_reduct_min_weight",   0.1},
+		new OptionDbl{"imp_time_step",              1e-7}
 	};
 
 	// Provide a string and return the corresponding enumerator in Names
@@ -58,6 +59,7 @@ namespace Input
 		if (input_str == "imp_var_reduct")             return imp_var_reduct;
 		if (input_str == "imp_var_reduct_freq")        return imp_var_reduct_freq;
 		if (input_str == "imp_var_reduct_min_weight")  return imp_var_reduct_min_weight;
+		if (input_str == "imp_time_step")              return imp_time_step;
 		else return -1;
 	}
 
