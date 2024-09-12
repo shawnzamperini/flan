@@ -2,10 +2,15 @@ import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
 from matplotlib.colors import Normalize, LogNorm
-
+from matplotlib import animation
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # Some global variables
 g_fontsize = 14
+
+# Turn off interactive mode. This is to avoid plotting each individual plot
+# when we are generating an animation.
+plt.ioff()
 
 class FlanPlots:
 
@@ -48,8 +53,8 @@ class FlanPlots:
 		"""
 		
 		# Valid options that can be loaded.
-		valid_opts = ["elec_dens", "elec_temp", "ion_temp", "plasma_pot", 
-			"bmag"]
+		valid_opts = ["electron_dens", "electron_temp", "ion_temp", 
+			"plasma_pot", "elec_x", "elec_y", "elec_z", "bmag", "imp_counts"]
 
 		# Throw an error if a valid option wasn't chosen.
 		if (data_name not in valid_opts):
@@ -146,17 +151,15 @@ class FlanPlots:
 
 		# Find closest z index to input z value
 		z_idx = self.closest_index(z, z0) 
-		print(z_idx)
 
 		# Index data at this z location.
 		data_xy = data[:,:,z_idx]
 
 		# Grid the x, y data
 		X, Y = np.meshgrid(x, y)
-
+		
 		# Optionally plot the data.
 		if showplot:
-			
 			fig, ax1 = plt.subplots()
 
 			# Plot according to the normalization option passed in.
@@ -167,7 +170,97 @@ class FlanPlots:
 			ax1.set_xlabel("x (m)", fontsize=g_fontsize)
 			ax1.set_ylabel("y (m)", fontsize=g_fontsize)
 			cbar.set_label(data_name, fontsize=g_fontsize)
+
 			fig.tight_layout()
+
 			fig.show()
 
 		return X, Y, data_xy
+
+
+	def plot_frames_xy(self, data_name, frame_start, frame_end, z0, 
+		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
+		vmin=None, vmax=None):
+		"""
+		Combine multiple plots from plot_frame_xy into an animation.
+		"""
+
+		# If we do not want to animate the colorbar, then we need to loop 
+		# through the data ahead of time to find the limits for the colorbar.
+		if not animate_cbar:
+			skip_vmin = False
+			skip_vmax = False
+			for f in range(frame_start, frame_end+1):
+				
+				X, Y, data_xy = self.plot_frame_xy(data_name, f, z0, 
+					showplot=False)
+
+				# Need to set vmin, vmax to values so we can use <,> on them.
+				# If users pass in values for either, those take precedence and
+				# we don't reassign them.
+				if (f == frame_start):
+					if vmin is None: 
+						vmin = data_xy.min()
+					else:
+						skip_vmin = True
+					if vmax is None: 
+						vmax = data_xy.max()
+					else:
+						skip_vmax = True
+				else:
+					if (not skip_vmin and data_xy.min() < vmin): 
+						vmin = data_xy.min()
+					if (not skip_vmax and data_xy.max() > vmax): 
+						vmax = data_xy.max()
+
+		# Setup the first frame.
+		X, Y, data_xy = self.plot_frame_xy(data_name, frame_start, z0, 
+			showplot=False)
+
+		# These commands are copied from plot_xy_frame. I wanted to have
+		# plot_xy_frame return the fig and associated objects, but I couldn't
+		# get around it showing the first figure in addition to the animation
+		# that is later also shown. This is an undesirable effect, so we brute
+		# force it by just copying the same code and reproducing it here.
+		fig, ax1 = plt.subplots()
+		div = make_axes_locatable(ax1)
+		cax = div.append_axes("right", "5%", "5%")
+		norm = self.get_norm(data_xy, norm_type, vmin=vmin, vmax=vmax)
+		mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
+		cbar = fig.colorbar(mesh, cax=cax)
+		ax1.set_xlabel("x (m)", fontsize=g_fontsize)
+		ax1.set_ylabel("y (m)", fontsize=g_fontsize)
+		ax1.set_title("Frame {}".format(frame_start), fontsize=g_fontsize)
+		cbar.set_label(data_name, fontsize=g_fontsize)
+		fig.tight_layout()
+		fig.show()
+
+		# Define animation function
+		def animate(i):
+			
+			# Call for the next frame. i is being passed in zero-indexed, so to
+			# get the frame we offset it from the start_frame.
+			X, Y, data_xy = self.plot_frame_xy(data_name, frame_start + i, z0, 
+				showplot=False)
+
+			norm = self.get_norm(data_xy, norm_type, vmin=vmin, vmax=vmax)
+			mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
+			ax1.set_title("Frame {}".format(frame_start+i), fontsize=g_fontsize)
+			cax.cla()
+			fig.colorbar(mesh, cax=cax)
+			cbar.set_label(data_name, fontsize=g_fontsize)
+
+			# Update the plot with the data from this frame.
+			#ax1.clear()
+			#mesh.set_array(data_xy.T)
+			#vmin = data_xy.min()
+			#vmax = data_xy.max()
+			#mesh.set_clim(vmin, vmax)
+			#cbar.update_normal(mesh)
+
+			return mesh,
+
+		# Generate animation
+		anim = animation.FuncAnimation(fig, animate, frames=frame_end-frame_start)
+		plt.show()
+

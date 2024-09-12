@@ -68,8 +68,9 @@ namespace Input
 	std::string get_str_from_line(std::stringstream& input_line_stream);
 
 	// Using the option name (input_name) and the value pulled from the input
-	// file (input_val), save this value into the main options array. 
-	void save_input_opt(std::string_view input_name, std::string_view input_val);
+	// file (input_val), save this value into the main options array. Returns
+	// true if successful, false if not.
+	bool save_input_opt(std::string_view input_name, std::string_view input_val);
 
 	// Take a line from an input file and parse it, saving the input into 
 	// the options array if the line is not blank or a comment. 

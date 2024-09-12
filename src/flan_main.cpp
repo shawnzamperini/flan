@@ -7,10 +7,11 @@
 #include "impurity_transport.h"
 #include "save_results.h"
 #include "background.h"
+#include "impurity_stats.h"
 
 int main(int argc, char *argv[])
 {
-	std::cout << "Welcome to Flan V X.X\n";
+	std::cout << "Welcome to Flan vX.X\n";
 
 	// Read in input options, overwriting all the default values.
 	if (argc != 2)
@@ -19,6 +20,10 @@ int main(int argc, char *argv[])
 		std::cerr << "  ./flan case_name\n";
 		return -1;
 	}
+
+	// Test that we won't run into any NetCDF (really, HDF5) errors when we
+	// want to save at the end. Annoying if it happens.
+	
 
 	// Load input file.
 	std::string case_name {argv[1]};
@@ -47,10 +52,10 @@ int main(int argc, char *argv[])
 	
 
 	// Begin main particle following loop.
-	Impurity::follow_impurities(bkg);
+	Impurity::Statistics imp_stats {Impurity::follow_impurities(bkg)};
 
 	// Save simulation results.
-	SaveResults::save_results(case_name, bkg);
+	SaveResults::save_results(case_name, bkg, imp_stats);
 
 	return 0;
 }

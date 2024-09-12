@@ -21,6 +21,9 @@ namespace Gkyl
 	// Vectors to hold density, temperature, potential and magnetic field
 	// for each frame (assuming electrostatic so only one magnetic field
 	// entry is needed. Dimensions are (time, x, y, z). 
+	// I feel like the logic could've shaken out better here, but in the end
+	// the data in these arrays are moved into a Background object (not copied)
+	// so end of the day it's fine. 
 	std::vector<double> gkyl_times {};
 	std::vector<double> gkyl_x {};  // Cell centers
 	std::vector<double> gkyl_y {};
@@ -33,16 +36,30 @@ namespace Gkyl
 	Vectors::Vector4D<double> gkyl_ti {};
 	Vectors::Vector4D<double> gkyl_vp {};
 	Vectors::Vector4D<double> gkyl_b {};  // If electrostatic the first dimension is only 1 long
+	Vectors::Vector4D<double> gkyl_ex {};
+	Vectors::Vector4D<double> gkyl_ey {};
+	Vectors::Vector4D<double> gkyl_ez {};
 
 	// Entry point for reading Gkeyll data into Flan. 
 	Background::Background read_gkyl()
 	{	
 		// Load each needed dataset from Gkeyll
+		std::cout << "Loading Gkeyll data...\n";
+		std::cout << "  - Electron density\n";
 		read_elec_density();
+		std::cout << "  - Electron temperature\n";
 		read_elec_temperature();
+		std::cout << "  - Ion temperature\n";
 		read_ion_temperature();
+		std::cout << "  - Plasma potential\n";
 		read_potential();
+		std::cout << "  - Magnetic field\n";
 		read_magnetic_field();
+		std::cout << "\n";
+
+		// Calculate the 3 electric field components from the potential
+		std::cout << "Calculating electric field...\n";
+		calc_elec_field();
 
 		// With all our arrays assembled, encapsulate them into a Background
 		// class object with move semantics then return.
@@ -105,7 +122,7 @@ namespace Gkyl
 				{
 					ntimes = std::stoi(line);
 					ntimes_read = true;
-					std::cout << "Reading " << ntimes << " times\n";
+					//std::cout << "Reading " << ntimes << " times\n";
 
 					// Set the capacity of the vector now that we know what 
 					// it will be.
@@ -140,7 +157,7 @@ namespace Gkyl
 		std::vector<double> grid_y {};
 		std::vector<double> grid_z {};
 		std::vector<int> dims {};
-		int ngrid {};
+		[[maybe_unused]] int ngrid {};
 		bool ngrid_read {false};
 		int count {};
 
@@ -180,7 +197,7 @@ namespace Gkyl
 					// x values are all printed, then the y then the z. 
 					ngrid = dims[0] + dims[1] + dims[2];
 					ngrid_read = true;
-					std::cout << "Reading " << ngrid << " grid values\n";
+					//std::cout << "Reading " << ngrid << " grid values\n";
 
 					// Set the capacity of the vectors now that we know them.
 					grid_x.reserve(dims[0]);
@@ -274,7 +291,7 @@ namespace Gkyl
 					// vector there are t*x*y*z values to read in. 
 					ndata = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
 					ndata_read = true;
-					std::cout << "Reading " << ndata << " data values\n";
+					//std::cout << "Reading " << ndata << " data values\n";
 
 					// Set the capacity of the vector now that we know what it will be.
 					data_flattened.reserve(ndata);
@@ -352,6 +369,8 @@ namespace Gkyl
 	//   bkg_from_pgkyl_grid.csv : Nodes for grid
 	//   bkg_from_pgkyl_density.csv : Density arrays for all frames
 	//   bkg_from_pgkyl_temperature.csv : Temperature arrays for all frames 
+	//   bkg_from_pgkyl_potential.csv : Plasma potential arrays for all frames 
+	//   bkg_from_pgkyl_magnetic_field.csv : Magnetic field arrays for all frames 
 	// The data is loaded and placed into gkyl_data accordingly.
 	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
@@ -394,7 +413,7 @@ namespace Gkyl
 		// Execute the command to save the files
 		std::string tmp_str {read_gkyl_cmd_ss.str()};
 		const char* read_gkyl_cmd {tmp_str.c_str()};
-		std::cout << read_gkyl_cmd << '\n';
+		//std::cout << read_gkyl_cmd << '\n';
 		[[maybe_unused]] int sys_result {system(read_gkyl_cmd)};
 
 		// Load the times for each frame in a vector<double>
@@ -416,7 +435,7 @@ namespace Gkyl
 		// cannot be used on a const lvalue reference. So we create
 		// the tmp rvalue and then pass it in, where the data is then
 		// moved from tmp into gkyl_data. 
-		std::cout << "Loading " << data_type << "...\n";
+		//std::cout << "Loading " << data_type << "...\n";
 		Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
 		gkyl_data.move_into_data(tmp_data);
 	}
@@ -504,6 +523,120 @@ namespace Gkyl
 		read_data_pgkyl("null"s, "magnetic_field", gkyl_b);
 	}
 
+	// Implementation of gradient as used by numpy.gradient. This is a second
+	// order approximation of the derivative.
+	double calc_gradient(const double hd, const double hs, const double fd, 
+		const double fs, const double f)
+	{
+		return (hs*hs*fd + (hd*hd - hs*hs) * f - hd*hd*fs) / 
+			(hs*hd*(hd+hs));
+	}
+
+	// Calculate the electric field components as the gradient of the potential.
+	// The gradient is calculated using the same implementation used in
+	// numpy.gradient, which can be found here:
+	// https://numpy.org/doc/stable/reference/generated/numpy.gradient.html
+	void calc_elec_field()
+	{
+		// Initialize empty 4D vectors
+		Vectors::Vector4D<double> ex {gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4()};
+		Vectors::Vector4D<double> ey {gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4()};
+		Vectors::Vector4D<double> ez {gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4()};
+		
+
+		// Calculate Ex.
+		for (int i {}; i < std::ssize(gkyl_times); ++i)
+		{
+			for (int j {}; j < std::ssize(gkyl_x); ++j)
+			{
+				for (int k {}; k < std::ssize(gkyl_y); ++k)
+				{
+					for (int l {}; l < std::ssize(gkyl_z); ++l)
+					{
+						// Edges
+						if (j == 0)
+						{
+							double h {gkyl_x[1] - gkyl_x[0]};
+							ex(i,j,k,l) = -(gkyl_vp(i,1,k,l) 
+								- gkyl_vp(i,0,k,l)) / h;
+						}
+						else if (j == std::ssize(gkyl_x) - 1)
+						{
+							double h {gkyl_x[j] - gkyl_x[j-1]};
+							ex(i,j,k,l) = -(gkyl_vp(i,j,k,l) 
+								- gkyl_vp(i,j-1,k,l)) / h;
+						}
+
+						// Everywhere else
+						else
+						{
+							double hd {gkyl_x[j+1] - gkyl_x[j]};
+							double hs {gkyl_x[j] - gkyl_x[j-1]};
+							double fd {gkyl_vp(i,j+1,k,l)};
+							double fs {gkyl_vp(i,j-1,k,l)};
+							double f {gkyl_vp(i,j,k,l)};
+							ex(i,j,k,l) = -calc_gradient(hd, hs, fd, fs, f);
+						}
+
+						// Repeat for Ey
+						if (k == 0)
+						{
+							double h {gkyl_y[1] - gkyl_y[0]};
+							ey(i,j,k,l) = -(gkyl_vp(i,j,1,l) 
+								- gkyl_vp(i,j,0,l)) / h;
+						}
+						else if (k == std::ssize(gkyl_y) - 1)
+						{
+							double h {gkyl_y[k] - gkyl_y[k-1]};
+							ey(i,j,k,l) = -(gkyl_vp(i,j,k,l) 
+								- gkyl_vp(i,j,k-1,l)) / h;
+						}
+						else
+						{
+							double hd {gkyl_y[k+1] - gkyl_y[k]};
+							double hs {gkyl_y[k] - gkyl_y[k-1]};
+							double fd {gkyl_vp(i,j,k+1,l)};
+							double fs {gkyl_vp(i,j,k-1,l)};
+							double f {gkyl_vp(i,j,k,l)};
+							ey(i,j,k,l) = -calc_gradient(hd, hs, fd, fs, f);
+						}
+
+						// Repeat for Ez
+						if (l == 0)
+						{
+							double h {gkyl_z[1] - gkyl_z[0]};
+							ez(i,j,k,l) = -(gkyl_vp(i,j,k,1) 
+								- gkyl_vp(i,j,k,0)) / h;
+						}
+						else if (l == std::ssize(gkyl_z) - 1)
+						{
+							double h {gkyl_z[l] - gkyl_z[l-1]};
+							ez(i,j,k,l) = -(gkyl_vp(i,j,k,l) 
+								- gkyl_vp(i,j,k,l-1)) / h;
+						}
+						else
+						{
+							double hd {gkyl_z[l+1] - gkyl_z[l]};
+							double hs {gkyl_z[l] - gkyl_z[l-1]};
+							double fd {gkyl_vp(i,j,k,l+1)};
+							double fs {gkyl_vp(i,j,k,l-1)};
+							double f {gkyl_vp(i,j,k,l)};
+							ez(i,j,k,l) = -calc_gradient(hd, hs, fd, fs, f);
+						}
+					}
+				}
+			}
+		}
+
+		// Move results into arrays. 
+		gkyl_ex.move_into_data(ex);
+		gkyl_ey.move_into_data(ey);
+		gkyl_ez.move_into_data(ez);
+	}
+
 	Background::Background create_bkg()
 	{
 		Background::Background bkg {};
@@ -521,6 +654,9 @@ namespace Gkyl
 		bkg.move_into_ti(gkyl_ti);
 		bkg.move_into_vp(gkyl_vp);
 		bkg.move_into_b(gkyl_b);
+		bkg.move_into_ex(gkyl_ex);
+		bkg.move_into_ey(gkyl_ey);
+		bkg.move_into_ez(gkyl_ez);
 		
 		// Okay to return by value since C++11 uses move semantics here.
 		return bkg;

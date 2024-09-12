@@ -2,10 +2,11 @@
 #define IMPURITY_TRANSPORT_H
 
 #include "background.h"
+#include "impurity_stats.h"
 
 namespace Impurity
 {
-	void follow_impurities(Background::Background& bkg);
+	Statistics follow_impurities(Background::Background& bkg);
 }
 
 #endif

@@ -210,14 +210,14 @@ def main():
         else:
             print("Error! Unrecognized gkyl_data_type: {}".format(args.gkyl_data_type))
             
-        print("Reading binary files...")
+        #print("Reading binary files...")
         times, grid, values = read_binary(args, comp, value_scale)
 
     else:
         print("Error! Only binary Gkyell files (.gkyl) are currently supported.")
 
     # Save to csv file with numpy.
-    print("Saving .csv files...")
+    #print("Saving .csv files...")
     save_csv(args, times, grid, values)
 
 

@@ -180,6 +180,14 @@ namespace Vectors
 			return m_data[calc_index(i, j, k, l)];
 		}
 
+		// I guess we need a separate identical overload of the parentheses
+		// overload (?) to handle const objects?
+		const T& operator()(const int i, const int j, const int k, const int l) 
+			const
+		{
+			return m_data[calc_index(i, j, k, l)];
+		}
+
 		// Assignment operator moves data from one Vector4D into this one.
 		Vector4D& operator=(Vector4D&& other) noexcept
 		{

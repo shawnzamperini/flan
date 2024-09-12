@@ -1,3 +1,6 @@
+#ifndef IMPURITY_STATS_H
+#define IMPURITY_STATS_H
+
 #include <vector>
 
 #include "vectors.h"
@@ -32,10 +35,34 @@ namespace Impurity
 			, m_counts (Vectors::Vector4D<int> {dim1, dim2, dim3, dim4})
 			, m_weights (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
 		{}
+		
+		/*
+		Statistics(const Statistics&) 
+		{
+			std::cout << "Copy constructor\n";
+		}
+
+		Statistics(Statistics&&) noexcept 
+		{
+			std::cout << "Move constructor\n";
+		}
+		
+		Statistics& operator=(const Statistics&) 
+		{
+			std::cout << "Copy assignment\n";
+			return *this;
+		}
+
+		Statistics& operator=(Statistics&&) noexcept 
+		{
+			std::cout << "Move assignment\n";
+			return *this;
+		}
+		*/
 
 		// Accessors
-		Vectors::Vector4D<int> get_counts() {return m_counts;};
-		Vectors::Vector4D<double> get_weights() {return m_weights;}
+		Vectors::Vector4D<int>& get_counts() {return m_counts;};
+		Vectors::Vector4D<double>& get_weights() {return m_weights;}
 
 		// Functions to increase counts
 		void add_counts(const int tidx, const int xidx, const int yidx, 
@@ -66,3 +93,5 @@ namespace Impurity
 	};
 
 }
+
+#endif

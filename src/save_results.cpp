@@ -11,11 +11,11 @@
 namespace SaveResults
 {
 	void save_results(const std::string_view case_name, 
-		const Background::Background& bkg)
+		const Background::Background& bkg, Impurity::Statistics& imp_stats)
 	{
 		// Right now this is just a redirect to the netcdf option. I built 
 		// it this way to allow other save options in the future if desired.
-		save_netcdf(case_name, bkg);
+		save_netcdf(case_name, bkg, imp_stats);
 	
 	}
 
@@ -90,7 +90,7 @@ namespace SaveResults
 	}
 
 	void save_netcdf(const std::string_view case_name, 
-		const Background::Background& bkg)
+		const Background::Background& bkg, Impurity::Statistics& imp_stats)
 	{
 		std::cout << "Saving netCDF file...\n";
 
@@ -152,13 +152,14 @@ namespace SaveResults
 		save_vector_1d(nc_file, bkg.get_grid_z(), "grid_z", grid_dim4, desc, "(m)");
 
 		// Electron density
+		std::cout << "Saving electron density...\n";
 		desc = "electron density";
-		save_vector_4d(nc_file, bkg.get_ne(), "elec_dens", 
+		save_vector_4d(nc_file, bkg.get_ne(), "electron_dens", 
 			dim1, dim2, dim3, dim4, desc, "(m-3)");
 
 		// Electron temperature
 		desc = "electron temperature";
-		save_vector_4d(nc_file, bkg.get_te(), "elec_temp", 
+		save_vector_4d(nc_file, bkg.get_te(), "electron_temp", 
 			dim1, dim2, dim3, dim4, desc, "(eV)");
 
 		// Ion temperature
@@ -171,10 +172,30 @@ namespace SaveResults
 		save_vector_4d(nc_file, bkg.get_vp(), "plasma_pot", 
 			dim1, dim2, dim3, dim4, desc, "(V)");
 
+		// Electric field
+		desc = "electric field (x)";
+		save_vector_4d(nc_file, bkg.get_ex(), "elec_x", 
+			dim1, dim2, dim3, dim4, desc, "(V/m)");
+		desc = "electric field (y)";
+		save_vector_4d(nc_file, bkg.get_ey(), "elec_y", 
+			dim1, dim2, dim3, dim4, desc, "(V/m)");
+		desc = "electric field (z)";
+		save_vector_4d(nc_file, bkg.get_ez(), "elec_z", 
+			dim1, dim2, dim3, dim4, desc, "(V/m)");
+			
 		// Magnetic field
 		desc = "magnetic field";
 		save_vector_4d(nc_file, bkg.get_b(), "bmag", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
+
+		// Impurity counts
+		std::cout << "Saving imp_counts...\n";
+		desc = "impurity counts";
+		save_vector_4d(nc_file, imp_stats.get_counts(), "imp_counts", 
+			dim1, dim2, dim3, dim4, desc, "");
+
+
+		// Impurity weights
 	}
 
 }

@@ -22,6 +22,9 @@ namespace Background
 		Vectors::Vector4D<double> m_ti {};
 		Vectors::Vector4D<double> m_vp {};
 		Vectors::Vector4D<double> m_b {};
+		Vectors::Vector4D<double> m_ex {};
+		Vectors::Vector4D<double> m_ey {};
+		Vectors::Vector4D<double> m_ez {};
 		int m_dim1 {};
 		int m_dim2 {};
 		int m_dim3 {};
@@ -42,6 +45,9 @@ namespace Background
 		const Vectors::Vector4D<double>& get_ti() const {return m_ti;}
 		const Vectors::Vector4D<double>& get_vp() const {return m_vp;}
 		const Vectors::Vector4D<double>& get_b() const {return m_b;}
+		const Vectors::Vector4D<double>& get_ex() const {return m_ex;}
+		const Vectors::Vector4D<double>& get_ey() const {return m_ey;}
+		const Vectors::Vector4D<double>& get_ez() const {return m_ez;}
 		int get_dim1() const {return m_dim1;}
 		int get_dim2() const {return m_dim2;}
 		int get_dim3() const {return m_dim3;}
@@ -166,10 +172,25 @@ namespace Background
 		}
 		void move_into_b(Vectors::Vector4D<double>& b) 
 		{
-			// This is skipped for now since elctrostatic so the time dimension
+			// This is skipped for now since electrostatic so the time dimension
 			// is always just one long.
 			//set_dims(b, "b");
 			m_b.move_into_data(b);
+		}
+		void move_into_ex(Vectors::Vector4D<double>& ex) 
+		{
+			set_dims(ex, "ex");
+			m_ex.move_into_data(ex);
+		}
+		void move_into_ey(Vectors::Vector4D<double>& ey) 
+		{
+			set_dims(ey, "ey");
+			m_ey.move_into_data(ey);
+		}
+		void move_into_ez(Vectors::Vector4D<double>& ez) 
+		{
+			set_dims(ez, "ez");
+			m_ez.move_into_data(ez);
 		}
 	};
 }

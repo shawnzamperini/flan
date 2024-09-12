@@ -52,6 +52,10 @@ namespace Gkyl
 	//void read_data(const std::string& species, const std::string& ftype,
 	//	std::vector<Vectors::Vector3D>& gkyl_data, int comp);
 
+	// Calcuate the electric field using the gradient of gkyl_vp. This must
+	// be run after read_potential.
+	void calc_elec_field();
+
 	// Read in the corresponding Gkeyll data into vectors.
 	void read_elec_density();
 	void read_elec_temperature();

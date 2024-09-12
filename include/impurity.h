@@ -61,6 +61,8 @@ namespace Impurity
 		double get_vx() const {return m_vx;}
 		double get_vy() const {return m_vy;}
 		double get_vz() const {return m_vz;}
+		double get_mass() const {return m_mass;}
+		int get_charge() const {return m_charge;}
 
 		// Setters
 		void set_weight(double w) {m_weight = w;}
@@ -71,5 +73,6 @@ namespace Impurity
 		void set_vx(double vx) {m_vx = vx;}
 		void set_vy(double vy) {m_vy = vy;}
 		void set_vz(double vz) {m_vz = vz;}
+		void set_charge(int charge) {m_charge = charge;}
 	};
 }
