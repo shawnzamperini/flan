@@ -217,6 +217,9 @@ namespace Impurity
 			// Perform a step according to the Lorentz force
 			do_lorentz_step(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
 
+			// Update paeticle time
+			imp.set_t(imp.get_t() + imp_time_step);
+
 			// Update statistics
 			record_stats(imp_stats, imp, tidx, xidx, yidx, zidx);
 
@@ -240,7 +243,8 @@ namespace Impurity
 			omp_out = omp_out + omp_in) \
 			initializer(omp_priv(omp_orig))
 
-
+		std::cout << "Starting particle following...\n";
+	
 		// Loop through one impurity at a time, tracking it from its birth
 		// time/location to the end. 
 		// dynamic scheduling likely the best here since the loop times can
@@ -260,6 +264,11 @@ namespace Impurity
 			// OpenMP overhead
 			[[maybe_unused]] int thread_id {omp_get_thread_num()};
 			[[maybe_unused]] int num_threads {omp_get_num_threads()};
+
+			if (thread_id == 0)
+			{
+				std::cout << "Number of threads: " << num_threads << '\n';
+			}
 
 			// Create starting impurity ion
 			Impurity primary_imp = create_primary_imp(bkg);

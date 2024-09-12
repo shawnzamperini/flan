@@ -144,8 +144,11 @@ namespace Vectors
 			, m_dim4 {v.m_dim4}
 			, m_size {v.m_size}
 		{
-			std::cout << "Warning! Why are you making an expensive copy"
-				<< " of a Vector4D?\n";
+			// This is a useful warning to check. Generally don't want to do
+			// this, but it is needed when creating private copies of vectors
+			// for each OpenMP thread.
+			//std::cout << "Warning! Why are you making an expensive copy"
+			//	<< " of a Vector4D?\n";
 		}
 
 		// We could alternatively prevent copies with delete.
