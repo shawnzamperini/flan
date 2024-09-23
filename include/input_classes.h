@@ -1,17 +1,11 @@
+/**
+* @file input_classes.h
+* @brief input_classes.cpp header file
+*/
+
 #ifndef INPUT_CLASSES_H
 #define INPUT_CLASSES_H
 
-/*
-Header file containing the declarations of the different type of input options.
-There is a string, int and double Option type class. Each class is derived from
-a base class called OptionBase, which let's us put all the options into a
-single array a pointers to their base class (i.e., type is OptionBase*). 
-
-A template would've been nice here, but CTAD fails. And since each function in 
-the different classes needs to return a different type, it is difficult to
-implement a single templated class anyways. This implementation style, while
-not very straightforward, was what I cooked up to maintain flexiblity. 
-*/
 
 namespace Input
 {

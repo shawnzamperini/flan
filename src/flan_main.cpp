@@ -1,3 +1,9 @@
+/**
+* @file  flan_main.cpp
+*
+* @brief Entry point and main top level control of Flan.
+*/
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -23,7 +29,7 @@ int main(int argc, char *argv[])
 
 	// Test that we won't run into any NetCDF (really, HDF5) errors when we
 	// want to save at the end. Annoying if it happens.
-	
+	// To-do.
 
 	// Load input file.
 	std::string case_name {argv[1]};

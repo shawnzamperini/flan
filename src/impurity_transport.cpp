@@ -1,3 +1,9 @@
+/**
+* @file  impurity_transport.cpp
+*
+* @brief Impurity transport routines
+*/
+
 #include <omp.h>
 #include <tuple>
 #include <vector>
@@ -15,14 +21,30 @@
 
 namespace Impurity
 {
-	// Function to return a random starting time for an impurity ion. This is
-	// obviously very basic, to have as its own function, but we do this since
-	// this will probably get more complicated in the future.
+	/**
+	* @brief Get starting time to pass into an Impurity object.
+	*
+	* Function to return a random starting time for an impurity ion. This is
+	* obviously very basic, to have as its own function, but we do this since
+	* this will probably get more complicated in the future.
+	*
+	* @param bkg Reference to the loaded Background object
+	*/
 	double get_birth_t(const Background::Background& bkg)
 	{
 		return Random::get(bkg.get_t_min(), bkg.get_t_max());
 	}
 
+	/**
+	* @brief Get starting x location to pass into an Impurity object
+	*
+	* Function to return a random starting x location for an impurity ion.
+	* Right now this uniformily chooses between two values given by the user
+	* in the input file. If both those values are the same it just returns
+	* that number.
+	*
+	* @param bkg Reference to the loaded Background object
+	*/
 	double get_birth_x(const Background::Background& bkg)
 	{	
 		// Load input options as local variables for cleaner code
@@ -33,29 +55,57 @@ namespace Impurity
 		return Random::get(xmin, xmax);
 	}
 
+	/**
+	* @brief Get starting y location to pass into an Impurity object
+	*
+	* Function to return a random starting x location for an impurity ion.
+	* Right now this uniformily chooses between the y bounds of the simulation
+	* volume.
+	*
+	* @param bkg Reference to the loaded Background object
+	*/
 	double get_birth_y(const Background::Background& bkg)
 	{
 		return Random::get(bkg.get_y_min(), bkg.get_y_max());
 	}
 
+	/**
+	* @brief Get starting z location to pass into an Impurity object
+	*
+	* Function to return the starting z location for an impurity ion. Right now
+	* this just uses a single value passed in via the input file.
+	*
+	* @param bkg Reference to the loaded Background object
+	*/
 	double get_birth_z(const Background::Background& bkg)
 	{
 		double imp_zstart_val {Input::get_opt_dbl(Input::imp_zstart_val)};
 		return imp_zstart_val;
 	}
 	
+	/**
+	* @brief Get starting charge to pass into an Impurity object
+	*
+	* Function to return the starting charge for an impurity ion. Right now
+	* this just uses a single value passed in via the input file.
+	*
+	* @param bkg Reference to the loaded Background object
+	*/
 	int get_birth_charge()
 	{
 		int imp_charge {Input::get_opt_int(Input::imp_init_charge)};
 		return imp_charge;
 	}
 
-	
-
-	// Create a primary Impurity. Primary impurities are those that start
-	// according to the initial condition options specified in the input file.
-	// Later, these can create secondary Impurity objects as a result of
-	// Monte Carlo splitting.
+	/**
+	* @brief Create a primary impurity ion
+	*
+	* Primary impurities are those that start according to the initial 
+	* condition options specified in the input file. Later, these can create 
+	* secondary Impurity objects as a result of Monte Carlo splitting.
+	*
+	* @param bkg Reference to the loaded Background object
+	*/
 	Impurity create_primary_imp(const Background::Background& bkg)
 	{
 		// Load input options as local variables for cleaner code.
@@ -83,8 +133,11 @@ namespace Impurity
 			imp_weight, charge_imp, imp_mass};
 	}
 
-	// Helper function to get the last element in a vector while also removing
-	// it.
+	/**
+	* @brief Helper function to get and remove the last element in a vector
+	*
+	* @param vec Reference to vector to operate on
+	*/
 	template <typename T>
 	T pop_back_remove(std::vector<T>& vec)
 	{
@@ -93,6 +146,16 @@ namespace Impurity
 		return element;
 	}
 
+	/**
+	* @brief Function that return the nearest index in a vector to value
+	*
+	* This is a slightly tricky algorithm, so I relied on Microsoft's Copilot
+	* AI to help me figure this one out using the standard library so it would
+	* be fast.
+	*
+	* @param vec The vector to search in
+	* @param value The value we are looking for the nearest index to
+	*/
 	template <typename T>
 	int get_nearest_index(const std::vector<T>& vec, const T value)
 	{
@@ -118,14 +181,35 @@ namespace Impurity
 		}
 	}
 
+	/**
+	* @brief Find nearest cell index in a vector representing a grid
+	*
+	* This algorithm is a bit quicker than get_nearest_index because it uses
+	* the grid edges. In this case, we do not care which grid edge we are
+	* closer to. As long as grid_edges is sorted, once we know the index of
+	* the first element that is larger than value, we have the cell index. That
+	* lets us skip a few extra step that get_nearest_index has to do.
+	*
+	* @param grid_edges Vector containing the grid edges for the cells
+	* @param value Value to find nearest cell for
+	*/
 	template <typename T>
 	int get_nearest_cell_index(const std::vector<T>& grid_edges, const T value)
 	{
-		
+		// Get the index of the first value in grid_edges that is larger
+		// than value.
 		auto lower = std::lower_bound(grid_edges.begin(), grid_edges.end(), 
 			value);
 
-		// Comment here explaining this logic again
+		// Realize that one minus the index represented by lower is the value
+		// we're after in the vectors with values at the cell centers.
+		//  ____________
+		//  |_0_|_1_|_2_|  <-- cell center indices
+		//  0   1   2   3  <-- grid_edges indices
+		//          ^
+		//        lower
+		//
+		// In this example, we want 1 returned, so we return 2 - 1 = 1. 
 		if (lower == grid_edges.begin()) return 0;
 		else return lower - grid_edges.begin() - 1;
 	}
@@ -137,11 +221,16 @@ namespace Impurity
 		// Impurity's charge
 		double imp_q {imp.get_charge() * Constants::charge_e};
 
+		//std::cout << "Ex, Ey, Ez = " << bkg.get_ex()(tidx, xidx, yidx, zidx)
+		//	<< bkg.get_ey()(tidx, xidx, yidx, zidx) 
+		//	<< bkg.get_ez()(tidx, xidx, yidx, zidx) << "\n";
+		//std::cout << "Bz = " << bkg.get_b()(tidx, xidx, yidx, zidx) << "\n";
+
 		// Each component of the Lorentz force
 		double fx {imp_q * (bkg.get_ex()(tidx, xidx, yidx, zidx) + 
 			imp.get_vy() * bkg.get_b()(tidx, xidx, yidx, zidx))};
 		double fy {imp_q * (bkg.get_ey()(tidx, xidx, yidx, zidx) + 
-			imp.get_vx() * bkg.get_b()(tidx, xidx, yidx, zidx))};
+			-imp.get_vx() * bkg.get_b()(tidx, xidx, yidx, zidx))};
 		double fz {imp_q * bkg.get_ez()(tidx, xidx, yidx, zidx)};
 
 		// Change in velocity over time step
@@ -166,7 +255,10 @@ namespace Impurity
 		// Add one to counts to this location	
 		imp_stats.add_counts(tidx, xidx, yidx, zidx, 1);
 
-		// Add particle's weight to this location
+		// Add particle's weight to this location. Note: We should be adding
+		// the particle weight * imp_time_step, but since the time step is
+		// constant, we can add it at the end and save a floating point
+		// operation.
 		imp_stats.add_weights(tidx, xidx, yidx, zidx, imp.get_weight());
 	}
 
@@ -174,14 +266,24 @@ namespace Impurity
 	{
 		// The x boundaries are treated as absorbing. Could certianly add
 		// different options here in the future.
-		if (imp.get_x() <= bkg.get_grid_x()[0]) return false;
-		if (imp.get_x() >= bkg.get_grid_x().back()) return false;
+		if (imp.get_x() <= bkg.get_grid_x()[0])
+		{
+			//std::cout << "absorbed: lower_x " << imp.get_x() << " < " 
+			//	<< bkg.get_grid_x()[0] << "\n";
+			return false;
+		}
+		if (imp.get_x() >= bkg.get_grid_x().back()) 
+		{
+			//std::cout << "absorbed: upper_x " << imp.get_x() << " > " 
+			//	<< bkg.get_grid_x().back() << "\n";
+			return false;
+		}
 
 		// Absorbing z boundaries
 		if (imp.get_z() <= bkg.get_grid_z()[0]) return false;
 		if (imp.get_z() >= bkg.get_grid_z().back()) return false;
 
-		// Perioidic y boundaries. This means if an impurity crosses one of
+		// Periodic y boundaries. This means if an impurity crosses one of
 		// these boundaries it will wrap around to the other one.
 		if (imp.get_y() < bkg.get_grid_y()[0])
 		{
@@ -206,6 +308,11 @@ namespace Impurity
 		bool continue_following {true};
 		while (continue_following)
 		{
+			// Debugging
+			//std::cout << "imp t, x, y, z: " << imp.get_t() << ", " << 
+			//	imp.get_x() << ", " << imp.get_y() << ", " << imp.get_z() 
+			//	<< '\n';
+
 			// Get nearest time index
 			int tidx {get_nearest_index(bkg.get_times(), imp.get_t())};
 
@@ -217,7 +324,7 @@ namespace Impurity
 			// Perform a step according to the Lorentz force
 			do_lorentz_step(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
 
-			// Update paeticle time
+			// Update particle time
 			imp.set_t(imp.get_t() + imp_time_step);
 
 			// Update statistics
@@ -227,6 +334,8 @@ namespace Impurity
 			continue_following = check_boundary(bkg, imp);
 
 			// Check for a collision
+
+			// Check for ionization or recombination
 		}
 
 	}
@@ -256,18 +365,47 @@ namespace Impurity
 		//     *follow impurity routine*
 		//     *potentially add imp to split_imps*
 		//   while (!split_imps.is_empty())
+		int thread_imp_count {};
+		int thread_imp_num {};
 		#pragma omp parallel for schedule(dynamic) \
 			shared(bkg) \
+			firstprivate(thread_imp_num, thread_imp_count) \
 			reduction(+: imp_stats)
 		for (int i = 0; i < imp_num; ++i)
 		{
 			// OpenMP overhead
 			[[maybe_unused]] int thread_id {omp_get_thread_num()};
 			[[maybe_unused]] int num_threads {omp_get_num_threads()};
+			thread_imp_num = imp_num / num_threads;
 
+			// Printout of progress. We don't want to use atomic or anything
+			// that can slow the program down, so we will just report progress
+			// for a single thread since, in theory, all threads should finish
+			// near the same time. For smaller numbers of particles this can
+			// give silly numbers, but it should give the correct numbers at
+			// production level numbers of impurities.
 			if (thread_id == 0)
 			{
-				std::cout << "Number of threads: " << num_threads << '\n';
+				// Print progress this many times
+				int prog_interval {10};
+
+				// Percent that we've followed
+				double perc_complete {static_cast<double>(thread_imp_count) 
+					/ thread_imp_num * 100};
+
+				// Only do this is enough impurities are being followed, 
+				// otherwise the following modulo in the if statement will
+				// be a divide by zero error.
+				if (thread_imp_num > prog_interval)
+				{
+					if ((thread_imp_count % (thread_imp_num / prog_interval)) == 0 
+						&& thread_imp_count > 0)
+					{
+						std::cout << "Followed " << thread_imp_count * num_threads 
+							<< "/" << imp_num << " impurities (" 
+							<< static_cast<int>(perc_complete) << "%)\n";
+					}
+				}
 			}
 
 			// Create starting impurity ion
@@ -280,6 +418,10 @@ namespace Impurity
 
 				follow_impurity(imp, bkg, imp_stats);
 			}
+
+			// Increment thread-specific counter. This just counts primary
+			// impurities. 
+			thread_imp_count += 1;
 		}
 	}
 
@@ -294,7 +436,19 @@ namespace Impurity
 		// Execute main particle following loop.
 		main_loop(bkg, imp_stats);
 	
-		// Aggregate the statistics into meaningful quantities.
+		// Convert the statistics into meaningful quantities. We are scaling
+		// the density by the scale factor * time step. Technically speaking,
+		// the time step should be accounted for in the main loop each time
+		// we score a particle (weight * time step instead of just weight), 
+		// but since the time step is constant, we can avoid that floating 
+		// point operation in the main loop and apply it here after the fact.
+		std::cout << "Calculating derived quantities...\n";
+		int imp_num {Input::get_opt_int(Input::imp_num)};
+		double imp_source_scale_fact {
+			Input::get_opt_dbl(Input::imp_source_scale_fact)};
+		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step)};
+		imp_stats.calc_density(bkg, imp_num, 
+			imp_source_scale_fact * imp_time_step);
 		
 		return imp_stats;
 

@@ -1,3 +1,9 @@
+/**
+* @file read_gkyl.cpp
+*
+* @brief Routines handling reading in a plasma background from Gkeyll
+*/
+
 #include <iostream>
 #include <string>
 #include <sstream>

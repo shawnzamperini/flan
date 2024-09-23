@@ -88,10 +88,14 @@ def read_binary(args, comp, value_scale=1.0):
         value *= value_scale
         values.append(value)
 
-        # If using doing magnetic field, this is only to be done once since
+		# Ignore this comment below. We actually do want to do this so that the
+		# magnetic field conforms to the other data arrays. One day if we
+		# ever do electromagnetic simulations we won't need to change as much
+		# code. 
+        # If doing magnetic field, this is only to be done once since
         # we otherwise would be repeating the same information each frame.
-        if (args.gkyl_data_type == "magnetic_field"):
-            break
+        #if (args.gkyl_data_type == "magnetic_field"):
+        #    break
 
     # Note: We intentionally just return grid and not grids since it is the
     # same for each time slice. If this changes, we can revisit but keep it 

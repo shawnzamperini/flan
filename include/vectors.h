@@ -168,7 +168,7 @@ namespace Vectors
 		// using the move semantics functions below. Use get_data().size()
 		// instead.
 		//int get_size() const {return m_size;}
-		std::vector<T> get_data() const {return m_data;}
+		const std::vector<T>& get_data() const {return m_data;}
 
 		// Convert from 4D index to the 1D one used in the underlying m_data.
 		int calc_index(const int i, const int j, const int k, const int l) const

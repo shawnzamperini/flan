@@ -54,7 +54,8 @@ class FlanPlots:
 		
 		# Valid options that can be loaded.
 		valid_opts = ["electron_dens", "electron_temp", "ion_temp", 
-			"plasma_pot", "elec_x", "elec_y", "elec_z", "bmag", "imp_counts"]
+			"plasma_pot", "elec_x", "elec_y", "elec_z", "bmag", "imp_counts",
+			"imp_density"]
 
 		# Throw an error if a valid option wasn't chosen.
 		if (data_name not in valid_opts):
@@ -65,6 +66,7 @@ class FlanPlots:
 			for opt in valid_opts:
 				msg += " {}\n".format(opt)
 			raise ValueError(msg)
+			return None
 
 		return self.nc[data_name][frame].data
 
@@ -115,7 +117,7 @@ class FlanPlots:
 		return norm
 
 	def plot_frame_xy(self, data_name, frame, z0, showplot=True, 
-		cmap="inferno", norm_type="linear"):
+		cmap="inferno", norm_type="linear", vmin=None, vmax=None):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -155,6 +157,12 @@ class FlanPlots:
 		# Index data at this z location.
 		data_xy = data[:,:,z_idx]
 
+		# Determine colorbar limits.
+		if vmin is None: 
+			vmin = data_xy.min()
+		if vmax is None: 
+			vmax = data_xy.max()
+
 		# Grid the x, y data
 		X, Y = np.meshgrid(x, y)
 		
@@ -163,7 +171,7 @@ class FlanPlots:
 			fig, ax1 = plt.subplots()
 
 			# Plot according to the normalization option passed in.
-			norm = self.get_norm(data_xy, norm_type)
+			norm = self.get_norm(data_xy, norm_type, vmin=vmin, vmax=vmax)
 			mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
 			
 			cbar = fig.colorbar(mesh, ax=ax1)
@@ -172,7 +180,6 @@ class FlanPlots:
 			cbar.set_label(data_name, fontsize=g_fontsize)
 
 			fig.tight_layout()
-
 			fig.show()
 
 		return X, Y, data_xy
@@ -192,8 +199,14 @@ class FlanPlots:
 			skip_vmax = False
 			for f in range(frame_start, frame_end+1):
 				
-				X, Y, data_xy = self.plot_frame_xy(data_name, f, z0, 
-					showplot=False)
+				try:
+					X, Y, data_xy = self.plot_frame_xy(data_name, f, z0, 
+						showplot=False)
+
+				# TypeError will happen if we put in an invalid option for
+				# data_name.
+				except TypeError:
+					return None
 
 				# Need to set vmin, vmax to values so we can use <,> on them.
 				# If users pass in values for either, those take precedence and
@@ -244,6 +257,7 @@ class FlanPlots:
 				showplot=False)
 
 			norm = self.get_norm(data_xy, norm_type, vmin=vmin, vmax=vmax)
+			ax1.clear()
 			mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
 			ax1.set_title("Frame {}".format(frame_start+i), fontsize=g_fontsize)
 			cax.cla()

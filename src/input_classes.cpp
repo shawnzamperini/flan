@@ -1,3 +1,16 @@
+/**
+* @file input_classes.cpp
+* @brief Implementation of various input option types
+*
+* There is a string, int and double Option type class. Each class is derived 
+* from a base class called OptionBase, which let's us put all the options into 
+* a single array a pointers to their base class (i.e., type is OptionBase*). 
+*
+* A template would've been nice here, but CTAD fails. And since each function 
+* in the different classes needs to return a different type, it is difficult to
+* implement a single templated class anyways. This implementation style, while
+* not very straightforward, was what I cooked up to maintain flexiblity. 
+*/
 #include <string>
 #include <iomanip>
 #include <charconv>
@@ -23,10 +36,18 @@ namespace Input
 
 	int OptionInt::get_value() const {return m_value;}
 	void OptionInt::put_value(int value) {m_value = value;}
-	void OptionInt::put_value(std::string value) {m_value = std::stoi(value);}
+	void OptionInt::put_value(std::string value) 
+	{
+		// We read as double first to capture scientific notation input. If
+		// value = 1e9, std::stoi will apparently just read in 1 and ignore e9. 
+		//m_value = std::stoi(value);
+		m_value = static_cast<int>(std::stod(value));
+	}
 	void OptionInt::put_value(std::string_view sv)
 	{
-		m_value = sv_to_value<int>(sv);
+		// Similar to above.
+		//m_value = sv_to_value<int>(sv);
+		m_value = static_cast<int>(sv_to_value<double>(sv));
 	}
 	
 	// Double option class

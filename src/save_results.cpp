@@ -1,3 +1,10 @@
+/**
+* @file save_results.cpp
+* @brief Routines for saving results of Flan simulation
+*
+* Right now only outputting everything into a single netCDF file is supported.
+*/
+
 #include <type_traits>
 #include <iostream>
 #include <string>
@@ -152,7 +159,6 @@ namespace SaveResults
 		save_vector_1d(nc_file, bkg.get_grid_z(), "grid_z", grid_dim4, desc, "(m)");
 
 		// Electron density
-		std::cout << "Saving electron density...\n";
 		desc = "electron density";
 		save_vector_4d(nc_file, bkg.get_ne(), "electron_dens", 
 			dim1, dim2, dim3, dim4, desc, "(m-3)");
@@ -189,13 +195,14 @@ namespace SaveResults
 			dim1, dim2, dim3, dim4, desc, "(T)");
 
 		// Impurity counts
-		std::cout << "Saving imp_counts...\n";
 		desc = "impurity counts";
 		save_vector_4d(nc_file, imp_stats.get_counts(), "imp_counts", 
 			dim1, dim2, dim3, dim4, desc, "");
 
-
-		// Impurity weights
+		// Impurity density
+		desc = "impurity density";
+		save_vector_4d(nc_file, imp_stats.get_density(), "imp_density", 
+			dim1, dim2, dim3, dim4, desc, "(m-3)");
 	}
 
 }
