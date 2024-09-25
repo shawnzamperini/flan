@@ -1,3 +1,8 @@
+/**
+* @file vectors.h
+*
+* @brief Header file for vectors.cpp
+*/
 #ifndef VECTORS_H
 #define VECTORS_H
 
@@ -10,10 +15,11 @@
 // as flatten vectors and then () is overloaded to act as indexing. 
 namespace Vectors
 {
+	template <typename T>
 	class Vector3D
 	{
 	private:
-		std::vector<double> m_data;
+		std::vector<T> m_data;
 		int m_dim1 {};
 		int m_dim2 {};
 		int m_dim3 {};
@@ -21,27 +27,13 @@ namespace Vectors
 
 	public:
 		// Default constructor
-		Vector3D()
-		{}
+		Vector3D();
 
 		// Constructor to allow creating an empty vector
-		Vector3D(int dim1, int dim2, int dim3)
-			: m_dim1 {dim1}
-			, m_dim2 {dim2}
-			, m_dim3 {dim3}
-		{
-			m_size = dim1 * dim2 * dim3;
-			m_data.resize(m_size);
-		}
+		Vector3D(int dim1, int dim2, int dim3);
 
 		// Constructor to create vector and fill with the data passed on
-		Vector3D(std::vector<double> data_in, int dim1, int dim2, int dim3)
-			: Vector3D(dim1, dim2, dim3)
-		{
-			// Copy over into the class
-			// Note: Expensive! Could we use move semantics instead?
-			m_data = data_in;
-		}
+		Vector3D(std::vector<T> data_in, int dim1, int dim2, int dim3);
 
 		// Artificial constructor to allow us to compile read_gkyl.load_values.
 		// That function selectively returns a brace-enclosed initializer list
@@ -49,39 +41,22 @@ namespace Vectors
 		// The compiler nonetheless needs to see a constructor for Vector3D
 		// that accepts 5 inputs, since that is what Vector4D uses. This
 		// constructor should never get used.
-		Vector3D(std::vector<double> data_in, int dim1, int dim2, int dim3, 
-				int dim4)
-		{
-			std::cerr << "Error! Vector3D was called with 4 dimensions. This"
-				<< " is a programming error. Please fix\n";
-		}
+		Vector3D(std::vector<T> data_in, int dim1, int dim2, int dim3, 
+				int dim4);
 	
 		// Accessors
-		int get_dim1() {return m_dim1;}
-		int get_dim2() {return m_dim2;}
-		int get_dim3() {return m_dim3;}
-		int get_size() {return m_size;}
-		std::vector<double> get_data() {return m_data;}
+		int get_dim1();
+		int get_dim2();
+		int get_dim3();
+		int get_size();
+		std::vector<T> get_data();
 
 		// Overload parentheses to act as indexing.
-		double& operator()(int i, int j, int k)
-		{
-			int index = i * (m_dim2 * m_dim3) + j * m_dim3 + k;
-			return m_data[index];
-		}
+		T& operator()(int i, int j, int k);
 
 		// Move the passed in vector to data. Hmmm... this is really
 		// some sort of abstraction of operator=...
-		void move_into_data(Vectors::Vector3D& vec)
-		{
-			// Copy over the dimensions
-			m_dim1 = vec.get_dim1();
-			m_dim2 = vec.get_dim2();
-			m_dim3 = vec.get_dim3();
-
-			// Move the data into this
-			m_data = std::move(vec.m_data);
-		}
+		void move_into_data(Vectors::Vector3D<T>& vec);
 	};
 
 	template <typename T>
@@ -97,29 +72,14 @@ namespace Vectors
 
 	public:
 		// Default constructor
-		Vector4D()
-		{}
+		Vector4D();
 
 		// Constructor to allow creating an empty vector
-		Vector4D(int dim1, int dim2, int dim3, int dim4)
-			: m_dim1 {dim1}
-			, m_dim2 {dim2}
-			, m_dim3 {dim3}
-			, m_dim4 {dim4}
-		{
-			m_size = dim1 * dim2 * dim3 * dim4;
-			m_data.resize(m_size);
-		}
+		Vector4D(int dim1, int dim2, int dim3, int dim4);
 
 		// Constructor to create vector and fill with the data passed on
 		Vector4D(std::vector<T> data_in, int dim1, int dim2, int dim3, 
-			int dim4)
-			: Vector4D(dim1, dim2, dim3, dim4)
-		{
-			// Copy over into the class
-			// Note: Expensive! Could we use move semantics instead?
-			m_data = data_in;
-		}
+			int dim4);
 
 		// Artificial constructor to allow us to compile read_gkyl.load_values.
 		// That function selectively returns a brace-enclosed initializer list
@@ -127,38 +87,21 @@ namespace Vectors
 		// The compiler nonetheless needs to see a constructor for Vector4D
 		// that accepts these inputs, since that is what Vector3D uses. This
 		// constructor should never get used.
-		Vector4D(std::vector<T> data_in, int dim1, int dim2, int dim3)
-		{
-			std::cerr << "Error! Vector4D was called with 3 dimensions. This"
-				<< " is a programming error. Please fix\n";
-		}
+		Vector4D(std::vector<T> data_in, int dim1, int dim2, int dim3);
 
-		// We are making the copy copy constructor yell at us since we 
+		// We are making the copy constructor yell at us since we 
 		// probably never want to make a copy of a Vector4D. Can comment
 		// this out if we ever find this is not the case.
-		Vector4D(const Vector4D& v)
-			: m_data {v.m_data}
-			, m_dim1 {v.m_dim1}
-			, m_dim2 {v.m_dim2}
-			, m_dim3 {v.m_dim3}
-			, m_dim4 {v.m_dim4}
-			, m_size {v.m_size}
-		{
-			// This is a useful warning to check. Generally don't want to do
-			// this, but it is needed when creating private copies of vectors
-			// for each OpenMP thread.
-			//std::cout << "Warning! Why are you making an expensive copy"
-			//	<< " of a Vector4D?\n";
-		}
+		Vector4D(const Vector4D& v);
 
 		// We could alternatively prevent copies with delete.
 		//Vector4D(const Vector4D& v) = delete;
 	
 		// Accessors
-		int get_dim1() const {return m_dim1;}
-		int get_dim2() const {return m_dim2;}
-		int get_dim3() const {return m_dim3;}
-		int get_dim4() const {return m_dim4;}
+		int get_dim1() const;
+		int get_dim2() const;
+		int get_dim3() const;
+		int get_dim4() const;
 
 		// Setup a Vector4D. This generally would be done via a constructor
 		// in the first place, but in Impurity::Statistics we define empty
@@ -168,7 +111,7 @@ namespace Vectors
 		// using the move semantics functions below. Use get_data().size()
 		// instead.
 		//int get_size() const {return m_size;}
-		const std::vector<T>& get_data() const {return m_data;}
+		const std::vector<T>& get_data() const;
 
 		// Convert from 4D index to the 1D one used in the underlying m_data.
 		int calc_index(const int i, const int j, const int k, const int l) const
@@ -264,9 +207,9 @@ namespace Vectors
 
 		// Slice a single dimension (which returns a vector with one 
 		// lower dimensionality).
-		Vector3D slice_dim4(int dim_index)
+		Vector3D<T> slice_dim4(int dim_index)
 		{
-			Vector3D vec {m_dim1, m_dim2, m_dim3};
+			Vector3D<T> vec {m_dim1, m_dim2, m_dim3};
 			for (int i {}; i < m_dim1; ++i)
 			{
 				for (int j {}; j < m_dim2; ++j)

@@ -1,6 +1,6 @@
 /**
 * @file input_classes.h
-* @brief input_classes.cpp header file
+* @brief Header file for input_classes.cpp
 */
 
 #ifndef INPUT_CLASSES_H
@@ -10,8 +10,10 @@
 namespace Input
 {
 	
-	// Base class to derive different input option types (int, double. string, ...)
-	// from.  
+	/**
+	* @brief Base class to derive different input option types (int, double, 
+	* string) from.  
+	*/
 	class OptionBase
 	{
 	private:
@@ -26,7 +28,9 @@ namespace Input
 
 	};
 
-	// Integer input option class.
+	/**
+	* @brief Integer input option class. Inherits from OptionBase.
+	*/
 	class OptionInt : public OptionBase
 	{
 	private:
@@ -45,7 +49,9 @@ namespace Input
 		void put_value(std::string_view sv);
 	};
 
-	// Integer input option class.
+	/**
+	* @brief Double input option class. Inherits from OptionBase.
+	*/
 	class OptionDbl : public OptionBase
 	{
 	private:
@@ -64,7 +70,9 @@ namespace Input
 		void put_value(std::string_view sv);
 	};
 
-	// String input option class.
+	/**
+	* @brief String input option class. Inherits from OptionBase.
+	*/
 	class OptionStr : public OptionBase
 	{
 	private:

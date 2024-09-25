@@ -1,7 +1,7 @@
 /**
 * @file impurity_stats.h
 *
-* @brief impurity_stats.cpp header file
+* @brief Header file for impurity_stats.cpp
 */
 
 #ifndef IMPURITY_STATS_H
@@ -9,6 +9,7 @@
 
 #include <numeric>
 #include <vector>
+
 #include "vectors.h"
 #include "background.h"
 

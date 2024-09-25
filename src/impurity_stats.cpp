@@ -7,6 +7,7 @@
 #include <numeric>
 #include <vector>
 
+#include "vectors.h"
 #include "impurity_stats.h"
 
 namespace Impurity

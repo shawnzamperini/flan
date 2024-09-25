@@ -20,15 +20,40 @@
 
 namespace Input
 {
-	// Base class to derive different input option types (int, double. string, ...)
-	// from.  
+	/** 
+	* @class OptionBase
+	* @brief Base class to derive different input option types (int, double, 
+	* string) from.  
+	*/
+
+	/**
+	* @brief Constructor
+	*
+	* @param name Name of the input option.
+	*/
 	OptionBase::OptionBase(std::string name)
 		: m_name {name}
 	{}
 
+	/**
+	* @brief Get name of input option.
+	*
+	* @return Returns a string_view of the option name.
+	*/
 	std::string_view OptionBase::get_name() const {return m_name;}
 	
-	// Integer option class
+	/**
+	* @class OptionInt
+	*
+	* @brief Integer input option class. Inherits from OptionBase.
+	*/
+
+	/**
+	* @brief Constructor.
+	*
+	* @param name String containing name of option.
+	* @param value Integer value of option.
+	*/
 	OptionInt::OptionInt(std::string name, int value)
 		: OptionBase(name)
 		, m_value {value}
@@ -50,7 +75,9 @@ namespace Input
 		m_value = static_cast<int>(sv_to_value<double>(sv));
 	}
 	
-	// Double option class
+	/**
+	* @brief Double input option class. Inherits from OptionBase.
+	*/
 	OptionDbl::OptionDbl(std::string name, double value)
 		: OptionBase(name)
 		, m_value {value}
@@ -64,7 +91,9 @@ namespace Input
 		m_value = sv_to_value<double>(sv);
 	}
 
-	// String input option class.
+	/**
+	* @brief String input option class. Inherits from OptionBase.
+	*/
 	OptionStr::OptionStr(std::string name, std::string value)
 		: OptionBase(name)
 		, m_value {value}

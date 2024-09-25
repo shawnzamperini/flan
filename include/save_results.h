@@ -1,6 +1,6 @@
 /**
 * @file save_results.h
-* @brief save_results.cpp header file
+* @brief Header file for save_results.cpp
 */
 
 #ifndef SAVE_RESULTS_H

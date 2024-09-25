@@ -1,7 +1,7 @@
 /**
 * @file read_gkyl.h
 *
-* @brief read_gkyl.cpp header file
+* @brief Header file for read_gkyl.cpp
 */
 
 #ifndef READ_GKYL_H
@@ -41,6 +41,12 @@ namespace Gkyl
 	template <typename T>
 	Vectors::Vector4D<T> load_values(const std::string& data_type);
 
+	// Load file with the interpolation setting used by Gkeyll
+	std::vector<std::string> load_interp_settings();
+
+	// Calculate cell centers for the given grid points.
+	std::vector<double> cell_centers(std::vector<double>& grid);
+
 	// Function to read in Gkeyll data using a python interface to postgkyl
 	// via read_gkyl.py. This produces the following csv files:
 	//   bkg_from_pgkyl_times.csv : The time for each frame
@@ -53,11 +59,6 @@ namespace Gkyl
 		const std::string& data_type,
 		Vectors::Vector4D<T>& gkyl_data);
 
-	// General function to read in data from Gkeyll into the relevant
-	// vector specified by gkyl_data.
-	//void read_data(const std::string& species, const std::string& ftype,
-	//	std::vector<Vectors::Vector3D>& gkyl_data, int comp);
-
 	// Calcuate the electric field using the gradient of gkyl_vp. This must
 	// be run after read_potential.
 	void calc_elec_field();
@@ -69,6 +70,16 @@ namespace Gkyl
 	void read_potential();
 	void read_magnetic_field();
 
+	// Implementation of gradient as used by numpy.gradient. This is a second
+	// order approximation of the derivative.
+	double calc_gradient(const double hd, const double hs, const double fd, 
+		const double fs, const double f);
+
+	// Calculate the electric field components as the gradient of the potential.
+	void calc_elec_field();
+
+	// Move all the data loaded into global arrays into a Background object and
+	// return it.
 	Background::Background create_bkg();
 }
 

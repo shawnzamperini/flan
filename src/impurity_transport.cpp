@@ -214,6 +214,17 @@ namespace Impurity
 		else return lower - grid_edges.begin() - 1;
 	}
 
+	/**
+	* @brief Perform impurity step based on the Lorentz force
+	*
+	* @param imp Impurity object that is updated within function
+	* @param bkg Reference to the loaded Background object
+	* @param imp_time_step Size of time step specified in input file
+	* @param tidx Index in time array imp is at
+	* @param xidx Index in x array imp is at
+	* @param yidx Index in y array imp is at
+	* @param zidx Index in z array imp is at
+	*/
 	void do_lorentz_step(Impurity& imp, const Background::Background& bkg,
 		const double imp_time_step, const int tidx, const int xidx, 
 		const int yidx, const int zidx)
@@ -249,8 +260,19 @@ namespace Impurity
 		imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);
 	}
 
-	void record_stats(Statistics& imp_stats, const Impurity& imp, const int tidx, 
-		const int xidx, const int yidx, const int zidx)
+	/**
+	* @brief Record/score particle in the ImpurityStats object
+	*
+	* @param imp_stats A Statistics object tracking the Monte Carlo statistics
+	* of this simulation.
+	* @param imp The Impurity object to score
+	* @param tidx Index in time array imp is at
+	* @param xidx Index in x array imp is at
+	* @param yidx Index in y array imp is at
+	* @param zidx Index in z array imp is at
+	*/
+	void record_stats(Statistics& imp_stats, const Impurity& imp, 
+		const int tidx, const int xidx, const int yidx, const int zidx)
 	{
 		// Add one to counts to this location	
 		imp_stats.add_counts(tidx, xidx, yidx, zidx, 1);
@@ -262,20 +284,28 @@ namespace Impurity
 		imp_stats.add_weights(tidx, xidx, yidx, zidx, imp.get_weight());
 	}
 
+	/**
+	* @brief Check if an Impurity has encountered a boundary condition.
+	*
+	* A boundary condition could be absorbing or reflecting, depends on the 
+	* simulation settings and boundary.
+	*
+	* @param bkg Reference to the loaded Background object
+	* @param imp The Impurity object to check for boundary condition
+	*
+	* @return Returns false if particle following is to be terminated, true
+	* otherwise.
+	*/
 	bool check_boundary(const Background::Background& bkg, Impurity& imp)
 	{
 		// The x boundaries are treated as absorbing. Could certianly add
 		// different options here in the future.
 		if (imp.get_x() <= bkg.get_grid_x()[0])
 		{
-			//std::cout << "absorbed: lower_x " << imp.get_x() << " < " 
-			//	<< bkg.get_grid_x()[0] << "\n";
 			return false;
 		}
 		if (imp.get_x() >= bkg.get_grid_x().back()) 
 		{
-			//std::cout << "absorbed: upper_x " << imp.get_x() << " > " 
-			//	<< bkg.get_grid_x().back() << "\n";
 			return false;
 		}
 
@@ -299,6 +329,15 @@ namespace Impurity
 		return true;
 	}
 
+	/**
+	* @brief Controlling function for following an impurity until a terminating
+	* condition is met.
+	*
+	* @param imp Reference to the Impurity object to follow
+	* @param bkg Reference to the Background to follow the impurity in
+	* @param imp_stats Reference to the Statistics object that keeps track of
+	* the Monte Carlo statistics during the simulation.
+	*/
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats)
 	{
@@ -340,7 +379,18 @@ namespace Impurity
 
 	}
 
-	// Main particle following loop. This is where the magic begins.
+	/**
+	* @brief Main particle following loop for impurity transport
+	*
+	* The is the main function for the impurity transport part of Flan.
+	* The main loop is parallelized with OpenMP. Each thread is assigned an
+	* impurity to follow, including any secondary impurities spawned by that
+	* impurity. Dyanamic scheduling ensures each thread stays busy.
+	*
+	* @param bkg Reference to Background to perform simulation in
+	* @param imp_stats Reference to the Statistics object that keeps track of
+	* the Monte Carlo statistics during the simulation.
+	*/
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats)
 	{
 		// Load input options as local variables for cleaner code.
@@ -425,7 +475,17 @@ namespace Impurity
 		}
 	}
 
-	// Entry point to particle following routine(s).
+	/**
+	* @brief Entry level function to impurity following routines
+	*
+	* This function controls the top-level functions of the impurity transport
+	* simulation. See main_loop for more information.
+	*
+	* @param bkg Reference to Background to perform simulation in
+	*
+	* @return Return a Statistics object with the impurity-related results of
+	* the simulation.
+	*/
 	Statistics follow_impurities(Background::Background& bkg)
 	{
 		// Initialize particle statistics vectors, all contained within a

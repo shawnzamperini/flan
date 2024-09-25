@@ -1,3 +1,5 @@
+#ifndef IMPURITY_H
+#define IMPURITY_H
 
 namespace Impurity
 {
@@ -76,3 +78,5 @@ namespace Impurity
 		void set_charge(int charge) {m_charge = charge;}
 	};
 }
+
+#endif

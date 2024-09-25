@@ -41,12 +41,16 @@ namespace Gkyl
 	Vectors::Vector4D<double> gkyl_te {};
 	Vectors::Vector4D<double> gkyl_ti {};
 	Vectors::Vector4D<double> gkyl_vp {};
-	Vectors::Vector4D<double> gkyl_b {};  // If electrostatic the first dimension is only 1 long
+	Vectors::Vector4D<double> gkyl_b {}; 
 	Vectors::Vector4D<double> gkyl_ex {};
 	Vectors::Vector4D<double> gkyl_ey {};
 	Vectors::Vector4D<double> gkyl_ez {};
 
-	// Entry point for reading Gkeyll data into Flan. 
+	/**
+	* @brief Entry point for reading Gkeyll data into Flan. 
+	*
+	* @return Returns a filled in Background object
+	*/
 	Background::Background read_gkyl()
 	{	
 		// Load each needed dataset from Gkeyll
@@ -73,8 +77,19 @@ namespace Gkyl
 		return bkg;
 	}
 	
-	// Simple helper function to return a string of the full path to a Gkeyll
-	// file using it's file name convention.
+	/**
+	* @brief Helper function to get Gkeyll file path
+	*
+	* Simple helper function to return a string of the full path to a Gkeyll
+	* file using it's file name convention.
+	*
+	* @param species Name of the species used in the Gkeyll run
+	* @param ftype The data type to load, e.g., M0 or prim_moms.
+	* @param frame The frame number
+	* @param extension The extension type, e.g.,\ .gkyl.
+	*
+	* @return Returns a string of the full file path.
+	*/
 	std::string assemble_path(const std::string& species, 
 		const std::string& ftype, int frame, const std::string& extension) 
 	{
@@ -86,10 +101,16 @@ namespace Gkyl
 			"_" + std::to_string(frame) + extension;
 	}
 
-	// Function to return the full path to read_gkyl.py, which is used to
-	// interface with postgkyl and create files that are easily read in by
-	// Flan. This path is stored as an environment variable that is set
-	// before Flan is run.
+	/**
+	* @brief Get path to python interface script to postgkyl, read_gkyl\.py.
+	*
+	* Function to return the full path to read_gkyl.py, which is used to
+	* interface with postgkyl and create files that are easily read in by
+	* Flan. This path is stored as an environment variable that is set
+	* as part of the flan conda environment.
+	*
+	* @return Returns string containing the full path to read_gkyl\.py.
+	*/
 	std::string get_read_gkyl_py()
 	{
 		if (const char* read_gkyl_py {std::getenv("READ_GKYL_PY")})
@@ -105,7 +126,11 @@ namespace Gkyl
 		}
 	}
 
-	// Reads in a 1D vector of times corresponding to each frame.
+	/**
+	* @brief Reads in a 1D vector of times corresponding to each frame.
+	*
+	* @return Return a vector of the times.
+	*/
 	std::vector<double> load_times()
 	{
 		// Filename is treated as a constant.
@@ -149,7 +174,11 @@ namespace Gkyl
 		return times;
 	}
 
-	// Reads in the x, y, z grid nodes using pgkyl.
+	/**
+	* @brief Reads in the x, y, z grid nodes using pgkyl.
+	*
+	* @return Returns a tuple of 3 vectors containing the grid edges - (x,y,z)
+	*/
 	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> 
 		load_grid()
 	{
@@ -243,7 +272,14 @@ namespace Gkyl
 		return std::make_tuple(grid_x, grid_y, grid_z);
 	}
 
-	// Read in data values using pgkyl, returning as a Vector4D.
+	/**
+	* @brief Read in data values using pgkyl, returning as a Vector4D.
+	*
+	* @param data_type String identifying which data file to load. This is one
+	* of density, temperature, magnetic_field, potential or times.
+	*
+	* @return Returns a Vector4D object of the data (t,x,y,z).
+	*/
 	template <typename T>
 	Vectors::Vector4D<T> load_values(const std::string& data_type)
 	{
@@ -295,11 +331,13 @@ namespace Gkyl
 					// nvalues is the total number of points in the file. The
 					// data is flattened using C-style indexing, so as a 1D 
 					// vector there are t*x*y*z values to read in. 
-					ndata = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
+					ndata = std::accumulate(dims.begin(), dims.end(), 1, 
+						std::multiplies<int>());
 					ndata_read = true;
 					//std::cout << "Reading " << ndata << " data values\n";
 
-					// Set the capacity of the vector now that we know what it will be.
+					// Set the capacity of the vector now that we know what it 
+					// will be.
 					data_flattened.reserve(ndata);
 				}
 				else
@@ -331,6 +369,14 @@ namespace Gkyl
 		return {data_flattened, dims[0], dims[1], dims[2], dims[3]};
 	}
 
+	/**
+	* @brief Load file with the interpolation setting used by Gkeyll
+	*
+	* This file is made automatically so it is available to other files which
+	* do not have this data included with them (like the magnetic_field data).
+	*
+	* @returns Returns a vector of two elements: the basis type and the order.
+	*/
 	std::vector<std::string> load_interp_settings()
 	{
 		// Filename is treated as a constant.
@@ -355,9 +401,17 @@ namespace Gkyl
 		return interp_settings;
 	}
 
-	// Calculate the cell centers for the given grid points. This returns a
-	// vector one shorter than the grid point. This only works for uniform
-	// grids, just in case that isn't obvious throughout the whole code.
+	/**
+	* @brief Calculate cell centers for the given grid points.
+	*
+	* Calculate the cell centers for the given grid points. This returns a
+	* vector one shorter than the grid point. This only works for uniform
+	* grids, just in case that isn't obvious throughout the whole code.
+	*
+	* @param grid The grid edges for a given dimension.
+	* @return Returns a vector of the cell centers that is one less in length
+	* than grid.
+	*/
 	std::vector<double> cell_centers(std::vector<double>& grid)
 	{
 
@@ -369,15 +423,25 @@ namespace Gkyl
 		return centers;
 	}
 
-	// Function to read in Gkeyll data using a python interface to postgkyl
-	// via read_gkyl.py. This produces the following csv files:
-	//   bkg_from_pgkyl_times.csv : The time for each frame
-	//   bkg_from_pgkyl_grid.csv : Nodes for grid
-	//   bkg_from_pgkyl_density.csv : Density arrays for all frames
-	//   bkg_from_pgkyl_temperature.csv : Temperature arrays for all frames 
-	//   bkg_from_pgkyl_potential.csv : Plasma potential arrays for all frames 
-	//   bkg_from_pgkyl_magnetic_field.csv : Magnetic field arrays for all frames 
-	// The data is loaded and placed into gkyl_data accordingly.
+	/**
+	* @brief Function to read in Gkeyll data using a python interface to postgkyl
+	* via read_gkyl.py. 
+	*
+	* This produces the following csv files:
+	*   bkg_from_pgkyl_times.csv : The time for each frame
+	*   bkg_from_pgkyl_grid.csv : Nodes for grid
+	*   bkg_from_pgkyl_density.csv : Density arrays for all frames
+	*   bkg_from_pgkyl_temperature.csv : Temperature arrays for all frames 
+	*   bkg_from_pgkyl_potential.csv : Plasma potential arrays for all frames 
+	*   bkg_from_pgkyl_magnetic_field.csv : Magnetic field arrays for all frames 
+	* The data is loaded and placed into gkyl_data accordingly.
+	*
+	* @param species Name of the species for the Gkeyll run
+	* @param data_type Name of the data to load.\ Can be one of temperature,
+	* density, potential or magnetic field. 
+	* @param gkyl_data One of the global (to the Gkyl namespace) vectors that
+	* corredponds to the data_type being loaded.
+	*/
 	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
 		const std::string& data_type,
@@ -445,39 +509,10 @@ namespace Gkyl
 		Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
 		gkyl_data.move_into_data(tmp_data);
 	}
-/*
-	// General function to read in data from Gkeyll into the relevant
-	// vector specified by gkyl_data.
-	void read_data(const std::string& species, const std::string& ftype,
-		std::vector<Vectors::Vector3D>& gkyl_data, int comp)
-	{
-		// Load into local variables so code is easier to read.
-		int gkyl_frame_start {Input::get_opt_int(Input::gkyl_frame_start)};
-		int gkyl_frame_end {Input::get_opt_int(Input::gkyl_frame_end)};
-		std::string gkyl_file_type {Input::get_opt_str(Input::gkyl_file_type)};
-		
-		// Loop through the frames.
-		for (int f {gkyl_frame_start}; f <= gkyl_frame_end; ++f)
-		{
-			// Binary (.gkyl) type of file read in.
-			if (gkyl_file_type == "binary")
-			{
-				// Assemble string of path to file.
-				std::string path {assemble_path(species, ftype, f, ".gkyl")};
-	
-				// Read in a binary file.
-				double time {};
-				Vectors::Vector4D data {};
-				std::tie(time, data) = GkylBinary::load_frame(path);
-				std::cout << "Time = " << time << '\n';
-				
-				// The density is the first component in the last dimension.
-				gkyl_data[f - gkyl_frame_start] = data.slice_dim4(comp);
-			}
-		}
-	}
-*/
-	// Read electron density into gkyl_ne.
+
+	/**
+	* @brief Read electron density into gkyl_ne.
+	*/
 	void read_elec_density()
 	{
 		// Load into local variables so code is easier to read.
@@ -487,7 +522,9 @@ namespace Gkyl
 		read_data_pgkyl(gkyl_elec_name, "density", gkyl_ne);
 	}
 
-	// Read electron temperature into gkyl_te.
+	/**
+	* @brief Read electron temperature into gkyl_te.
+	*/
 	void read_elec_temperature()
 	{
 		// Load into local variables so code is easier to read.
@@ -497,7 +534,9 @@ namespace Gkyl
 		read_data_pgkyl(gkyl_elec_name, "temperature", gkyl_te);
 	}
 
-	// Read ion temperature into gkyl_ti.
+	/**
+	* @brief Read ion temperature into gkyl_ti.
+	*/
 	void read_ion_temperature()
 	{
 		// Load into local variables so code is easier to read.
@@ -507,7 +546,9 @@ namespace Gkyl
 		read_data_pgkyl(gkyl_ion_name, "temperature", gkyl_ti);
 	}
 
-	// Read plasma potential into gkyl_vp.
+	/**
+	* @brief Read plasma potential into gkyl_vp.
+	*/
 	void read_potential()
 	{
 		using namespace std::string_literals;
@@ -518,7 +559,9 @@ namespace Gkyl
 		read_data_pgkyl("null"s, "potential", gkyl_vp);
 	}
 
-	// Read magnetic field into gkyl_b.
+	/**
+	* @brief Read magnetic field into gkyl_b.
+	*/
 	void read_magnetic_field()
 	{
 		using namespace std::string_literals;
@@ -529,8 +572,20 @@ namespace Gkyl
 		read_data_pgkyl("null"s, "magnetic_field", gkyl_b);
 	}
 
-	// Implementation of gradient as used by numpy.gradient. This is a second
-	// order approximation of the derivative.
+	/**
+	* @brief Calculate gradient with a second order approximation.
+	* 
+	* Implementation of gradient as used by numpy.gradient. This is a second
+	* order approximation of the derivative.
+	*
+	* @param hd See equation.
+	* @param hs See equation.
+	* @param fd See equation.
+	* @param fs See equation.
+	* @param f See equation.
+	*
+	* @return Returns the value of the gradient.
+	*/
 	double calc_gradient(const double hd, const double hs, const double fd, 
 		const double fs, const double f)
 	{
@@ -538,10 +593,14 @@ namespace Gkyl
 			(hs*hd*(hd+hs));
 	}
 
-	// Calculate the electric field components as the gradient of the potential.
-	// The gradient is calculated using the same implementation used in
-	// numpy.gradient, which can be found here:
-	// https://numpy.org/doc/stable/reference/generated/numpy.gradient.html
+	/**
+	* @brief Calculate electric field from potential gradient.
+	*
+	* Calculate the electric field components as the gradient of the potential.
+	* The gradient is calculated using the same implementation used in
+	* numpy.gradient, which can be found here:
+	* https://numpy.org/doc/stable/reference/generated/numpy.gradient.html
+	*/
 	void calc_elec_field()
 	{
 		// Initialize empty 4D vectors
@@ -643,6 +702,13 @@ namespace Gkyl
 		gkyl_ez.move_into_data(ez);
 	}
 
+	/**
+	* @brief Move data from the global (to the Gkyl namespace) into a
+	* Background object and return.
+	*
+	* @return Returns a filled-in Background object to perform an impurity
+	* transport simulation on.
+	*/
 	Background::Background create_bkg()
 	{
 		Background::Background bkg {};
