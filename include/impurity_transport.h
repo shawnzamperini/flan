@@ -1,7 +1,7 @@
 /**
 * @file impurity_transport.h
 *
-* @brief Header file impurity_transport.cpp
+* @brief Header file for impurity_transport.cpp
 */
 
 #ifndef IMPURITY_TRANSPORT_H

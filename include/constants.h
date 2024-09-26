@@ -1,3 +1,7 @@
+/**
+* @file constants.h
+* @brief Some physical constants
+*/
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 namespace Constants

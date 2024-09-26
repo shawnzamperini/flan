@@ -1,7 +1,7 @@
 /**
 * @file random.h
 *
-* @brief Mersenne Twister random number generator
+* @brief Header-only Mersenne Twister random number generator
 *
 * This file is taken from the useful website https://www.learncpp.com/cpp-tutorial/global-random-numbers-random-h/.
 * It is freely redistributable, and saves a lot of headache trying to code 

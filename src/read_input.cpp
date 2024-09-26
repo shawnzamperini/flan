@@ -6,10 +6,12 @@
 * an input file into Option classes used by Flan to keep track of things.
 * An input file takes the form of, e.g.,
 * 
+* @code
 * # This is a comment
 * string_option_name  |  name     Note: Do not use quotation marks.
 * int_option_name     |  3
 * double_option_name  |  183.34
+* @endcode
 * 
 * The options can go in any order, and you can move the | around to make 
 * everything align if you want to. The options must be valid options though or

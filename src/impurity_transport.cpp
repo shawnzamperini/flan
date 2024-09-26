@@ -1,5 +1,5 @@
 /**
-* @file  impurity_transport.cpp
+* @file impurity_transport.cpp
 *
 * @brief Impurity transport routines
 */
@@ -88,8 +88,6 @@ namespace Impurity
 	*
 	* Function to return the starting charge for an impurity ion. Right now
 	* this just uses a single value passed in via the input file.
-	*
-	* @param bkg Reference to the loaded Background object
 	*/
 	int get_birth_charge()
 	{
