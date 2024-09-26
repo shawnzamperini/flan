@@ -1,3 +1,22 @@
+/**
+* @file read_input.cpp
+* @brief Definitions of the input options and the routine to read them 
+*
+* This contains the declarations of everything needed to read in input from
+* an input file into Option classes used by Flan to keep track of things.
+* An input file takes the form of, e.g.,
+* 
+* # This is a comment
+* string_option_name  |  name     Note: Do not use quotation marks.
+* int_option_name     |  3
+* double_option_name  |  183.34
+* 
+* The options can go in any order, and you can move the | around to make 
+* everything align if you want to. The options must be valid options though or
+* it will yell at you! For a list of all the options and their defaults, 
+* see the options array in below (or the documentation). 
+*/
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -12,7 +31,12 @@
 
 namespace Input
 {
-	// Array containing all the input options along with default values.
+	/**
+	* @brief Array containing all the input options along with default values.
+	*
+	* Add new input options here. Make sure to add it as a variable in 
+	* Input::Names located in read_input.cpp
+	*/
 	std::array<OptionBase*, max_input_opts> options 
 	{
 		new OptionStr{"gkyl_dir",            "undefined"},
@@ -38,7 +62,14 @@ namespace Input
 		new OptionDbl{"imp_source_scale_fact",		 1.0}
 	};
 
-	// Provide a string and return the corresponding enumerator in Names
+	/**
+	* @brief Provide a string and return the corresponding enumerator in Names
+	*
+	* @param input_str String containing name of input variable
+	* @return Return the corresponding int value that identifies the variable
+	* in Input::Names (see read_input.h). This does NOT return the actual value
+	* of the input option.
+	*/
 	int str_to_name(std::string_view input_str)
 	{
 		if (input_str == "gkyl_dir")                   return gkyl_dir;
@@ -70,31 +101,72 @@ namespace Input
 	// in Names are the same! The actual input file can be in whatever order. 
 	static_assert(std::ssize(options) == max_input_opts);
 
-	// Helper function to provide a Name from the enumeration above and it will
-	// return the value held by the option. One function for strings, integers
-	// and doubles. 
-	// The reason we do not use a template here is because the type to be 
-	// returned can not be deduced with CTAD.
+	/**
+	* @brief Get string option
+	*
+	* Helper function to provide a Name from the enumeration above and it will
+	* return the value held by the option. One function for strings, integers
+	* and doubles. 
+	* The reason we do not use a template here is because the type to be 
+	* returned can not be deduced with CTAD.
+	*
+	* @param name The value in Input::Names corresponding to the string input
+	* option.
+	* @return Returns the input option as a string_view. 
+	*/
 	std::string_view get_opt_str(Names name)
 	{
 		OptionBase* opt_base_ptr {options[name]};
 		return dynamic_cast<OptionStr*>(opt_base_ptr)->get_value();
 	}
 
+	/**
+	* @brief Get int option
+	*
+	* Helper function to provide a Name from the enumeration above and it will
+	* return the value held by the option. One function for strings, integers
+	* and doubles. 
+	* The reason we do not use a template here is because the type to be 
+	* returned can not be deduced with CTAD.
+	*
+	* @param name The value in Input::Names corresponding to the int input
+	* option.
+	* @return Returns the input option as a int. 
+	*/
 	int get_opt_int(Names name)
 	{
 		OptionBase* opt_base_ptr {options[name]};
 		return dynamic_cast<OptionInt*>(opt_base_ptr)->get_value();
 	}
 
+	/**
+	* @brief Get double option
+	*
+	* Helper function to provide a Name from the enumeration above and it will
+	* return the value held by the option. One function for strings, integers
+	* and doubles. 
+	* The reason we do not use a template here is because the type to be 
+	* returned can not be deduced with CTAD.
+	*
+	* @param name The value in Input::Names corresponding to the double input
+	* option.
+	* @return Returns the input option as a double. 
+	*/
 	double get_opt_dbl(Names name)
 	{
 		OptionBase* opt_base_ptr {options[name]};
 		return dynamic_cast<OptionDbl*>(opt_base_ptr)->get_value();
 	}
 
-	// Takes in a line from an input file as a stringstream object and returns
-	// it as a normal string for further manipulation. 
+	/**
+	* @brief Get entire line from input file as a string
+	*
+	* Takes in a line from an input file as a stringstream object and returns
+	* it as a normal string for further manipulation. 
+	*
+	* @param input_line_stream The line as a stringstream object
+	* @return Returns the line converted to a string object
+	*/
 	std::string get_str_from_line(std::stringstream& input_line_stream)
 	{
 		std::string str {};
@@ -104,34 +176,51 @@ namespace Input
 		return str;
 	}
 
-	// Using the option name (input_name) and the value pulled from the input
-	// file (input_val), save this value into the main options array. Returns
-	// true if successful, false if not.
-	bool save_input_opt(std::string_view input_name, std::string_view input_val)
+	/**
+	* @brief Save input option into options array, overwriting the default
+	*
+	* Using the option name (input_name) and the value pulled from the input
+	* file (input_val), save this value into the main options array. Returns
+	* true if successful, false if not.
+	*
+	* @param input_name The name of the input option as a string 
+	* @param input_val The value of the input option as a string
+	* @return Returns true if opration successful, false if not
+	*/
+	bool save_input_opt(std::string_view input_name, 
+		std::string_view input_val)
 	{
 			// Assign each variable to its appropriate spot in options.
 			//std::cout << Input::str_to_name(input_name) << '\n';
-			Input::OptionBase* opt_base_ptr {Input::options[Input::str_to_name(input_name)]};
+			Input::OptionBase* opt_base_ptr {Input::options[
+				Input::str_to_name(input_name)]};
 
-			// Attempt to downcast to each inherited class until we hit upon the
-			// right one. Once we do, call put_value to overwrite the default value.
+			// Attempt to downcast to each inherited class until we hit upon 
+			// the right one. Once we do, call put_value to overwrite the 
+			// default value.
 			if (dynamic_cast<Input::OptionStr*>(opt_base_ptr))
 			{
 				//std::cout << "String option\n";
-				dynamic_cast<Input::OptionStr*>(opt_base_ptr)->put_value(input_val);
-				//std::cout << *dynamic_cast<Input::OptionStr*>(opt_base_ptr) << '\n';
+				dynamic_cast<Input::OptionStr*>(opt_base_ptr)->
+					put_value(input_val);
+				//std::cout << *dynamic_cast<Input::OptionStr*>(opt_base_ptr) 
+				//	<< '\n';
 			}
 			else if (dynamic_cast<Input::OptionInt*>(opt_base_ptr))
 			{
 				//std::cout << "Int option\n";
-				dynamic_cast<Input::OptionInt*>(opt_base_ptr)->put_value(input_val);
-				//std::cout << *dynamic_cast<Input::OptionInt*>(opt_base_ptr) << '\n';
+				dynamic_cast<Input::OptionInt*>(opt_base_ptr)->
+					put_value(input_val);
+				//std::cout << *dynamic_cast<Input::OptionInt*>(opt_base_ptr) 
+				//	<< '\n';
 			}
 			else if (dynamic_cast<Input::OptionDbl*>(opt_base_ptr))
 			{
 				//std::cout << "Double option\n";
-				dynamic_cast<Input::OptionDbl*>(opt_base_ptr)->put_value(input_val);
-				//std::cout << *dynamic_cast<Input::OptionDbl*>(opt_base_ptr) << '\n';
+				dynamic_cast<Input::OptionDbl*>(opt_base_ptr)->
+					put_value(input_val);
+				//std::cout << *dynamic_cast<Input::OptionDbl*>(opt_base_ptr) 
+				//	<< '\n';
 			}
 			else
 			{
@@ -142,14 +231,27 @@ namespace Input
 			return true;
 	}
 
+	/**
+	* @brief Helper function to determine if string is a comment or blank
+	*
+	* Comments start with a #
+	*
+	* @return Return true if comment or blank, false otherwise
+	*/
 	bool not_comment_or_blank_line(const std::string_view line) 
 	{
 		return !line.starts_with("#") && 
 			(line.find_first_not_of(' ') != std::string::npos);
 	}
 
-	// Take a line from an input file and parse it, saving the input into 
-	// the options array if the line is not blank or a comment. 
+	/**
+	* @brief Parse line from input file, saving input option if valid
+	*
+	* Take a line from an input file and parse it, saving the input into 
+	* the options array if the line is not blank or a comment. 
+	*
+	* @param input_line Line from input file as a string_view
+	*/
 	void parse_input_line(std::string_view input_line)
 	{
 		// If line starts with #, then it's a comment and ignore
@@ -163,12 +265,6 @@ namespace Input
 			std::string input_name {get_str_from_line(input_line_stream)};
 			std::string input_val {get_str_from_line(input_line_stream)};
 
-			// First call grabs the name, second call the value (as a string).
-			//std::getline(input_line_stream, input_name, '|');
-			//std::cout << "Input name: " << input_name << '\n';
-			//std::getline(input_line_stream, input_val, '|');
-			//std::cout << "Input value: " << input_val << '\n';
-
 			// Save the input option into options array. 
 			if(!save_input_opt(input_name, input_val))
 			{
@@ -179,9 +275,15 @@ namespace Input
 		}
 	}
 
-	// This goes through all the input options and changes the values from 
-	// their defaults using the value included in the input file. All the input 
-	// options can be found in the options array.
+	/**
+	* @brief Top-level function to read in options from input file
+	*
+	* This goes through all the input options and changes the values from 
+	* their defaults using the value included in the input file. All the input 
+	* options can be found in the options array at the top of this file.
+	*
+	* @param input_stream The filestream object pointing to the input file
+	*/
 	void load_input_opts(std::ifstream& input_stream)
 	{
 		// Load entire line as a string
@@ -189,7 +291,7 @@ namespace Input
 		while (std::getline(input_stream, input_line))
 		{
 			// Nothing is returned by this. For each option it reads it'll just 
-			// place it within the array Input::settings. 
+			// place it within the array Input::options. 
 			//std::cout << "Parsing line: " << input_line << '\n';
 			parse_input_line(input_line);
 		}

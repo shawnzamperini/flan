@@ -1,3 +1,8 @@
+/**
+* @file read_input.h
+* @brief Header file for read_input.cpp
+*/
+
 #ifndef READ_INPUT_H
 #define READ_INPUT_H
 
@@ -7,28 +12,12 @@
 
 #include "input_classes.h"
 
-/*
-This contains the declarations of everything needed to read in input from
-an input file into Option classes used by Flan to keep track of things.
-An input file takes the form of, e.g.,
-
-# This is a comment
-string_option_name  |  name     Note: Do not use quotation marks.
-int_option_name     |  3
-double_option_name  |  183.34
-
-The options can go in any order, and you can move the | around to make 
-everything align if you want to. The options must be valid options though or
-it will yell at you!
-
-For a list of all the options and their defaults, see the options array in
-read_input.cpp (or the documentation). 
-*/
 namespace Input
 {
 	
 	// Enumeration containing all the input options. There are used to index
-	// the options array defined in read_input.cpp. 
+	// the options array defined in read_input.cpp. These are here in the 
+	// header file so other files can include this file to access them.
 	enum Names
 	{
 		gkyl_dir,
