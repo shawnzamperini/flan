@@ -1,5 +1,6 @@
 /**
 * @file openadas.h
+* @brief Header file for openadas.cpp
 */
 #ifndef OPENADAS_H
 #define OPENADAS_H
@@ -13,9 +14,18 @@
 namespace OpenADAS
 {
 
+	/**
+	* @brief Class to read and store ionization/recombination rates from 
+	* OpenADAS
+	*/
 	class OpenADAS
 	{
 	private:
+		int m_atomic_number {};
+		int m_ndens {};
+		int m_ntemp {};
+		int m_charge_low {};
+		int m_charge_high {};
 		std::vector<double> m_te {};
 		std::vector<double> m_ne {};
 		Vectors::Vector3D<double> m_rates {};
@@ -27,17 +37,48 @@ namespace OpenADAS
 		*
 		* @param openadas_root Full path to the directory containing OpenADAS 
 		* data
+		* @param openadas_year The year of the OpenADAS data to load
 		* @param imp_atom_num Atomic number of the ion to load data for
 		* @param rate_type One of "acd" (recombination) or "scd" (ionization)
 		*/
-		OpenADAS(std::string_view openadas_root, int openadas_year, 
-			int imp_atom_num, std::string_view rate_type);
+		OpenADAS(const std::string_view openadas_root, const int openadas_year, 
+			const int imp_atom_num, const std::string_view rate_type);
 		
+		/**
+		* @brief Construct full path to an OpenADAS data file
+		*
+		* @param openadas_root Full path to the directory containing OpenADAS
+		* data
+		* @param openadas_year The year of the OpenADAS data to load
+		* @param imp_atom_num Atomic number of the ion to load data for
+		* @param rate_type One of "acd" (recombination) or "scd" (ionization)
+		*
+		* @return Returns string containing the full path to the OpenADAS file
+		* that data is being read in from.
+		*/
+		std::string get_openadas_path(const std::string_view openadas_root, 
+			const int openadas_year, const int imp_atom_num, 
+			const std::string_view rate_type);
+
+		/**
+		* @brief Read in data from an OpenADAS file, storing it internally
+		* to the class
+		*
+		* @param openadas_stream A filestream object of the OpenADAS file
+		*/
+		void read_rate_coefficients(std::ifstream& openadas_stream);
+
 		/**
 		*
 		*/
-		std::string get_openadas_path(std::string_view openadas_root, 
-			int openadas_year, int imp_atom_num, std::string_view rate_type);
+		std::tuple<double, double, double, std::size_t, std::size_t> 
+			get_bilinear_interp_vals(std::vector<double>& vec, 
+			double value);
+
+		/**
+		*
+		*/
+		double get_rate_coeff(const int charge, double ne, double te);
 	};
 }
 

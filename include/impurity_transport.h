@@ -160,6 +160,14 @@ namespace Impurity
 	bool check_boundary(const Background::Background& bkg, Impurity& imp);
 	
 	/**
+	*
+	*/
+	void ioniz_recomb(Impurity& imp, const Background::Background& bkg,
+		const OpenADAS::OpenADAS& oa_ioniz, 
+		const OpenADAS::OpenADAS& oa_recomb, const double imp_time_step, 
+		const int tidx, const int xidx, const int yidx, const int zidx);
+
+	/**
 	* @brief Controlling function for following an impurity until a terminating
 	* condition is met.
 	*
@@ -167,9 +175,14 @@ namespace Impurity
 	* @param bkg Reference to the Background to follow the impurity in
 	* @param imp_stats Reference to the Statistics object that keeps track of
 	* the Monte Carlo statistics during the simulation.
+	* @param oa_ioniz An OpenADAS object containing the ionization rate 
+	* coefficients.
+	* @param oa_recomb An OpenADAS object containing the recombination rate 
+	* coefficients.
 	*/
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
-		Statistics& imp_stats);
+		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
+		const OpenADAS::OpenADAS& oa_recomb);
 
 	/**
 	* @brief Main particle following loop for impurity transport
@@ -182,8 +195,14 @@ namespace Impurity
 	* @param bkg Reference to Background to perform simulation in
 	* @param imp_stats Reference to the Statistics object that keeps track of
 	* the Monte Carlo statistics during the simulation.
+	* @param oa_ioniz An OpenADAS object containing the ionization rate 
+	* coefficients.
+	* @param oa_recomb An OpenADAS object containing the recombination rate 
+	* coefficients.
 	*/
-	void main_loop(const Background::Background& bkg, Statistics& imp_stats);
+	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
+		const OpenADAS::OpenADAS& oa_ioniz, 
+		const OpenADAS::OpenADAS& oa_recomb);
 
 	/**
 	* @brief Entry level function to impurity following routines

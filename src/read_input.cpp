@@ -177,7 +177,8 @@ namespace Input
 	{
 		std::string str {};
 		std::getline(input_line_stream, str, '|');
-		std::string::iterator end_pos = std::remove(str.begin(), str.end(), ' ');
+		std::string::iterator end_pos = std::remove(str.begin(), 
+			str.end(), ' ');
 		str.erase(end_pos, str.end());
 		return str;
 	}

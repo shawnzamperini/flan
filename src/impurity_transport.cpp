@@ -217,8 +217,18 @@ namespace Impurity
 		return true;
 	}
 
+	void ioniz_recomb(Impurity& imp, const Background::Background& bkg,
+		const OpenADAS::OpenADAS& oa_ioniz, 
+		const OpenADAS::OpenADAS& oa_recomb, const double imp_time_step, 
+		const int tidx, const int xidx, const int yidx, const int zidx)
+	{
+		// Get ionization and recombination rate at this plasma density and 
+		// temperature.
+	}
+
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
-		Statistics& imp_stats)
+		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
+		const OpenADAS::OpenADAS& oa_recomb)
 	{
 		// Timestep of impurity transport simulation
 		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step)};
@@ -258,7 +268,9 @@ namespace Impurity
 
 	}
 
-	void main_loop(const Background::Background& bkg, Statistics& imp_stats)
+	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
+		const OpenADAS::OpenADAS& oa_ioniz, 
+		const OpenADAS::OpenADAS& oa_recomb)
 	{
 		// Load input options as local variables for cleaner code.
 		int imp_num {Input::get_opt_int(Input::imp_num)};
@@ -310,7 +322,7 @@ namespace Impurity
 				double perc_complete {static_cast<double>(thread_imp_count) 
 					/ thread_imp_num * 100};
 
-				// Only do this is enough impurities are being followed, 
+				// Only do this if enough impurities are being followed, 
 				// otherwise the following modulo in the if statement will
 				// be a divide by zero error.
 				if (thread_imp_num > prog_interval)
@@ -333,7 +345,7 @@ namespace Impurity
 			{
 				Impurity imp {pop_back_remove(imps)};
 
-				follow_impurity(imp, bkg, imp_stats);
+				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb);
 			}
 
 			// Increment thread-specific counter. This just counts primary
@@ -354,13 +366,13 @@ namespace Impurity
 			Input::openadas_root)};
 		int imp_atom_num {Input::get_opt_int(Input::imp_atom_num)};
 		int openadas_year {Input::get_opt_int(Input::openadas_year)};
-		OpenADAS::OpenADAS oa_ioniz {openadas_root, openadas_year, 
+		const OpenADAS::OpenADAS oa_ioniz {openadas_root, openadas_year, 
 			imp_atom_num, "scd"};
-		OpenADAS::OpenADAS oa_recomb {openadas_root, openadas_year, 
+		const OpenADAS::OpenADAS oa_recomb {openadas_root, openadas_year, 
 			imp_atom_num, "acd"};
 
 		// Execute main particle following loop.
-		main_loop(bkg, imp_stats);
+		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb);
 	
 		// Convert the statistics into meaningful quantities. We are scaling
 		// the density by the scale factor * time step. Technically speaking,
