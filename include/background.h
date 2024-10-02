@@ -8,6 +8,10 @@
 #include <vector>
 #include "vectors.h"
 
+/**
+* @namespace Background
+* @brief Namespace to contain anything related to the background plasma
+*/
 namespace Background
 {
 	/**

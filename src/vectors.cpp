@@ -3,6 +3,10 @@
 *
 * @brief Implementations of multidimensional vectors
 *
+* This file contains some simple implementations of multidimensional vectors.
+* Instead of storing them as actual multidimensional vectors, they are stored
+* as flatten vectors and then () is overloaded to act as indexing. 
+*
 * The bottom of this file includes instatiations of Vector3D and Vector4D for
 * the different types needed (e.g., int, double, ...). This is a pecularity
 * needed when splitting the declarations and definitions between a header and
@@ -16,26 +20,15 @@
 
 namespace Vectors
 {
-	/**
-	* @class Vector3D
-	* @brief Implementation of a 3D vector
-	*
-	* This class provides an intuitive interface to 3D data. A value at a 
-	* particular index is accessed by indexing via the parentheses operator,
-	* e.g., vec(i,j,k). The underlying data is stored as a contiguous 1D
-	* vector. 
-	*/
-	
-	/**
-	* @brief Default empty constructor
-	*/
+
+	// ************************
+	// * Vector3D definitions *
+	// ************************
+
 	template <typename T>
 	Vector3D<T>::Vector3D()
 	{}
 
-	/**
-	* @brief Constructor to create an empty vector of indicated size
-	*/
 	template <typename T>
 	Vector3D<T>::Vector3D(int dim1, int dim2, int dim3)
 		: m_dim1 {dim1}
@@ -46,9 +39,6 @@ namespace Vectors
 		m_data.resize(m_size);
 	}
 
-	/**
-	* @brief Constructor to create vector and fill with data passed in
-	*/
 	template <typename T>
 	Vector3D<T>::Vector3D(std::vector<T> data_in, int dim1, int dim2, 
 		int dim3)
@@ -59,16 +49,6 @@ namespace Vectors
 		m_data = data_in;
 	}
 
-	/**
-	* @brief Artificial constructor that should not be directly called.
-	*
-	* Artificial constructor to allow us to compile read_gkyl::load_values.
-	* That function selectively returns a brace-enclosed initializer list
-	* for either a Vector3D or Vector4D based on the template parameter.
-	* The compiler nonetheless needs to see a constructor for Vector3D
-	* that accepts 5 inputs, since that is what Vector4D uses. This
-	* constructor should never get used.
-	*/
 	template <typename T>
 	Vector3D<T>::Vector3D(std::vector<T> data_in, int dim1, int dim2, int dim3, 
 			int dim4)
@@ -77,46 +57,21 @@ namespace Vectors
 			<< " is a programming error. Please fix\n";
 	}
 
-	/**
-	* @brief Get first dimension size
-	* @return Returns dimension as an int
-	*/
 	template <typename T>
 	int Vector3D<T>::get_dim1() {return m_dim1;}
 
-	/**
-	* @brief Get second dimension size
-	* @return Returns dimension as an int
-	*/
 	template <typename T>
 	int Vector3D<T>::get_dim2() {return m_dim2;}
 
-	/**
-	* @brief Get third dimension size
-	* @return Returns dimension as an int
-	*/
 	template <typename T>
 	int Vector3D<T>::get_dim3() {return m_dim3;}
 
-	/**
-	* @brief Get size of underlying data
-	* @return Returns size as an int
-	*/
 	template <typename T>
 	int Vector3D<T>::get_size() {return m_size;}
 
-	/**
-	* @brief Get the 1D vector containing all the data
-	* @return Returns a 1D vector of underlying data type
-	*/
 	template <typename T>
 	std::vector<T> Vector3D<T>::get_data() {return m_data;}
 	
-	/**
-	* @brief Overload parentheses to act as indexing.
-	* @return Returns reference to value represented by this index of 
-	* indicated data type
-	*/
 	template <typename T>
 	T& Vector3D<T>::operator()(int i, int j, int k)
 	{
@@ -124,12 +79,6 @@ namespace Vectors
 		return m_data[index];
 	}
 
-	/**
-	* @brief Move the passed in vector to data. 
-	* 
-	* This uses move semantics. Hmmm... this is really some sort of 
-	* abstraction of operator=...
-	*/
 	template <typename T>
 	void Vector3D<T>::move_into_data(Vectors::Vector3D<T>& vec)
 	{
@@ -142,27 +91,14 @@ namespace Vectors
 		m_data = std::move(vec.m_data);
 	}
 	
+	// ************************
+	// * Vector4D definitions *
+	// ************************
 
-	/**
-	* @class Vector4D
-	* @brief Implementation of a 4D vector
-	*
-	* This class provides an intuitive interface to 4D data. A value at a 
-	* particular index is accessed by indexing via the parentheses operator,
-	* e.g., vec(i,j,k,l). The underlying data is stored as a contiguous 1D
-	* vector. 
-	*/
-
-	/**
-	* @brief Default constructor
-	*/
 	template <typename T>
 	Vector4D<T>::Vector4D()
 	{}
 
-	/**
-	* @brief Constructor to allow creating an empty vector
-	*/
 	template <typename T>
 	Vector4D<T>::Vector4D(int dim1, int dim2, int dim3, int dim4)
 		: m_dim1 {dim1}
@@ -174,9 +110,6 @@ namespace Vectors
 		m_data.resize(m_size);
 	}
 
-	/**
-	* @brief Constructor to create vector and fill with the data passed on
-	*/
 	template <typename T>
 	Vector4D<T>::Vector4D(std::vector<T> data_in, int dim1, int dim2, int dim3, 
 		int dim4)
@@ -187,16 +120,6 @@ namespace Vectors
 		m_data = data_in;
 	}
 
-	/**
-	* @brief Artificial constructor that should not be directly called.
-	* 
-	* Artificial constructor to allow us to compile read_gkyl.load_values.
-	* That function selectively returns a brace-enclosed initializer list
-	* for either a Vector3D or Vector4D based on the template parameter.
-	* The compiler nonetheless needs to see a constructor for Vector4D
-	* that accepts these inputs, since that is what Vector3D uses. This
-	* constructor should never get used.
-	*/
 	template <typename T>
 	Vector4D<T>::Vector4D(std::vector<T> data_in, int dim1, int dim2, int dim3)
 	{
@@ -204,15 +127,6 @@ namespace Vectors
 			<< " is a programming error. Please fix\n";
 	}
 
-	/**
-	* @brief Copy constructor
-	*
-	* We can make the copy constructor yell at us since we probably never 
-	* want to make a copy of a Vector4D, with the exception of when a Vector4D
-	* is involved in an OpenMP reduction (in that case you need to make a copy
-	* for each thread. Useful to uncomment out this print statement to check 
-	* for inefficiencies. 
-	*/
 	template <typename T>
 	Vector4D<T>::Vector4D(const Vector4D<T>& v)
 		: m_data {v.m_data}
@@ -229,40 +143,173 @@ namespace Vectors
 		//	<< " of a Vector4D?\n";
 	}
 	
-	/**
-	* @brief Get first dimension size
-	* @return Returns dimension as an int
-	*/
 	template <typename T>
 	int Vector4D<T>::get_dim1() const {return m_dim1;}
 
-	/**
-	* @brief Get second dimension size
-	* @return Returns dimension as an int
-	*/
 	template <typename T>
 	int Vector4D<T>::get_dim2() const {return m_dim2;}
 
-	/**
-	* @brief Get third dimension size
-	* @return Returns dimension as an int
-	*/
 	template <typename T>
 	int Vector4D<T>::get_dim3() const {return m_dim3;}
 
-	/**
-	* @brief Get fourth dimension size
-	* @return Returns dimension as an int
-	*/
 	template <typename T>
 	int Vector4D<T>::get_dim4() const {return m_dim4;}
 
-	/**
-	* @brief Get a reference to the underlying 1D data
-	* @return Returns a reference to the underlying 1D vector
-	*/
 	template <typename T>
 	const std::vector<T>& Vector4D<T>::get_data() const {return m_data;}
+
+	template <typename T>
+	int Vector4D<T>::calc_index(const int i, const int j, const int k, 
+		const int l) const
+	{
+		return i * (m_dim2 * m_dim3 * m_dim4) + j 
+			* (m_dim3 * m_dim4) + k * m_dim4 + l;
+	}
+
+	template <typename T>
+	T& Vector4D<T>::operator()(const int i, const int j, const int k, 
+		const int l)
+	{
+		return m_data[calc_index(i, j, k, l)];
+	}
+
+	template <typename T>
+	const T& Vector4D<T>::operator()(const int i, const int j, 
+		const int k, const int l) const
+	{
+		return m_data[calc_index(i, j, k, l)];
+	}
+
+	template <typename T>
+	Vector4D<T>& Vector4D<T>::operator=(Vector4D<T>&& other) 
+		noexcept
+	{
+		// Self-assignment check
+		if (this != &other)
+		{	
+			m_data = std::move(other.m_data);
+		}
+		return *this;
+	}
+
+	template <typename T>
+	bool Vector4D<T>::check_same_shape(const Vector4D<T>& other) const
+	{
+		if (m_dim1 != other.m_dim1 || m_dim2 != other.m_dim2 || 
+			m_dim3 != other.m_dim3 || m_dim4 != other.m_dim4)
+		{
+			std::cerr << "Error! Vector4D's are not of the same shape.\n";
+			std::cerr << "  this   other\n";
+			std::cerr << std::setw(6) << m_dim1 << std::setw(8) 
+				<< other.m_dim1 << '\n'; 
+			std::cerr << std::setw(6) << m_dim2 << std::setw(8) 
+				<< other.m_dim2 << '\n'; 
+			std::cerr << std::setw(6) << m_dim3 << std::setw(8) 
+				<< other.m_dim3 << '\n'; 
+			std::cerr << std::setw(6) << m_dim4 << std::setw(8) 
+				<< other.m_dim4 << '\n'; 
+			
+			return false;
+		}
+		return true;
+	}
+
+	template <typename T>
+	Vector4D<T> Vector4D<T>::operator+(const Vector4D& other) const
+	{
+		// Safety check to make sure the two Vector4D's are the same 
+		// shape.
+		bool same_shape {check_same_shape(other)};
+
+		if (same_shape)
+		{
+			// Use the standard library transform function to apply the
+			// addition function and store into a new vector (ret_data). 
+			std::vector<T> ret_data (m_data.size());
+			std::transform(m_data.begin(), m_data.end(), 
+				other.m_data.begin(), ret_data.begin(), std::plus<T>());
+			return {ret_data, m_dim1, m_dim2, m_dim3, m_dim4};	
+		}
+		else
+		{
+			std::cerr << "Error! The two Vector4D's are not the " 
+				<< "same size."
+				<< " See previous error message for details.\n";
+			return {};
+		}
+	}
+
+	template <typename T>
+	void Vector4D<T>::move_into_data(Vector4D<T>& vec)
+	{
+		// Copy over the dimensions
+		m_dim1 = vec.get_dim1();
+		m_dim2 = vec.get_dim2();
+		m_dim3 = vec.get_dim3();
+		m_dim4 = vec.get_dim4();
+
+		// Move the data into this
+		m_data = std::move(vec.m_data);
+	}
+
+	template <typename T>
+	Vector3D<T> Vector4D<T>::slice_dim4(int dim_index)
+	{
+		Vector3D<T> vec {m_dim1, m_dim2, m_dim3};
+		for (int i {}; i < m_dim1; ++i)
+		{
+			for (int j {}; j < m_dim2; ++j)
+			{
+				for (int k {}; k < m_dim3; ++k)
+				{
+					int index = i * (m_dim2 * m_dim3 * m_dim4) + j 
+						* (m_dim3 * m_dim4) + k * m_dim4 + dim_index;
+					vec(i, j, k) = m_data[index];
+				}
+			}
+		}
+		return vec;
+	}
+
+	template <typename T>
+	std::vector<std::vector<std::vector<std::vector<T>>>> 
+		Vector4D<T>::as_4d() const
+	{
+
+		// Size check
+		if (std::ssize(m_data) != m_dim1 * m_dim2 * m_dim3 * m_dim4)
+		{
+			std::cerr << "Error! The number of elements does not match" 
+			<< " the specified dimensions.\n";	
+		}
+
+		// Create an actual 4D vector, fill in one element at a time. Must
+		// initialize vector with the dimensions. Incredibly messy.
+		std::vector<std::vector<std::vector<std::vector<T>>>> vec(
+			m_dim1, std::vector<std::vector<std::vector<T>>>(
+			m_dim2, std::vector<std::vector<T>>(
+			m_dim3, std::vector<T>(m_dim4, 0.0))));
+		std::cout << "as_4d dim1 = " << vec.size() << "\n";
+		std::cout << "as_4d dim2 = " << vec[0].size() << "\n";
+		std::cout << "as_4d dim3 = " << vec[0][0].size() << "\n";
+		std::cout << "as_4d dim4 = " << vec[0][0][0].size() << "\n";
+		for (int i {}; i < m_dim1; ++i)
+		{
+			for (int j {}; j < m_dim2; ++j)
+			{
+				for (int k {}; k < m_dim3; ++k)
+				{
+					for (int l {}; l < m_dim4; ++l)
+					{
+						vec[i][j][k][l] = m_data[calc_index(i,j,k,l)];
+					}
+				}
+			}
+		}
+
+		// Return
+		return vec;	
+	}
 }
 
 // This is a pecularity of splitting a class declarations and definitions 

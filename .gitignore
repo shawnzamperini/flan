@@ -1,9 +1,6 @@
 *.so
 *.o
 *.html
-src/openadas.cpp
-src/impurity_transport.cpp
-src/imp_cpp.cpp
 .DS_Store
 *.vim
 build/*

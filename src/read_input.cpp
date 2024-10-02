@@ -61,7 +61,9 @@ namespace Input
 		new OptionDbl{"imp_var_reduct_freq",         0.1},
 		new OptionDbl{"imp_var_reduct_min_weight",   0.1},
 		new OptionDbl{"imp_time_step",              1e-7},
-		new OptionDbl{"imp_source_scale_fact",		 1.0}
+		new OptionDbl{"imp_source_scale_fact",		 1.0},
+		new OptionStr{"openadas_root",       "undefined"},
+		new OptionInt{"openadas_year",                50}
 	};
 
 	/**
@@ -95,6 +97,8 @@ namespace Input
 		if (input_str == "imp_var_reduct_min_weight")  return imp_var_reduct_min_weight;
 		if (input_str == "imp_time_step")              return imp_time_step;
 		if (input_str == "imp_source_scale_fact")      return imp_source_scale_fact;
+		if (input_str == "openadas_root")              return openadas_root;
+		if (input_str == "openadas_year")              return openadas_year;
 		else return -1;
 	}
 

@@ -9,10 +9,6 @@
 #include "vectors.h"
 #include "background.h"
 
-/**
-* @namespace Background
-* @brief Namespace to contain anything related to the background plasma
-*/
 namespace Background
 {
 
@@ -37,17 +33,6 @@ namespace Background
 	int Background::get_dim3() const {return m_dim3;}
 	int Background::get_dim4() const {return m_dim4;}
 
-	/**
-	* @brief Safety check that any data that is read into Background is 
-	* consistent with the already-set dimension.
-	*
-	* @param m_dim Current dimension value
-	* @param in_dim New dimension value
-	* @param data Name of data (for print out)
-	* @param dim_num Dimension unmber (for print out)
-	* @return Returns true if dimensions match, false (and a error message) if
-	* not
-	*/
 	bool Background::check_dim(const int m_dim, const int in_dim, 
 		const std::string_view data, const int dim_num)
 	{
@@ -72,18 +57,6 @@ namespace Background
 		return true;
 	}
 
-	/**
-	* @brief Function to ensure dimensions are consistent across the different
-	* vectors.
-	*
-	* Right now this just prints the appropriate error message and then lets
-	* the program crash. I'd like to work in some kind of intentional 
-	* terminate command, but not sure what the safest way is for that so I
-	* let it crash.
-	*
-	* @param v Vector4D containing the dimensions we're checking against
-	* @param data Name of data being loaded (for print out)
-	*/
 	template <typename T>
 	void Background::set_dims(Vectors::Vector4D<T>& v, 
 		const std::string_view data)
