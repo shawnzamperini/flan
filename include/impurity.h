@@ -31,6 +31,7 @@ namespace Impurity
 		double m_weight {};
 		int m_charge {};
 		double m_mass {};
+		int m_atom_num {};
 	
 	public:
 
@@ -47,7 +48,7 @@ namespace Impurity
 		Impurity(const double t, const double x, 
 			const double y, const double z, const double vx, const double vy, 
 			const double vz, const double weight, const int charge, 
-			const double mass);
+			const double mass, const int atom_num);
 		
 		/**
 		* @brief Accessor for particle weight (units depend, see imp_stats.cpp)
@@ -99,6 +100,11 @@ namespace Impurity
 		* @return Returns particle charge as int
 		*/
 		int get_charge() const;
+		/**
+		* @brief Accessor for atomic number (unitless)
+		* @return Returns atomic number as int
+		*/
+		int get_atom_num() const;
 
 		/**
 		* @brief Setter for particle weight

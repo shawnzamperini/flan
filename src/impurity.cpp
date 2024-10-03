@@ -13,7 +13,7 @@ namespace Impurity
 	Impurity::Impurity(const double t, const double x, 
 		const double y, const double z, const double vx, const double vy, 
 		const double vz, const double weight, const int charge, 
-		const double mass)
+		const double mass, const int atom_num)
 		: m_t {t}
 		, m_x {x}
 		, m_y {y}
@@ -24,6 +24,7 @@ namespace Impurity
 		, m_weight {weight}
 		, m_charge {charge}
 		, m_mass {mass}
+		, m_atom_num {atom_num}
 	{}
 
 	double Impurity::get_weight() const {return m_weight;}
@@ -36,6 +37,7 @@ namespace Impurity
 	double Impurity::get_vz() const {return m_vz;}
 	double Impurity::get_mass() const {return m_mass;}
 	int Impurity::get_charge() const {return m_charge;}
+	int Impurity::get_atom_num() const {return m_atom_num;}
 		
 	void Impurity::set_weight(double w) {m_weight = w;}
 	void Impurity::set_t(double t) {m_t = t;}

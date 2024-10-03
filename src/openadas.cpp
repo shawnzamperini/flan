@@ -212,7 +212,7 @@ namespace OpenADAS
 						double rate {Utilities::str_as_dbl(word)};
 
 						// Store in m_rates, converting to m3/s.
-						m_rates(i, j, k) = pow(10, rate) * 1e6;
+						m_rates(i, j, k) = pow(10, rate) * 1e-6;
 						++k;
 					}
 				}

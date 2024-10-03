@@ -59,6 +59,7 @@ namespace Impurity
 	{
 		// Load input options as local variables for cleaner code.
 		double imp_mass_amu {Input::get_opt_dbl(Input::imp_mass_amu)};
+		int imp_atom_num {Input::get_opt_int(Input::imp_atom_num)};
 
 		// Starting t,x,y,z for the impurity
 		double t_imp = get_birth_t(bkg);
@@ -79,7 +80,7 @@ namespace Impurity
 		double imp_weight {1.0};
 		double imp_mass {imp_mass_amu * Constants::amu_to_kg};
 		return {t_imp, x_imp, y_imp, z_imp, vx_imp, vy_imp, vz_imp, 
-			imp_weight, charge_imp, imp_mass};
+			imp_weight, charge_imp, imp_mass, imp_atom_num};
 	}
 
 	template <typename T>
@@ -220,25 +221,35 @@ namespace Impurity
 	void ioniz_recomb(Impurity& imp, const Background::Background& bkg,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, const double imp_time_step, 
-		const int tidx, const int xidx, const int yidx, const int zidx)
+		const int tidx, const int xidx, const int yidx, const int zidx, 
+		int& ioniz_warnings, int& recomb_warnings)
 	{
-		// Get ionization and recombination rate at this plasma density and 
-		// temperature.
+		// We use ne and te more than once here, so to avoid indexing
+		// multiple times it is cheaper to just do it once and save it in
+		// a local variable.
+		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
+		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
 		
 		// Ionization rate coefficients are indexed by charge. This is 
 		// because the zeroeth charge index in the underlying rate data is
 		// for neutral ionization (charge = 0), W0 --> W1+.
-		double ioniz_rate {oa_ioniz.get_rate_coeff(imp.get_charge(), 
-			bkg.get_ne()(tidx, xidx, yidx, zidx),
-			bkg.get_te()(tidx, xidx, yidx, zidx))};
+		double ioniz_rate {};
+		if (imp.get_charge() < imp.get_atom_num())
+		{
+			ioniz_rate = oa_ioniz.get_rate_coeff(imp.get_charge(), 
+				local_ne, local_te);
+		}
 
 		// Recombination rate coefficients are indexed by charge-1. This is
 		// because this zeroeth entry is for W1+ --> W0. So if we want that
 		// rate coefficient for, say, W1+, we need to pass it charge-1 so it
 		// chooses that zeroeth index.
-		double recomb_rate {oa_recomb.get_rate_coeff(imp.get_charge()-1, 
-			bkg.get_ne()(tidx, xidx, yidx, zidx),
-			bkg.get_te()(tidx, xidx, yidx, zidx))};
+		double recomb_rate {};
+		if (imp.get_charge() > 0)
+		{
+			recomb_rate = oa_recomb.get_rate_coeff(imp.get_charge()-1, 
+			local_ne, local_te);
+		}
 
 		/*
 		std::cout << "-------------------------------\n";
@@ -251,15 +262,33 @@ namespace Impurity
 		*/
 
 		// The probability of either ionization or recombination occuring is:
-		//   prob = rate [m3/s] * ne [m3] * dt [s]
+		//   prob = rate [m3/s] * ne [m-3] * dt [s]
+		double ioniz_prob {ioniz_rate * local_ne * imp_time_step};
+		double recomb_prob {recomb_rate * local_ne * imp_time_step};
+
+		// Track number of times the probabilities are greater than 1. This
+		// indicates that a smaller timestep should be used if there are a
+		// significant number of warnings. 
+		if (ioniz_prob > 1.0) ioniz_warnings += 1;
+		if (recomb_prob > 1.0) recomb_warnings += 1;
+
 		// For each process, pull a random number. If that number is less than
 		// prob, then that event occurs. If both events occur, then they just 
 		// cancel each other out and there's no change.
+		if (Random::get(0.0, 1.0) < ioniz_prob)
+		{
+			imp.set_charge(imp.get_charge() + 1);
+		}
+		if (Random::get(0.0, 1.0) < recomb_prob)
+		{
+			imp.set_charge(imp.get_charge() - 1);
+		}
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb)
+		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
+		int& recomb_warnings)
 	{
 		// Timestep of impurity transport simulation
 		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step)};
@@ -268,9 +297,9 @@ namespace Impurity
 		while (continue_following)
 		{
 			// Debugging
-			//std::cout << "imp t, x, y, z: " << imp.get_t() << ", " << 
-			//	imp.get_x() << ", " << imp.get_y() << ", " << imp.get_z() 
-			//	<< '\n';
+			//std::cout << "imp q, t, x, y, z: " << imp.get_charge() << ", "
+			//	<< imp.get_t() << ", " << imp.get_x() << ", " << imp.get_y() 
+			//	<< ", " << imp.get_z() << '\n';
 
 			// Get nearest time index
 			int tidx {get_nearest_index(bkg.get_times(), imp.get_t())};
@@ -296,9 +325,28 @@ namespace Impurity
 
 			// Check for ionization or recombination
 			ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
-				xidx, yidx, zidx);
+				xidx, yidx, zidx, ioniz_warnings, recomb_warnings);
 		}
 
+	}
+
+	void print_ioniz_recomb_warn(int ioniz_warnings, int recomb_warnings)
+	{
+		// Number of ionization warnings
+		if (ioniz_warnings > 0)
+		{
+			std::cout << "Warning! The ionization probability was greater than"
+				<< " 1.0 for " << ioniz_warnings << " time steps. Consider "
+				<< "using a smaller time step.\n";
+		}
+
+		// Number of recombination warnings
+		if (recomb_warnings > 0)
+		{
+			std::cout << "Warning! The recombination probability was greater "
+				<< "than 1.0 for " << recomb_warnings << " time steps. Consider"
+				<< " using a smaller time step.\n";
+		}
 	}
 
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
@@ -317,22 +365,16 @@ namespace Impurity
 		std::cout << "Starting particle following...\n";
 	
 		// Loop through one impurity at a time, tracking it from its birth
-		// time/location to the end. 
-		// dynamic scheduling likely the best here since the loop times can
-		// vary widely.
-		// Probably want to make this a while loop with OMP tasks for logic
-		// that goes like this (serial example):
-		//   split_imps {}
-		//   do
-		//     *follow impurity routine*
-		//     *potentially add imp to split_imps*
-		//   while (!split_imps.is_empty())
+		// time/location to the end. Dynamic scheduling likely the best here 
+		// since the loop times can vary widely.
 		int thread_imp_count {};
 		int thread_imp_num {};
+		int ioniz_warnings {};
+		int recomb_warnings {};
 		#pragma omp parallel for schedule(dynamic) \
 			shared(bkg) \
 			firstprivate(thread_imp_num, thread_imp_count) \
-			reduction(+: imp_stats)
+			reduction(+: imp_stats, ioniz_warnings, recomb_warnings)
 		for (int i = 0; i < imp_num; ++i)
 		{
 			// OpenMP overhead
@@ -360,11 +402,11 @@ namespace Impurity
 				// be a divide by zero error.
 				if (thread_imp_num > prog_interval)
 				{
-					if ((thread_imp_count % (thread_imp_num / prog_interval)) == 0 
-						&& thread_imp_count > 0)
+					if ((thread_imp_count % (thread_imp_num / prog_interval)) 
+						== 0 && thread_imp_count > 0)
 					{
-						std::cout << "Followed " << thread_imp_count * num_threads 
-							<< "/" << imp_num << " impurities (" 
+						std::cout << "Followed " << thread_imp_count 
+							* num_threads << "/" << imp_num << " impurities (" 
 							<< static_cast<int>(perc_complete) << "%)\n";
 					}
 				}
@@ -373,18 +415,33 @@ namespace Impurity
 			// Create starting impurity ion
 			Impurity primary_imp = create_primary_imp(bkg);
 			
+			// Each thread starts with one impurity ion, but it may end up 
+			// following more than that because that ion may split off another
+			// one, which may split off another one, so the thread will
+			// continue until there are no more to follow. One could argue that
+			// the algorithm here should use OpenMP tasks, which would work 
+			// fine, but it is probably unneccesary because all we really need
+			// is all the CPUs to stay busy, which is accomplished with the
+			// current algorithm with minimal OpenMP overhead. Just some
+			// threads may track more impurities than others, which is fine
+			// as long as you use dynamic scheduling. 
 			std::vector<Impurity> imps {primary_imp};
 			while (!imps.empty())
 			{
 				Impurity imp {pop_back_remove(imps)};
 
-				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb);
+				// Logic for handling additional split impurities not here yet
+				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
+					ioniz_warnings, recomb_warnings);
 			}
 
 			// Increment thread-specific counter. This just counts primary
 			// impurities. 
 			thread_imp_count += 1;
 		}
+
+		// Let user know how many, if any, warnings occured.
+		print_ioniz_recomb_warn(ioniz_warnings, recomb_warnings);
 	}
 
 	Statistics follow_impurities(Background::Background& bkg)

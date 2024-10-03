@@ -160,12 +160,22 @@ namespace Impurity
 	bool check_boundary(const Background::Background& bkg, Impurity& imp);
 	
 	/**
+	* @brief Handle impurity ion ionization and recombination
 	*
+	* The impurity charge is modified within this function, if necessary. If
+	* the probabilities for ionization or recombination are greater than 1.0,
+	* ioniz_warnings and recomb_warnings are incremented by 1. 
+	*
+	* @param ioniz_warnings Integer that tracks number of ionization 
+	* probability > 1.0 events
+	* @param recomb_warnings Integer that tracks number of recombination 
+	* probability > 1.0 events
 	*/
 	void ioniz_recomb(Impurity& imp, const Background::Background& bkg,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, const double imp_time_step, 
-		const int tidx, const int xidx, const int yidx, const int zidx);
+		const int tidx, const int xidx, const int yidx, const int zidx,
+		int& ioniz_warnings, int& recomb_warnings);
 
 	/**
 	* @brief Controlling function for following an impurity until a terminating
@@ -179,11 +189,26 @@ namespace Impurity
 	* coefficients.
 	* @param oa_recomb An OpenADAS object containing the recombination rate 
 	* coefficients.
+	* @param ioniz_warnings Integer that tracks number of ionization 
+	* probability > 1.0 events
+	* @param recomb_warnings Integer that tracks number of recombination 
+	* probability > 1.0 events
 	*/
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb);
+		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
+		int& recomb_warnings);
 
+	/**
+	* @brief Print out warnings if ionization/recombination probabilities were
+	* greater than 1.0 at some point.
+	* @param ioniz_warnings Integer that tracks number of ionization 
+	* probability > 1.0 events
+	* @param recomb_warnings Integer that tracks number of recombination 
+	* probability > 1.0 events
+	*/
+	void print_ioniz_recomb_warn(int ioniz_warnings, int recomb_warnings);
+	
 	/**
 	* @brief Main particle following loop for impurity transport
 	*
