@@ -220,16 +220,16 @@ namespace OpenADAS
 		}
 	}
 
-	std::tuple<double, double, double, std::size_t, std::size_t> 
-		OpenADAS::get_bilinear_interp_vals(std::vector<double>& vec, 
-		double value)
+	std::tuple<double, double, double, int, int> 
+		OpenADAS::get_bilinear_interp_vals(const std::vector<double>& vec, 
+		double value) const
 	{
 		// Get the iterator of the first index in vec that is larger
 		// than value. The bounding values for the bilinear interpolation
 		// will then be lower and lower-1, depending on the conditions below.
 		auto lower = std::lower_bound(vec.begin(), vec.end(), value);
-		std::size_t index0 {};
-		std::size_t index1 {};
+		int index0 {};
+		int index1 {};
 
 		// In this case, value is at/below the minimum value in vec and thus
 		// out of bounds. It is not a good idea to livalarly extrapolate past
@@ -267,7 +267,8 @@ namespace OpenADAS
 		return std::make_tuple(value, value0, value1, index0, index1);
 	}
 
-	double OpenADAS::get_rate_coeff(const int charge, double ne, double te)
+	double OpenADAS::get_rate_coeff(int charge, double ne, double te)
+		const
 	{
 		// Load the values needed to perform a bilinear interpolation. Note
 		// that if ne or te are out of range, it is reassigned to the
@@ -275,15 +276,15 @@ namespace OpenADAS
 		// words, we do not extrapolate beyond the values provided by OpenADAS.
 		double ne0 {};
 		double ne1 {};
-		std::size_t ne0_index {};
-		std::size_t ne1_index {};
+		int ne0_index {};
+		int ne1_index {};
 		std::tie(ne, ne0, ne1, ne0_index, ne1_index) = 
 			get_bilinear_interp_vals(m_ne, ne);
 
 		double te0 {};
 		double te1 {};
-		std::size_t te0_index {};
-		std::size_t te1_index {};
+		int te0_index {};
+		int te1_index {};
 		std::tie(te, te0, te1, te0_index, te1_index) = 
 			get_bilinear_interp_vals(m_te, te);
 
@@ -291,6 +292,19 @@ namespace OpenADAS
 		// interpolating between.
 		double rate0 = m_rates(charge, te0_index, ne0_index);
 		double rate1 = m_rates(charge, te1_index, ne1_index);
+
+		/*
+		std::cout << "te0_index = " << te0_index << '\n';
+		std::cout << "te1_index = " << te1_index << '\n';
+		std::cout << "ne0_index = " << ne0_index << '\n';
+		std::cout << "ne1_index = " << ne1_index << '\n';
+		std::cout << "log10(te0) = " << std::log10(te0) << '\n';
+		std::cout << "log10(te1) = " << std::log10(te1) << '\n';
+		std::cout << "log10(ne0) = " << std::log10(ne0 * 1e-6) << '\n';
+		std::cout << "log10(ne1) = " << std::log10(ne1 * 1e-6) << '\n';
+		std::cout << "log10(rate0) = " << std::log10(rate0 * 1e-6) << '\n';
+		std::cout << "log10(rate1) = " << std::log10(rate1 * 1e-6) << '\n';
+		*/
 
 		// Do a bilinear interpolation. In this case, x=Te, y=ne
 		return Utilities::bilinear_interpolate(te0, ne0, rate0, te1, ne1, 

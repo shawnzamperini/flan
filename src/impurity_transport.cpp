@@ -224,6 +224,37 @@ namespace Impurity
 	{
 		// Get ionization and recombination rate at this plasma density and 
 		// temperature.
+		
+		// Ionization rate coefficients are indexed by charge. This is 
+		// because the zeroeth charge index in the underlying rate data is
+		// for neutral ionization (charge = 0), W0 --> W1+.
+		double ioniz_rate {oa_ioniz.get_rate_coeff(imp.get_charge(), 
+			bkg.get_ne()(tidx, xidx, yidx, zidx),
+			bkg.get_te()(tidx, xidx, yidx, zidx))};
+
+		// Recombination rate coefficients are indexed by charge-1. This is
+		// because this zeroeth entry is for W1+ --> W0. So if we want that
+		// rate coefficient for, say, W1+, we need to pass it charge-1 so it
+		// chooses that zeroeth index.
+		double recomb_rate {oa_recomb.get_rate_coeff(imp.get_charge()-1, 
+			bkg.get_ne()(tidx, xidx, yidx, zidx),
+			bkg.get_te()(tidx, xidx, yidx, zidx))};
+
+		/*
+		std::cout << "-------------------------------\n";
+		std::cout << "te = " << bkg.get_te()(tidx, xidx, yidx, zidx) << '\n';
+		std::cout << "ne = " << bkg.get_ne()(tidx, xidx, yidx, zidx) << '\n';
+		std::cout << "charge = " << imp.get_charge() << '\n';
+		std::cout << "ioniz_rate =  " << ioniz_rate << '\n';
+		std::cout << "recomb_rate = " << recomb_rate << '\n';
+		std::cout << "-------------------------------\n";
+		*/
+
+		// The probability of either ionization or recombination occuring is:
+		//   prob = rate [m3/s] * ne [m3] * dt [s]
+		// For each process, pull a random number. If that number is less than
+		// prob, then that event occurs. If both events occur, then they just 
+		// cancel each other out and there's no change.
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
@@ -264,6 +295,8 @@ namespace Impurity
 			// Check for a collision
 
 			// Check for ionization or recombination
+			ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
+				xidx, yidx, zidx);
 		}
 
 	}
@@ -366,9 +399,9 @@ namespace Impurity
 			Input::openadas_root)};
 		int imp_atom_num {Input::get_opt_int(Input::imp_atom_num)};
 		int openadas_year {Input::get_opt_int(Input::openadas_year)};
-		const OpenADAS::OpenADAS oa_ioniz {openadas_root, openadas_year, 
+		OpenADAS::OpenADAS oa_ioniz {openadas_root, openadas_year, 
 			imp_atom_num, "scd"};
-		const OpenADAS::OpenADAS oa_recomb {openadas_root, openadas_year, 
+		OpenADAS::OpenADAS oa_recomb {openadas_root, openadas_year, 
 			imp_atom_num, "acd"};
 
 		// Execute main particle following loop.

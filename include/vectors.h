@@ -91,11 +91,27 @@ namespace Vectors
 		std::vector<T> get_data();
 
 		/**
+		* @brief Convert from 3D index to the 1D one used in the underlying 
+		* m_data.
+		* @return Returns the index used to index the underlying 1D data 
+		* vector.
+		*/
+		int calc_index(const int i, const int j, const int k) const;
+	
+		/**
 		* @brief Overload parentheses to act as indexing.
 		* @return Returns reference to value represented by this index of 
 		* indicated data type
 		*/
 		T& operator()(int i, int j, int k);
+
+		/**
+		* @brief Overload parentheses to act as indexing (for const objects).
+		* @return Returns reference to value represented by this index of 
+		* indicated data type
+		*/
+		const T& operator()(const int i, const int j, 
+			const int k) const;
 
 		/**
 		* @brief Move the passed in vector to data. 

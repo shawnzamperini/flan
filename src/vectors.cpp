@@ -73,10 +73,22 @@ namespace Vectors
 	std::vector<T> Vector3D<T>::get_data() {return m_data;}
 	
 	template <typename T>
+	int Vector3D<T>::calc_index(const int i, const int j, const int k) const
+	{
+		return i * (m_dim2 * m_dim3) + j * m_dim3 + k;
+	}
+		
+	template <typename T>
 	T& Vector3D<T>::operator()(int i, int j, int k)
 	{
-		int index = i * (m_dim2 * m_dim3) + j * m_dim3 + k;
-		return m_data[index];
+		return m_data[calc_index(i, j, k)];
+	}
+
+	template <typename T>
+	const T& Vector3D<T>::operator()(const int i, const int j, 
+		const int k) const
+	{
+		return m_data[calc_index(i, j, k)];
 	}
 
 	template <typename T>

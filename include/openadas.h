@@ -71,14 +71,14 @@ namespace OpenADAS
 		/**
 		*
 		*/
-		std::tuple<double, double, double, std::size_t, std::size_t> 
-			get_bilinear_interp_vals(std::vector<double>& vec, 
-			double value);
+		std::tuple<double, double, double, int, int> 
+			get_bilinear_interp_vals(const std::vector<double>& vec, 
+			double value) const;
 
 		/**
 		*
 		*/
-		double get_rate_coeff(const int charge, double ne, double te);
+		double get_rate_coeff(const int charge, double ne, double te) const;
 	};
 }
 
