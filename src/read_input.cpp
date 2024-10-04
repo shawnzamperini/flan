@@ -47,6 +47,8 @@ namespace Input
 		new OptionInt{"gkyl_frame_end",                1},
 		new OptionStr{"gkyl_elec_name",            "elc"},
 		new OptionStr{"gkyl_ion_name",             "ion"},
+		new OptionDbl{"gkyl_elec_mass_amu",     0.000548},
+		new OptionDbl{"gkyl_ion_mass_amu",         2.014},
 		new OptionStr{"gkyl_file_type",         "binary"},
 		new OptionInt{"imp_atom_num",                 74},
 		new OptionDbl{"imp_mass_amu",             183.84},
@@ -62,6 +64,7 @@ namespace Input
 		new OptionDbl{"imp_var_reduct_min_weight",   0.1},
 		new OptionDbl{"imp_time_step",              1e-7},
 		new OptionDbl{"imp_source_scale_fact",		 1.0},
+		new OptionInt{"imp_coll_num",               1000},
 		new OptionStr{"openadas_root",       "undefined"},
 		new OptionInt{"openadas_year",                50}
 	};
@@ -82,6 +85,8 @@ namespace Input
 		if (input_str == "gkyl_frame_end")             return gkyl_frame_end;
 		if (input_str == "gkyl_elec_name")             return gkyl_elec_name;
 		if (input_str == "gkyl_ion_name")              return gkyl_ion_name;
+		if (input_str == "gkyl_elec_mass_amu")         return gkyl_elec_mass_amu;
+		if (input_str == "gkyl_ion_mass_amu")          return gkyl_ion_mass_amu;
 		if (input_str == "gkyl_file_type")             return gkyl_file_type;
 		if (input_str == "imp_atom_num")               return imp_atom_num;
 		if (input_str == "imp_mass_amu")               return imp_mass_amu;
@@ -97,6 +102,7 @@ namespace Input
 		if (input_str == "imp_var_reduct_min_weight")  return imp_var_reduct_min_weight;
 		if (input_str == "imp_time_step")              return imp_time_step;
 		if (input_str == "imp_source_scale_fact")      return imp_source_scale_fact;
+		if (input_str == "imp_coll_num")               return imp_coll_num;
 		if (input_str == "openadas_root")              return openadas_root;
 		if (input_str == "openadas_year")              return openadas_year;
 		else return -1;

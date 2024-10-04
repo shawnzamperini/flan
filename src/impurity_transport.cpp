@@ -19,6 +19,7 @@
 #include "random.h"
 #include "constants.h"
 #include "openadas.h"
+#include "collisions.h"
 
 
 namespace Impurity
@@ -218,6 +219,16 @@ namespace Impurity
 		return true;
 	}
 
+	void collision(Impurity& imp, const double imp_time_step, 
+		const int tidx, const int xidx, const int yidx, const int zidx)
+	{
+
+		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
+		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
+		double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
+		Collisions::collision_step(imp, te, ti, ne, imp_time_step)
+	}
+
 	void ioniz_recomb(Impurity& imp, const Background::Background& bkg,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, const double imp_time_step, 
@@ -322,6 +333,7 @@ namespace Impurity
 			continue_following = check_boundary(bkg, imp);
 
 			// Check for a collision
+
 
 			// Check for ionization or recombination
 			ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 

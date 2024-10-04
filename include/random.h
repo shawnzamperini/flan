@@ -15,6 +15,10 @@
 
 #include <chrono>
 #include <random>
+#include <cmath>
+#include <utility>
+
+#include "constants.h"
 
 /**
 * @brief Namespace for Mersenne Twister random number generator.
@@ -72,6 +76,40 @@ namespace Random
 	inline double get(double min, double max)
 	{
 		return std::uniform_real_distribution{min, max}(mt);
+	}
+
+	/**
+	* @brief Generate random double from a normal distribution
+	*
+	* This function was added and is not part of the original learncpp example.
+	* It uses the Box-Muller transform, which outputs normally distributed
+	* numbers two at a time.
+	*
+	* @param mu The mean of the distribution
+	* @param sigma The standard deviation of the distribution
+	*/
+	inline std::pair<double, double> get_two_norm(double mu, double sigma)
+	{
+
+		constexpr double two_pi {2.0 * Constants::pi};
+			
+		// Generate two uniformally distributed numbers. Make sure ran1 is
+		// greater than zero since we use it in cosine below. 
+		double ran1 {};
+		double ran2 {get(0.0, 1.0)};
+		while (ran1 == 0.0)
+		{
+			ran1 = get(0.0, 1.0);
+		}
+
+		// Box-Muller transform. Calculate coefficient in front and then apply
+		// the formulas.
+		double coef {sigma * std::sqrt(-2.0 * std::log(ran1))};
+		double ran1_norm {coef * std::cos(two_pi * ran2) + mu};
+		double ran2_norm {coef * std::sin(two_pi * ran2) + mu};
+
+		return std::make_pair(ran1_norm, ran2_norm);
+		
 	}
 
 	// The following function templates can be used to generate random numbers

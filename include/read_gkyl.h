@@ -56,8 +56,8 @@ namespace Gkyl
 	// The data is loaded and placed into gkyl_data accordingly.
 	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
-		const std::string& data_type,
-		Vectors::Vector4D<T>& gkyl_data);
+		const std::string& data_type, Vectors::Vector4D<T>& gkyl_data, 
+		const double species_mass_amu=0);
 
 	// Calcuate the electric field using the gradient of gkyl_vp. This must
 	// be run after read_potential.

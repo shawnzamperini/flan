@@ -26,6 +26,8 @@ namespace Input
 		gkyl_frame_end,
 		gkyl_elec_name,
 		gkyl_ion_name,
+		gkyl_elec_mass_amu,
+		gkyl_ion_mass_amu,
 		gkyl_file_type,
 		imp_atom_num,
 		imp_mass_amu,
@@ -41,6 +43,7 @@ namespace Input
 		imp_var_reduct_min_weight,
 		imp_time_step,
 		imp_source_scale_fact,
+		imp_coll_num,
 		openadas_root,
 		openadas_year,
 		max_input_opts,  // Always leave this at the end of Names

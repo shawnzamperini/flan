@@ -444,8 +444,8 @@ namespace Gkyl
 	*/
 	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
-		const std::string& data_type,
-		Vectors::Vector4D<T>& gkyl_data)
+		const std::string& data_type, Vectors::Vector4D<T>& gkyl_data, 
+		const double species_mass_amu)
 	{
 		// Load into local variables so code is easier to read.
 		const std::string gkyl_dir {Input::get_opt_str(Input::gkyl_dir)};
@@ -466,6 +466,7 @@ namespace Gkyl
 			<< " --gkyl_frame_start=" << gkyl_frame_start
 			<< " --gkyl_frame_end=" << gkyl_frame_end
 			<< " --gkyl_species=" << species
+			<< " --gkyl_species_mass_amu=" << species_mass_amu
 			<< " --gkyl_data_type=" << data_type;
 
 		// The bmag files don't include the needed DG interpolation data,
@@ -529,9 +530,13 @@ namespace Gkyl
 	{
 		// Load into local variables so code is easier to read.
 		std::string gkyl_elec_name {Input::get_opt_str(Input::gkyl_elec_name)};
+		double species_mass_amu {
+			Input::get_opt_dbl(Input::gkyl_elec_mass_amu)};
 
-		// Call pgkyl to load data into gkyl_te
-		read_data_pgkyl(gkyl_elec_name, "temperature", gkyl_te);
+		// Call pgkyl to load data into gkyl_te. Need to pass in the species
+		// mass so it can calculate temperature correctly.
+		read_data_pgkyl(gkyl_elec_name, "temperature", gkyl_te, 
+			species_mass_amu);
 	}
 
 	/**
@@ -541,9 +546,13 @@ namespace Gkyl
 	{
 		// Load into local variables so code is easier to read.
 		std::string gkyl_ion_name {Input::get_opt_str(Input::gkyl_ion_name)};
+		double species_mass_amu {
+			Input::get_opt_dbl(Input::gkyl_ion_mass_amu)};
 
-		// Call pgkyl to load data into gkyl_ti
-		read_data_pgkyl(gkyl_ion_name, "temperature", gkyl_ti);
+		// Call pgkyl to load data into gkyl_ti. Need to pass in the species
+		// mass so it can calculate temperature correctly.
+		read_data_pgkyl(gkyl_ion_name, "temperature", gkyl_ti, 
+			species_mass_amu);
 	}
 
 	/**

@@ -189,6 +189,7 @@ def main():
     parser.add_argument("--gkyl_frame_start", type=int, help="first Gkyell frame to read in")
     parser.add_argument("--gkyl_frame_end", type=int, help="last Gkyell frame to read in")
     parser.add_argument("--gkyl_species", type=str, help="name of the species to load")
+    parser.add_argument("--gkyl_species_mass_amu", type=float, help="mass of the species in amu")
     parser.add_argument("--gkyl_data_type", type=str, help="name of the type of data file to load", choices=["density", "temperature", "potential", "magnetic_field"])
     parser.add_argument("--gkyl_basis_type", type=str, help="DG basis type", choices=["serendipity"])
     parser.add_argument("--gkyl_poly_order", type=int, help="DG poly order")
@@ -206,9 +207,18 @@ def main():
             comp = 0
 
         # Load temperature. This actually loads the velocity, which we convert
-        # to temperature via T = value * me / q
+        # to temperature via T = value * m / q
         elif (args.gkyl_data_type == "temperature"):
-            value_scale = 9.1e-31 / 1.602e-19
+
+            # Want to trigger a warning if the species mass was zero (probably
+            # means it was accidentally not passed in). 
+            if (args.gkyl_species_mass_amu == 0.0):
+                print("Error! gkyl_species_mass_amu = 0.0. Did you forget" + \
+                " to pass in this argument?")
+
+            # Calculate mass of particle (kg) so we can convert to temperature
+            m = 1.661e-27 * args.gkyl_species_mass_amu
+            value_scale = m / 1.602e-19
             comp = 1
 
         else:
