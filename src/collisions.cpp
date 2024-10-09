@@ -59,77 +59,8 @@ namespace Collisions
 	{
 		return std::sqrt(imp.get_vx() * imp.get_vx() 
 			+ imp.get_vy() * imp.get_vy() + imp.get_vz() * imp.get_vz());
-
 	}
 	
-	std::vector<double> generate_impact_param(double bmin, double bmax,
-		int num)
-	{
-		std::vector<double> b (num);
-		for (int i {}; i < num; ++i)
-		{
-			// This is the cumulative distribution function for the pdf 1/r.
-			//b[i] = bmax - bmin * std::exp(Random::get(0.0, 1.0) 
-			//	* std::log(bmax / bmin));
-
-			// Uniform distribution function.
-			//b[i] = bmin + Random::get(0.0, 1.0) * (bmax - bmin);
-
-			// Cumulative distribution function for a 1/r^2 pdf
-			b[i] = std::sqrt(1.0 / (Random::get(0.0, 1.0) 
-				* (1.0 / bmin - 1.0 / bmax)));
-		}
-		return b;
-	}
-
-	double calc_defl_freq(double red_mass, std::vector<double>& vel, 
-		std::vector<double>& b, double q1, double q2, double lambda_debye,
-		double vz, double imp_time_step, double te, double ne)
-	{
-		// Calculate deflection angle over the number of collisions specified
-		// by the length of vel (or b, same size). 
-		double defl_ang {};
-		//std::cout << std::scientific << "  q1 = " << q1 << '\n';
-		//std::cout << std::scientific << "  q2 = " << q2 << '\n';
-		//std::cout << "  red_mass = " << red_mass << '\n';
-		for (std::size_t i {}; i < vel.size(); ++i)
-		{
-			//std::cout << "  b[" << i << "] = " << b[i] << '\n';
-			//std::cout << "  vel[" << i << "] = " << vel[i] << '\n';
-			//std::cout << "  defl_ang term = " << 2.0 * 1.0 / 
-			//	(4.0 * Constants::pi 
-			//	* Constants::eps0 * red_mass / (q1 * q2) * vel[i] * vel[i] 
-			//	* b[i]) << '\n';
-			//std::cout << "  defl_ang = " << 2.0 * std::atan(1.0 / 
-			//	(4.0 * Constants::pi 
-			//	* Constants::eps0 * red_mass / (q1 * q2) * vel[i] * vel[i] 
-			//	* b[i])) << '\n';
-			defl_ang += 2.0 * std::atan(1.0 / (4.0 * Constants::pi 
-				* Constants::eps0 * red_mass / (q1 * q2) * vel[i] * vel[i] 
-				* b[i]));
-		}
-
-		// The timescale over which these collisions occur is how long it takes
-		// the impurity to leave the Debye sphere, i.e., dt = (lambda / 2) / vz.
-		double dt {lambda_debye / 2.0 / vz};
-
-		// Calculate average deflection frequency
-		double avg_defl_per_coll {defl_ang / static_cast<double>(vel.size())};
-		std::cout << "method #1: " << avg_defl_per_coll / dt << '\n';
-		//double avg_defl_freq {avg_defl_per_coll / dt};
-		//double n_debye_cyl {Constants::pi * Constants::eps0 * te 
-		//	* Constants::ev_to_j * imp_time_step * vz / (Constants::charge_e 
-		//	* Constants::charge_e)};
-		double n_debye_cyl {Constants::pi * lambda_debye * lambda_debye * vz
-			* imp_time_step * ne};
-		double avg_defl_freq {defl_ang / static_cast<double>(vel.size())
-			* n_debye_cyl / imp_time_step};
-		std::cout << "method #2: " << avg_defl_per_coll / imp_time_step 
-			* n_debye_cyl << '\n';
-
-		return avg_defl_freq;
-	}
-
 	std::array<double, 3> ran_unit_vector()
 	{
 
@@ -222,109 +153,56 @@ namespace Collisions
 		imp.set_vz(rotated_vec[2]);
 	}
 
-	std::vector<double> generate_com_vels(Impurity::Impurity& imp, 
-		std::vector<double>& vels)
-	{
-		// Vector to hold CoM velocities.
-		std::vector<double> com_vels (vels.size());
-
-		for (std::size_t i {}; i < vels.size(); ++i)
-		{
-			// Each loop represents an ion/electron that we need to generate
-			// a randomly oriented vector with magnitude vel for. So get a 
-			// random unit vector first.
-			std::array<double, 3> unit_vector {ran_unit_vector()};
-
-			// The magnitude of the CoM velocity vector is then
-			com_vels[i] = std::sqrt(
-			std::pow(imp.get_vx() - unit_vector[0] * vels[i], 2)
-			+ std::pow(imp.get_vy() - unit_vector[1] * vels[i], 2)
-			+ std::pow(imp.get_vz() - unit_vector[2] * vels[i], 2));
-		}
-		return com_vels;
-	}
-
-	void compare_theory_90_zi(double calc_freq, double ne, double te, 
-		double ti, double vz, double red_mass, double mz, double mi, 
-		double qz, double qi)
-	{
-		// This helper function compares the given angular deflection frequency
-		// to the 90-degree frequency predicted by theory for ion-impurity
-		// collisions. It is just to tell us if what we are doing makes sense 
-		// in regards to established theory.
-		// ne [m-3]
-		// te, ti [K]
-		// vz [m/s]
-		// red_mass [kg]
-		// mz, mi [kg]
-		// qz, qi [C]
-
-		// Calculate ln(alpha)
-		double lnalpha_fact {std::log(std::pow(Constants::eps0, 1.5) * 4.0 *
-			Constants::pi * Constants::amu_to_kg / 
-			std::pow(Constants::ev_to_j, 2.5))};
-		double lnalpha {lnalpha_fact + std::log(std::sqrt(te / 
-			Constants::ev_to_j / ne) * vz * vz * (red_mass 
-			/ Constants::amu_to_kg) / (std::abs(qz / Constants::ev_to_j 
-			* qi / Constants::ev_to_j)))};
-
-		// Calculate the 90 degree deflection frequency
-		double nu90_fact {std::pow(Constants::ev_to_j, 4.0) * 
-			std::pow(Constants::amu_to_kg, 1.5) / (4.0 * Constants::pi 
-			* std::pow(Constants::eps0, 2.0) 
-			* std::pow(Constants::amu_to_kg, 2.0) 
-			* std::pow(2.0 * Constants::ev_to_j, 1.5))};
-		double nu90 {nu90_fact * std::pow(qz / Constants::ev_to_j, 2.0) 
-		* std::pow(qi / Constants::ev_to_j, 2.0) * ne * lnalpha / 
-		((mz / Constants::amu_to_kg) * (red_mass / Constants::amu_to_kg))
-		/ std::pow((ti / Constants::ev_to_j) / (mz / Constants::amu_to_kg), 
-		1.5) + 1.3 * std::pow((ti / Constants::ev_to_j) / 
-		(mi / Constants::amu_to_kg), 1.5)};
-
-		// Calculate what the 90 degree deflection frequency is for our case
-		double calc_nu90 {calc_freq / (Constants::pi / 2.0)};
-
-		// Print out
-		std::cout << std::scientific << "theory, calc = " << nu90 
-			<< ", " << calc_nu90 << '\n';
-
-	}
-
 	double calc_momentum_loss_freq(double ne, double te, 
 		double n2, double t2, double v1, double m1, double m2, 
 		double q1, double q2)
 	{
-		// Generally 1 = impurity, 2 = species colliding with
-		// ne [m-3]
-		// te, temp2 [eV]
+		// This follows the derivation in Freidberg's textbook, Ch. 9. Most
+		// everything is the same except the Coulomb logarithm is explicitly
+		// calculated (i.e., the common assumption ln(alpha)=15 or 20 is not
+		// enforced) and it has been generalized to any type of particles.
+		// Generally use this as 1 = impurity, 2 = species colliding with. The
+		// units of the input are:
+		// ne, n2 [m-3]
+		// te, t2 [eV]
 		// v1 [m/s]
 		// m1, m2 [kg]
 		// q1, q2 [C]
 		
-		// Calculate reduced mass
+		// Calculate reduced mass, Eq. 9.7
 		double mr = calc_reduced_mass(m1, m2);
 
 		// Debye length
 		double lambda_debye {calc_debye_length(te, ne)};
 
 		// The initial (squared) velocity of the reduced mass in the CoM 
-		// frame. See derivation in ...
+		// frame. See Eq. 9.4 for the vector v. We square this for:
+		// v^2 = v1^2 + v2^2 - 2 v1 dot v2
+		// We assume that the second species is Maxwellian. So the last term
+		// with the dot product vanishes on average since for every v2 vector
+		// it is equally likely that an oppositely directed v2 vector exists.
+		// So over many collisions, this term --> 0 on average. v is then
+		// aligned along the x-axis in the CoM frame (Fig. 9.3) without any
+		// loss in generality, thus v^2 --> v0^2.
 		double mr_v0_sq {v1 * v1 + 1.5 * t2 
 			* Constants::ev_to_j / m2};
 
-		// b90, impact parameter that causes a 90 degree collision
+		// b90, impact parameter that causes a 90 degree collision, Eq. 9.16
 		double b90 {std::abs((q1 * q2) / (4.0 * Constants::pi 
 			* Constants::eps0 * mr * mr_v0_sq))};
 
-		// Coulomb factor, ln(alpha)
+		// Coulomb factor, ln(alpha), see Eq. 9.34 but we retain some 
+		// generality here instead of just approximating ln(alpha) = 20.
 		double lnalpha {std::log(lambda_debye / b90)};
 
-		// Thermal velocity (squared) of the species 1 is colliding with. No
-		// 2/3 factor here because this comes after the problem has been 
-		// simplified into a 1D problem, at least that's my understanding.
+		// Thermal velocity (squared) of the species 1 is colliding 
+		// with, Eq. 9.41. No 2/3 factor here because this comes after the 
+		// problem has been simplified into a 1D problem, at least that's 
+		// my understanding.
 		double vt2_sq {2.0 * t2 * Constants::ev_to_j / m2};
 
-		// The 1-2 collision frequency for the momentum loss rate.
+		// The 1-2 collision frequency for the momentum loss rate. Compare to
+		// Eq. 9.48. Only difference is e^4 --> q1^2 * q2^2.
 		double nu {(1.0 / (4.0 * Constants::pi) * q1*q1 * q2*q2 * n2 / 
 			(Constants::eps0*Constants::eps0 * m1 * mr) * lnalpha) *
 			(1.0 / (v1*v1*v1 + 1.3 * vt2_sq))};
@@ -332,62 +210,15 @@ namespace Collisions
 		return nu;
 	}
 
-	double old_calc_momentum_loss_freq(double ne, double te, 
-		double temp2, double v1, double m1, double m2, 
-		double q1, double q2)
-	{
-		// Generally 1 = impurity, 2 = species colliding with
-		// ne [m-3]
-		// te, temp2 [J]
-		// v1 [m/s]
-		// red_mass [kg]
-		// m1, m2 [kg]
-		// q1, q2 [C]
-		
-		// Calculate reduced mass
-		double red_mass = calc_reduced_mass(m1, m2);
-
-		// Calculate ln(alpha). Broken up to make it a bit more digestible. 
-		double lnalpha_fact {std::log(std::pow(Constants::eps0, 1.5) * 4.0 *
-			Constants::pi * Constants::amu_to_kg / 
-			std::pow(Constants::ev_to_j, 2.5))};
-		double lnalpha {lnalpha_fact + std::log(std::sqrt(te / 
-			Constants::ev_to_j / ne) * v1 * v1 * (red_mass 
-			/ Constants::amu_to_kg) / (std::abs(q1 / Constants::ev_to_j 
-			* q2 / Constants::ev_to_j)))};
-		std::cout << "  lnalpha_fact = " << lnalpha_fact << '\n';
-		std::cout << "  lnalpha = " << lnalpha << '\n';
-
-		// Calculate the momentum loss frequency. This is the frequency at
-		// which the species 1 loses its forward-directed momentum due to
-		// collisions with species 2.
-		double nu_fact {std::pow(Constants::ev_to_j, 4.0) * 
-			std::pow(Constants::amu_to_kg, 1.5) / (4.0 * Constants::pi 
-			* std::pow(Constants::eps0, 2.0) 
-			* std::pow(Constants::amu_to_kg, 2.0) 
-			* std::pow(2.0 * Constants::ev_to_j, 1.5))};
-		double nu {nu_fact * std::pow(q1 / Constants::ev_to_j, 2.0) 
-		* std::pow(q2 / Constants::ev_to_j, 2.0) * ne * lnalpha / 
-		((m1 / Constants::amu_to_kg) * (red_mass / Constants::amu_to_kg))
-		/ std::pow((temp2 / Constants::ev_to_j) / (m1 / Constants::amu_to_kg), 
-		1.5) + 1.3 * std::pow((temp2 / Constants::ev_to_j) / 
-		(m2 / Constants::amu_to_kg), 1.5)};
-		std::cout << "  nu_fact = " << nu_fact << '\n';
-		std::cout << "  nu = " << nu << '\n';
-
-		return nu;
-
-	}
-
 	void collision_step(Impurity::Impurity& imp, double te, double ti, 
 		double ne, double imp_time_step)
 	{
 		
-		std::cout << "=== Collisions ===\n";
+		//std::cout << "=== Collisions ===\n";
 
 		// Calculate impurity velocity
 		double imp_v {calc_imp_vel(imp)};
-		std::cout << "imp_v = " << imp_v << '\n';
+		//std::cout << "imp_v = " << imp_v << '\n';
 
 		// Load electron mass in kg. Calculate momentum loss frequency due to 
 		// impurity-electron collisions. Note that we are passing in as the
@@ -400,7 +231,7 @@ namespace Collisions
 		double nu_ze {calc_momentum_loss_freq(ne, te, ne, te, imp_v, 
 			imp.get_mass(), me, -imp.get_charge() * Constants::charge_e, 
 			Constants::charge_e)};
-		std::cout << std::scientific << "nu_ze = " << nu_ze << '\n';
+		//std::cout << std::scientific << "nu_ze = " << nu_ze << '\n';
 
 		// Load ion mass in kg. Calculate momentum loss frequency due to 
 		// impurity-ion collisions. Assuming singly charged ions, but the 
@@ -415,7 +246,7 @@ namespace Collisions
 		double nu_zi {calc_momentum_loss_freq(ne, te, ne, ti, imp_v, 
 			imp.get_mass(),	mi, -imp.get_charge() * Constants::charge_e, 
 			-Constants::charge_e)};
-		std::cout << std::scientific << "nu_zi = " << nu_zi << '\n';
+		//std::cout << std::scientific << "nu_zi = " << nu_zi << '\n';
 
 		// Test that the equation gives expected values for e-i (just to pick
 		// and example collision type). 
@@ -427,15 +258,15 @@ namespace Collisions
 		//	Constants::charge_e, -Constants::charge_e)};
 		double nu_ei {calc_momentum_loss_freq(ne, te, ne, ti, e_v, me, mi, 
 			Constants::charge_e, -Constants::charge_e)};
-		std::cout << "e_v = " << e_v << '\n';
-		std::cout << std::scientific << "nu_ei = " << nu_ei << " (" 
-			<< nu_ei_test << ")\n";
+		//std::cout << "e_v = " << e_v << '\n';
+		std::cout << std::scientific << "nu_ei = " << nu_ei << " " 
+			<< nu_ei_test << "\n";
 
 		// Calculate total momentum (i.e., change in velocity since mass is 
 		// constant) loss from each type of collision.
 		// d/dt(mz*vz) = -nu * mz * vz  --> dvz = -nu * vz * dt
 		double imp_dv {(nu_ze + nu_zi) * imp_v * imp_time_step};
-		std::cout << "imp_dv = " << imp_dv << '\n';
+		//std::cout << "imp_dv = " << imp_dv << '\n';
 
 		// Straightforward approach to apply this to the impurity is to scale 
 		// down each impurity velocity component proportional to the amount
@@ -445,14 +276,14 @@ namespace Collisions
 		// Thus each component of the after-collision vector is:
 		// vx1 = a * vx0    and likewise for y and z.
 		double mom_loss_frac {(imp_v - imp_dv) / imp_v};
-		std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
-		std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() << ", " 
+		//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
+		//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() << ", " 
 			<< imp.get_vz() << '\n';
 		imp.set_vx(imp.get_vx() * mom_loss_frac); 
 		imp.set_vy(imp.get_vy() * mom_loss_frac); 
 		imp.set_vz(imp.get_vz() * mom_loss_frac); 
 
-		std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() << ", " 
+		//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() << ", " 
 			<< imp.get_vz() << '\n';
 
 	}
