@@ -219,14 +219,18 @@ namespace Impurity
 		return true;
 	}
 
-	void collision(Impurity& imp, const double imp_time_step, 
-		const int tidx, const int xidx, const int yidx, const int zidx)
+	void collision(Impurity& imp, const Background::Background& bkg, 
+		const double imp_time_step, const int tidx, const int xidx, 
+		const int yidx, const int zidx)
 	{
-
+		// Local plasma propoerties
 		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
 		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
 		double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
-		Collisions::collision_step(imp, te, ti, ne, imp_time_step)
+
+		// Impurity modified within collision step
+		Collisions::collision_step(imp, local_te, local_ti, local_ne, 
+			imp_time_step);
 	}
 
 	void ioniz_recomb(Impurity& imp, const Background::Background& bkg,
@@ -333,11 +337,11 @@ namespace Impurity
 			continue_following = check_boundary(bkg, imp);
 
 			// Check for a collision
-
+			collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
 
 			// Check for ionization or recombination
-			ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
-				xidx, yidx, zidx, ioniz_warnings, recomb_warnings);
+			//ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
+			//	xidx, yidx, zidx, ioniz_warnings, recomb_warnings);
 		}
 
 	}
