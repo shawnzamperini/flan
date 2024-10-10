@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib.colors import Normalize, LogNorm
 from matplotlib import animation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.animation import PillowWriter
 
 # Some global variables
 g_fontsize = 14
@@ -187,44 +188,44 @@ class FlanPlots:
 
 	def plot_frames_xy(self, data_name, frame_start, frame_end, z0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
-		vmin=None, vmax=None):
+		vmin=None, vmax=None, save_path=None):
 		"""
 		Combine multiple plots from plot_frame_xy into an animation.
 		"""
 
 		# If we do not want to animate the colorbar, then we need to loop 
 		# through the data ahead of time to find the limits for the colorbar.
-		#if not animate_cbar:
-		skip_vmin = False
-		skip_vmax = False
-		for f in range(frame_start, frame_end+1):
-			
-			try:
-				X, Y, data_xy = self.plot_frame_xy(data_name, f, z0, 
-					showplot=False)
+		if not animate_cbar:
+			skip_vmin = False
+			skip_vmax = False
+			for f in range(frame_start, frame_end+1):
+				
+				try:
+					X, Y, data_xy = self.plot_frame_xy(data_name, f, z0, 
+						showplot=False)
 
-			# TypeError will happen if we put in an invalid option for
-			# data_name.
-			except TypeError:
-				return None
+				# TypeError will happen if we put in an invalid option for
+				# data_name.
+				except TypeError:
+					return None
 
-			# Need to set vmin, vmax to values so we can use <,> on them.
-			# If users pass in values for either, those take precedence and
-			# we don't reassign them.
-			if (f == frame_start):
-				if vmin is None: 
-					vmin = data_xy.min()
+				# Need to set vmin, vmax to values so we can use <,> on them.
+				# If users pass in values for either, those take precedence and
+				# we don't reassign them.
+				if (f == frame_start):
+					if vmin is None: 
+						vmin = data_xy.min()
+					else:
+						skip_vmin = True
+					if vmax is None: 
+						vmax = data_xy.max()
+					else:
+						skip_vmax = True
 				else:
-					skip_vmin = True
-				if vmax is None: 
-					vmax = data_xy.max()
-				else:
-					skip_vmax = True
-			else:
-				if (not skip_vmin and data_xy.min() < vmin): 
-					vmin = data_xy.min()
-				if (not skip_vmax and data_xy.max() > vmax): 
-					vmax = data_xy.max()
+					if (not skip_vmin and data_xy.min() < vmin): 
+						vmin = data_xy.min()
+					if (not skip_vmax and data_xy.max() > vmax): 
+						vmax = data_xy.max()
 
 		# Setup the first frame.
 		X, Y, data_xy = self.plot_frame_xy(data_name, frame_start, z0, 
@@ -276,5 +277,17 @@ class FlanPlots:
 
 		# Generate animation
 		anim = animation.FuncAnimation(fig, animate, frames=frame_end-frame_start)
+
+		# If save_path is provided, save the file there as a gif. 
+		if (save_path is not None):
+			print("Saving animation...")
+			anim.save(save_path + ".gif", writer=PillowWriter(fps=30))
+
+			# Seems to be issues with this. Issue for another day I guess.
+			#writer = animation.FFMpegWriter(fps=10, extra_args=["-vf", 
+			#	"scale=trunc(iw/2)*2:trunc(ih/2)*2"])
+			#anim.save(save_path + ".mp4", writer=writer) 
+
 		plt.show()
+
 
