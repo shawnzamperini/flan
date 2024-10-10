@@ -138,7 +138,7 @@ namespace Impurity
 		else return lower - grid_edges.begin() - 1;
 	}
 
-	void do_lorentz_step(Impurity& imp, const Background::Background& bkg,
+	void lorentz_update(Impurity& imp, const Background::Background& bkg,
 		const double imp_time_step, const int tidx, const int xidx, 
 		const int yidx, const int zidx)
 	{
@@ -166,8 +166,12 @@ namespace Impurity
 		imp.set_vx(imp.get_vx() + dvx);
 		imp.set_vy(imp.get_vy() + dvy);
 		imp.set_vz(imp.get_vz() + dvz);
+	}
 
-		// Update particle position
+	void step(Impurity& imp, const double imp_time_step)
+	{
+		// Update particle time and position
+		imp.set_t(imp.get_t() + imp_time_step);
 		imp.set_x(imp.get_x() + imp.get_vx() * imp_time_step);
 		imp.set_y(imp.get_y() + imp.get_vy() * imp_time_step);
 		imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);
@@ -188,6 +192,10 @@ namespace Impurity
 
 	bool check_boundary(const Background::Background& bkg, Impurity& imp)
 	{
+		// If we've run past the time range covered by the background plasma
+		// then we're done
+		if (imp.get_t() > bkg.get_t_max()) return false; 
+
 		// The x boundaries are treated as absorbing. Could certianly add
 		// different options here in the future.
 		if (imp.get_x() <= bkg.get_grid_x()[0])
@@ -229,7 +237,7 @@ namespace Impurity
 		double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
 
 		// Impurity modified within collision step
-		Collisions::collision_step(imp, local_te, local_ti, local_ne, 
+		Collisions::collision_update(imp, local_te, local_ti, local_ne, 
 			imp_time_step);
 	}
 
@@ -303,7 +311,7 @@ namespace Impurity
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
-		int& recomb_warnings)
+		int& recomb_warnings, const bool imp_coll_on)
 	{
 		// Timestep of impurity transport simulation
 		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step)};
@@ -324,24 +332,27 @@ namespace Impurity
 			int yidx {get_nearest_cell_index(bkg.get_grid_y(), imp.get_y())};
 			int zidx {get_nearest_cell_index(bkg.get_grid_z(), imp.get_z())};
 
-			// Perform a step according to the Lorentz force
-			do_lorentz_step(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
-
-			// Update particle time
-			imp.set_t(imp.get_t() + imp_time_step);
+			// Update particle velocity from the Lorentz force
+			lorentz_update(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
 
 			// Update statistics
 			record_stats(imp_stats, imp, tidx, xidx, yidx, zidx);
 
-			// Check for a terminating or boundary conditions
-			continue_following = check_boundary(bkg, imp);
-
 			// Check for a collision
-			collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
+			if (imp_coll_on)
+			{
+				collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
+			}
 
 			// Check for ionization or recombination
-			//ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
-			//	xidx, yidx, zidx, ioniz_warnings, recomb_warnings);
+			ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
+				xidx, yidx, zidx, ioniz_warnings, recomb_warnings);
+
+			// Last thing is move particle to a new location
+			step(imp, imp_time_step);
+
+			// Check for a terminating or boundary conditions
+			continue_following = check_boundary(bkg, imp);
 		}
 
 	}
@@ -371,6 +382,13 @@ namespace Impurity
 	{
 		// Load input options as local variables for cleaner code.
 		int imp_num {Input::get_opt_int(Input::imp_num)};
+		std::string imp_collisions {Input::get_opt_str(Input::imp_collisions)};
+
+		// Use an internal control boolean variable instead of a string to 
+		// check if collisions are on. Faster than checking against a string
+		// each loop.
+		bool imp_coll_on {false};
+		if (imp_collisions == "yes") imp_coll_on = true;
 
 		// https://stackoverflow.com/questions/29633531/user-defined-
 		// reduction-on-vector-of-varying-size/29660244#29660244
@@ -379,54 +397,22 @@ namespace Impurity
 			initializer(omp_priv(omp_orig))
 
 		std::cout << "Starting particle following...\n";
+
+		// Print progress this many times
+		constexpr int prog_interval {10};
 	
 		// Loop through one impurity at a time, tracking it from its birth
 		// time/location to the end. Dynamic scheduling likely the best here 
-		// since the loop times can vary widely.
-		int thread_imp_count {};
-		int thread_imp_num {};
+		// since the loop times can vary widely. Declaring bkg, oa_ioniz and
+		// oa_recomb as shared is redundant, but I like being explicit. 
 		int ioniz_warnings {};
 		int recomb_warnings {};
+		int imp_count {};
 		#pragma omp parallel for schedule(dynamic) \
-			shared(bkg) \
-			firstprivate(thread_imp_num, thread_imp_count) \
+			shared(bkg, oa_ioniz, oa_recomb) \
 			reduction(+: imp_stats, ioniz_warnings, recomb_warnings)
 		for (int i = 0; i < imp_num; ++i)
 		{
-			// OpenMP overhead
-			[[maybe_unused]] int thread_id {omp_get_thread_num()};
-			[[maybe_unused]] int num_threads {omp_get_num_threads()};
-			thread_imp_num = imp_num / num_threads;
-
-			// Printout of progress. We don't want to use atomic or anything
-			// that can slow the program down, so we will just report progress
-			// for a single thread since, in theory, all threads should finish
-			// near the same time. For smaller numbers of particles this can
-			// give silly numbers, but it should give the correct numbers at
-			// production level numbers of impurities.
-			if (thread_id == 0)
-			{
-				// Print progress this many times
-				int prog_interval {10};
-
-				// Percent that we've followed
-				double perc_complete {static_cast<double>(thread_imp_count) 
-					/ thread_imp_num * 100};
-
-				// Only do this if enough impurities are being followed, 
-				// otherwise the following modulo in the if statement will
-				// be a divide by zero error.
-				if (thread_imp_num > prog_interval)
-				{
-					if ((thread_imp_count % (thread_imp_num / prog_interval)) 
-						== 0 && thread_imp_count > 0)
-					{
-						std::cout << "Followed " << thread_imp_count 
-							* num_threads << "/" << imp_num << " impurities (" 
-							<< static_cast<int>(perc_complete) << "%)\n";
-					}
-				}
-			}
 
 			// Create starting impurity ion
 			Impurity primary_imp = create_primary_imp(bkg);
@@ -448,12 +434,33 @@ namespace Impurity
 
 				// Logic for handling additional split impurities not here yet
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
-					ioniz_warnings, recomb_warnings);
+					ioniz_warnings, recomb_warnings, imp_coll_on);
 			}
 
-			// Increment thread-specific counter. This just counts primary
-			// impurities. 
-			thread_imp_count += 1;
+			// Print out progress at intervals set by prog_interval (i.e.,
+			// prog_interval = 10 means print out every 10%, 5 means every 20%,
+			// etc.). Would prefer not to have a critical section here, but
+			// this is such a quick block of code that it should have very
+			// little impact on the overall simulation time considering all
+			// the calculation time is spent following impurities. 
+			#pragma omp critical
+			{
+				// Increment shared counter
+				++imp_count;
+				
+				if (imp_num > prog_interval)
+				{
+					if ((imp_count % (imp_num / prog_interval)) == 0 
+						&& imp_count > 0)
+					{
+						double perc_complete {static_cast<double>(imp_count) 
+							/ imp_num * 100};
+						std::cout << "Followed " << imp_count << "/" << imp_num 
+							<< " impurities (" << static_cast<int>(perc_complete) 
+							<< "%)\n";
+					}
+				}
+			}
 		}
 
 		// Let user know how many, if any, warnings occured.

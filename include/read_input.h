@@ -43,7 +43,6 @@ namespace Input
 		imp_var_reduct_min_weight,
 		imp_time_step,
 		imp_source_scale_fact,
-		imp_coll_num,
 		openadas_root,
 		openadas_year,
 		max_input_opts,  // Always leave this at the end of Names

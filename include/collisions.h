@@ -10,7 +10,7 @@ namespace Collisions
 	/**
 	* @brief Entry point for collision model
 	*/
-	void collision_step(Impurity::Impurity& imp, 
+	void collision_update(Impurity::Impurity& imp, 
 		const double te, const double ti, const double ne, 
 		double imp_time_step);
 

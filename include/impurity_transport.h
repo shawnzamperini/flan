@@ -117,7 +117,7 @@ namespace Impurity
 	int get_nearest_cell_index(const std::vector<T>& grid_edges, const T value);
 
 	/**
-	* @brief Perform impurity step based on the Lorentz force
+	* @brief Update impurity velocity based on the Lorentz force
 	*
 	* @param imp Impurity object that is updated within function
 	* @param bkg Reference to the loaded Background object
@@ -127,10 +127,18 @@ namespace Impurity
 	* @param yidx Index in y array imp is at
 	* @param zidx Index in z array imp is at
 	*/
-	void do_lorentz_step(Impurity& imp, const Background::Background& bkg,
+	void lorentz_update(Impurity& imp, const Background::Background& bkg,
 		const double imp_time_step, const int tidx, const int xidx, 
 		const int yidx, const int zidx);
 		
+	/**
+	* @brief Move particle based on its current velocity and the time step
+	*
+	* @param imp Impurity object that is updated within function
+	* @param imp_time_step Size of time step specified in input file
+	*/
+	void step(Impurity& imp, const double imp_time_step);
+
 	/**
 	* @brief Record/score particle in the ImpurityStats object
 	*
@@ -193,11 +201,12 @@ namespace Impurity
 	* probability > 1.0 events
 	* @param recomb_warnings Integer that tracks number of recombination 
 	* probability > 1.0 events
+	* @param imp_coll_on Boolean controlling if collisions are on or not
 	*/
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
-		int& recomb_warnings);
+		int& recomb_warnings, const bool imp_coll_on);
 
 	/**
 	* @brief Print out warnings if ionization/recombination probabilities were

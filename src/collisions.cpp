@@ -210,7 +210,7 @@ namespace Collisions
 		return nu;
 	}
 
-	void collision_step(Impurity::Impurity& imp, double te, double ti, 
+	void collision_update(Impurity::Impurity& imp, double te, double ti, 
 		double ne, double imp_time_step)
 	{
 		
@@ -250,22 +250,19 @@ namespace Collisions
 
 		// Test that the equation gives expected values for e-i (just to pick
 		// and example collision type). 
-		double e_v {std::sqrt(3.0 * te * Constants::ev_to_j / me)};
-		double nu_ei_test {1.33e5 * ne * 1.0e-20 / 
-			std::pow(ti * 1.0e-3, 1.5)};
-		//double nu_ei {calc_momentum_loss_freq(ne, te * Constants::ev_to_j, 
-		//	ti * Constants::ev_to_j, e_v, me,	mi, 
+		//double e_v {std::sqrt(3.0 * te * Constants::ev_to_j / me)};
+		//double nu_ei_test {1.33e5 * ne * 1.0e-20 / 
+		//	std::pow(ti * 1.0e-3, 1.5)};
+		//double nu_ei {calc_momentum_loss_freq(ne, te, ne, ti, e_v, me, mi, 
 		//	Constants::charge_e, -Constants::charge_e)};
-		double nu_ei {calc_momentum_loss_freq(ne, te, ne, ti, e_v, me, mi, 
-			Constants::charge_e, -Constants::charge_e)};
 		//std::cout << "e_v = " << e_v << '\n';
-		std::cout << std::scientific << "nu_ei = " << nu_ei << " " 
-			<< nu_ei_test << "\n";
+		//std::cout << std::scientific << "nu_ei = " << nu_ei << " " 
+		//	<< nu_ei_test << "\n";
 
 		// Calculate total momentum (i.e., change in velocity since mass is 
 		// constant) loss from each type of collision.
 		// d/dt(mz*vz) = -nu * mz * vz  --> dvz = -nu * vz * dt
-		double imp_dv {(nu_ze + nu_zi) * imp_v * imp_time_step};
+		double imp_dv {-(nu_ze + nu_zi) * imp_v * imp_time_step};
 		//std::cout << "imp_dv = " << imp_dv << '\n';
 
 		// Straightforward approach to apply this to the impurity is to scale 
@@ -275,16 +272,57 @@ namespace Collisions
 		// After:  v1 = a * v0 = (a*vx0, a*vy0, a*vz0) = (vx1, vy1, vz1)
 		// Thus each component of the after-collision vector is:
 		// vx1 = a * vx0    and likewise for y and z.
-		double mom_loss_frac {(imp_v - imp_dv) / imp_v};
+		// In theory this can be negative if dv > v. This would just mean the
+		// particle is turning around due to a collision I suppose. 
+		double mom_loss_frac {(imp_v + imp_dv) / imp_v};
+
+		// Warning about if this fraction is < 1 then you should decrease the
+		// time step?
+
 		//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
-		//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() << ", " 
-			<< imp.get_vz() << '\n';
+		//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
+		//	<< ", " << imp.get_vz() << '\n';
 		imp.set_vx(imp.get_vx() * mom_loss_frac); 
 		imp.set_vy(imp.get_vy() * mom_loss_frac); 
 		imp.set_vz(imp.get_vz() * mom_loss_frac); 
 
-		//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() << ", " 
-			<< imp.get_vz() << '\n';
+		//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
+		//	<< ", " << imp.get_vz() << '\n';
+
+		// Inelastic approach. The axes are rotated by some unknown angle so 
+		// that the initial velocity lies along x. This was already done/
+		// impied in the previous steps, just stating here that it happened.
+		// Then before/after looks like:
+		// Before: v0 = (v0x,   0,   0)
+		// After:  v1 = (v1x, v1y, v1z)
+		// The calculated imp_dv is the velocity (really momentum, but mass is
+		// constant so we can just talk velocities) loss over this time step
+		// **in the direction of the vector**. So we can rewrite v1 as:
+		//   v1 = (v0x - dv, v1y, v1z)
+		// The angle between the vector is the dot product:
+		//   v0 * v1 = |v0||v1|cos(theta) = v0x * v1x 
+		// This is an inelastic collision approximation, so |v0| = |v1| = v0x^2
+		// thus:
+		//   cos(theta) = v1x / v0x = (v0x - dv) / v0x
+		// So we can achieve the post-collision vector by just rotating the
+		// original vector by theta. But what in what direction? And what about
+		// the original rotation that we did? Ignore the original because fuck
+		// it, end of the day we just need to rotate the vector in a random
+		// direction by theta since any direction is equally possible, assuming
+		// the species the impurity is colliding with is Maxwellian (which we
+		// do assume here).
+		/*
+		std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
+			<< ", " << imp.get_vz() << '\n';
+		std::cout << "imp_v = " << calc_imp_vel(imp) << '\n';
+		std::cout << "arg = " << (imp_v - imp_dv) / imp_v << '\n';
+		double defl_ang {std::acos((imp_v - imp_dv) / imp_v)};
+		std::cout << "defl_ang = " << defl_ang << '\n';
+		rotate_imp(imp, defl_ang);
+		std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
+			<< ", " << imp.get_vz() << '\n';
+		std::cout << "imp_v = " << calc_imp_vel(imp) << '\n';
+		*/
 
 	}
 

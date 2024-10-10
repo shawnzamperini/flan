@@ -194,37 +194,37 @@ class FlanPlots:
 
 		# If we do not want to animate the colorbar, then we need to loop 
 		# through the data ahead of time to find the limits for the colorbar.
-		if not animate_cbar:
-			skip_vmin = False
-			skip_vmax = False
-			for f in range(frame_start, frame_end+1):
-				
-				try:
-					X, Y, data_xy = self.plot_frame_xy(data_name, f, z0, 
-						showplot=False)
+		#if not animate_cbar:
+		skip_vmin = False
+		skip_vmax = False
+		for f in range(frame_start, frame_end+1):
+			
+			try:
+				X, Y, data_xy = self.plot_frame_xy(data_name, f, z0, 
+					showplot=False)
 
-				# TypeError will happen if we put in an invalid option for
-				# data_name.
-				except TypeError:
-					return None
+			# TypeError will happen if we put in an invalid option for
+			# data_name.
+			except TypeError:
+				return None
 
-				# Need to set vmin, vmax to values so we can use <,> on them.
-				# If users pass in values for either, those take precedence and
-				# we don't reassign them.
-				if (f == frame_start):
-					if vmin is None: 
-						vmin = data_xy.min()
-					else:
-						skip_vmin = True
-					if vmax is None: 
-						vmax = data_xy.max()
-					else:
-						skip_vmax = True
+			# Need to set vmin, vmax to values so we can use <,> on them.
+			# If users pass in values for either, those take precedence and
+			# we don't reassign them.
+			if (f == frame_start):
+				if vmin is None: 
+					vmin = data_xy.min()
 				else:
-					if (not skip_vmin and data_xy.min() < vmin): 
-						vmin = data_xy.min()
-					if (not skip_vmax and data_xy.max() > vmax): 
-						vmax = data_xy.max()
+					skip_vmin = True
+				if vmax is None: 
+					vmax = data_xy.max()
+				else:
+					skip_vmax = True
+			else:
+				if (not skip_vmin and data_xy.min() < vmin): 
+					vmin = data_xy.min()
+				if (not skip_vmax and data_xy.max() > vmax): 
+					vmax = data_xy.max()
 
 		# Setup the first frame.
 		X, Y, data_xy = self.plot_frame_xy(data_name, frame_start, z0, 
