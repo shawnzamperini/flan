@@ -152,11 +152,14 @@ namespace SaveResults
 		
 		// Grid edges - x, y, z
 		desc = "x grid edges";
-		save_vector_1d(nc_file, bkg.get_grid_x(), "grid_x", grid_dim2, desc, "(m)");
+		save_vector_1d(nc_file, bkg.get_grid_x(), "grid_x", grid_dim2, desc, 
+			"(m)");
 		desc = "y grid edges";
-		save_vector_1d(nc_file, bkg.get_grid_y(), "grid_y", grid_dim3, desc, "(m)");
+		save_vector_1d(nc_file, bkg.get_grid_y(), "grid_y", grid_dim3, desc, 
+			"(m)");
 		desc = "z grid edges";
-		save_vector_1d(nc_file, bkg.get_grid_z(), "grid_z", grid_dim4, desc, "(m)");
+		save_vector_1d(nc_file, bkg.get_grid_z(), "grid_z", grid_dim4, desc, 
+			"(m)");
 
 		// Electron density
 		desc = "electron density";
@@ -203,6 +206,24 @@ namespace SaveResults
 		desc = "impurity density";
 		save_vector_4d(nc_file, imp_stats.get_density(), "imp_density", 
 			dim1, dim2, dim3, dim4, desc, "(m-3)");
+	
+		if (imp_stats.get_vel_stats())
+		{
+			// Impurity average x velocity
+			desc = "impurity x velocity";
+			save_vector_4d(nc_file, imp_stats.get_vx(), "imp_vx", 
+				dim1, dim2, dim3, dim4, desc, "(m/s)");
+
+			// Impurity average y velocity
+			desc = "impurity y velocity";
+			save_vector_4d(nc_file, imp_stats.get_vy(), "imp_vy", 
+				dim1, dim2, dim3, dim4, desc, "(m/s)");
+
+			// Impurity average z velocity
+			desc = "impurity z velocity";
+			save_vector_4d(nc_file, imp_stats.get_vx(), "imp_vz", 
+				dim1, dim2, dim3, dim4, desc, "(m/s)");
+		}
 	}
 
 }

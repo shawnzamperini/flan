@@ -225,9 +225,6 @@ namespace Collisions
 		// correct units (J for temperatures, kg for masses and C for charges).
 		double me {Input::get_opt_dbl(Input::gkyl_elec_mass_amu) 
 			* Constants::amu_to_kg};
-		//double nu_ze {calc_momentum_loss_freq(ne, te * Constants::ev_to_j, 
-		//	te * Constants::ev_to_j, imp_v, imp.get_mass(), me, 
-		//	-imp.get_charge() * Constants::charge_e, Constants::charge_e)};
 		double nu_ze {calc_momentum_loss_freq(ne, te, ne, te, imp_v, 
 			imp.get_mass(), me, -imp.get_charge() * Constants::charge_e, 
 			Constants::charge_e)};
@@ -240,9 +237,6 @@ namespace Collisions
 		// quasi-neutrality and passing in ni=ne here. 
 		double mi {Input::get_opt_dbl(Input::gkyl_ion_mass_amu) 
 			* Constants::amu_to_kg};
-		//double nu_zi {calc_momentum_loss_freq(ne, te * Constants::ev_to_j, 
-		//	ti * Constants::ev_to_j, imp_v, imp.get_mass(),	mi, 
-		//	-imp.get_charge() * Constants::charge_e, -Constants::charge_e)};
 		double nu_zi {calc_momentum_loss_freq(ne, te, ne, ti, imp_v, 
 			imp.get_mass(),	mi, -imp.get_charge() * Constants::charge_e, 
 			-Constants::charge_e)};
@@ -275,190 +269,60 @@ namespace Collisions
 		// In theory this can be negative if dv > v. This would just mean the
 		// particle is turning around due to a collision I suppose. 
 		double mom_loss_frac {(imp_v + imp_dv) / imp_v};
-
-		// Warning about if this fraction is < 1 then you should decrease the
-		// time step?
-
-		//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
-		//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
-		//	<< ", " << imp.get_vz() << '\n';
-		imp.set_vx(imp.get_vx() * mom_loss_frac); 
-		imp.set_vy(imp.get_vy() * mom_loss_frac); 
-		imp.set_vz(imp.get_vz() * mom_loss_frac); 
-
-		//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
-		//	<< ", " << imp.get_vz() << '\n';
-
-		// Inelastic approach. The axes are rotated by some unknown angle so 
-		// that the initial velocity lies along x. This was already done/
-		// impied in the previous steps, just stating here that it happened.
-		// Then before/after looks like:
-		// Before: v0 = (v0x,   0,   0)
-		// After:  v1 = (v1x, v1y, v1z)
-		// The calculated imp_dv is the velocity (really momentum, but mass is
-		// constant so we can just talk velocities) loss over this time step
-		// **in the direction of the vector**. So we can rewrite v1 as:
-		//   v1 = (v0x - dv, v1y, v1z)
-		// The angle between the vector is the dot product:
-		//   v0 * v1 = |v0||v1|cos(theta) = v0x * v1x 
-		// This is an inelastic collision approximation, so |v0| = |v1| = v0x^2
-		// thus:
-		//   cos(theta) = v1x / v0x = (v0x - dv) / v0x
-		// So we can achieve the post-collision vector by just rotating the
-		// original vector by theta. But what in what direction? And what about
-		// the original rotation that we did? Ignore the original because fuck
-		// it, end of the day we just need to rotate the vector in a random
-		// direction by theta since any direction is equally possible, assuming
-		// the species the impurity is colliding with is Maxwellian (which we
-		// do assume here).
-		/*
-		std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
-			<< ", " << imp.get_vz() << '\n';
-		std::cout << "imp_v = " << calc_imp_vel(imp) << '\n';
-		std::cout << "arg = " << (imp_v - imp_dv) / imp_v << '\n';
-		double defl_ang {std::acos((imp_v - imp_dv) / imp_v)};
-		std::cout << "defl_ang = " << defl_ang << '\n';
-		rotate_imp(imp, defl_ang);
-		std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
-			<< ", " << imp.get_vz() << '\n';
-		std::cout << "imp_v = " << calc_imp_vel(imp) << '\n';
-		*/
-
-	}
-
-	/*
-	void collision_step(Impurity::Impurity& imp, 
-		const double te, const double ti, const double ne, 
-		double imp_time_step)
-	{
-
-		//std::cout << "=============================\n";
-		// Load some input options up front
-		double me {Input::get_opt_dbl(Input::gkyl_elec_mass_amu) 
-			* Constants::amu_to_kg};
-		double mi {Input::get_opt_dbl(Input::gkyl_ion_mass_amu)
-			* Constants::amu_to_kg};
-
-		// First get the reduced masses for each collision option. Right now 
-		// this is specific to collisions with electrons and an ion species
-		double red_mass_ze = calc_reduced_mass(imp.get_mass(), me);
-		double red_mass_zi = calc_reduced_mass(imp.get_mass(), mi);
-
-		// Then calculate the Debye length. Only collisions within a radius 
-		// of this are considered.
-		double lambda_debye {calc_debye_length(te, ne)};
-		//std::cout << "lambda_debye = " << lambda_debye << '\n';
-
-		// Sample a large number of different electron and ion velocites from
-		// a Maxwellian distribution centered on Te, Ti. The algoritm returns
-		// two numbers at a time.
-		int imp_coll_num {Input::get_opt_int(Input::imp_coll_num)};
-
-		// Calculate average ion velocity. We don't really have the standard 
-		// deviation of the the ion velocity, so we're hardcoding it as avg/4.
-		// This could certainly be improved in the future. Multiplying by
-		// ev_to_j converts eV --> Joules.
-		double avg_ion_vel {std::sqrt(2.0 * ti * Constants::ev_to_j / mi)};
-		double std_ion_vel {avg_ion_vel / 4.0};
-		std::vector<double> ion_vels {generate_random_vels(avg_ion_vel, 
-			std_ion_vel, imp_coll_num)};
-		//std::cout << "avg_ion_vel = " << avg_ion_vel << '\n';
-
-		// Likewise for electron velocity.
-		double avg_elec_vel {std::sqrt(2.0 * te * Constants::ev_to_j / me)};
-		double std_elec_vel {avg_elec_vel / 4.0};
-		std::vector<double> elec_vels {generate_random_vels(avg_elec_vel, 
-			std_elec_vel, imp_coll_num)};
-		//std::cout << "avg_elec_vel = " << avg_elec_vel << '\n';
-
-		// Then calculate the corresponding center of mass velocities. This
-		// needs the impurity velocity. We are reusing ion_vels and elec_vels
-		// to save some time.
-		double vz {calc_imp_vel(imp)};
-		//double vz {2 * te * Constants::ev_to_j / imp.get_mass()};
-		//std::cout << "vz = " << vz << '\n';
-		//for (std::size_t i {}; i < ion_vels.size(); ++i)
-		//{
-		//	ion_vels[i] = std::sqrt(vz * vz + ion_vels[i] * ion_vels[i]);
-		//}
-		//for (std::size_t i {}; i < elec_vels.size(); ++i)
-		//{
-		//	elec_vels[i] = std::sqrt(vz * vz + elec_vels[i] * elec_vels[i]);
-		//}
-		std::vector<double> ion_com_vels {generate_com_vels(imp, ion_vels)};
-		std::vector<double> elec_com_vels {generate_com_vels(imp, elec_vels)};
-
-		// Genarate a random number of impact parameters (b) from a 1/r
-		// distribution between some specified bmin and the Debye length.
-		// bmin just needs to be artbitrarily small, so right now it is 
-		// hardcoded as 1e-10 m. 
-		double bmin {1e-10};
-		std::vector<double> ion_b {generate_impact_param(bmin, 
-			lambda_debye, imp_coll_num)}; 
-		std::vector<double> elec_b {generate_impact_param(bmin, 
-			lambda_debye, imp_coll_num)}; 
-		
-		// Now calculate a vector containing all the deflection angles. The
-		// highest fidelity approach would be to see how many total ion/
-		// electron pairs the impurity would encounter and then calculate that
-		// many mini-deflection angles. This would just take too long, so 
-		// instead we calculate a smaller number of deflection (imp_coll_num),
-		// enough to generate good statistics, and then artifically scale it
-		// up to the total number of particles by multiplying to the total
-		// deflection angle after imp_coll_num collisions by real_num_coll /
-		// imp_coll_num. 
-
-		// Deflection frequency for elec-imp collisions (radians/s)
-		double elec_imp_freq {calc_defl_freq(red_mass_ze, elec_com_vels, elec_b, 
-			Constants::charge_e, -imp.get_charge() * Constants::charge_e,
-			lambda_debye, vz, imp_time_step, te, ne)};
-		//std::cout << "elec_imp_ang = " << elec_imp_ang << '\n';
-
-		// Deflection frequency for ion-imp collisions (radians/s). Assuming 
-		// singly charged ions here, though the function is general and can 
-		// handle other charge states if that's needed.
-		double ion_imp_freq {calc_defl_freq(red_mass_zi, ion_com_vels, ion_b, 
-			-Constants::charge_e, -imp.get_charge() * Constants::charge_e,
-			lambda_debye, vz, imp_time_step, te, ne)};
-		//std::cout << "ion_imp_ang = " << ion_imp_ang << '\n';
-
-		// The total deflection angle is the sum of these frequencies times
-		// the impurity time step.
-		double tot_defl_ang {(elec_imp_freq + ion_imp_freq) * imp_time_step};
-
-		// See how we compare with theory.
-		compare_theory_90_zi(ion_imp_freq, ne, te * Constants::ev_to_j, 
-			ti * Constants::ev_to_j, vz, red_mass_zi, 
-			imp.get_mass(), mi, imp.get_charge() * Constants::ev_to_j, 
-			Constants::ev_to_j);
-		
-		// At this point we have a deflection angle for an arbitrary 
-		// imp_coll_num number of collisions. Over this timestep, the impurity
-		// likely encounters many more collisions though. So to estimate it
-		// without setting imp_coll_num to crazy large numbers, calculate by
-		// what factor the real number of collisions is larger by, and multiply
-		// the angle we have by that. 
 	
-		// Calculate how many electron/ion pairs the impurity "sees" in the
-		// Debye cylinder corresponding to the impurity's distance traveled
-		// during the time step (dist = vz * imp_time_step). 
-		//double n_debye_cyl {Constants::pi * Constants::eps0 * te 
-		//	* Constants::ev_to_j * imp_time_step * vz / (Constants::charge_e 
-		//	* Constants::charge_e)};
-		//std::cout << "n_debye_cyl = " << n_debye_cyl << '\n';
+		// Just a temporary way to choose between inelastic (true) or elastic
+		// (false) collisions.
+		if (true)
+		{
+			//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
+			//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
+			//	<< ", " << imp.get_vz() << '\n';
+			imp.set_vx(imp.get_vx() * mom_loss_frac); 
+			imp.set_vy(imp.get_vy() * mom_loss_frac); 
+			imp.set_vz(imp.get_vz() * mom_loss_frac); 
+			//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
+			//	<< ", " << imp.get_vz() << '\n';
+		}
 
-		//double tot_defl_ang {(n_debye_cyl / static_cast<double>(imp_coll_num)) 
-		//	* (elec_imp_ang + ion_imp_ang)};	
-		//std::cout << "tot_defl_ang = " << tot_defl_ang << '\n';
-
-		// Now modify the impurity ion's trajectory by tot_defl_ang.
-		//std::cout << "imp velocity\n";
-		//std::cout << imp.get_vx() << ", " << imp.get_vy() << ", " 
-		//	<< imp.get_vz() << '\n';
-		rotate_imp(imp, tot_defl_ang);
-		//std::cout << imp.get_vx() << ", " << imp.get_vy() << ", " 
-		//	<< imp.get_vz() << '\n';
-
+		// This gives weird results, probably remove eventually. 
+		else
+		{
+			// Inelastic approach. The axes are rotated by some unknown angle 
+			// so 
+			// that the initial velocity lies along x. This was already done/
+			// impied in the previous steps, just stating here that it happened.
+			// Then before/after looks like:
+			// Before: v0 = (v0x,   0,   0)
+			// After:  v1 = (v1x, v1y, v1z)
+			// The calculated imp_dv is the velocity (really momentum, but 
+			// mass is
+			// constant so we can just talk velocities) loss over this time 
+			// step
+			// **in the direction of the vector**. So we can rewrite v1 as:
+			//   v1 = (v0x - dv, v1y, v1z)
+			// The angle between the vector is the dot product:
+			//   v0 * v1 = |v0||v1|cos(theta) = v0x * v1x 
+			// This is an inelastic collision approximation, so |v0| = |v1| 
+			// = v0x^2
+			// thus:
+			//   cos(theta) = v1x / v0x = (v0x - dv) / v0x
+			// So we can achieve the post-collision vector by just rotating the
+			// original vector by theta. But what in what direction? And what 
+			// about
+			// the original rotation that we did? Ignore the original because 
+			// fuck
+			// it, end of the day we just need to rotate the vector in a random
+			// direction by theta since any direction is equally possible, 
+			// assuming
+			// the species the impurity is colliding with is Maxwellian (which we
+			// do assume here).
+			//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
+			//	<< ", " << imp.get_vz() << '\n';
+			double defl_ang {std::acos(mom_loss_frac)};
+			//std::cout << "defl_ang = " << defl_ang << '\n';
+			rotate_imp(imp, defl_ang);
+			//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
+			//	<< ", " << imp.get_vz() << '\n';
+		}
 	}
-	*/
 }

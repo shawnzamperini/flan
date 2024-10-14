@@ -188,6 +188,13 @@ namespace Impurity
 		// constant, we can add it at the end and save a floating point
 		// operation.
 		imp_stats.add_weights(tidx, xidx, yidx, zidx, imp.get_weight());
+
+		// Add each velocity component to the running sum for this location
+		if (imp_stats.get_vel_stats())
+		{
+			imp_stats.add_vels(tidx, xidx, yidx, zidx, imp.get_vx(), 
+				imp.get_vy(), imp.get_vz());
+		}
 	}
 
 	bool check_boundary(const Background::Background& bkg, Impurity& imp)
@@ -470,9 +477,14 @@ namespace Impurity
 	Statistics follow_impurities(Background::Background& bkg)
 	{
 		// Initialize particle statistics vectors, all contained within a
-		// Statistics object.
+		// Statistics object. Option to control if the three velocity arrays
+		// are allocated (to save memory).
+		bool imp_vel_stats {false};
+		std::string imp_vel_stats_str 
+			{Input::get_opt_str(Input::imp_vel_stats)};
+		if (imp_vel_stats_str == "yes") imp_vel_stats = true;
 		Statistics imp_stats {bkg.get_dim1(), bkg.get_dim2(), 
-			bkg.get_dim3(), bkg.get_dim4()};
+			bkg.get_dim3(), bkg.get_dim4(), imp_vel_stats};
 
 		// Load OpenADAS data needed for ionization/recombination rates. 
 		std::string_view openadas_root {Input::get_opt_str(
@@ -500,6 +512,7 @@ namespace Impurity
 		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step)};
 		imp_stats.calc_density(bkg, imp_num, 
 			imp_source_scale_fact * imp_time_step);
+		if (imp_stats.get_vel_stats()) imp_stats.calc_vels();
 		
 		return imp_stats;
 

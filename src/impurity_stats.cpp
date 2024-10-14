@@ -31,7 +31,7 @@ namespace Impurity
 	* Zero-initializes the member Vector4D's.
 	*/
 	Statistics::Statistics(const int dim1, const int dim2, const int dim3, 
-		const int dim4)
+		const int dim4, const bool vel_stats)
 		: m_dim1 {dim1}
 		, m_dim2 {dim2}
 		, m_dim3 {dim3}
@@ -39,7 +39,17 @@ namespace Impurity
 		, m_counts (Vectors::Vector4D<int> {dim1, dim2, dim3, dim4})
 		, m_weights (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
 		, m_density (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
-	{}
+		, m_vel_stats (vel_stats)
+	{
+		// These aren't always needed, can cut back on memory usage by not
+		// including them by default.
+		if (m_vel_stats)
+		{
+			m_vx = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
+			m_vy = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
+			m_vz = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
+		}
+	}
 
 	/**
 	* @brief Accessor for counts data
@@ -69,6 +79,43 @@ namespace Impurity
 	Vectors::Vector4D<double>& Statistics::get_density() {return m_density;}
 
 	/**
+	* @brief Accessor for x velocity data
+	* @return Vector4D<double>
+	* @sa calc_vels()
+	*
+	* calc_vels() is used to turn the data in this into an actual velocity.
+	* Before doing that it's just a collection of Monte Carlo type values.
+	*/
+	Vectors::Vector4D<double>& Statistics::get_vx() {return m_vx;}
+
+	/**
+	* @brief Accessor for y velocity data
+	* @return Vector4D<double>
+	* @sa calc_vels()
+	*
+	* calc_vels() is used to turn the data in this into an actual velocity.
+	* Before doing that it's just a collection of Monte Carlo type values.
+	*/
+	Vectors::Vector4D<double>& Statistics::get_vy() {return m_vy;}
+
+	/**
+	* @brief Accessor for z velocity data
+	* @return Vector4D<double>
+	* @sa calc_vels()
+	*
+	* calc_vels() is used to turn the data in this into an actual velocity.
+	* Before doing that it's just a collection of Monte Carlo type values.
+	*/
+	Vectors::Vector4D<double>& Statistics::get_vz() {return m_vz;}
+
+	/**
+	* @brief Accessor for if velocity stats are being tracked
+	* @return Returns boolean true if velocity stats are being tracked, false
+	* if not.
+	*/
+	bool Statistics::get_vel_stats() {return m_vel_stats;}
+
+	/**
 	* @brief Overload + to add two Statistics together
 	* @param other A Statistics object
 	* @return Statistics object with the summed data
@@ -81,6 +128,9 @@ namespace Impurity
 		Statistics ret_stats {m_dim1, m_dim2, m_dim3, m_dim4};
 		ret_stats.m_counts = m_counts + other.m_counts;
 		ret_stats.m_weights = m_weights + other.m_weights;
+		ret_stats.m_vx = m_vx + other.m_vx;
+		ret_stats.m_vy = m_vy + other.m_vy;
+		ret_stats.m_vz = m_vz + other.m_vz;
 
 		return ret_stats;
 	}
@@ -93,7 +143,8 @@ namespace Impurity
 	* @param zidx z index
 	* @param value Number to increment by (usually just 1)
 	*/
-	void Statistics::add_counts(const int tidx, const int xidx, const int yidx, 
+	void Statistics::add_counts(const int tidx, const int xidx, 
+		const int yidx, 
 		const int zidx, const int value)
 	{
 		m_counts(tidx, xidx, yidx, zidx) += value;
@@ -107,10 +158,22 @@ namespace Impurity
 	* @param zidx z index
 	* @param value Weight to add to the cell
 	*/
-	void Statistics::add_weights(const int tidx, const int xidx, const int yidx,
-		const int zidx, const int value)
+	void Statistics::add_weights(const int tidx, const int xidx, 
+		const int yidx, const int zidx, const int value)
 	{
 		m_weights(tidx, xidx, yidx, zidx) += value;
+	}
+
+	/**
+	*
+	*/
+	void Statistics::add_vels(const int tidx, const int xidx, const int yidx,
+		const int zidx, const double vx, const double vy, const double vz)
+	{
+		// Add velocities to the running total at each cell location
+		m_vx(tidx, xidx, yidx, zidx) += vx;
+		m_vy(tidx, xidx, yidx, zidx) += vy;
+		m_vz(tidx, xidx, yidx, zidx) += vz;
 	}
 
 	/**
@@ -147,7 +210,7 @@ namespace Impurity
 			double dz {bkg.get_grid_z()[l+1] - bkg.get_grid_z()[l]};
 
 			// Normalize each weight value by the volume and total number of
-			// partciles launched. This goes from units of (s) to (s/m3). 
+			// particles launched. This goes from units of (s) to (s/m3). 
 			m_density(i,j,k,l) = m_weights(i,j,k,l) / (dx * dy * dz) 
 				/ tot_imp_num * imp_source_scale_fact;
 		}
@@ -155,5 +218,40 @@ namespace Impurity
 		}	
 		}
 
+	}
+	
+	/**
+	* @brief Calculate the average velocity in each cell
+	*/
+	void Statistics::calc_vels()
+	{
+		if (!m_vel_stats)
+		{
+			std::cerr << "Error! Cannot calculate average impurity velocities"
+				<< " if velocity tracking is off. Set imp_vel_stats to yes if"
+				<< " velocity tracking is desired.\n";
+		}
+		else
+		{
+			// Need to loop through the entire Vector4D. Unconventional 
+			// indentation here just to keep it clean.
+			for (int i {}; i < m_dim1; ++i)
+			{
+			for (int j {}; j < m_dim2; ++j)
+			{
+			for (int k {}; k < m_dim3; ++k)
+			{
+			for (int l {}; l < m_dim4; ++l)
+			{
+				// Convert each velocity sum in each cell to an average velocity
+				// by dividing it by the number of counts.
+				m_vx(i,j,k,l) /= m_counts(i,j,k,l);
+				m_vy(i,j,k,l) /= m_counts(i,j,k,l);
+				m_vz(i,j,k,l) /= m_counts(i,j,k,l);
+			}
+			}
+			}	
+			}
+		}
 	}
 }

@@ -26,17 +26,25 @@ namespace Impurity
 		Vectors::Vector4D<int> m_counts {};
 		Vectors::Vector4D<double> m_weights {};
 		Vectors::Vector4D<double> m_density {};
+		Vectors::Vector4D<double> m_vx {};
+		Vectors::Vector4D<double> m_vy {};
+		Vectors::Vector4D<double> m_vz {};
+		bool m_vel_stats {};
 
 	public:
 		
 		// Constructor
 		Statistics(const int dim1, const int dim2, const int dim3, 
-			const int dim4);
+			const int dim4, const bool vel_stats = false);
 		
 		// Accessors
 		Vectors::Vector4D<int>& get_counts();
 		Vectors::Vector4D<double>& get_weights();
 		Vectors::Vector4D<double>& get_density();
+		Vectors::Vector4D<double>& get_vx();
+		Vectors::Vector4D<double>& get_vy();
+		Vectors::Vector4D<double>& get_vz();
+		bool get_vel_stats();
 
 		// Overload of + to add counts and weights together, returned as a 
 		// new Statistics object.
@@ -50,10 +58,18 @@ namespace Impurity
 		void add_weights(const int tidx, const int xidx, const int yidx, 
 			const int zidx, const int value = 1.0);
 
+		// Function add each velocity component to the corresponding array
+		// location
+		void add_vels(const int tidx, const int xidx, const int yidx,
+			const int zidx, const double vx, const double vy, const double vz);
+
 		// Calculate the impurity density using the data stored in counts and 
 		// weights.
 		void calc_density(const Background::Background& bkg, 
 			const int tot_imp_num, const double imp_source_scale_fact = 1.0);
+
+		// Calculate the average velocity in each cell. 
+		void calc_vels();
 	};
 
 }
