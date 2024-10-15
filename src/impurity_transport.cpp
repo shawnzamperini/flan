@@ -143,7 +143,7 @@ namespace Impurity
 		const int yidx, const int zidx)
 	{
 		// Impurity's charge
-		double imp_q {imp.get_charge() * Constants::charge_e};
+		double imp_q {imp.get_charge() * -Constants::charge_e};
 
 		//std::cout << "Ex, Ey, Ez = " << bkg.get_ex()(tidx, xidx, yidx, zidx)
 		//	<< bkg.get_ey()(tidx, xidx, yidx, zidx) 
@@ -339,11 +339,11 @@ namespace Impurity
 			int yidx {get_nearest_cell_index(bkg.get_grid_y(), imp.get_y())};
 			int zidx {get_nearest_cell_index(bkg.get_grid_z(), imp.get_z())};
 
-			// Update particle velocity from the Lorentz force
-			lorentz_update(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
-
 			// Update statistics
 			record_stats(imp_stats, imp, tidx, xidx, yidx, zidx);
+
+			// Update particle velocity from the Lorentz force
+			lorentz_update(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
 
 			// Check for a collision
 			if (imp_coll_on)
@@ -510,9 +510,14 @@ namespace Impurity
 		double imp_source_scale_fact {
 			Input::get_opt_dbl(Input::imp_source_scale_fact)};
 		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step)};
+		std::cout << "  Density...\n";
 		imp_stats.calc_density(bkg, imp_num, 
 			imp_source_scale_fact * imp_time_step);
-		if (imp_stats.get_vel_stats()) imp_stats.calc_vels();
+		if (imp_stats.get_vel_stats())
+		{
+			std::cout << "  Velocity...\n";
+			imp_stats.calc_vels();
+		}
 		
 		return imp_stats;
 

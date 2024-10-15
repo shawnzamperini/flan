@@ -221,7 +221,7 @@ namespace SaveResults
 
 			// Impurity average z velocity
 			desc = "impurity z velocity";
-			save_vector_4d(nc_file, imp_stats.get_vx(), "imp_vz", 
+			save_vector_4d(nc_file, imp_stats.get_vz(), "imp_vz", 
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 		}
 	}

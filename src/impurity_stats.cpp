@@ -39,16 +39,19 @@ namespace Impurity
 		, m_counts (Vectors::Vector4D<int> {dim1, dim2, dim3, dim4})
 		, m_weights (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
 		, m_density (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
-		, m_vel_stats (vel_stats)
+		, m_vx (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
+		, m_vel_stats {vel_stats}
 	{
+		// Issue: This code seems to not be correct, not sure how yet...
 		// These aren't always needed, can cut back on memory usage by not
 		// including them by default.
-		if (m_vel_stats)
-		{
-			m_vx = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
-			m_vy = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
-			m_vz = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
-		}
+		//if (m_vel_stats)
+		//{
+		//	std::cout << "Allocating m_vx...\n";
+		//	m_vx = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
+			//m_vy = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
+			//m_vz = (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4});
+		//}
 	}
 
 	/**
@@ -125,12 +128,12 @@ namespace Impurity
 	*/
 	Statistics Statistics::operator+ (const Statistics& other) const
 	{
-		Statistics ret_stats {m_dim1, m_dim2, m_dim3, m_dim4};
+		Statistics ret_stats {m_dim1, m_dim2, m_dim3, m_dim4, m_vel_stats};
 		ret_stats.m_counts = m_counts + other.m_counts;
 		ret_stats.m_weights = m_weights + other.m_weights;
 		ret_stats.m_vx = m_vx + other.m_vx;
-		ret_stats.m_vy = m_vy + other.m_vy;
-		ret_stats.m_vz = m_vz + other.m_vz;
+		//ret_stats.m_vy = m_vy + other.m_vy;
+		//ret_stats.m_vz = m_vz + other.m_vz;
 
 		return ret_stats;
 	}
@@ -172,8 +175,8 @@ namespace Impurity
 	{
 		// Add velocities to the running total at each cell location
 		m_vx(tidx, xidx, yidx, zidx) += vx;
-		m_vy(tidx, xidx, yidx, zidx) += vy;
-		m_vz(tidx, xidx, yidx, zidx) += vz;
+		//m_vy(tidx, xidx, yidx, zidx) += vy;
+		//m_vz(tidx, xidx, yidx, zidx) += vz;
 	}
 
 	/**
@@ -245,9 +248,19 @@ namespace Impurity
 			{
 				// Convert each velocity sum in each cell to an average velocity
 				// by dividing it by the number of counts.
-				m_vx(i,j,k,l) /= m_counts(i,j,k,l);
-				m_vy(i,j,k,l) /= m_counts(i,j,k,l);
-				m_vz(i,j,k,l) /= m_counts(i,j,k,l);
+				int counts {m_counts(i,j,k,l)};
+				if (counts > 0)
+				{
+					m_vx(i,j,k,l) /= counts;
+					//m_vy(i,j,k,l) /= counts;
+					//m_vz(i,j,k,l) /= counts;
+				}
+				else
+				{
+					m_vx(i,j,k,l) = 0.0;
+					//m_vy(i,j,k,l) = 0.0;
+					//m_vz(i,j,k,l) = 0.0;
+				}
 			}
 			}
 			}	
