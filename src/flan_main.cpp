@@ -14,10 +14,12 @@
 #include "save_results.h"
 #include "background.h"
 #include "impurity_stats.h"
+#include "config.h"
 
 int main(int argc, char *argv[])
 {
-	std::cout << "Welcome to Flan vX.X\n";
+	// Load version info from config.h file
+	std::cout << "Welcome to Flan v" << PROJECT_VERSION << "\n";
 
 	// Read in input options, overwriting all the default values.
 	if (argc != 2)
