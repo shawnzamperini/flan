@@ -20,7 +20,7 @@ A publication detailing Flan is anticipated in 2025.
 
 ## Dependencies
 
-The build system should handle installing all the dependencies, but they are: NetCDF, zlib, HDF5. Anaconda is also required, as the interface to Gkeyll (more specifically, the post-processing Gkeyll suite [postgkyl](https://github.com/ammarhakim/postgkyl/tree/main)) is written in python. A conda environment is automatically setup to handle this. 
+CMake is used as a build system. The `mkdeps` shell script should handle installing all the dependencies, but they are: NetCDF, zlib, HDF5. Anaconda is also required, as the interface to Gkeyll (more specifically, the post-processing Gkeyll suite [postgkyl](https://github.com/ammarhakim/postgkyl/tree/main)) is written in python. A conda environment is automatically setup by `mkdeps` to handle this. 
 
 ## Installing Flan
 
@@ -33,7 +33,7 @@ Before installing flan, ensure you have a working installation of Anaconda on yo
    - If you changed `FLANSOFT` above, modify the `cmake` command with `-DFLANSOFT=/path/to/flansoft`
 3. Make Flan: `make`
 
-This process installs the flan executable in the `build` directory. You can call it using its full path or add an alias to its location. 
+This process installs the `flan` executable in the `build` directory and activates the `(flan)` conda environment. You can call `flan` using its full path or add an alias to its location, but it must be ran within the `(flan)` conda environment! 
 
 ## Regression Cases
 
