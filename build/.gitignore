@@ -1,0 +1,5 @@
+# Ignore everything in this directory since it is a build directory
+*
+
+# Don't ignore this file though
+!.gitignore

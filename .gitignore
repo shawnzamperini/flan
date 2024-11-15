@@ -3,8 +3,6 @@
 *.html
 .DS_Store
 *.vim
-build/*
-!build/
 python/__pycache__
 install-deps/adios*
 install-deps/boost*
