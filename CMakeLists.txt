@@ -3,11 +3,10 @@ cmake_minimum_required(VERSION 3.31)
 project(flan VERSION 0.1.0)
 
 # User must specify where the dependencies are stored via the FLANSOFT variable
-if(DEFINED FLANSOFT)
-	message(STATUS "FLANSOFT set to ${FLANSOFT}")
-else()
-	message(SEND_ERROR "FLANSOFT not set! Exiting...")
+if(NOT DEFINED FLANSOFT)
+	set(FLANSOFT $ENV{HOME}/flansoft)
 endif()
+message(STATUS "FLANSOFT set to ${FLANSOFT}")
 
 # Print out version and make configuration header file so version is accessible
 # within flan
