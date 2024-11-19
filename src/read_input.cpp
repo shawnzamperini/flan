@@ -56,6 +56,8 @@ namespace Input
 		new OptionInt{"imp_num",                       1},
 		new OptionDbl{"imp_xmin",                    0.0},
 		new OptionDbl{"imp_xmax",                    0.0},
+		new OptionStr{"imp_ystart_opt",   "single_value"},
+		new OptionDbl{"imp_ystart_val",              0.0},
 		new OptionStr{"imp_zstart_opt",   "single_value"},
 		new OptionDbl{"imp_zstart_val",              0.0},
 		new OptionStr{"imp_collisions",            "off"},
@@ -65,6 +67,8 @@ namespace Input
 		new OptionDbl{"imp_time_step",              1e-7},
 		new OptionDbl{"imp_source_scale_fact",		 1.0},
 		new OptionStr{"imp_vel_stats",             "off"},
+		new OptionDbl{"imp_xbound_buffer",		     0.0},
+		new OptionStr{"imp_iz_recomb",             "yes"},
 		new OptionStr{"openadas_root",       "undefined"},
 		new OptionInt{"openadas_year",                50}
 	};
@@ -94,6 +98,8 @@ namespace Input
 		if (input_str == "imp_num")                    return imp_num;
 		if (input_str == "imp_xmin")                   return imp_xmin;
 		if (input_str == "imp_xmax")                   return imp_xmax;
+		if (input_str == "imp_ystart_opt")             return imp_ystart_opt;
+		if (input_str == "imp_ystart_val")             return imp_ystart_val;
 		if (input_str == "imp_zstart_opt")             return imp_zstart_opt;
 		if (input_str == "imp_zstart_val")             return imp_zstart_val;
 		if (input_str == "imp_collisions")             return imp_collisions;
@@ -103,6 +109,8 @@ namespace Input
 		if (input_str == "imp_time_step")              return imp_time_step;
 		if (input_str == "imp_source_scale_fact")      return imp_source_scale_fact;
 		if (input_str == "imp_vel_stats")              return imp_vel_stats;
+		if (input_str == "imp_xbound_buffer")          return imp_xbound_buffer;
+		if (input_str == "imp_iz_recomb")              return imp_iz_recomb;
 		if (input_str == "openadas_root")              return openadas_root;
 		if (input_str == "openadas_year")              return openadas_year;
 		else return -1;

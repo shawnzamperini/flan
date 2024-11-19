@@ -118,7 +118,8 @@ class FlanPlots:
 		return norm
 
 	def plot_frame_xy(self, data_name, frame, z0, showplot=True, 
-		cmap="inferno", norm_type="linear", vmin=None, vmax=None):
+		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
+		xlabel="x (m)", ylabel="y (m)", cbar_label=None):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -152,6 +153,9 @@ class FlanPlots:
 			print(e)
 			return None
 
+		# Time at frame, starting it at zero
+		time = self.nc["time"][frame] - self.nc["time"][0]
+
 		# Find closest z index to input z value
 		z_idx = self.closest_index(z, z0) 
 
@@ -176,9 +180,14 @@ class FlanPlots:
 			mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
 			
 			cbar = fig.colorbar(mesh, ax=ax1)
-			ax1.set_xlabel("x (m)", fontsize=g_fontsize)
-			ax1.set_ylabel("y (m)", fontsize=g_fontsize)
-			cbar.set_label(data_name, fontsize=g_fontsize)
+			ax1.set_aspect("equal")
+			ax1.set_title("{:.2f} us".format(time * 1e6))
+			ax1.set_xlabel(xlabel, fontsize=g_fontsize)
+			ax1.set_ylabel(ylabel, fontsize=g_fontsize)
+			if cbar_label is None:
+				cbar.set_label(data_name, fontsize=g_fontsize)
+			else:
+				cbar.set_label(cbar_label, fontsize=g_fontsize)
 
 			fig.tight_layout()
 			fig.show()
@@ -188,7 +197,8 @@ class FlanPlots:
 
 	def plot_frames_xy(self, data_name, frame_start, frame_end, z0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
-		vmin=None, vmax=None, save_path=None):
+		vmin=None, vmax=None, save_path=None, xlabel="x (m)", ylabel="y (m)",
+		cbar_label=None, rsep=0.0):
 		"""
 		Combine multiple plots from plot_frame_xy into an animation.
 		"""
@@ -240,12 +250,17 @@ class FlanPlots:
 		div = make_axes_locatable(ax1)
 		cax = div.append_axes("right", "5%", "5%")
 		norm = self.get_norm(data_xy, norm_type, vmin=vmin, vmax=vmax)
-		mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
+		mesh = ax1.pcolormesh(X-rsep, Y, data_xy.T, cmap=cmap, norm=norm)
 		cbar = fig.colorbar(mesh, cax=cax)
-		ax1.set_xlabel("x (m)", fontsize=g_fontsize)
-		ax1.set_ylabel("y (m)", fontsize=g_fontsize)
+		ax1.set_facecolor("grey")
+		ax1.set_aspect("equal")
+		ax1.set_xlabel(xlabel, fontsize=g_fontsize)
+		ax1.set_ylabel(ylabel, fontsize=g_fontsize)
 		ax1.set_title("Frame {}".format(frame_start), fontsize=g_fontsize)
-		cbar.set_label(data_name, fontsize=g_fontsize)
+		if cbar_label is None:
+			cbar.set_label(data_name, fontsize=g_fontsize)
+		else:
+			cbar.set_label(cbar_label, fontsize=g_fontsize)
 		fig.tight_layout()
 		fig.show()
 
@@ -257,13 +272,21 @@ class FlanPlots:
 			X, Y, data_xy = self.plot_frame_xy(data_name, frame_start + i, z0, 
 				showplot=False)
 
+			# Time at frame, starting it at zero
+			time = self.nc["time"][i] - self.nc["time"][0]
+				
 			norm = self.get_norm(data_xy, norm_type, vmin=vmin, vmax=vmax)
 			ax1.clear()
-			mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
-			ax1.set_title("Frame {}".format(frame_start+i), fontsize=g_fontsize)
+			mesh = ax1.pcolormesh(X-rsep, Y, data_xy.T, cmap=cmap, norm=norm)
+			ax1.set_title("{:.2f} us".format(time * 1e6))
+			ax1.set_xlabel(xlabel, fontsize=g_fontsize)
+			ax1.set_ylabel(ylabel, fontsize=g_fontsize)
 			cax.cla()
 			fig.colorbar(mesh, cax=cax)
-			cbar.set_label(data_name, fontsize=g_fontsize)
+			if cbar_label is None:
+				cbar.set_label(data_name, fontsize=g_fontsize)
+			else:
+				cbar.set_label(cbar_label, fontsize=g_fontsize)
 
 			# Update the plot with the data from this frame.
 			#ax1.clear()
@@ -281,7 +304,7 @@ class FlanPlots:
 		# If save_path is provided, save the file there as a gif. 
 		if (save_path is not None):
 			print("Saving animation...")
-			anim.save(save_path + ".gif", writer=PillowWriter(fps=30))
+			anim.save(save_path + ".gif", writer=PillowWriter(fps=15))
 
 			# Seems to be issues with this. Issue for another day I guess.
 			#writer = animation.FFMpegWriter(fps=10, extra_args=["-vf", 

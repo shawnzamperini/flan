@@ -35,6 +35,8 @@ namespace Input
 		imp_num,
 		imp_xmin,
 		imp_xmax,
+		imp_ystart_opt,
+		imp_ystart_val,
 		imp_zstart_opt,
 		imp_zstart_val,
 		imp_collisions,
@@ -44,6 +46,8 @@ namespace Input
 		imp_time_step,
 		imp_source_scale_fact,
 		imp_vel_stats,
+		imp_xbound_buffer,
+		imp_iz_recomb,
 		openadas_root,
 		openadas_year,
 		max_input_opts,  // Always leave this at the end of Names

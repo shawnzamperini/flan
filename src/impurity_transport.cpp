@@ -39,9 +39,23 @@ namespace Impurity
 		return Random::get(xmin, xmax);
 	}
 
-	double get_birth_y(const Background::Background& bkg)
+	double get_birth_y(const Background::Background& bkg, 
+		const int imp_ystart_opt_int)
 	{
-		return Random::get(bkg.get_y_min(), bkg.get_y_max());
+		// Start at specific point
+		if (imp_ystart_opt_int == 0)
+		{
+			return {Input::get_opt_dbl(Input::imp_ystart_val)};
+		}
+
+		// Start between a range (here defaults to the full y-width of the 
+		// simulation volume).
+		else if (imp_ystart_opt_int == 1)
+		{
+			return Random::get(bkg.get_y_min(), bkg.get_y_max());
+		}
+		
+		return 0.0;
 	}
 
 	double get_birth_z(const Background::Background& bkg)
@@ -56,7 +70,8 @@ namespace Impurity
 		return imp_charge;
 	}
 
-	Impurity create_primary_imp(const Background::Background& bkg)
+	Impurity create_primary_imp(const Background::Background& bkg, 
+		const int imp_ystart_opt_int)
 	{
 		// Load input options as local variables for cleaner code.
 		double imp_mass_amu {Input::get_opt_dbl(Input::imp_mass_amu)};
@@ -65,7 +80,7 @@ namespace Impurity
 		// Starting t,x,y,z for the impurity
 		double t_imp = get_birth_t(bkg);
 		double x_imp = get_birth_x(bkg);
-		double y_imp = get_birth_y(bkg);
+		double y_imp = get_birth_y(bkg, imp_ystart_opt_int);
 		double z_imp = get_birth_z(bkg);
 
 		// Assume starting at rest, but if this ever changes do it here
@@ -204,12 +219,16 @@ namespace Impurity
 		if (imp.get_t() > bkg.get_t_max()) return false; 
 
 		// The x boundaries are treated as absorbing. Could certianly add
-		// different options here in the future.
-		if (imp.get_x() <= bkg.get_grid_x()[0])
+		// different options here in the future. There can be Gkeyll
+		// artifact near the x bounds, so there is an additional option to 
+		// consider anything within imp_xbound_buffer as absorbed.
+		const double imp_xbound_buffer {Input::get_opt_dbl(
+			Input::imp_xbound_buffer)};
+		if (imp.get_x() <= bkg.get_grid_x()[0] + imp_xbound_buffer)
 		{
 			return false;
 		}
-		if (imp.get_x() >= bkg.get_grid_x().back()) 
+		if (imp.get_x() >= bkg.get_grid_x().back() - imp_xbound_buffer) 
 		{
 			return false;
 		}
@@ -318,19 +337,19 @@ namespace Impurity
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
-		int& recomb_warnings, const bool imp_coll_on)
+		int& recomb_warnings, const bool imp_coll_on, 
+		const bool imp_iz_recomb_on)
 	{
 		// Timestep of impurity transport simulation
 		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step)};
 
+		// For debugging purposes (only works with one thread)
+		//static int imp_id {0};
+		//imp_id++;
+
 		bool continue_following {true};
 		while (continue_following)
 		{
-			// Debugging
-			//std::cout << "imp q, t, x, y, z: " << imp.get_charge() << ", "
-			//	<< imp.get_t() << ", " << imp.get_x() << ", " << imp.get_y() 
-			//	<< ", " << imp.get_z() << '\n';
-
 			// Get nearest time index
 			int tidx {get_nearest_index(bkg.get_times(), imp.get_t())};
 
@@ -338,6 +357,12 @@ namespace Impurity
 			int xidx {get_nearest_cell_index(bkg.get_grid_x(), imp.get_x())};
 			int yidx {get_nearest_cell_index(bkg.get_grid_y(), imp.get_y())};
 			int zidx {get_nearest_cell_index(bkg.get_grid_z(), imp.get_z())};
+			
+			// Debugging
+			//std::cout << "id, q, t, tidx, x, y, z: " << imp_id << ", " 
+			//	<< imp.get_charge() << ", "<< imp.get_t() << ", " << tidx 
+			//	<< ", " << imp.get_x() << ", " << imp.get_y() 
+			//	<< ", " << imp.get_z() << '\n';
 
 			// Update statistics
 			record_stats(imp_stats, imp, tidx, xidx, yidx, zidx);
@@ -352,8 +377,11 @@ namespace Impurity
 			}
 
 			// Check for ionization or recombination
-			ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
-				xidx, yidx, zidx, ioniz_warnings, recomb_warnings);
+			if (imp_iz_recomb_on)
+			{
+				ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, 
+					tidx, xidx, yidx, zidx, ioniz_warnings, recomb_warnings);
+			}
 
 			// Last thing is move particle to a new location
 			step(imp, imp_time_step);
@@ -390,12 +418,27 @@ namespace Impurity
 		// Load input options as local variables for cleaner code.
 		int imp_num {Input::get_opt_int(Input::imp_num)};
 		std::string imp_collisions {Input::get_opt_str(Input::imp_collisions)};
+		std::string imp_iz_recomb {Input::get_opt_str(Input::imp_iz_recomb)};
+		std::string imp_ystart_opt {Input::get_opt_str(Input::imp_ystart_opt)};
 
-		// Use an internal control boolean variable instead of a string to 
-		// check if collisions are on. Faster than checking against a string
-		// each loop.
+		// Use internal control variables for string input options. It's better
+		// to pass these as booleans or integers to avoid repeatedly checking
+		// the value of a string.
+		// 1. Boolean for collisions
 		bool imp_coll_on {false};
 		if (imp_collisions == "yes") imp_coll_on = true;
+
+		// 2. Boolean for ionization/recombination
+		bool imp_iz_recomb_on {false};
+		if (imp_iz_recomb == "yes") imp_iz_recomb_on = true;
+
+		// 3. Integer for y start option
+		int imp_ystart_opt_int {0};
+		if (imp_ystart_opt == "single_value") imp_ystart_opt_int = 0;
+		else if (imp_ystart_opt == "range") imp_ystart_opt_int = 1;
+		else std::cerr << "Error: Unrecognized value for imp_ystart_opt (" << 
+			imp_ystart_opt << "). Valid options are: 'single_value' or " <<
+			"'range'.\n";
 
 		// https://stackoverflow.com/questions/29633531/user-defined-
 		// reduction-on-vector-of-varying-size/29660244#29660244
@@ -403,7 +446,14 @@ namespace Impurity
 			omp_out = omp_out + omp_in) \
 			initializer(omp_priv(omp_orig))
 
+		// Startup message. Create parallel region to see how many threads it
+		// will generate in the following loop.
 		std::cout << "Starting particle following...\n";
+		#pragma omp parallel
+		{
+			if (omp_get_thread_num() == 0) std::cout << " Number of threads: " 
+				<< omp_get_num_threads() << '\n';
+		}
 
 		// Print progress this many times
 		constexpr int prog_interval {10};
@@ -422,7 +472,7 @@ namespace Impurity
 		{
 
 			// Create starting impurity ion
-			Impurity primary_imp = create_primary_imp(bkg);
+			Impurity primary_imp = create_primary_imp(bkg, imp_ystart_opt_int);
 			
 			// Each thread starts with one impurity ion, but it may end up 
 			// following more than that because that ion may split off another
@@ -441,7 +491,8 @@ namespace Impurity
 
 				// Logic for handling additional split impurities not here yet
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
-					ioniz_warnings, recomb_warnings, imp_coll_on);
+					ioniz_warnings, recomb_warnings, imp_coll_on, 
+					imp_iz_recomb_on);
 			}
 
 			// Print out progress at intervals set by prog_interval (i.e.,
