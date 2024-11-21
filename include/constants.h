@@ -23,5 +23,8 @@ namespace Constants
 
 	// Pi
 	inline constexpr double pi {3.14159};
+
+	// A numerically small value used for checking zero equivalence
+	inline constexpr double small {1.0e-50};
 }
 #endif

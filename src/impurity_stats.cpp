@@ -6,9 +6,13 @@
 
 #include <numeric>
 #include <vector>
+#include <cmath>
 
 #include "vectors.h"
 #include "impurity_stats.h"
+#include "impurity.h"
+#include "background.h"
+#include "constants.h"
 
 namespace Impurity
 {
@@ -40,6 +44,7 @@ namespace Impurity
 		, m_weights (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
 		, m_density (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
 		, m_vx (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
+		, m_gyrorad (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
 		, m_vel_stats {vel_stats}
 	{
 		// Issue: This code seems to not be correct, not sure how yet...
@@ -112,6 +117,16 @@ namespace Impurity
 	Vectors::Vector4D<double>& Statistics::get_vz() {return m_vz;}
 
 	/**
+	* @brief Accessor for gyroradius data
+	* @return Vector4D<double>
+	* @sa calc_gyrorad()
+	*
+	* calc_gyrorad() is used to turn the aggregated data into average
+	* gyroradius values at each location.
+	*/
+	Vectors::Vector4D<double>& Statistics::get_gyrorad() {return m_gyrorad;}
+
+	/**
 	* @brief Accessor for if velocity stats are being tracked
 	* @return Returns boolean true if velocity stats are being tracked, false
 	* if not.
@@ -134,6 +149,7 @@ namespace Impurity
 		ret_stats.m_vx = m_vx + other.m_vx;
 		//ret_stats.m_vy = m_vy + other.m_vy;
 		//ret_stats.m_vz = m_vz + other.m_vz;
+		ret_stats.m_gyrorad = m_gyrorad + other.m_gyrorad;
 
 		return ret_stats;
 	}
@@ -177,6 +193,33 @@ namespace Impurity
 		m_vx(tidx, xidx, yidx, zidx) += vx;
 		//m_vy(tidx, xidx, yidx, zidx) += vy;
 		//m_vz(tidx, xidx, yidx, zidx) += vz;
+	}
+
+	/**
+	* @brief Add gyroradius value for impurity to running total at given
+	* location.
+	* @param tidx Time index
+	* @param xidx x index
+	* @param yidx y index
+	* @param zidx z index
+	* @param imp Reference to Impurity object
+	* @param bkg Reference to Background object
+	*/
+	void Statistics::add_gyrorad(const int tidx, const int xidx, 
+		const int yidx, const int zidx, const Impurity& imp, 
+		const Background::Background& bkg)
+	{
+		// Calculate gyroradius and add it to the running total. Charge must
+		// be 1 or higher since neutrals do not gyrate. 
+		if (imp.get_charge() > 0)
+		{
+			const double vperp {sqrt(imp.get_vx()*imp.get_vx() 
+				+ imp.get_vy()*imp.get_vy())};
+			const double gyrorad {vperp * imp.get_mass() / 
+				(-imp.get_charge() * Constants::charge_e * 
+				bkg.get_b()(tidx, xidx, yidx, zidx))};
+			m_gyrorad(tidx, xidx, yidx, zidx) += gyrorad;
+		}
 	}
 
 	/**
@@ -265,6 +308,36 @@ namespace Impurity
 			}
 			}	
 			}
+		}
+	}
+
+	/**
+	* @brief Calculate the average gyroradius at each cell location
+	*/
+	void Statistics::calc_gyrorad()
+	{
+		// Average gyroradius is just the running sum divided by the number of
+		// counts in the cell.
+		for (int i {}; i < m_dim1; ++i)
+		{
+		for (int j {}; j < m_dim2; ++j)
+		{
+		for (int k {}; k < m_dim3; ++k)
+		{
+		for (int l {}; l < m_dim4; ++l)
+		{
+			int counts {m_counts(i,j,k,l)};
+			if (counts > 0)
+			{
+				m_gyrorad(i,j,k,l) /= counts;
+			}
+			else
+			{
+				m_gyrorad(i,j,k,l) = 0.0;
+			}
+		}
+		}
+		}	
 		}
 	}
 }

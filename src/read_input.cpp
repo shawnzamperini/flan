@@ -64,7 +64,9 @@ namespace Input
 		new OptionStr{"imp_var_reduct",            "off"},
 		new OptionDbl{"imp_var_reduct_freq",         0.1},
 		new OptionDbl{"imp_var_reduct_min_weight",   0.1},
+		new OptionStr{"imp_time_step_opt",    "constant"},
 		new OptionDbl{"imp_time_step",              1e-7},
+		new OptionDbl{"imp_time_step_min",         1e-12},
 		new OptionDbl{"imp_source_scale_fact",		 1.0},
 		new OptionStr{"imp_vel_stats",             "off"},
 		new OptionDbl{"imp_xbound_buffer",		     0.0},
@@ -106,7 +108,9 @@ namespace Input
 		if (input_str == "imp_var_reduct")             return imp_var_reduct;
 		if (input_str == "imp_var_reduct_freq")        return imp_var_reduct_freq;
 		if (input_str == "imp_var_reduct_min_weight")  return imp_var_reduct_min_weight;
+		if (input_str == "imp_time_step_opt")          return imp_time_step_opt;
 		if (input_str == "imp_time_step")              return imp_time_step;
+		if (input_str == "imp_time_step_min")          return imp_time_step_min;
 		if (input_str == "imp_source_scale_fact")      return imp_source_scale_fact;
 		if (input_str == "imp_vel_stats")              return imp_vel_stats;
 		if (input_str == "imp_xbound_buffer")          return imp_xbound_buffer;

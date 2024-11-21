@@ -213,12 +213,19 @@ namespace Collisions
 	void collision_update(Impurity::Impurity& imp, double te, double ti, 
 		double ne, double imp_time_step)
 	{
-		
+		// Not handling neutral collisions (this is an approximation I do not
+		// know if it is true or not, but it's common enough among codes). 
+		if (imp.get_charge() == 0) return;
+
 		//std::cout << "=== Collisions ===\n";
 
 		// Calculate impurity velocity
 		double imp_v {calc_imp_vel(imp)};
 		//std::cout << "imp_v = " << imp_v << '\n';
+
+		// If impurity is at rest there's nothing to be done so return. We'd
+		// get NaN's if we continued. 
+		if (imp_v < Constants::small) return;
 
 		// Load electron mass in kg. Calculate momentum loss frequency due to 
 		// impurity-electron collisions. Note that we are passing in as the
@@ -266,7 +273,7 @@ namespace Collisions
 		// After:  v1 = a * v0 = (a*vx0, a*vy0, a*vz0) = (vx1, vy1, vz1)
 		// Thus each component of the after-collision vector is:
 		// vx1 = a * vx0    and likewise for y and z.
-		// In theory this can be negative if dv > v. This would just mean the
+		// In theory this can be negative if dv < v. This would just mean the
 		// particle is turning around due to a collision I suppose. 
 		double mom_loss_frac {(imp_v + imp_dv) / imp_v};
 	
@@ -274,7 +281,7 @@ namespace Collisions
 		// (false) collisions.
 		if (true)
 		{
-			//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
+			std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
 			//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
 			//	<< ", " << imp.get_vz() << '\n';
 			imp.set_vx(imp.get_vx() * mom_loss_frac); 

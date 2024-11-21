@@ -151,7 +151,8 @@ namespace Impurity
 	* @param zidx Index in z array imp is at
 	*/
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
-		const int tidx, const int xidx, const int yidx, const int zidx);
+		const Background::Background& bkg, const int tidx, const int xidx, 
+		const int yidx, const int zidx);
 
 	/**
 	* @brief Check if an Impurity has encountered a boundary condition.

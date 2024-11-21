@@ -224,6 +224,11 @@ namespace SaveResults
 			save_vector_4d(nc_file, imp_stats.get_vz(), "imp_vz", 
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 		}
+		
+		// Gyroradius
+		desc = "average impurity gyroradius";
+		save_vector_4d(nc_file, imp_stats.get_gyrorad(), "imp_gyrorad", 
+			dim1, dim2, dim3, dim4, desc, "(m)");
 	}
 
 }

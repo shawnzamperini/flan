@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "vectors.h"
+#include "impurity.h"
 #include "background.h"
 
 namespace Impurity
@@ -29,6 +30,7 @@ namespace Impurity
 		Vectors::Vector4D<double> m_vx {};
 		Vectors::Vector4D<double> m_vy {};
 		Vectors::Vector4D<double> m_vz {};
+		Vectors::Vector4D<double> m_gyrorad {};
 		bool m_vel_stats {};
 
 	public:
@@ -44,6 +46,7 @@ namespace Impurity
 		Vectors::Vector4D<double>& get_vx();
 		Vectors::Vector4D<double>& get_vy();
 		Vectors::Vector4D<double>& get_vz();
+		Vectors::Vector4D<double>& get_gyrorad();
 		bool get_vel_stats();
 
 		// Overload of + to add counts and weights together, returned as a 
@@ -63,6 +66,12 @@ namespace Impurity
 		void add_vels(const int tidx, const int xidx, const int yidx,
 			const int zidx, const double vx, const double vy, const double vz);
 
+		// Function add the calculated gyroradius to the corresponding array
+		// location
+		void add_gyrorad(const int tidx, const int xidx, 
+			const int yidx, const int zidx, const Impurity& imp, 
+			const Background::Background& bkg);
+
 		// Calculate the impurity density using the data stored in counts and 
 		// weights.
 		void calc_density(const Background::Background& bkg, 
@@ -70,6 +79,9 @@ namespace Impurity
 
 		// Calculate the average velocity in each cell. 
 		void calc_vels();
+
+		// Calculate the average gyroradius. 
+		void calc_gyrorad();
 	};
 
 }
