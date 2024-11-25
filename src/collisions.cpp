@@ -12,6 +12,7 @@
 #include "read_input.h"
 #include "constants.h"
 #include "random.h"
+#include "background.h"
 
 namespace Collisions
 {
@@ -55,7 +56,7 @@ namespace Collisions
 		return vels;
 	}
 
-	double calc_imp_vel(Impurity::Impurity& imp)
+	double calc_imp_vel(const Impurity::Impurity& imp)
 	{
 		return std::sqrt(imp.get_vx() * imp.get_vx() 
 			+ imp.get_vy() * imp.get_vy() + imp.get_vz() * imp.get_vz());
@@ -210,6 +211,72 @@ namespace Collisions
 		return nu;
 	}
 
+	// Calculate a value for dt_coll, if needed. We use dt_coll as an
+	// in/out variable here because it is not gauranteed that any 
+	// restriction will be placed on the time step (e.g., if the particle is
+	// at rest we don't have anything to say here).
+	void set_var_time_step_coll(double& dt_coll, const Impurity::Impurity& imp,
+		const Background::Background& bkg, const int tidx, const int xidx, 
+		const int yidx, const int zidx)
+	{
+		// Calculate the momentum slowing down frequency. This would normally 
+		// be done in collision_update, but we need to know the frequency to
+		// calculate the time step so it gets a little mixed up.
+	
+		// Not handling neutral collisions (this is an approximation I do not
+		// know if it is true or not, but it's common enough among codes). 
+		if (imp.get_charge() == 0)
+		{
+			std::cerr << "Error! get_var_time_step_coll was called for a " 
+				<< "neutral. Neutral-impurity collisions are not considered."
+				<< " This is a programming error.\n";
+				return;
+		}
+
+		// Calculate impurity velocity
+		double imp_v {calc_imp_vel(imp)};
+
+		// If impurity is at rest there's nothing to be done so return. We'd
+		// get NaN's if we continued. 
+		if (imp_v < Constants::small) return;
+
+		// Load these into local variables since we pass them twice below.
+		const double te = bkg.get_te()(tidx, xidx, yidx, zidx);
+		const double ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
+		const double ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
+
+		// Load electron mass in kg. Calculate momentum loss frequency due to 
+		// impurity-electron collisions. Note that we are passing in as the
+		// correct units (J for temperatures, kg for masses and C for charges).
+		double me {Input::get_opt_dbl(Input::gkyl_elec_mass_amu) 
+			* Constants::amu_to_kg};
+		double nu_ze {calc_momentum_loss_freq(ne, te, ne, te, imp_v, 
+			imp.get_mass(), me, -imp.get_charge() * Constants::charge_e, 
+			Constants::charge_e)};
+
+		// Load ion mass in kg. Calculate momentum loss frequency due to 
+		// impurity-ion collisions. Assuming singly charged ions, but the 
+		// function is generalized to any charge. Just need to change what's
+		// passed in for q2 here if you want other charges. Also assuming
+		// quasi-neutrality and passing in ni=ne here. 
+		double mi {Input::get_opt_dbl(Input::gkyl_ion_mass_amu) 
+			* Constants::amu_to_kg};
+		double nu_zi {calc_momentum_loss_freq(ne, te, ne, ti, imp_v, 
+			imp.get_mass(),	mi, -imp.get_charge() * Constants::charge_e, 
+			-Constants::charge_e)};
+
+		// The change in velocity and the fraction are defined as: 
+		//   imp_dv = -(nu_ze + nu_zi) * imp_v * imp_time_step
+		//   mom_loss_frac = (imp_v + imp_dv) / imp_v
+		// We don't want this changing by too much at one time, so we set a
+		// reasonable limit on what the fraction can be and then calculate
+		// the time step from that. Solve the above equations for dt to get:
+		//   dt = (1 - f) / (nu_ze + nu_zi)
+		double mom_loss_frac_limit {0.05};
+		dt_coll = (1.0 - mom_loss_frac_limit) / (nu_ze + nu_zi);
+		return;
+	}
+
 	void collision_update(Impurity::Impurity& imp, double te, double ti, 
 		double ne, double imp_time_step)
 	{
@@ -281,7 +348,7 @@ namespace Collisions
 		// (false) collisions.
 		if (true)
 		{
-			std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
+			//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
 			//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
 			//	<< ", " << imp.get_vz() << '\n';
 			imp.set_vx(imp.get_vx() * mom_loss_frac); 

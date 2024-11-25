@@ -38,7 +38,7 @@ namespace Impurity
 		// Constructor
 		Statistics(const int dim1, const int dim2, const int dim3, 
 			const int dim4, const bool vel_stats);
-		
+
 		// Accessors
 		Vectors::Vector4D<int>& get_counts();
 		Vectors::Vector4D<double>& get_weights();

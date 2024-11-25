@@ -203,131 +203,134 @@ namespace Impurity
 		return std::make_tuple(fx, fy, fz);
 	}
 
-	double get_variable_time_step(Impurity& imp, 
+	double get_var_time_step_trans(Impurity& imp, 
 		const Background::Background& bkg, const int xidx, const int yidx, 
 		const int zidx, const double fx, const double fy, const double fz)
 	{
-		// Calculate time step for reasonable transport calculation
-		// double dt_trans {variable_time_step_trans(imp, bkg, xidx, yidx, 
-		// zidx, fx, fy, fz)};
+		// v0 = velocity before forces are applied
+		// v1 = v0 + dv = velocity after forces are applied
+		//
+		// We use the rule that a particle's step must be less than the
+		// minimum width of the cell (w), e.g.,
+		// (v0 + dv) * dt < w. We modify this condition to
+		// (|v0| + |dv|) * dt < w to avoid imaginary solutions. This in 
+		// fact adds an additional layer of conservatism since 
+		// |v0 + dv| < |v0| + |dv|, i.e., we are always assuming the
+		// "worst case scenario" in which the sign of dv is the same as 
+		// v0. This means sometimes we are restricting the time step using
+		// too large a velocity, which just means the time step will be
+		// smaller than necessary sometimes. This is okay.
+		// We add another layer of safety onto this by defining the step 
+		// size as a fraction of the cell width, thus,
+		//   (|v0| + |dv|) * dt = w / safety_frac    (1)
+		//   dv = dt * F / m  (from F = m * dv/dt)  (2)
+		// (Note: Using |v0| + |dv| above implies we also should use |F|)
+		// Plug (2) into (1) and you get a quadratic equation in dt:
+		//   dt^2 + (v0 * m / F)dt - m * w / (safety_frac * F) = 0
+		// Quadratic equation says:
+		//  dt = (-v0 * m +|- sqrt((v0 * m)^2 
+		//		+ 4 * m * w * F / safety_frac))) / (2 * F)
+		// If F > 0, we can have two solutions. Common sense says just 
+		// pick the one guarunteed to be positive (choose the + in +|-). 
+		// If F < 0, then we could get an imaginary solution and be in 
+		// trouble. 
 
-		// If collisions are on, see what the minimum time step for a
-		// reasonable calculation is
-		// double dt_coll {dt_trans};
-		// if (imp_coll_on) dt_coll = variable_time_step_coll(...);
+		// Fraction of cell width to limit step size to.
+		const double safety_frac {5.0};
 
-		// Choose the smallest of the two
-		// return std::min({dt_trans, dt_coll});
+		// Width of cell in each dimension.
+		double xwidth {bkg.get_grid_x()[xidx+1] - bkg.get_grid_x()[xidx]};
+		double ywidth {bkg.get_grid_y()[yidx+1] - bkg.get_grid_y()[yidx]};
+		double zwidth {bkg.get_grid_z()[zidx+1] - bkg.get_grid_z()[zidx]};
+		double min_width {std::min({xwidth, ywidth, zwidth})};
+		
+		// Velocity and force magnitudes
+		double v {std::sqrt(imp.get_vx()*imp.get_vx() 
+			+ imp.get_vy()*imp.get_vy() + imp.get_vz()*imp.get_vz())};  
+		double f {std::sqrt(fx*fx + fy*fy + fz*fz)};
+
+		// The force can be zero if the particle has recombined to a
+		// neutral. This would cause a NaN down below, so we intercept
+		// here to calculate the variable time step.
+		if (std::abs(f) < Constants::small)
+		{
+			return min_width / v / safety_frac;
+		}
+
+		// The discriminant in the solution for dt
+		double disc {v*v * imp.get_mass()*imp.get_mass() 
+			+ 4.0 * f * imp.get_mass() * min_width / safety_frac};
+
+		// Check for imaginary solutions
+		if (disc < 0)
+		{
+			std::cerr << "Error! Discriminant in variable time step " 
+				<< "calculation is negative and causing an imaginary "
+				<< "solution. disc = " << disc << '\n';
+		}
+
+		// Two possible solutions. Return the one gauranteed to be 
+		// positive (+ disc vs. - disc)?
+		double dt {(-v * imp.get_mass() + std::sqrt(disc)) / (2.0 * f)};
+		if (std::isnan(dt) || std::isnan(disc) || std::isnan(f) 
+			|| std::isnan(v))
+		{
+			std::cerr << "Error! NaN encountereded in variable time " 
+				<< "step.\n" << "v, f, disc, dt = " << v << ", " << f
+				<< ", " << disc << ", " << dt << '\n' << "Setting to"
+				<< " imp_time_step_min\n";
+			std::cerr << "imp_q = " << imp.get_charge() << '\n';
+			std::exit(0);
+			dt = Input::get_opt_dbl(Input::imp_time_step_min);
+		}
+		return dt;
+	}
 
 
+	double get_var_time_step(Impurity& imp, 
+		const Background::Background& bkg, const int tidx, 
+		const int xidx, const int yidx, const int zidx, const double fx, 
+		const double fy, const double fz, const bool imp_coll_on)
+	{
 		// If impurity is at rest, just choose a very low number to kick
 		// things off.
-		if (imp.get_vx() == 0.0 && imp.get_vy() == 0.0 && imp.get_vz() == 0.0)
+		double imp_v {std::sqrt(imp.get_vx()*imp.get_vx() 
+			+ imp.get_vy()*imp.get_vy() + imp.get_vz()*imp.get_vz())};
+		if (imp_v < Constants::small)
 		{
 			return 1e-15;
 		}
 		else
 		{
-			// v0 = velocity before forces are applied
-			// v1 = v0 + dv = velocity after forces are applied
-			//
-			// We use the rule that a particle's step must be less than the
-			// minimum width of the cell (w), e.g.,
-			// (v0 + dv) * dt < w. We modify this condition to
-			// (|v0| + |dv|) * dt < w to avoid imaginary solutions. This in 
-			// fact adds an additional layer of conservatism since 
-			// |v0 + dv| < |v0| + |dv|, i.e., we are always assuming the
-			// "worst case scenario" in which the sign of dv is the same as 
-			// v0. This means sometimes we are restricting the time step using
-			// too large a velocity, which just means the time step will be
-			// smaller than necessary sometimes. This is okay.
-			// We add another layer of safety onto this by defining the step 
-			// size as a fraction of the cell width, thus,
-			//   (|v0| + |dv|) * dt = w / safety_frac    (1)
-			//   dv = dt * F / m  (from F = m * dv/dt)  (2)
-			// (Note: Using |v0| + |dv| above implies we also should use |F|)
-			// Plug (2) into (1) and you get a quadratic equation in dt:
-			//   dt^2 + (v0 * m / F)dt - m * w / (safety_frac * F) = 0
-			// Quadratic equation says:
-			//  dt = (-v0 * m +|- sqrt((v0 * m)^2 
-			//		+ 4 * m * w * F / safety_frac))) / (2 * F)
-			// If F > 0, we can have two solutions. Common sense says just 
-			// pick the one guarunteed to be positive (choose the + in +|-). 
-			// If F < 0, then we could get an imaginary solution and be in 
-			// trouble. 
+			// Calculate time step for reasonable transport calculation
+			double dt_trans {get_var_time_step_trans(imp, bkg, xidx, yidx, 
+				zidx, fx, fy, fz)};
 
-			// Fraction of cell width to limit step size to.
-			double safety_frac {5.0};
-
-			// Width of cell in each dimension.
-			double xwidth {bkg.get_grid_x()[xidx+1] - bkg.get_grid_x()[xidx]};
-			double ywidth {bkg.get_grid_y()[yidx+1] - bkg.get_grid_y()[yidx]};
-			double zwidth {bkg.get_grid_z()[zidx+1] - bkg.get_grid_z()[zidx]};
-			double min_width {std::min({xwidth, ywidth, zwidth})};
-			
-			// Velocity and force magnitudes
-			double v {std::sqrt(imp.get_vx()*imp.get_vx() 
-				+ imp.get_vy()*imp.get_vy() + imp.get_vz()*imp.get_vz())};  
-			double f {std::sqrt(fx*fx + fy*fy + fz*fz)};
-
-			// The force can be zero if the particle has recombined to a
-			// neutral. This would cause a NaN down below, so we intercept
-			// here to calculate the variable time step.
-			if (std::abs(f) < Constants::small)
+			// Calculate time step for a reasonable collisions calculation
+			// (if necessary). Don't do this if the impurity is neutral, it
+			// won't work. Unfortunately this is calculating the momentum
+			// loss factor, tossing it, and then elsehwere we have to 
+			// calculate it again. This could use some restructuring to save
+			// some time but I'm favoring readibility at this point in time. 
+			if (imp_coll_on && imp.get_charge() > 0) 
 			{
-				return min_width / v / safety_frac;
+				double dt_coll {dt_trans};
+				Collisions::set_var_time_step_coll(dt_coll, imp, bkg, tidx, 
+					xidx, yidx, zidx);
+
+				// Choose the smallest of the two
+				//std::cout << "dt_trans, dt_coll = " << dt_trans << ", " 
+				//	<< dt_coll << '\n';
+				return std::min({dt_trans, dt_coll});
 			}
 
-			// The discriminant in the solution for dt
-			double disc {v*v * imp.get_mass()*imp.get_mass() 
-				+ 4.0 * f * imp.get_mass() * min_width / safety_frac};
-
-			// Check for imaginary solutions
-			if (disc < 0)
-			{
-				std::cerr << "Error! Discriminant in variable time step " 
-					<< "calculation is negative and causing an imaginary "
-					<< "solution. disc = " << disc << '\n';
-			}
-
-			// Two possible solutions. Return the one gauranteed to be 
-			// positive (+ disc vs. - disc)?
-			double dt {(-v * imp.get_mass() + std::sqrt(disc)) / (2.0 * f)};
-			if (std::isnan(dt) || std::isnan(disc) || std::isnan(f) 
-				|| std::isnan(v))
-			{
-				std::cerr << "Error! NaN encountereded in variable time " 
-					<< "step.\n" << "v, f, disc, dt = " << v << ", " << f
-					<< ", " << disc << ", " << dt << '\n' << "Setting to"
-					<< " imp_time_step_min\n";
-				std::cerr << "imp_q = " << imp.get_charge() << '\n';
-				std::exit(0);
-				dt = Input::get_opt_dbl(Input::imp_time_step_min);
-			}
-			return dt;
+			return dt_trans;
 		}
 	}
 
-	void step(Impurity& imp, const Background::Background& bkg, 
-		const int xidx, const int yidx, const int zidx,
-		const double fx, const double fy, const double fz, 
-		const int imp_time_step_opt_int, double& imp_time_step)
+	void step(Impurity& imp, const double fx, const double fy, const double fz, 
+		const double imp_time_step)
 	{
-		// If the time step is variable, we need to calculate the time step
-		// before we can update the particle position/velocity.
-		if (imp_time_step_opt_int == 1)
-		{
-			imp_time_step = get_variable_time_step(imp, bkg, xidx, yidx, 
-				zidx, fx, fy, fz);
-
-			// Enforce a floor to avoid it getting caught in a hole
-			const double imp_time_step_min {Input::get_opt_dbl(
-				Input::imp_time_step_min)};
-			if (imp_time_step < imp_time_step_min) 
-				imp_time_step = imp_time_step_min;
-
-		}
-
 		// Change in velocity over time step (this is just F = m * dv/dt)
 		double dvx {fx * imp_time_step / imp.get_mass()};
 		double dvy {fy * imp_time_step / imp.get_mass()};
@@ -347,16 +350,16 @@ namespace Impurity
 
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
 		const Background::Background& bkg, const int tidx, const int xidx, 
-		const int yidx, const int zidx)
+		const int yidx, const int zidx, const double imp_time_step)
 	{
 		// Add one to counts to this location	
 		imp_stats.add_counts(tidx, xidx, yidx, zidx, 1);
 
-		// Add particle's weight to this location. Note: We should be adding
-		// the particle weight * imp_time_step, but since the time step is
-		// constant, we can add it at the end and save a floating point
-		// operation.
-		imp_stats.add_weights(tidx, xidx, yidx, zidx, imp.get_weight());
+		// Add total weight to this location. The total weight is the particle
+		// weight times the time step. This is Monte Carlo stuff, best read
+		// the literature if you don't recognize it.
+		imp_stats.add_weights(tidx, xidx, yidx, zidx, 
+			imp.get_weight() * imp_time_step);
 
 		// Add each velocity component to the running sum for this location
 		if (imp_stats.get_vel_stats())
@@ -521,21 +524,21 @@ namespace Impurity
 			int yidx {get_nearest_cell_index(bkg.get_grid_y(), imp.get_y())};
 			int zidx {get_nearest_cell_index(bkg.get_grid_z(), imp.get_z())};
 
-			// Update statistics
-			record_stats(imp_stats, imp, bkg, tidx, xidx, yidx, zidx);
+			// Calculate Lorentz force components. First loop these are all
+			// zero if particles start at rest.
+			auto [fx, fy, fz] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
+				zidx);
 
-			// Calculate variable time step
-			// imp_time_step = get_variable_time_step(..., imp_coll_on)
+			// Calculate variable time step (if necessary)
+			if (imp_time_step_opt_int == 1) imp_time_step = 
+				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fx, 
+				fy, fz, imp_coll_on);
 
 			// Check for a collision
 			if (imp_coll_on)
 			{
 				collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
 			}
-
-			// Calculate Lorentz force components
-			auto [fx, fy, fz] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
-				zidx);
 
 			// Debugging
 			//std::cout << "id, q, t, x, y, z, dt, fx, fy, fz: " 
@@ -545,13 +548,15 @@ namespace Impurity
 			//	<< ", " << imp.get_z() << ", " << imp_time_step 
 			//	<< ", " << fx << ", " << fy << ", " << fz << '\n';
 
-			// Update particle velocity from the Lorentz force
-			//lorentz_update(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
+			// Update statistics. Need to do this after the time step is
+			// calculated (if it is), but before the particle moves into 
+			// a different cell in step.
+			record_stats(imp_stats, imp, bkg, tidx, xidx, yidx, zidx, 
+				imp_time_step);
 
 			// Last thing is move particle to a new location
 			//step(imp, imp_time_step);
-			step(imp, bkg, xidx, yidx, zidx, fx, fy, fz, 
-				imp_time_step_opt_int, imp_time_step);
+			step(imp, fx, fy, fz, imp_time_step);
 
 			// Check for ionization or recombination
 			if (imp_iz_recomb_on)
@@ -736,19 +741,13 @@ namespace Impurity
 		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb);
 	
 		// Convert the statistics into meaningful quantities. We are scaling
-		// the density by the scale factor * time step. Technically speaking,
-		// the time step should be accounted for in the main loop each time
-		// we score a particle (weight * time step instead of just weight), 
-		// but since the time step is constant, we can avoid that floating 
-		// point operation in the main loop and apply it here after the fact.
+		// the density by the scale factor.
 		std::cout << "Calculating derived quantities...\n";
 		int imp_num {Input::get_opt_int(Input::imp_num)};
 		double imp_source_scale_fact {
 			Input::get_opt_dbl(Input::imp_source_scale_fact)};
-		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step)};
 		std::cout << "  Density...\n";
-		imp_stats.calc_density(bkg, imp_num, 
-			imp_source_scale_fact * imp_time_step);
+		imp_stats.calc_density(bkg, imp_num, imp_source_scale_fact);
 		if (imp_stats.get_vel_stats())
 		{
 			std::cout << "  Velocity...\n";

@@ -251,6 +251,21 @@ namespace Vectors
 		}
 	}
 
+	// Overloaded. This is the rvalue reference one.
+	template <typename T>
+	void Vector4D<T>::move_into_data(Vector4D<T>&& vec)
+	{
+		// Copy over the dimensions
+		m_dim1 = vec.get_dim1();
+		m_dim2 = vec.get_dim2();
+		m_dim3 = vec.get_dim3();
+		m_dim4 = vec.get_dim4();
+
+		// Move the data into this
+		m_data = std::move(vec.m_data);
+	}
+	
+	// Overloaded. This is the normal reference one.
 	template <typename T>
 	void Vector4D<T>::move_into_data(Vector4D<T>& vec)
 	{

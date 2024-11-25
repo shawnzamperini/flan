@@ -265,6 +265,7 @@ namespace Vectors
 		* Hmmm... this is really some sort of abstraction of operator=...
 		*/
 		//void move_into_data(Vectors::Vector4D<T>& vec);
+		void move_into_data(Vector4D<T>&& vec);
 		void move_into_data(Vector4D<T>& vec);
 
 		/**
