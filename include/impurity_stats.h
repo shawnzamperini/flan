@@ -55,11 +55,11 @@ namespace Impurity
 
 		// Functions to increase counts
 		void add_counts(const int tidx, const int xidx, const int yidx, 
-			const int zidx, const int value = 1);
+			const int zidx, const int value);
 
 		// Function to increase weights
 		void add_weights(const int tidx, const int xidx, const int yidx, 
-			const int zidx, const int value = 1.0);
+			const int zidx, const double value);
 
 		// Function add each velocity component to the corresponding array
 		// location

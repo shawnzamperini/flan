@@ -149,10 +149,11 @@ namespace Impurity
 	* @param xidx Index in x array imp is at
 	* @param yidx Index in y array imp is at
 	* @param zidx Index in z array imp is at
+	* @param imp_time_step Size of time step (s)
 	*/
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
 		const Background::Background& bkg, const int tidx, const int xidx, 
-		const int yidx, const int zidx);
+		const int yidx, const int zidx, const double imp_time_step);
 
 	/**
 	* @brief Check if an Impurity has encountered a boundary condition.

@@ -284,8 +284,6 @@ namespace Collisions
 		// know if it is true or not, but it's common enough among codes). 
 		if (imp.get_charge() == 0) return;
 
-		//std::cout << "=== Collisions ===\n";
-
 		// Calculate impurity velocity
 		double imp_v {calc_imp_vel(imp)};
 		//std::cout << "imp_v = " << imp_v << '\n';
@@ -333,70 +331,69 @@ namespace Collisions
 		double imp_dv {-(nu_ze + nu_zi) * imp_v * imp_time_step};
 		//std::cout << "imp_dv = " << imp_dv << '\n';
 
-		// Straightforward approach to apply this to the impurity is to scale 
-		// down each impurity velocity component proportional to the amount
-		// that was lost in the collisions.
-		// Before: v0 = (vx0, vy0, vz0)
-		// After:  v1 = a * v0 = (a*vx0, a*vy0, a*vz0) = (vx1, vy1, vz1)
-		// Thus each component of the after-collision vector is:
-		// vx1 = a * vx0    and likewise for y and z.
-		// In theory this can be negative if dv < v. This would just mean the
-		// particle is turning around due to a collision I suppose. 
 		double mom_loss_frac {(imp_v + imp_dv) / imp_v};
+		//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
 	
 		// Just a temporary way to choose between inelastic (true) or elastic
 		// (false) collisions.
-		if (true)
+		//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
+		//	<< ", " << imp.get_vz() << '\n';
+		if (false)
 		{
-			//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
-			//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
-			//	<< ", " << imp.get_vz() << '\n';
+			// Elastic approach. Straightforward approach to apply this to the 
+			// impurity is to scale down each impurity velocity component 
+			// proportional to the amount that was lost in the collisions.
+			// Before: v0 = (vx0, vy0, vz0)
+			// After:  v1 = a * v0 = (a*vx0, a*vy0, a*vz0) = (vx1, vy1, vz1)
+			// Thus each component of the after-collision vector is:
+			// vx1 = a * vx0    and likewise for y and z.
+			// In theory this can be negative if dv < v. This would just mean the
+			// particle is turning around due to a collision I suppose. 
 			imp.set_vx(imp.get_vx() * mom_loss_frac); 
 			imp.set_vy(imp.get_vy() * mom_loss_frac); 
 			imp.set_vz(imp.get_vz() * mom_loss_frac); 
-			//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
-			//	<< ", " << imp.get_vz() << '\n';
 		}
-
-		// This gives weird results, probably remove eventually. 
 		else
 		{
-			// Inelastic approach. The axes are rotated by some unknown angle 
-			// so 
-			// that the initial velocity lies along x. This was already done/
-			// impied in the previous steps, just stating here that it happened.
-			// Then before/after looks like:
+			// Inelastic approach. Consider a new coordinate system rotated by
+			// by some unknown angle such that the particle velocity is along
+			// the x axis (this assumption was actually already made in
+			// in calculating the momentum loss frequency). 
+			// Then before/after a collision looks like:
 			// Before: v0 = (v0x,   0,   0)
 			// After:  v1 = (v1x, v1y, v1z)
 			// The calculated imp_dv is the velocity (really momentum, but 
-			// mass is
-			// constant so we can just talk velocities) loss over this time 
-			// step
-			// **in the direction of the vector**. So we can rewrite v1 as:
-			//   v1 = (v0x - dv, v1y, v1z)
-			// The angle between the vector is the dot product:
+			// mass is constant so we can just talk velocities) loss over this 
+			// time step **in the x direction**. So we can rewrite v1 as:
+			//   v1 = (v0x + dv, v1y, v1z)
+			// The angle between the before/after vectors is the dot product:
 			//   v0 * v1 = |v0||v1|cos(theta) = v0x * v1x 
-			// This is an inelastic collision approximation, so |v0| = |v1| 
-			// = v0x^2
-			// thus:
-			//   cos(theta) = v1x / v0x = (v0x - dv) / v0x
+			// We then assume an inelastic collision approximation,  
+			// so |v0| = |v1| = v0x^2. This is because we do not have enough
+			// information to know how much |v1| changes by, we only know how
+			// much the x component changed. Thus:
+			//   cos(theta) = v1x / v0x = (v0x + dv) / v0x = mom_loss_frac
 			// So we can achieve the post-collision vector by just rotating the
-			// original vector by theta. But what in what direction? And what 
-			// about
-			// the original rotation that we did? Ignore the original because 
-			// fuck
-			// it, end of the day we just need to rotate the vector in a random
-			// direction by theta since any direction is equally possible, 
-			// assuming
-			// the species the impurity is colliding with is Maxwellian (which we
-			// do assume here).
-			//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
-			//	<< ", " << imp.get_vz() << '\n';
+			// original vector by theta. The next question is then in which
+			// direction - x, y, z or some combination of the three? Well this
+			// is a random process in which *any* direction is equally
+			// possible, so we simply create a random unit vector and rotate
+			// our vector around it by theta. This is to say, we assume the 
+			// species it is colliding with is Maxwellian, which is fine
+			// enough. Once we have theta (defl_ang), we rotate the particle
+			// vector by it and we're done. 
+			// There is a subtlety in that theta was calculated after we had
+			// chosen a coordinate system aligned with the x direction. This
+			// is fine, because we just need to know what angle to deflect by,
+			// which will be the same angle in both the original or our 
+			// temporary coordinate system (theta can be thought of as an 
+			// displacement - if you're moving 5 meters, it doesn't matter if
+			// you did it in Virginia or California, it's the same either way).
 			double defl_ang {std::acos(mom_loss_frac)};
 			//std::cout << "defl_ang = " << defl_ang << '\n';
 			rotate_imp(imp, defl_ang);
-			//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
-			//	<< ", " << imp.get_vz() << '\n';
 		}
+		//std::cout << "After:  " << imp.get_vx() << ", " << imp.get_vy() 
+		//	<< ", " << imp.get_vz() << '\n';
 	}
 }

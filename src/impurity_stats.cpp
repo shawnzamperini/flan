@@ -188,7 +188,7 @@ namespace Impurity
 	* @param value Weight to add to the cell
 	*/
 	void Statistics::add_weights(const int tidx, const int xidx, 
-		const int yidx, const int zidx, const int value)
+		const int yidx, const int zidx, const double value)
 	{
 		m_weights(tidx, xidx, yidx, zidx) += value;
 	}
