@@ -21,12 +21,15 @@
 #include "constants.h"
 #include "openadas.h"
 #include "collisions.h"
+#include "variance_reduction.h"
 
 
 namespace Impurity
 {
 	double get_birth_t(const Background::Background& bkg)
 	{
+		//std::cout << "Warning! Hardcoded t=0 in for testing.\n";
+		//return bkg.get_t_min();
 		return Random::get(bkg.get_t_min(), bkg.get_t_max());
 	}
 
@@ -309,7 +312,7 @@ namespace Impurity
 			// Calculate time step for a reasonable collisions calculation
 			// (if necessary). Don't do this if the impurity is neutral, it
 			// won't work. Unfortunately this is calculating the momentum
-			// loss factor, tossing it, and then elsehwere we have to 
+			// loss factor, tossing it, and then elsewhere we have to 
 			// calculate it again. This could use some restructuring to save
 			// some time but I'm favoring readibility at this point in time. 
 			if (imp_coll_on && imp.get_charge() > 0) 
@@ -427,78 +430,15 @@ namespace Impurity
 			imp_time_step);
 	}
 
-	void ioniz_recomb(Impurity& imp, const Background::Background& bkg,
-		const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb, const double imp_time_step, 
-		const int tidx, const int xidx, const int yidx, const int zidx, 
-		int& ioniz_warnings, int& recomb_warnings)
-	{
-		// We use ne and te more than once here, so to avoid indexing
-		// multiple times it is cheaper to just do it once and save it in
-		// a local variable.
-		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
-		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
-		
-		// Ionization rate coefficients are indexed by charge. This is 
-		// because the zeroeth charge index in the underlying rate data is
-		// for neutral ionization (charge = 0), W0 --> W1+.
-		double ioniz_rate {};
-		if (imp.get_charge() < imp.get_atom_num())
-		{
-			ioniz_rate = oa_ioniz.get_rate_coeff(imp.get_charge(), 
-				local_ne, local_te);
-		}
-
-		// Recombination rate coefficients are indexed by charge-1. This is
-		// because this zeroeth entry is for W1+ --> W0. So if we want that
-		// rate coefficient for, say, W1+, we need to pass it charge-1 so it
-		// chooses that zeroeth index.
-		double recomb_rate {};
-		if (imp.get_charge() > 0)
-		{
-			recomb_rate = oa_recomb.get_rate_coeff(imp.get_charge()-1, 
-			local_ne, local_te);
-		}
-
-		/*
-		std::cout << "-------------------------------\n";
-		std::cout << "te = " << bkg.get_te()(tidx, xidx, yidx, zidx) << '\n';
-		std::cout << "ne = " << bkg.get_ne()(tidx, xidx, yidx, zidx) << '\n';
-		std::cout << "charge = " << imp.get_charge() << '\n';
-		std::cout << "ioniz_rate =  " << ioniz_rate << '\n';
-		std::cout << "recomb_rate = " << recomb_rate << '\n';
-		std::cout << "-------------------------------\n";
-		*/
-
-		// The probability of either ionization or recombination occuring is:
-		//   prob = rate [m3/s] * ne [m-3] * dt [s]
-		double ioniz_prob {ioniz_rate * local_ne * imp_time_step};
-		double recomb_prob {recomb_rate * local_ne * imp_time_step};
-
-		// Track number of times the probabilities are greater than 1. This
-		// indicates that a smaller timestep should be used if there are a
-		// significant number of warnings. 
-		if (ioniz_prob > 1.0) ioniz_warnings += 1;
-		if (recomb_prob > 1.0) recomb_warnings += 1;
-
-		// For each process, pull a random number. If that number is less than
-		// prob, then that event occurs. If both events occur, then they just 
-		// cancel each other out and there's no change.
-		if (Random::get(0.0, 1.0) < ioniz_prob)
-		{
-			imp.set_charge(imp.get_charge() + 1);
-		}
-		if (Random::get(0.0, 1.0) < recomb_prob)
-		{
-			imp.set_charge(imp.get_charge() - 1);
-		}
-	}
-
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
 		int& recomb_warnings, const bool imp_coll_on, 
-		const bool imp_iz_recomb_on, const int imp_time_step_opt_int)
+		const bool imp_iz_recomb_on, const int imp_time_step_opt_int,
+		std::vector<Impurity>& imps, const bool imp_var_reduct_on,
+		const double imp_var_reduct_freq, 
+		const double imp_var_reduct_min_weight, 
+		const std::vector<int> imp_var_reduct_counts)
 	{
 		// Timestep of impurity transport simulation. It can be a constant
 		// value (set here), or set on the fly based on a reasonable criteria.
@@ -529,6 +469,18 @@ namespace Impurity
 			auto [fx, fy, fz] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
 				zidx);
 
+			// Variance reduction scheme. This may change the particle's 
+			// weight and create a secondary Impurity to be followed. It
+			// currently is based on ionization/recombination, hence that also
+			// needs to be on to work.
+			if (imp_var_reduct_on && imp_iz_recomb_on)
+			{
+				VarianceReduction::split_particle_main(imp, tidx, xidx, yidx, 
+					zidx, imp_stats, imps, imp_var_reduct_min_weight, 
+					imp_var_reduct_counts, bkg, oa_ioniz, oa_recomb, 
+					imp_time_step);
+			}
+
 			// Calculate variable time step (if necessary)
 			if (imp_time_step_opt_int == 1) imp_time_step = 
 				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fx, 
@@ -541,8 +493,8 @@ namespace Impurity
 			}
 
 			// Debugging
-			//std::cout << "id, q, t, x, y, z, dt, fx, fy, fz: " 
-			//	<< imp_id << ", " 
+			//std::cout << "id, tidx, q, t, x, y, z, dt, fx, fy, fz: " 
+			//	<< imp_id << ", " << tidx << ", "
 			//	<< imp.get_charge() << ", "<< imp.get_t() << ", " 
 			//	<< ", " << imp.get_x() << ", " << imp.get_y() 
 			//	<< ", " << imp.get_z() << ", " << imp_time_step 
@@ -561,8 +513,9 @@ namespace Impurity
 			// Check for ionization or recombination
 			if (imp_iz_recomb_on)
 			{
-				ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, imp_time_step, 
-					tidx, xidx, yidx, zidx, ioniz_warnings, recomb_warnings);
+				OpenADAS::ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, 
+					imp_time_step, tidx, xidx, yidx, zidx, ioniz_warnings, 
+					recomb_warnings);
 			}
 
 			// Check for a terminating or boundary conditions
@@ -596,11 +549,10 @@ namespace Impurity
 	{
 		// Load input options as local variables for cleaner code.
 		int imp_num {Input::get_opt_int(Input::imp_num)};
-		std::string imp_collisions {Input::get_opt_str(Input::imp_collisions)};
-		std::string imp_iz_recomb {Input::get_opt_str(Input::imp_iz_recomb)};
-		std::string imp_ystart_opt {Input::get_opt_str(Input::imp_ystart_opt)};
-		std::string imp_time_step_opt {
-			Input::get_opt_str(Input::imp_time_step_opt)};
+		const double imp_var_reduct_freq {Input::get_opt_dbl(
+			Input::imp_var_reduct_freq)};
+		const double imp_var_reduct_min_weight {Input::get_opt_dbl(
+			Input::imp_var_reduct_min_weight)};
 
 		// Use internal control variables for string input options. It's better
 		// to pass these as booleans or integers to avoid repeatedly checking
@@ -608,14 +560,17 @@ namespace Impurity
 		// they can all be passed via a single reference.
 		// 1. Boolean for collisions
 		bool imp_coll_on {false};
+		std::string imp_collisions {Input::get_opt_str(Input::imp_collisions)};
 		if (imp_collisions == "yes") imp_coll_on = true;
 
 		// 2. Boolean for ionization/recombination
 		bool imp_iz_recomb_on {false};
+		std::string imp_iz_recomb {Input::get_opt_str(Input::imp_iz_recomb)};
 		if (imp_iz_recomb == "yes") imp_iz_recomb_on = true;
 
 		// 3. Integer for y start option
 		int imp_ystart_opt_int {0};
+		std::string imp_ystart_opt {Input::get_opt_str(Input::imp_ystart_opt)};
 		if (imp_ystart_opt == "single_value") imp_ystart_opt_int = 0;
 		else if (imp_ystart_opt == "range") imp_ystart_opt_int = 1;
 		else std::cerr << "Error: Unrecognized value for imp_ystart_opt (" << 
@@ -624,11 +579,31 @@ namespace Impurity
 
 		// 4. Integer for time step option
 		int imp_time_step_opt_int {0};
+		std::string imp_time_step_opt {
+			Input::get_opt_str(Input::imp_time_step_opt)};
 		if (imp_time_step_opt == "constant") imp_time_step_opt_int = 0;
 		else if (imp_time_step_opt == "variable") imp_time_step_opt_int = 1;
 		else std::cerr << "Error: Unrecognized value for imp_time_step_opt (" 
 			<< imp_time_step_opt << "). Valid options are: 'constant' or " <<
 			"'variable'.\n";
+
+		// 5. Boolean for variance reduction scheme
+		bool imp_var_reduct_on {false};
+		std::string imp_var_reduct {Input::get_opt_str(Input::imp_var_reduct)};
+		if (imp_var_reduct == "yes") imp_var_reduct_on = true;
+
+		// Variance reduction requires ionization/recombination be on
+		if (imp_var_reduct_on && !imp_iz_recomb_on)
+		{
+			std::cout << "Warning! Variance reduction requires "
+				<< "imp_ioniz_recomb be set to 'yes'. Variance reduction will"
+				<< " not occur for this simulation.\n";
+		}
+
+		// Vector of counts at each frame, below which is considered a 
+		// low-count region (as defined in variance_reduction.get_counts).
+		std::vector<int> imp_var_reduct_counts (
+			imp_stats.get_counts().get_dim1(), 0);
 
 		// https://stackoverflow.com/questions/29633531/user-defined-
 		// reduction-on-vector-of-varying-size/29660244#29660244
@@ -654,12 +629,52 @@ namespace Impurity
 		// oa_recomb as shared is redundant, but I like being explicit. 
 		int ioniz_warnings {};
 		int recomb_warnings {};
-		int imp_count {};
+		int prim_imp_count {};
+		int tot_imp_count {};
+		int priv_count {};
+		bool imp_var_reduct_control {false};
 		#pragma omp parallel for schedule(dynamic) \
+			firstprivate(priv_count, imp_var_reduct_counts) \
+			firstprivate(imp_var_reduct_control) \
 			shared(bkg, oa_ioniz, oa_recomb) \
-			reduction(+: imp_stats, ioniz_warnings, recomb_warnings)
+			reduction(+: imp_stats, ioniz_warnings, recomb_warnings) \
+			reduction(+: tot_imp_count)
 		for (int i = 0; i < imp_num; ++i)
 		{
+
+			// Periodically determine what number of counts qualifies for 
+			// splitting a particle, if necessary. 
+			if (imp_var_reduct_on && priv_count > 0)
+			{
+				// This variable is just an integer saying "every X particles
+				// followed, update the variance reduction counts". It needs to
+				// be greater than zero.
+				int imp_var_reduct_mod {static_cast<int>(
+					static_cast<double>(imp_num) / omp_get_num_threads() 
+					* imp_var_reduct_freq)};
+				if (imp_var_reduct_mod == 0) imp_var_reduct_mod = 1;
+
+				// Update variance reduction counts according to the variance
+				// reduction frequency (imp_var_reduct_freq), which is a number 
+				// between 0 and 1. So for example, a value of 0.10 would 
+				// execute this if statement 10 times during the simulation.
+				if (priv_count % imp_var_reduct_mod == 0 && priv_count > 0)
+				{
+					imp_var_reduct_counts = 
+						VarianceReduction::get_counts(imp_stats, 1.0);
+
+					// We use this separate boolean (initially false) to
+					// control if variance reduction occurs so that the
+					// simulation can run through for a bit and learn
+					// what a low-count region qualifies as. 
+					imp_var_reduct_control = true;
+
+					//for (auto c : imp_var_reduct_counts)
+					//{
+					//	std::cout << "imp_var_reduct_counts = " << c << '\n';
+					//}
+				}
+			}	
 
 			// Create starting impurity ion
 			Impurity primary_imp = create_primary_imp(bkg, imp_ystart_opt_int);
@@ -677,12 +692,19 @@ namespace Impurity
 			std::vector<Impurity> imps {primary_imp};
 			while (!imps.empty())
 			{
+				// Grab an Impurity to follow. First one will be the primary
+				// Impurity, any added during the course of follow_impurity
+				// are secondary Impuritys split off from the primary.
 				Impurity imp {pop_back_remove(imps)};
 
-				// Logic for handling additional split impurities not here yet
+				// Begin following Impurity
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
 					ioniz_warnings, recomb_warnings, imp_coll_on, 
-					imp_iz_recomb_on, imp_time_step_opt_int);
+					imp_iz_recomb_on, imp_time_step_opt_int, imps,
+					imp_var_reduct_control, imp_var_reduct_freq, 
+					imp_var_reduct_min_weight, imp_var_reduct_counts);
+				//std::cout << "imps.size() = " << imps.size() << '\n';
+				++tot_imp_count;
 			}
 
 			// Print out progress at intervals set by prog_interval (i.e.,
@@ -694,25 +716,32 @@ namespace Impurity
 			#pragma omp critical
 			{
 				// Increment shared counter
-				++imp_count;
+				++prim_imp_count;
 				
 				if (imp_num > prog_interval)
 				{
-					if ((imp_count % (imp_num / prog_interval)) == 0 
-						&& imp_count > 0)
+					if ((prim_imp_count % (imp_num / prog_interval)) == 0 
+						&& prim_imp_count > 0)
 					{
-						double perc_complete {static_cast<double>(imp_count) 
-							/ imp_num * 100};
-						std::cout << "Followed " << imp_count << "/" << imp_num 
-							<< " impurities (" << static_cast<int>(perc_complete) 
-							<< "%)\n";
+						double perc_complete {static_cast<double>(
+							prim_imp_count) / imp_num * 100};
+						std::cout << "Followed " << prim_imp_count << "/" 
+							<< imp_num << " impurities (" 
+							<< static_cast<int>(perc_complete) << "%)\n";
 					}
 				}
 			}
+
+			// Increment counter private to each thread
+			priv_count++;
 		}
 
 		// Let user know how many, if any, warnings occured.
 		print_ioniz_recomb_warn(ioniz_warnings, recomb_warnings);
+
+		// Let user know how many secondary impurities were followed.
+		std::cout << "Secondary impurities followed: " << tot_imp_count 
+			- prim_imp_count << '\n';
 	}
 
 	Statistics follow_impurities(Background::Background& bkg)

@@ -9,6 +9,8 @@
 #include <string>
 
 #include "vectors.h"
+#include "impurity.h"
+#include "background.h"
 
 
 namespace OpenADAS
@@ -80,6 +82,35 @@ namespace OpenADAS
 		*/
 		double get_rate_coeff(const int charge, double ne, double te) const;
 	};
+
+	/**
+	* @brief Calculate ionization and recombination probabilities
+	* @return Returns a pair of doubles representing the probabilities of each
+	*	process occurring (ionization, recombination).
+	*/
+	std::pair<double, double> calc_ioniz_recomb_probs(
+		Impurity::Impurity& imp, const Background::Background& bkg,
+		const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
+		const double imp_time_step, const int tidx, const int xidx, 
+		const int yidx, const int zidx);
+
+	/**
+	* @brief Handle impurity ion ionization and recombination
+	*
+	* The impurity charge is modified within this function, if necessary. If
+	* the probabilities for ionization or recombination are greater than 1.0,
+	* ioniz_warnings and recomb_warnings are incremented by 1. 
+	*
+	* @param ioniz_warnings Integer that tracks number of ionization 
+	* probability > 1.0 events
+	* @param recomb_warnings Integer that tracks number of recombination 
+	* probability > 1.0 events
+	*/
+	void ioniz_recomb(Impurity::Impurity& imp, 
+		const Background::Background& bkg, const OpenADAS& oa_ioniz, 
+		const OpenADAS& oa_recomb, const double imp_time_step, 
+		const int tidx, const int xidx, const int yidx, const int zidx, 
+		int& ioniz_warnings, int& recomb_warnings);
 }
 
 #endif

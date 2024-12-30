@@ -137,7 +137,7 @@ namespace Collisions
 		std::array<double, 3> rotation_axis {ran_unit_vector()};
 
 		// 2. Calculate the rotation matrix. Don't forget to convert angle
-		// to randians first.
+		// to radians first.
 		std::array<std::array<double, 3>, 3> rotation_matrix {
 			calc_rotation_matrix(rotation_axis, 
 			defl_ang)};
@@ -272,7 +272,7 @@ namespace Collisions
 		// reasonable limit on what the fraction can be and then calculate
 		// the time step from that. Solve the above equations for dt to get:
 		//   dt = (1 - f) / (nu_ze + nu_zi)
-		double mom_loss_frac_limit {0.05};
+		double mom_loss_frac_limit {0.90};
 		dt_coll = (1.0 - mom_loss_frac_limit) / (nu_ze + nu_zi);
 		return;
 	}
@@ -367,12 +367,13 @@ namespace Collisions
 			// time step **in the x direction**. So we can rewrite v1 as:
 			//   v1 = (v0x + dv, v1y, v1z)
 			// The angle between the before/after vectors is the dot product:
-			//   v0 * v1 = |v0||v1|cos(theta) = v0x * v1x 
+			//   v0 * v1 = |v0||v1|cos(theta) = v0x * v1x  + 0 + 0
 			// We then assume an inelastic collision approximation,  
-			// so |v0| = |v1| = v0x^2. This is because we do not have enough
+			// so |v0||v1| = v0x^2. This is because we do not have enough
 			// information to know how much |v1| changes by, we only know how
 			// much the x component changed. Thus:
-			//   cos(theta) = v1x / v0x = (v0x + dv) / v0x = mom_loss_frac
+			//   cos(theta) = v0x * v1x / v0x^2 = v1x / v0x 
+			//     = (v0x + dv) / v0x = mom_loss_frac
 			// So we can achieve the post-collision vector by just rotating the
 			// original vector by theta. The next question is then in which
 			// direction - x, y, z or some combination of the three? Well this
@@ -390,6 +391,10 @@ namespace Collisions
 			// displacement - if you're moving 5 meters, it doesn't matter if
 			// you did it in Virginia or California, it's the same either way).
 			double defl_ang {std::acos(mom_loss_frac)};
+
+			// Equal chance of being positive or negative angle.
+			if (Random::get(0, 1) == 1) defl_ang *= -1.0;
+
 			//std::cout << "defl_ang = " << defl_ang << '\n';
 			rotate_imp(imp, defl_ang);
 		}

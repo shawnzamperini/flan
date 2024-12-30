@@ -1,7 +1,8 @@
 /**
 * @file openadas.cpp
 * @brief Definitions for OpenADAS class. Contains routines related to reading
-* in a storing OpenADAS data.
+* in a storing OpenADAS data. Also contains two helper routines outside the 
+* class for updating an impurity's ionization state.
 */
 #include <vector>
 #include <string>
@@ -15,6 +16,9 @@
 #include "openadas.h"
 #include "vectors.h"
 #include "utilities.h"
+#include "impurity.h"
+#include "background.h"
+#include "random.h"
 
 
 namespace OpenADAS
@@ -310,6 +314,86 @@ namespace OpenADAS
 		return Utilities::bilinear_interpolate(te0, ne0, rate0, te1, ne1, 
 			rate1, te, ne);
 			
+	}
+
+	std::pair<double, double> calc_ioniz_recomb_probs(
+		Impurity::Impurity& imp, const Background::Background& bkg,
+		const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
+		const double imp_time_step, const int tidx, const int xidx, 
+		const int yidx, const int zidx)
+	{
+		// We use ne and te more than once here, so to avoid indexing
+		// multiple times it is cheaper to just do it once and save it in
+		// a local variable.
+		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
+		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
+		
+		// Ionization rate coefficients are indexed by charge. This is 
+		// because the zeroeth charge index in the underlying rate data is
+		// for neutral ionization (charge = 0), W0 --> W1+.
+		double ioniz_rate {};
+		if (imp.get_charge() < imp.get_atom_num())
+		{
+			ioniz_rate = oa_ioniz.get_rate_coeff(imp.get_charge(), 
+				local_ne, local_te);
+		}
+
+		// Recombination rate coefficients are indexed by charge-1. This is
+		// because this zeroeth entry is for W1+ --> W0. So if we want that
+		// rate coefficient for, say, W1+, we need to pass it charge-1 so it
+		// chooses that zeroeth index.
+		double recomb_rate {};
+		if (imp.get_charge() > 0)
+		{
+			recomb_rate = oa_recomb.get_rate_coeff(imp.get_charge()-1, 
+			local_ne, local_te);
+		}
+
+		/*
+		std::cout << "-------------------------------\n";
+		std::cout << "te = " << bkg.get_te()(tidx, xidx, yidx, zidx) << '\n';
+		std::cout << "ne = " << bkg.get_ne()(tidx, xidx, yidx, zidx) << '\n';
+		std::cout << "charge = " << imp.get_charge() << '\n';
+		std::cout << "ioniz_rate =  " << ioniz_rate << '\n';
+		std::cout << "recomb_rate = " << recomb_rate << '\n';
+		std::cout << "-------------------------------\n";
+		*/
+
+		// The probability of either ionization or recombination occuring is:
+		//   prob = rate [m3/s] * ne [m-3] * dt [s]
+		double ioniz_prob {ioniz_rate * local_ne * imp_time_step};
+		double recomb_prob {recomb_rate * local_ne * imp_time_step};
+
+		return std::make_pair(ioniz_prob, recomb_prob);
+	}
+
+	void ioniz_recomb(Impurity::Impurity& imp, 
+		const Background::Background& bkg, const OpenADAS& oa_ioniz, 
+		const OpenADAS& oa_recomb, const double imp_time_step, 
+		const int tidx, const int xidx, const int yidx, const int zidx, 
+		int& ioniz_warnings, int& recomb_warnings)
+	{
+		// Get ionization/recombination probabilities.
+		auto [ioniz_prob, recomb_prob] = calc_ioniz_recomb_probs(imp, bkg, 
+			oa_ioniz, oa_recomb, imp_time_step, tidx, xidx, yidx, zidx);
+
+		// Track number of times the probabilities are greater than 1. This
+		// indicates that a smaller timestep should be used if there are a
+		// significant number of warnings. 
+		if (ioniz_prob > 1.0) ioniz_warnings += 1;
+		if (recomb_prob > 1.0) recomb_warnings += 1;
+
+		// For each process, pull a random number. If that number is less than
+		// prob, then that event occurs. If both events occur, then they just 
+		// cancel each other out and there's no change.
+		if (Random::get(0.0, 1.0) < ioniz_prob)
+		{
+			imp.set_charge(imp.get_charge() + 1);
+		}
+		if (Random::get(0.0, 1.0) < recomb_prob)
+		{
+			imp.set_charge(imp.get_charge() - 1);
+		}
 	}
 }
 
