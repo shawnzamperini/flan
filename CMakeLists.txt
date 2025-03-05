@@ -36,8 +36,8 @@ link_directories(
 	${FLANSOFT}/netcdf-c/lib
 )
 
-# Add executable
-add_executable(flan ${SOURCES})
+# Add a shared library
+add_library(flan SHARED ${SOURCES})
 
 # Compilation flags
 target_compile_options(flan PRIVATE -Wall -O3 -fopenmp)
@@ -51,3 +51,32 @@ set_target_properties(flan PROPERTIES
     BUILD_WITH_INSTALL_RPATH TRUE
     INSTALL_RPATH ${FLANSOFT}/netcdf-cxx4/lib
 )
+
+# Install in lib and include
+#install(TARGETS flan
+#	LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/lib
+#   PUBLIC_HEADER DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Install the library itself
+install(TARGETS flan
+    EXPORT flan_targets
+    LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/lib
+	PUBLIC_HEADER DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Export the library's target configuration
+install(EXPORT flan_targets
+    FILE flanConfig.cmake
+    DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/flan
+)
+
+# Generate the flan_setup.sh script that helps a user setup a simulation. 
+# script_output.txt here isn't actually anything, just a placeholder so we 
+# can execute the generate script as part of the build process.
+add_custom_command(
+	OUTPUT script_output.txt
+	COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/generate_flan_setup.sh ${CMAKE_SOURCE_DIR}
+	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts
+	COMMENT "Generating flan_setup.sh"
+)
+add_custom_target(flan_setup ALL DEPENDS script_output.txt)
