@@ -6,11 +6,11 @@
 * @brief Contains aliases for some of the messier types used in Flan.
 */
 
-#include <string>
-#include <variant>
-#include <map>
 #include <functional>
+#include <map>
+#include <string>
 #include <tuple>
+#include <variant>
 
 
 /**

@@ -43,7 +43,14 @@ namespace Options
 			// name of the variable (key) to assign_option, making sure to
 			// use the correct template type for the argument. The value is
 			// set within assign_option.
-			if (key == "gkyl_dir") 
+			if (key == "case_name") 
+			{
+				auto set_func = std::bind(&Options::set_case_name, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "gkyl_dir") 
 			{
 				auto set_func = std::bind(&Options::set_gkyl_dir, &opts, 
 					std::placeholders::_1);

@@ -1,8 +1,8 @@
 #ifndef LOAD_OPTIONS_H
 #define LOAD_OPTIONS_H
 
-#include "options.h"
 #include "flan_types.h" // For Inputs type
+#include "options.h"
 
 namespace Options
 {

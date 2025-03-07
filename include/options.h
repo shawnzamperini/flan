@@ -5,6 +5,7 @@
 * @file options.h
 */
 #include <tuple>
+
 #include "flan_types.h"
 
 
@@ -29,6 +30,9 @@ namespace Options
 	private:
 
 		// Input options and their defaults are defined here
+
+		// Meta options for the simulation
+		std::string m_case_name              {"undefined"};
 
 		// Options related to reading in Gkeyll files
 		std::string m_gkyl_dir               {"undefined"};
@@ -93,6 +97,7 @@ namespace Options
 		Options();
 
 		// Setter declarations
+		void set_case_name(std::string case_name);
 		void set_gkyl_dir(std::string gkyl_dir);
 		void set_gkyl_casename(std::string gkyl_casename);
 		void set_gkyl_frame_start(int gkyl_frame_start);
@@ -128,6 +133,7 @@ namespace Options
 		void set_mapc2p(Mapc2p_ptr mapc2p);
 
 		// Accessor declarations
+		const std::string& case_name() const;
 		const std::string& gkyl_dir() const;
 		const std::string& gkyl_casename() const;
 		const int gkyl_frame_start() const;

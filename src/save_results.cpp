@@ -5,24 +5,25 @@
 * Right now only outputting everything into a single netCDF file is supported.
 */
 
-#include <type_traits>
 #include <iostream>
 #include <string>
-#include <vector>
+#include <type_traits>
 #include <variant>
+#include <vector>
 
 #include "background.h"
-#include "save_results.h"
 #include "netcdf"
+#include "options.h"
+#include "save_results.h"
 
 namespace SaveResults
 {
-	void save_results(const std::string_view case_name, 
-		const Background::Background& bkg, Impurity::Statistics& imp_stats)
+	void save_results(const Background::Background& bkg, 
+		Impurity::Statistics& imp_stats, const Options::Options& opts)
 	{
 		// Right now this is just a redirect to the netcdf option. I built 
 		// it this way to allow other save options in the future if desired.
-		save_netcdf(case_name, bkg, imp_stats);
+		save_netcdf(bkg, imp_stats, opts);
 	
 	}
 
@@ -96,8 +97,8 @@ namespace SaveResults
 		}
 	}
 
-	void save_netcdf(const std::string_view case_name, 
-		const Background::Background& bkg, Impurity::Statistics& imp_stats)
+	void save_netcdf(const Background::Background& bkg, 
+		Impurity::Statistics& imp_stats, const Options::Options& opts)
 	{
 		std::cout << "Saving netCDF file...\n";
 
@@ -110,7 +111,7 @@ namespace SaveResults
 		// so we cannot pass it around functions (at least not like a normal
 		// variable). The implementation details are such that it automatically
 		// closes once it goes out of scope.
-		std::string nc_filename {case_name};
+		std::string nc_filename {opts.case_name()};
 		nc_filename = nc_filename + ".nc";
 		netCDF::NcFile nc_file {nc_filename, netCDF::NcFile::replace};
 		
