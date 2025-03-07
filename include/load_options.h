@@ -30,10 +30,13 @@ namespace Options
 	void load_input(Options& opts, const Inputs& inpts);
 
 	/**
-	* @brief Returns true if the variant (var) is of type T, false if not.
+	* @brief Checks if variant (var) is of the correct type.
 	*
 	* @param var A variant object that contains all the types used among the
-	*            various input objects. See Inputs in \ref
+	*            various input objects. See Inputs in \ref flan_types.h.
+	* @param var_name string_view of the variant name.
+	*
+	* @returns Returns true if the variant (var) is of type T, false if not.
 	*/
 	template <typename T>
 	bool var_correct_type(auto var, const std::string_view var_name);

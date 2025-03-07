@@ -64,7 +64,7 @@ namespace Options
 		double m_imp_source_scale_fact               {1.0};
 		std::string m_imp_vel_stats                {"off"};
 		double m_imp_xbound_buffer                   {0.0};
-		std::string m_imp_iz_recomb                {"yes"};
+		std::string m_imp_iz_recomb                 {"on"};
 
 		// OpenADAS options
 		std::string m_openadas_root          {"undefined"};
@@ -75,6 +75,18 @@ namespace Options
 		// mapc2p_default is defined at the beginning of this file before the
 		// class. Mapc2p_ptr is defined in flan_types.h.
 		Mapc2p_ptr m_mapc2p {&mapc2p_default};
+
+		// Internal control variables for string options. The string options
+		// are just there to be user-friendly, but it is more efficient to
+		// use integers instead of comparing strings all the time. These are
+		// all set automatically within the corresponding settters.
+		int m_imp_ystart_opt_int {0};
+		int m_imp_zstart_opt_int {0};
+		int m_imp_collisions_int {0};
+		int m_imp_var_reduct_int {0};
+		int m_imp_time_step_opt_int {0};
+		int m_imp_vel_stats_int {0};
+		int m_imp_iz_recomb_int {0};
 
 	public:
 
@@ -116,38 +128,48 @@ namespace Options
 		void set_mapc2p(Mapc2p_ptr mapc2p);
 
 		// Accessor declarations
-		std::string gkyl_dir();
-		int gkyl_frame_start();
-		int gkyl_frame_end();
-		std::string gkyl_elec_name();
-		std::string gkyl_ion_name();
-		double gkyl_elec_mass_amu();
-		double gkyl_ion_mass_amu();
-		std::string gkyl_file_type();
-		int imp_atom_num();
-		double imp_mass_amu();
-		int imp_init_charge();
-		int imp_num();
-		double imp_xmin();
-		double imp_xmax();
-		std::string imp_ystart_opt();
-		double imp_ystart_val();
-		std::string imp_zstart_opt();
-		double imp_zstart_val();
-		std::string imp_collisions();
-		std::string imp_var_reduct();
-		double imp_var_reduct_freq();
-		double imp_var_reduct_min_weight();
-		std::string imp_time_step_opt();
-		double imp_time_step();
-		double imp_time_step_min();
-		double imp_source_scale_fact();
-		std::string imp_vel_stats();
-		double imp_xbound_buffer();
-		std::string imp_iz_recomb();
-		std::string openadas_root();
-		int openadas_year();
-		Mapc2p_ptr mapc2p();
+		const std::string& gkyl_dir() const;
+		const std::string& gkyl_casename() const;
+		const int gkyl_frame_start() const;
+		const int gkyl_frame_end() const;
+		const std::string& gkyl_elec_name() const;
+		const std::string& gkyl_ion_name() const;
+		const double gkyl_elec_mass_amu() const;
+		const double gkyl_ion_mass_amu() const;
+		const std::string& gkyl_file_type() const;
+		const int imp_atom_num() const;
+		const double imp_mass_amu() const;
+		const int imp_init_charge() const;
+		const int imp_num() const;
+		const double imp_xmin() const;
+		const double imp_xmax() const;
+		const std::string& imp_ystart_opt() const;
+		const double imp_ystart_val() const;
+		const std::string& imp_zstart_opt() const;
+		const double imp_zstart_val() const;
+		const std::string& imp_collisions() const;
+		const std::string& imp_var_reduct() const;
+		const double imp_var_reduct_freq() const;
+		const double imp_var_reduct_min_weight() const;
+		const std::string& imp_time_step_opt() const;
+		const double imp_time_step() const;
+		const double imp_time_step_min() const;
+		const double imp_source_scale_fact() const;
+		const std::string& imp_vel_stats() const;
+		const double imp_xbound_buffer() const;
+		const std::string& imp_iz_recomb() const;
+		const std::string& openadas_root() const;
+		const int openadas_year() const;
+		const Mapc2p_ptr mapc2p() const;
+
+		// Accessor declarations for internal control variables
+		const int imp_ystart_opt_int() const;
+		const int imp_zstart_opt_int() const;
+		const int imp_collisions_int() const;
+		const int imp_var_reduct_int() const;
+		const int imp_time_step_opt_int() const;
+		const int imp_vel_stats_int() const;
+		const int imp_iz_recomb_int() const;
 	};
 
 }

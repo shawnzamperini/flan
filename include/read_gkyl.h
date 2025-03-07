@@ -12,12 +12,13 @@
 
 #include "vectors.h"
 #include "background.h"
+#include "options.h"
 
 namespace Gkyl
 {
 
 	// Entry point for reading Gkeyll data into Flan. 
-	Background::Background read_gkyl();
+	Background::Background read_gkyl(const Options::Options& opts);
 	
 	// Simple helper function to return a string of the full path to a Gkeyll
 	// file using it's file name convention.
@@ -57,18 +58,18 @@ namespace Gkyl
 	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
 		const std::string& data_type, Vectors::Vector4D<T>& gkyl_data, 
-		const double species_mass_amu=0);
+		const Options::Options& opts, const double species_mass_amu=0);
 
 	// Calcuate the electric field using the gradient of gkyl_vp. This must
 	// be run after read_potential.
 	void calc_elec_field();
 
 	// Read in the corresponding Gkeyll data into vectors.
-	void read_elec_density();
-	void read_elec_temperature();
-	void read_ion_temperature();
-	void read_potential();
-	void read_magnetic_field();
+	void read_elec_density(const Options::Options& opts);
+	void read_elec_temperature(const Options::Options& opts);
+	void read_ion_temperature(const Options::Options& opts);
+	void read_potential(const Options::Options& opts);
+	void read_magnetic_field(const Options::Options& opts);
 
 	// Implementation of gradient as used by numpy.gradient. This is a second
 	// order approximation of the derivative.

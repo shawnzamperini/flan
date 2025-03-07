@@ -55,23 +55,44 @@ namespace Options
 	void Options::set_imp_xmax(double imp_xmax) 
 		{m_imp_xmax = imp_xmax;}
 	void Options::set_imp_ystart_opt(std::string imp_ystart_opt) 
-		{m_imp_ystart_opt = imp_ystart_opt;}
+		{
+			m_imp_ystart_opt = imp_ystart_opt;
+			if (imp_ystart_opt == "single_value") m_imp_ystart_opt_int = 0;
+			else if (imp_ystart_opt == "range") m_imp_ystart_opt_int = 1;
+		}
 	void Options::set_imp_ystart_val(double imp_ystart_val) 
 		{m_imp_ystart_val = imp_ystart_val;}
 	void Options::set_imp_zstart_opt(std::string imp_zstart_opt) 
-		{m_imp_zstart_opt = imp_zstart_opt;}
+		{
+			m_imp_zstart_opt = imp_zstart_opt;
+			if (imp_zstart_opt == "single_value") m_imp_zstart_opt_int = 0;
+			else if (imp_zstart_opt == "range") m_imp_zstart_opt_int = 1;
+		}
 	void Options::set_imp_zstart_val(double imp_zstart_val) 
 		{m_imp_zstart_val = imp_zstart_val;}
 	void Options::set_imp_collisions(std::string imp_collisions) 
-		{m_imp_collisions = imp_collisions;}
+		{
+			m_imp_collisions = imp_collisions;
+			if (imp_collisions == "off") m_imp_collisions_int = 0;
+			else if (imp_collisions == "on") m_imp_collisions_int = 1;
+		}
 	void Options::set_imp_var_reduct(std::string imp_var_reduct) 
-		{m_imp_var_reduct = imp_var_reduct;}
+		{
+			m_imp_var_reduct = imp_var_reduct;
+			if (imp_var_reduct == "off") m_imp_var_reduct_int = 0;
+			else if (imp_var_reduct == "on") m_imp_var_reduct_int = 1;
+		}
 	void Options::set_imp_var_reduct_freq(double imp_var_reduct_freq) 
 		{m_imp_var_reduct_freq = imp_var_reduct_freq;}
 	void Options::set_imp_var_reduct_min_weight(double imp_var_reduct_min_weight) 
 		{m_imp_var_reduct_min_weight = imp_var_reduct_min_weight;}
 	void Options::set_imp_time_step_opt(std::string imp_time_step_opt) 
-		{m_imp_time_step_opt = imp_time_step_opt;}
+		{
+			m_imp_time_step_opt = imp_time_step_opt;
+			if (imp_time_step_opt == "constant") m_imp_time_step_opt_int = 0;
+			else if (imp_time_step_opt == "variable") 
+				m_imp_time_step_opt_int = 1;
+		}
 	void Options::set_imp_time_step(double imp_time_step) 
 		{m_imp_time_step = imp_time_step;}
 	void Options::set_imp_time_step_min(double imp_time_step_min) 
@@ -79,11 +100,19 @@ namespace Options
 	void Options::set_imp_source_scale_fact(double imp_source_scale_fact) 
 		{m_imp_source_scale_fact = imp_source_scale_fact;}
 	void Options::set_imp_vel_stats(std::string imp_vel_stats) 
-		{m_imp_vel_stats = imp_vel_stats;}
+		{
+			m_imp_vel_stats = imp_vel_stats;
+			if (imp_vel_stats == "off") m_imp_vel_stats_int = 0;
+			else if (imp_vel_stats == "on") m_imp_vel_stats_int = 1;
+		}
 	void Options::set_imp_xbound_buffer(double imp_xbound_buffer) 
 		{m_imp_xbound_buffer = imp_xbound_buffer;}
 	void Options::set_imp_iz_recomb(std::string imp_iz_recomb) 
-		{m_imp_iz_recomb = imp_iz_recomb;}
+		{
+			m_imp_iz_recomb = imp_iz_recomb;
+			if (imp_iz_recomb == "off") m_imp_iz_recomb_int = 0;
+			else if (imp_iz_recomb == "on") m_imp_iz_recomb_int = 1;
+		}
 	void Options::set_openadas_root(std::string openadas_root) 
 		{m_openadas_root = openadas_root;}
 	void Options::set_openadas_year(int openadas_year) 
@@ -92,70 +121,88 @@ namespace Options
 		{m_mapc2p = mapc2p;}
 
 	// Accessor definitions
-	std::string Options::gkyl_dir() 
+	const std::string& Options::gkyl_dir() const 
 		{return m_gkyl_dir;}
-	int Options::gkyl_frame_start() 
+	const std::string& Options::gkyl_casename() const 
+		{return m_gkyl_casename;}
+	const int Options::gkyl_frame_start() const 
 		{return m_gkyl_frame_start;}
-	int Options::gkyl_frame_end() 
+	const int Options::gkyl_frame_end() const 
 		{return m_gkyl_frame_end;}
-	std::string Options::gkyl_elec_name() 
+	const std::string& Options::gkyl_elec_name() const 
 		{return m_gkyl_elec_name;}
-	std::string Options::gkyl_ion_name() 
+	const std::string& Options::gkyl_ion_name() const 
 		{return m_gkyl_ion_name;}
-	double Options::gkyl_elec_mass_amu() 
+	const double Options::gkyl_elec_mass_amu() const 
 		{return m_gkyl_elec_mass_amu;}
-	double Options::gkyl_ion_mass_amu() 
+	const double Options::gkyl_ion_mass_amu() const 
 		{return m_gkyl_ion_mass_amu;}
-	std::string Options::gkyl_file_type() 
+	const std::string& Options::gkyl_file_type() const 
 		{return m_gkyl_file_type;}
-	int Options::imp_atom_num() 
+	const int Options::imp_atom_num() const 
 		{return m_imp_atom_num;}
-	double Options::imp_mass_amu() 
+	const double Options::imp_mass_amu() const 
 		{return m_imp_mass_amu;}
-	int Options::imp_init_charge() 
+	const int Options::imp_init_charge() const 
 		{return m_imp_init_charge;}
-	int Options::imp_num()
+	const int Options::imp_num() const
 		{return m_imp_num;}
-	double Options::imp_xmin() 
+	const double Options::imp_xmin() const 
 		{return m_imp_xmin;}
-	double Options::imp_xmax() 
+	const double Options::imp_xmax() const 
 		{return m_imp_xmax;}
-	std::string Options::imp_ystart_opt() 
+	const std::string& Options::imp_ystart_opt() const 
 		{return m_imp_ystart_opt;}
-	double Options::imp_ystart_val() 
+	const double Options::imp_ystart_val() const 
 		{return m_imp_ystart_val;}
-	std::string Options::imp_zstart_opt() 
+	const std::string& Options::imp_zstart_opt() const 
 		{return m_imp_zstart_opt;}
-	double Options::imp_zstart_val() 
+	const double Options::imp_zstart_val() const 
 		{return m_imp_zstart_val;}
-	std::string Options::imp_collisions() 
+	const std::string& Options::imp_collisions() const 
 		{return m_imp_collisions;}
-	std::string Options::imp_var_reduct() 
+	const std::string& Options::imp_var_reduct() const 
 		{return m_imp_var_reduct;}
-	double Options::imp_var_reduct_freq() 
+	const double Options::imp_var_reduct_freq() const 
 		{return m_imp_var_reduct_freq;}
-	double Options::imp_var_reduct_min_weight() 
+	const double Options::imp_var_reduct_min_weight() const 
 		{return m_imp_var_reduct_min_weight;}
-	std::string Options::imp_time_step_opt() 
+	const std::string& Options::imp_time_step_opt() const 
 		{return m_imp_time_step_opt;}
-	double Options::imp_time_step() 
+	const double Options::imp_time_step() const 
 		{return m_imp_time_step;}
-	double Options::imp_time_step_min() 
+	const double Options::imp_time_step_min() const 
 		{return m_imp_time_step_min;}
-	double Options::imp_source_scale_fact() 
+	const double Options::imp_source_scale_fact() const 
 		{return m_imp_source_scale_fact;}
-	std::string Options::imp_vel_stats() 
+	const std::string& Options::imp_vel_stats() const 
 		{return m_imp_vel_stats;}
-	double Options::imp_xbound_buffer() 
+	const double Options::imp_xbound_buffer() const 
 		{return m_imp_xbound_buffer;}
-	std::string Options::imp_iz_recomb() 
+	const std::string& Options::imp_iz_recomb() const 
 		{return m_imp_iz_recomb;}
-	std::string Options::openadas_root() 
+	const std::string& Options::openadas_root() const 
 		{return m_openadas_root;}
-	int Options::openadas_year() 
+	const int Options::openadas_year() const 
 		{return m_openadas_year;}
-	Mapc2p_ptr Options::mapc2p() 
+	const Mapc2p_ptr Options::mapc2p() const 
 		{return m_mapc2p;}
+	
+	// Accessors for internal control variables
+	const int Options::imp_ystart_opt_int() const
+		{return m_imp_ystart_opt_int;}
+	const int Options::imp_zstart_opt_int() const
+		{return m_imp_zstart_opt_int;}
+	const int Options::imp_collisions_int() const
+		{return m_imp_collisions_int;}
+	const int Options::imp_var_reduct_int() const
+		{return m_imp_var_reduct_int;}
+	const int Options::imp_time_step_opt_int() const
+		{return m_imp_time_step_opt_int;}
+	const int Options::imp_vel_stats_int() const
+		{return m_imp_vel_stats_int;}
+	const int Options::imp_iz_recomb_int() const
+		{return m_imp_iz_recomb_int;}
 	
 
 }

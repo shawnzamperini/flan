@@ -9,6 +9,7 @@
 
 #include <vector> 
 
+#include "options.h"
 #include "background.h"
 #include "impurity.h"
 #include "impurity_stats.h"
@@ -225,7 +226,7 @@ namespace Impurity
 	*/
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb);
+		const OpenADAS::OpenADAS& oa_recomb, const Options::Options& opts);
 
 	/**
 	* @brief Entry level function to impurity following routines
@@ -238,7 +239,8 @@ namespace Impurity
 	* @return Return a Statistics object with the impurity-related results of
 	* the simulation.
 	*/
-	Statistics follow_impurities(Background::Background& bkg);
+	Statistics follow_impurities(Background::Background& bkg, 
+		const Options::Options& opts);
 }
 
 #endif
