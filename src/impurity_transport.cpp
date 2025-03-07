@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdlib>
 
+#include "options.h"
 #include "impurity_transport.h"
 #include "background.h"
 #include "read_input.h"
@@ -545,7 +546,7 @@ namespace Impurity
 
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb)
+		const OpenADAS::OpenADAS& oa_recomb, const Options::Options& opts)
 	{
 		// Load input options as local variables for cleaner code.
 		int imp_num {Input::get_opt_int(Input::imp_num)};
@@ -744,30 +745,32 @@ namespace Impurity
 			- prim_imp_count << '\n';
 	}
 
-	Statistics follow_impurities(Background::Background& bkg)
+	Statistics follow_impurities(Background::Background& bkg, 
+		const Options::Options& opts)
 	{
 		// Initialize particle statistics vectors, all contained within a
 		// Statistics object. Option to control if the three velocity arrays
 		// are allocated (to save memory).
-		bool imp_vel_stats {false};
-		std::string imp_vel_stats_str 
-			{Input::get_opt_str(Input::imp_vel_stats)};
-		if (imp_vel_stats_str == "yes") imp_vel_stats = true;
+		//bool imp_vel_stats {false};
+		//std::string imp_vel_stats_str 
+		//	{Input::get_opt_str(Input::imp_vel_stats)};
+		//if (imp_vel_stats_str == "yes") imp_vel_stats = true;
 		Statistics imp_stats {bkg.get_dim1(), bkg.get_dim2(), 
-			bkg.get_dim3(), bkg.get_dim4(), imp_vel_stats};
+			bkg.get_dim3(), bkg.get_dim4(), 
+			static_cast<bool>(opts.imp_vel_stats_int())};
 
 		// Load OpenADAS data needed for ionization/recombination rates. 
-		std::string_view openadas_root {Input::get_opt_str(
-			Input::openadas_root)};
-		int imp_atom_num {Input::get_opt_int(Input::imp_atom_num)};
-		int openadas_year {Input::get_opt_int(Input::openadas_year)};
-		OpenADAS::OpenADAS oa_ioniz {openadas_root, openadas_year, 
-			imp_atom_num, "scd"};
-		OpenADAS::OpenADAS oa_recomb {openadas_root, openadas_year, 
-			imp_atom_num, "acd"};
+		//std::string_view openadas_root {Input::get_opt_str(
+		//	Input::openadas_root)};
+		//int imp_atom_num {Input::get_opt_int(Input::imp_atom_num)};
+		//int openadas_year {Input::get_opt_int(Input::openadas_year)};
+		OpenADAS::OpenADAS oa_ioniz {opts.openadas_root(), 
+			opts.openadas_year(), opts.imp_atom_num(), "scd"};
+		OpenADAS::OpenADAS oa_recomb {opts.openadas_root(), 
+			opts.openadas_year(), opts.imp_atom_num(), "acd"};
 
 		// Execute main particle following loop.
-		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb);
+		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts);
 	
 		// Convert the statistics into meaningful quantities. We are scaling
 		// the density by the scale factor.

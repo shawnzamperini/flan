@@ -21,6 +21,7 @@
 #include "vectors.h"
 #include "constants.h"
 #include "background.h"
+#include "options.h"
 
 namespace Gkyl
 {
@@ -49,22 +50,25 @@ namespace Gkyl
 	/**
 	* @brief Entry point for reading Gkeyll data into Flan. 
 	*
+	* @param opts Options object containing the controlling setting of the
+	* simulation.
+	*
 	* @return Returns a filled in Background object
 	*/
-	Background::Background read_gkyl()
+	Background::Background read_gkyl(const Options::Options& opts)
 	{	
 		// Load each needed dataset from Gkeyll
 		std::cout << "Loading Gkeyll data...\n";
 		std::cout << "  - Electron density\n";
-		read_elec_density();
+		read_elec_density(opts);
 		std::cout << "  - Electron temperature\n";
-		read_elec_temperature();
+		read_elec_temperature(opts);
 		std::cout << "  - Ion temperature\n";
-		read_ion_temperature();
+		read_ion_temperature(opts);
 		std::cout << "  - Plasma potential\n";
-		read_potential();
+		read_potential(opts);
 		std::cout << "  - Magnetic field\n";
-		read_magnetic_field();
+		read_magnetic_field(opts);
 		std::cout << "\n";
 
 		// Calculate the 3 electric field components from the potential
@@ -441,30 +445,26 @@ namespace Gkyl
 	* density, potential or magnetic field. 
 	* @param gkyl_data One of the global (to the Gkyl namespace) vectors that
 	* corredponds to the data_type being loaded.
+	* @param opts Options object that contains all the controlling options
+	* of the simulation.
+	* @param species_mass_amu The mass of the species in amu.
 	*/
 	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
 		const std::string& data_type, Vectors::Vector4D<T>& gkyl_data, 
-		const double species_mass_amu)
+		const Options::Options& opts, const double species_mass_amu)
 	{
-		// Load into local variables so code is easier to read.
-		const std::string gkyl_dir {Input::get_opt_str(Input::gkyl_dir)};
-		const std::string gkyl_casename {Input::get_opt_str(Input::gkyl_casename)};
-		const int gkyl_frame_start {Input::get_opt_int(Input::gkyl_frame_start)};
-		const int gkyl_frame_end {Input::get_opt_int(Input::gkyl_frame_end)};
-		const std::string gkyl_file_type {Input::get_opt_str(Input::gkyl_file_type)};
-
 		// Ensure READ_GKYL_PY is defined, returning it if so.
 		std::string read_gkyl_py {get_read_gkyl_py()};
 
 		// Assemble command to call read_gkyl.py with stringstream	
 		std::stringstream read_gkyl_cmd_ss {};
 		read_gkyl_cmd_ss << "python " << read_gkyl_py 
-			<< " --gkyl_dir=" << gkyl_dir
-			<< " --gkyl_case_name=" << gkyl_casename
-			<< " --gkyl_file_type=" << gkyl_file_type
-			<< " --gkyl_frame_start=" << gkyl_frame_start
-			<< " --gkyl_frame_end=" << gkyl_frame_end
+			<< " --gkyl_dir=" << opts.gkyl_dir()
+			<< " --gkyl_case_name=" << opts.gkyl_casename()
+			<< " --gkyl_file_type=" << opts.gkyl_file_type()
+			<< " --gkyl_frame_start=" << opts.gkyl_frame_start()
+			<< " --gkyl_frame_end=" << opts.gkyl_frame_end()
 			<< " --gkyl_species=" << species
 			<< " --gkyl_species_mass_amu=" << species_mass_amu
 			<< " --gkyl_data_type=" << data_type;
@@ -488,11 +488,9 @@ namespace Gkyl
 		[[maybe_unused]] int sys_result {system(read_gkyl_cmd)};
 
 		// Load the times for each frame in a vector<double>
-		//std::vector<double> times {load_times()};
 		gkyl_times = {load_times()};
 
 		// Load the x, y, z grids each as their own vector<double>
-		//auto [grid_x, grid_y, grid_z] = load_grid();
 		std::tie(gkyl_grid_x, gkyl_grid_y, gkyl_grid_z) = load_grid();
 
 		// Calculate the cell centers.
@@ -514,71 +512,58 @@ namespace Gkyl
 	/**
 	* @brief Read electron density into gkyl_ne.
 	*/
-	void read_elec_density()
+	void read_elec_density(const Options::Options& opts)
 	{
-		// Load into local variables so code is easier to read.
-		std::string gkyl_elec_name {Input::get_opt_str(Input::gkyl_elec_name)};
-
 		// Call pgkyl to load data into gkyl_ne
-		read_data_pgkyl(gkyl_elec_name, "density", gkyl_ne);
+		read_data_pgkyl(opts.gkyl_elec_name(), "density", gkyl_ne, opts);
 	}
 
 	/**
 	* @brief Read electron temperature into gkyl_te.
 	*/
-	void read_elec_temperature()
+	void read_elec_temperature(const Options::Options& opts)
 	{
-		// Load into local variables so code is easier to read.
-		std::string gkyl_elec_name {Input::get_opt_str(Input::gkyl_elec_name)};
-		double species_mass_amu {
-			Input::get_opt_dbl(Input::gkyl_elec_mass_amu)};
-
 		// Call pgkyl to load data into gkyl_te. Need to pass in the species
 		// mass so it can calculate temperature correctly.
-		read_data_pgkyl(gkyl_elec_name, "temperature", gkyl_te, 
-			species_mass_amu);
+		read_data_pgkyl(opts.gkyl_elec_name(), "temperature", gkyl_te, opts, 
+			opts.gkyl_elec_mass_amu());
 	}
 
 	/**
 	* @brief Read ion temperature into gkyl_ti.
 	*/
-	void read_ion_temperature()
+	void read_ion_temperature(const Options::Options& opts)
 	{
-		// Load into local variables so code is easier to read.
-		std::string gkyl_ion_name {Input::get_opt_str(Input::gkyl_ion_name)};
-		double species_mass_amu {
-			Input::get_opt_dbl(Input::gkyl_ion_mass_amu)};
-
 		// Call pgkyl to load data into gkyl_ti. Need to pass in the species
 		// mass so it can calculate temperature correctly.
-		read_data_pgkyl(gkyl_ion_name, "temperature", gkyl_ti, 
-			species_mass_amu);
+		read_data_pgkyl(opts.gkyl_ion_name(), "temperature", gkyl_ti, opts,
+			opts.gkyl_ion_mass_amu());
 	}
 
 	/**
 	* @brief Read plasma potential into gkyl_vp.
 	*/
-	void read_potential()
+	void read_potential(const Options::Options& opts)
 	{
 		using namespace std::string_literals;
 
 		// Call pgkyl to load data into gkyl_vp. There is no species
 		// name with the potential file so just putting a placeholder
 		// string. The script handles things.
-		read_data_pgkyl("null"s, "potential", gkyl_vp);
+		read_data_pgkyl("null"s, "potential", gkyl_vp, opts);
 	}
 
 	/**
 	* @brief Read magnetic field into gkyl_b.
 	*/
-	void read_magnetic_field()
+	void read_magnetic_field(const Options::Options& opts)
 	{
 		using namespace std::string_literals;
 
 		// Call pgkyl to load data into gkyl_b. There is no species
 		// name with the potential file so just putting a placeholder
 		// string. The script handles things.
-		read_data_pgkyl("null"s, "magnetic_field", gkyl_b);
+		read_data_pgkyl("null"s, "magnetic_field", gkyl_b, opts);
 	}
 
 	/**
