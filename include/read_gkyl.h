@@ -23,7 +23,8 @@ namespace Gkyl
 	// Simple helper function to return a string of the full path to a Gkeyll
 	// file using it's file name convention.
 	std::string assemble_path(const std::string& species, 
-		const std::string& ftype, int frame, const std::string& extension);
+		const std::string& ftype, int frame, const std::string& extension,
+		const Options::Options& opts);
 
 	// Function to return the full path to read_gkyl.py, which is used to
 	// interface with postgkyl and create files that are easily read in by

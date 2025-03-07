@@ -11,13 +11,14 @@
 #include "background.h"
 #include "impurity_stats.h"
 #include "netcdf"
+#include "options.h"
 
 namespace SaveResults
 {
 
 	// Entry point to saving results.
-	void save_results(const std::string_view case_name, 
-		const Background::Background& bkg, Impurity::Statistics& imp_stats);
+	void save_results(const Background::Background& bkg,
+		Impurity::Statistics& imp_stats, const Options::Options& opts);
 
 	
 	// Save a 1D vector into nc_file. The correct NcDim (dim) must be passed 
@@ -40,8 +41,8 @@ namespace SaveResults
 		const std::string& units);
 
 	// Save all results in a netCDF4 file.
-	void save_netcdf(const std::string_view case_name, 
-		const Background::Background& bkg, Impurity::Statistics& imp_stats);
+	void save_netcdf(const Background::Background& bkg, 
+		Impurity::Statistics& imp_stats, const Options::Options& opts);
 
 }
 

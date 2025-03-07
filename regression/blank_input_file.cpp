@@ -26,7 +26,11 @@ Inputs create_inputs()
 	Inputs inpts;
 	
 	// Int, double and string input options go here
-	inpts["imp_num"] = 10;
+	inpts["case_name"] = "flan_case_name";
+	inpts["gkyl_dir"] = "/path/to/gkyl/case";
+	inpts["gkyl_casename"] = "name_of_gkyl_case";
+	inpts["gkyl_frame_start"] = 0;
+	inpts["gkyl_frame_end"] = 10;
 
 	// Pointers to functions go here
 	Mapc2p_ptr mapc2p_ptr {&mapc2p};

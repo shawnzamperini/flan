@@ -4,58 +4,52 @@
 * @brief Impurity transport routines
 */
 
-#include <omp.h>
-#include <tuple>
-#include <vector>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <omp.h>
+#include <tuple>
+#include <vector>
 
-#include "options.h"
-#include "impurity_transport.h"
 #include "background.h"
-#include "read_input.h"
-#include "vectors.h"
+#include "collisions.h"
+#include "constants.h"
 #include "impurity.h"
 #include "impurity_stats.h"
-#include "random.h"
-#include "constants.h"
+#include "impurity_transport.h"
 #include "openadas.h"
-#include "collisions.h"
+#include "options.h"
+#include "random.h"
 #include "variance_reduction.h"
+#include "vectors.h"
 
 
 namespace Impurity
 {
 	double get_birth_t(const Background::Background& bkg)
 	{
-		//std::cout << "Warning! Hardcoded t=0 in for testing.\n";
-		//return bkg.get_t_min();
 		return Random::get(bkg.get_t_min(), bkg.get_t_max());
 	}
 
-	double get_birth_x(const Background::Background& bkg)
+	double get_birth_x(const Background::Background& bkg,
+		const Options::Options& opts)
 	{	
-		// Load input options as local variables for cleaner code
-		double xmin {Input::get_opt_dbl(Input::imp_xmin)};		
-		double xmax {Input::get_opt_dbl(Input::imp_xmax)};		
-	
 		// Uniformily distributed between xmin, xmax.
-		return Random::get(xmin, xmax);
+		return Random::get(opts.imp_xmin(), opts.imp_xmax());
 	}
 
 	double get_birth_y(const Background::Background& bkg, 
-		const int imp_ystart_opt_int)
+		const Options::Options& opts)
 	{
 		// Start at specific point
-		if (imp_ystart_opt_int == 0)
+		if (opts.imp_ystart_opt_int() == 0)
 		{
-			return {Input::get_opt_dbl(Input::imp_ystart_val)};
+			return opts.imp_ystart_val();
 		}
 
 		// Start between a range (here defaults to the full y-width of the 
 		// simulation volume).
-		else if (imp_ystart_opt_int == 1)
+		else if (opts.imp_ystart_opt_int() == 1)
 		{
 			return Random::get(bkg.get_y_min(), bkg.get_y_max());
 		}
@@ -63,30 +57,25 @@ namespace Impurity
 		return 0.0;
 	}
 
-	double get_birth_z(const Background::Background& bkg)
+	double get_birth_z(const Background::Background& bkg,
+		const Options::Options& opts)
 	{
-		double imp_zstart_val {Input::get_opt_dbl(Input::imp_zstart_val)};
-		return imp_zstart_val;
+		return opts.imp_zstart_val();
 	}
 	
-	int get_birth_charge()
+	int get_birth_charge(const Options::Options& opts)
 	{
-		int imp_charge {Input::get_opt_int(Input::imp_init_charge)};
-		return imp_charge;
+		return opts.imp_init_charge();
 	}
 
 	Impurity create_primary_imp(const Background::Background& bkg, 
-		const int imp_ystart_opt_int)
+		const Options::Options& opts)
 	{
-		// Load input options as local variables for cleaner code.
-		double imp_mass_amu {Input::get_opt_dbl(Input::imp_mass_amu)};
-		int imp_atom_num {Input::get_opt_int(Input::imp_atom_num)};
-
 		// Starting t,x,y,z for the impurity
 		double t_imp = get_birth_t(bkg);
-		double x_imp = get_birth_x(bkg);
-		double y_imp = get_birth_y(bkg, imp_ystart_opt_int);
-		double z_imp = get_birth_z(bkg);
+		double x_imp = get_birth_x(bkg, opts);
+		double y_imp = get_birth_y(bkg, opts);
+		double z_imp = get_birth_z(bkg, opts);
 
 		// Assume starting at rest, but if this ever changes do it here
 		double vx_imp {0.0};
@@ -94,14 +83,14 @@ namespace Impurity
 		double vz_imp {0.0};
 
 		// Impurity starting charge
-		int charge_imp = get_birth_charge();
+		int charge_imp = get_birth_charge(opts);
 	
 		// Return a temporary Impurity object. Since these are primary Impurity
 		// objects they by definition start with weight = 1.0.
 		double imp_weight {1.0};
-		double imp_mass {imp_mass_amu * Constants::amu_to_kg};
+		double imp_mass {opts.imp_mass_amu() * Constants::amu_to_kg};
 		return {t_imp, x_imp, y_imp, z_imp, vx_imp, vy_imp, vz_imp, 
-			imp_weight, charge_imp, imp_mass, imp_atom_num};
+			imp_weight, charge_imp, imp_mass, opts.imp_atom_num()};
 	}
 
 	template <typename T>
@@ -158,7 +147,6 @@ namespace Impurity
 		else return lower - grid_edges.begin() - 1;
 	}
 
-	// Delete eventually
 	void lorentz_update(Impurity& imp, const Background::Background& bkg,
 		const double imp_time_step, const int tidx, const int xidx, 
 		const int yidx, const int zidx)
@@ -209,7 +197,8 @@ namespace Impurity
 
 	double get_var_time_step_trans(Impurity& imp, 
 		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx, const double fx, const double fy, const double fz)
+		const int zidx, const double fx, const double fy, const double fz,
+		const Options::Options& opts)
 	{
 		// v0 = velocity before forces are applied
 		// v1 = v0 + dv = velocity after forces are applied
@@ -285,16 +274,15 @@ namespace Impurity
 				<< " imp_time_step_min\n";
 			std::cerr << "imp_q = " << imp.get_charge() << '\n';
 			std::exit(0);
-			dt = Input::get_opt_dbl(Input::imp_time_step_min);
+			dt = opts.imp_time_step_min();
 		}
 		return dt;
 	}
 
-
 	double get_var_time_step(Impurity& imp, 
 		const Background::Background& bkg, const int tidx, 
 		const int xidx, const int yidx, const int zidx, const double fx, 
-		const double fy, const double fz, const bool imp_coll_on)
+		const double fy, const double fz, const Options::Options& opts)
 	{
 		// If impurity is at rest, just choose a very low number to kick
 		// things off.
@@ -308,7 +296,7 @@ namespace Impurity
 		{
 			// Calculate time step for reasonable transport calculation
 			double dt_trans {get_var_time_step_trans(imp, bkg, xidx, yidx, 
-				zidx, fx, fy, fz)};
+				zidx, fx, fy, fz, opts)};
 
 			// Calculate time step for a reasonable collisions calculation
 			// (if necessary). Don't do this if the impurity is neutral, it
@@ -316,11 +304,11 @@ namespace Impurity
 			// loss factor, tossing it, and then elsewhere we have to 
 			// calculate it again. This could use some restructuring to save
 			// some time but I'm favoring readibility at this point in time. 
-			if (imp_coll_on && imp.get_charge() > 0) 
+			if (opts.imp_collisions_int() > 0 && imp.get_charge() > 0) 
 			{
 				double dt_coll {dt_trans};
 				Collisions::set_var_time_step_coll(dt_coll, imp, bkg, tidx, 
-					xidx, yidx, zidx);
+					xidx, yidx, zidx, opts);
 
 				// Choose the smallest of the two
 				//std::cout << "dt_trans, dt_coll = " << dt_trans << ", " 
@@ -376,7 +364,8 @@ namespace Impurity
 		imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
 	}
 
-	bool check_boundary(const Background::Background& bkg, Impurity& imp)
+	bool check_boundary(const Background::Background& bkg, Impurity& imp,
+		const Options::Options& opts)
 	{
 		// If we've run past the time range covered by the background plasma
 		// then we're done
@@ -386,13 +375,13 @@ namespace Impurity
 		// different options here in the future. There can be Gkeyll
 		// artifact near the x bounds, so there is an additional option to 
 		// consider anything within imp_xbound_buffer as absorbed.
-		const double imp_xbound_buffer {Input::get_opt_dbl(
-			Input::imp_xbound_buffer)};
-		if (imp.get_x() <= bkg.get_grid_x()[0] + imp_xbound_buffer)
+		//const double imp_xbound_buffer {Input::get_opt_dbl(
+		//	Input::imp_xbound_buffer)};
+		if (imp.get_x() <= bkg.get_grid_x()[0] + opts.imp_xbound_buffer())
 		{
 			return false;
 		}
-		if (imp.get_x() >= bkg.get_grid_x().back() - imp_xbound_buffer) 
+		if (imp.get_x() >= bkg.get_grid_x().back() - opts.imp_xbound_buffer()) 
 		{
 			return false;
 		}
@@ -419,7 +408,7 @@ namespace Impurity
 
 	void collision(Impurity& imp, const Background::Background& bkg, 
 		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx)
+		const int yidx, const int zidx, const Options::Options& opts)
 	{
 		// Local plasma propoerties
 		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
@@ -428,26 +417,24 @@ namespace Impurity
 
 		// Impurity modified within collision step
 		Collisions::collision_update(imp, local_te, local_ti, local_ne, 
-			imp_time_step);
+			imp_time_step, opts);
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
-		int& recomb_warnings, const bool imp_coll_on, 
-		const bool imp_iz_recomb_on, const int imp_time_step_opt_int,
-		std::vector<Impurity>& imps, const bool imp_var_reduct_on,
-		const double imp_var_reduct_freq, 
-		const double imp_var_reduct_min_weight, 
-		const std::vector<int> imp_var_reduct_counts)
+		int& recomb_warnings, std::vector<Impurity>& imps,
+		const std::vector<int> imp_var_reduct_counts, 
+		const bool imp_var_reduct_on, const Options::Options& opts)
 	{
 		// Timestep of impurity transport simulation. It can be a constant
 		// value (set here), or set on the fly based on a reasonable criteria.
 		// Initialize it with whatever the minimum time step is.
-		double imp_time_step {Input::get_opt_dbl(Input::imp_time_step_min)};
-		if (imp_time_step_opt_int == 0)
+		//double imp_time_step {Input::get_opt_dbl(Input::imp_time_step_min)};
+		double imp_time_step {opts.imp_time_step_min()};
+		if (opts.imp_time_step_opt_int() == 0)
 		{
-			imp_time_step = Input::get_opt_dbl(Input::imp_time_step);
+			imp_time_step = opts.imp_time_step();
 		}
 
 		// For debugging purposes (only works with one thread)
@@ -474,23 +461,24 @@ namespace Impurity
 			// weight and create a secondary Impurity to be followed. It
 			// currently is based on ionization/recombination, hence that also
 			// needs to be on to work.
-			if (imp_var_reduct_on && imp_iz_recomb_on)
+			if (imp_var_reduct_on && opts.imp_iz_recomb_int() > 0)
 			{
 				VarianceReduction::split_particle_main(imp, tidx, xidx, yidx, 
-					zidx, imp_stats, imps, imp_var_reduct_min_weight, 
+					zidx, imp_stats, imps, opts.imp_var_reduct_min_weight(), 
 					imp_var_reduct_counts, bkg, oa_ioniz, oa_recomb, 
 					imp_time_step);
 			}
 
 			// Calculate variable time step (if necessary)
-			if (imp_time_step_opt_int == 1) imp_time_step = 
+			if (opts.imp_time_step_opt_int() == 1) imp_time_step = 
 				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fx, 
-				fy, fz, imp_coll_on);
+				fy, fz, opts);
 
 			// Check for a collision
-			if (imp_coll_on)
+			if (opts.imp_collisions_int() > 0)
 			{
-				collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx);
+				collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx, 
+					opts);
 			}
 
 			// Debugging
@@ -512,7 +500,7 @@ namespace Impurity
 			step(imp, fx, fy, fz, imp_time_step);
 
 			// Check for ionization or recombination
-			if (imp_iz_recomb_on)
+			if (opts.imp_iz_recomb_int() > 0)
 			{
 				OpenADAS::ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, 
 					imp_time_step, tidx, xidx, yidx, zidx, ioniz_warnings, 
@@ -520,7 +508,7 @@ namespace Impurity
 			}
 
 			// Check for a terminating or boundary conditions
-			continue_following = check_boundary(bkg, imp);
+			continue_following = check_boundary(bkg, imp, opts);
 		}
 
 	}
@@ -548,53 +536,9 @@ namespace Impurity
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, const Options::Options& opts)
 	{
-		// Load input options as local variables for cleaner code.
-		int imp_num {Input::get_opt_int(Input::imp_num)};
-		const double imp_var_reduct_freq {Input::get_opt_dbl(
-			Input::imp_var_reduct_freq)};
-		const double imp_var_reduct_min_weight {Input::get_opt_dbl(
-			Input::imp_var_reduct_min_weight)};
-
-		// Use internal control variables for string input options. It's better
-		// to pass these as booleans or integers to avoid repeatedly checking
-		// the value of a string. Should eventually wrap these into a class so
-		// they can all be passed via a single reference.
-		// 1. Boolean for collisions
-		bool imp_coll_on {false};
-		std::string imp_collisions {Input::get_opt_str(Input::imp_collisions)};
-		if (imp_collisions == "yes") imp_coll_on = true;
-
-		// 2. Boolean for ionization/recombination
-		bool imp_iz_recomb_on {false};
-		std::string imp_iz_recomb {Input::get_opt_str(Input::imp_iz_recomb)};
-		if (imp_iz_recomb == "yes") imp_iz_recomb_on = true;
-
-		// 3. Integer for y start option
-		int imp_ystart_opt_int {0};
-		std::string imp_ystart_opt {Input::get_opt_str(Input::imp_ystart_opt)};
-		if (imp_ystart_opt == "single_value") imp_ystart_opt_int = 0;
-		else if (imp_ystart_opt == "range") imp_ystart_opt_int = 1;
-		else std::cerr << "Error: Unrecognized value for imp_ystart_opt (" << 
-			imp_ystart_opt << "). Valid options are: 'single_value' or " <<
-			"'range'.\n";
-
-		// 4. Integer for time step option
-		int imp_time_step_opt_int {0};
-		std::string imp_time_step_opt {
-			Input::get_opt_str(Input::imp_time_step_opt)};
-		if (imp_time_step_opt == "constant") imp_time_step_opt_int = 0;
-		else if (imp_time_step_opt == "variable") imp_time_step_opt_int = 1;
-		else std::cerr << "Error: Unrecognized value for imp_time_step_opt (" 
-			<< imp_time_step_opt << "). Valid options are: 'constant' or " <<
-			"'variable'.\n";
-
-		// 5. Boolean for variance reduction scheme
-		bool imp_var_reduct_on {false};
-		std::string imp_var_reduct {Input::get_opt_str(Input::imp_var_reduct)};
-		if (imp_var_reduct == "yes") imp_var_reduct_on = true;
-
 		// Variance reduction requires ionization/recombination be on
-		if (imp_var_reduct_on && !imp_iz_recomb_on)
+		//if (imp_var_reduct_on && !imp_iz_recomb_on)
+		if (opts.imp_var_reduct_int() > 0 && opts.imp_iz_recomb_int() == 0)
 		{
 			std::cout << "Warning! Variance reduction requires "
 				<< "imp_ioniz_recomb be set to 'yes'. Variance reduction will"
@@ -640,19 +584,19 @@ namespace Impurity
 			shared(bkg, oa_ioniz, oa_recomb) \
 			reduction(+: imp_stats, ioniz_warnings, recomb_warnings) \
 			reduction(+: tot_imp_count)
-		for (int i = 0; i < imp_num; ++i)
+		for (int i = 0; i < opts.imp_num(); ++i)
 		{
 
 			// Periodically determine what number of counts qualifies for 
 			// splitting a particle, if necessary. 
-			if (imp_var_reduct_on && priv_count > 0)
+			if (opts.imp_var_reduct_int() > 0 && priv_count > 0)
 			{
 				// This variable is just an integer saying "every X particles
 				// followed, update the variance reduction counts". It needs to
 				// be greater than zero.
 				int imp_var_reduct_mod {static_cast<int>(
-					static_cast<double>(imp_num) / omp_get_num_threads() 
-					* imp_var_reduct_freq)};
+					static_cast<double>(opts.imp_num()) / omp_get_num_threads() 
+					* opts.imp_var_reduct_freq())};
 				if (imp_var_reduct_mod == 0) imp_var_reduct_mod = 1;
 
 				// Update variance reduction counts according to the variance
@@ -678,7 +622,7 @@ namespace Impurity
 			}	
 
 			// Create starting impurity ion
-			Impurity primary_imp = create_primary_imp(bkg, imp_ystart_opt_int);
+			Impurity primary_imp = create_primary_imp(bkg, opts);
 			
 			// Each thread starts with one impurity ion, but it may end up 
 			// following more than that because that ion may split off another
@@ -700,10 +644,8 @@ namespace Impurity
 
 				// Begin following Impurity
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
-					ioniz_warnings, recomb_warnings, imp_coll_on, 
-					imp_iz_recomb_on, imp_time_step_opt_int, imps,
-					imp_var_reduct_control, imp_var_reduct_freq, 
-					imp_var_reduct_min_weight, imp_var_reduct_counts);
+					ioniz_warnings, recomb_warnings, imps,
+					imp_var_reduct_counts, imp_var_reduct_control, opts);
 				//std::cout << "imps.size() = " << imps.size() << '\n';
 				++tot_imp_count;
 			}
@@ -719,15 +661,15 @@ namespace Impurity
 				// Increment shared counter
 				++prim_imp_count;
 				
-				if (imp_num > prog_interval)
+				if (opts.imp_num() > prog_interval)
 				{
-					if ((prim_imp_count % (imp_num / prog_interval)) == 0 
-						&& prim_imp_count > 0)
+					if ((prim_imp_count % (opts.imp_num() / prog_interval)) 
+						== 0 && prim_imp_count > 0)
 					{
 						double perc_complete {static_cast<double>(
-							prim_imp_count) / imp_num * 100};
+							prim_imp_count) / opts.imp_num() * 100};
 						std::cout << "Followed " << prim_imp_count << "/" 
-							<< imp_num << " impurities (" 
+							<< opts.imp_num() << " impurities (" 
 							<< static_cast<int>(perc_complete) << "%)\n";
 					}
 				}
@@ -751,19 +693,11 @@ namespace Impurity
 		// Initialize particle statistics vectors, all contained within a
 		// Statistics object. Option to control if the three velocity arrays
 		// are allocated (to save memory).
-		//bool imp_vel_stats {false};
-		//std::string imp_vel_stats_str 
-		//	{Input::get_opt_str(Input::imp_vel_stats)};
-		//if (imp_vel_stats_str == "yes") imp_vel_stats = true;
 		Statistics imp_stats {bkg.get_dim1(), bkg.get_dim2(), 
 			bkg.get_dim3(), bkg.get_dim4(), 
 			static_cast<bool>(opts.imp_vel_stats_int())};
 
 		// Load OpenADAS data needed for ionization/recombination rates. 
-		//std::string_view openadas_root {Input::get_opt_str(
-		//	Input::openadas_root)};
-		//int imp_atom_num {Input::get_opt_int(Input::imp_atom_num)};
-		//int openadas_year {Input::get_opt_int(Input::openadas_year)};
 		OpenADAS::OpenADAS oa_ioniz {opts.openadas_root(), 
 			opts.openadas_year(), opts.imp_atom_num(), "scd"};
 		OpenADAS::OpenADAS oa_recomb {opts.openadas_root(), 
@@ -775,11 +709,9 @@ namespace Impurity
 		// Convert the statistics into meaningful quantities. We are scaling
 		// the density by the scale factor.
 		std::cout << "Calculating derived quantities...\n";
-		int imp_num {Input::get_opt_int(Input::imp_num)};
-		double imp_source_scale_fact {
-			Input::get_opt_dbl(Input::imp_source_scale_fact)};
 		std::cout << "  Density...\n";
-		imp_stats.calc_density(bkg, imp_num, imp_source_scale_fact);
+		imp_stats.calc_density(bkg, opts.imp_num(), 
+			opts.imp_source_scale_fact());
 		if (imp_stats.get_vel_stats())
 		{
 			std::cout << "  Velocity...\n";

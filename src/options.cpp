@@ -2,6 +2,7 @@
 * @file options.cpp
 */
 #include <tuple>
+
 #include "options.h"
 
 
@@ -24,6 +25,8 @@ namespace Options
 	// Setter definitions. They're all the same, so just throwing together
 	// as a mass of code. Can organize if necessary, but it would probably
 	// just take up three times as much space.
+	void Options::set_case_name(std::string case_name) 
+		{m_case_name = case_name;}
 	void Options::set_gkyl_dir(std::string gkyl_dir) 
 		{m_gkyl_dir = gkyl_dir;}
 	void Options::set_gkyl_casename(std::string gkyl_casename) 
@@ -121,6 +124,8 @@ namespace Options
 		{m_mapc2p = mapc2p;}
 
 	// Accessor definitions
+	const std::string& Options::case_name() const 
+		{return m_case_name;}
 	const std::string& Options::gkyl_dir() const 
 		{return m_gkyl_dir;}
 	const std::string& Options::gkyl_casename() const 

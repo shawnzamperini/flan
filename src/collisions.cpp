@@ -9,7 +9,7 @@
 #include <iomanip>
 
 #include "impurity.h"
-#include "read_input.h"
+#include "options.h"
 #include "constants.h"
 #include "random.h"
 #include "background.h"
@@ -217,7 +217,7 @@ namespace Collisions
 	// at rest we don't have anything to say here).
 	void set_var_time_step_coll(double& dt_coll, const Impurity::Impurity& imp,
 		const Background::Background& bkg, const int tidx, const int xidx, 
-		const int yidx, const int zidx)
+		const int yidx, const int zidx, const Options::Options& opts)
 	{
 		// Calculate the momentum slowing down frequency. This would normally 
 		// be done in collision_update, but we need to know the frequency to
@@ -248,8 +248,7 @@ namespace Collisions
 		// Load electron mass in kg. Calculate momentum loss frequency due to 
 		// impurity-electron collisions. Note that we are passing in as the
 		// correct units (J for temperatures, kg for masses and C for charges).
-		double me {Input::get_opt_dbl(Input::gkyl_elec_mass_amu) 
-			* Constants::amu_to_kg};
+		double me {opts.gkyl_elec_mass_amu() * Constants::amu_to_kg};
 		double nu_ze {calc_momentum_loss_freq(ne, te, ne, te, imp_v, 
 			imp.get_mass(), me, -imp.get_charge() * Constants::charge_e, 
 			Constants::charge_e)};
@@ -259,8 +258,7 @@ namespace Collisions
 		// function is generalized to any charge. Just need to change what's
 		// passed in for q2 here if you want other charges. Also assuming
 		// quasi-neutrality and passing in ni=ne here. 
-		double mi {Input::get_opt_dbl(Input::gkyl_ion_mass_amu) 
-			* Constants::amu_to_kg};
+		double mi {opts.gkyl_ion_mass_amu() * Constants::amu_to_kg};
 		double nu_zi {calc_momentum_loss_freq(ne, te, ne, ti, imp_v, 
 			imp.get_mass(),	mi, -imp.get_charge() * Constants::charge_e, 
 			-Constants::charge_e)};
@@ -278,7 +276,7 @@ namespace Collisions
 	}
 
 	void collision_update(Impurity::Impurity& imp, double te, double ti, 
-		double ne, double imp_time_step)
+		double ne, double imp_time_step, const Options::Options& opts)
 	{
 		// Not handling neutral collisions (this is an approximation I do not
 		// know if it is true or not, but it's common enough among codes). 
@@ -295,8 +293,7 @@ namespace Collisions
 		// Load electron mass in kg. Calculate momentum loss frequency due to 
 		// impurity-electron collisions. Note that we are passing in as the
 		// correct units (J for temperatures, kg for masses and C for charges).
-		double me {Input::get_opt_dbl(Input::gkyl_elec_mass_amu) 
-			* Constants::amu_to_kg};
+		double me {opts.gkyl_elec_mass_amu() * Constants::amu_to_kg};
 		double nu_ze {calc_momentum_loss_freq(ne, te, ne, te, imp_v, 
 			imp.get_mass(), me, -imp.get_charge() * Constants::charge_e, 
 			Constants::charge_e)};
@@ -307,8 +304,7 @@ namespace Collisions
 		// function is generalized to any charge. Just need to change what's
 		// passed in for q2 here if you want other charges. Also assuming
 		// quasi-neutrality and passing in ni=ne here. 
-		double mi {Input::get_opt_dbl(Input::gkyl_ion_mass_amu) 
-			* Constants::amu_to_kg};
+		double mi {opts.gkyl_ion_mass_amu() * Constants::amu_to_kg};
 		double nu_zi {calc_momentum_loss_freq(ne, te, ne, ti, imp_v, 
 			imp.get_mass(),	mi, -imp.get_charge() * Constants::charge_e, 
 			-Constants::charge_e)};

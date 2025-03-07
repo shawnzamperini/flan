@@ -5,19 +5,15 @@
 */
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <sstream>
 #include <tuple>
 #include <type_traits> // For std::is_same
 #include <numeric>     // For std::accumulate
 #include <functional>  // For std::multiplies
-/*
- * Opting out of ADIOS2 since I think it's going to get removed...
-#include <adios2.h>
-*/
-#include "read_input.h"
+
 #include "read_gkyl.h"
-//#include "read_gkyl_binary.h"
 #include "vectors.h"
 #include "constants.h"
 #include "background.h"
@@ -94,16 +90,15 @@ namespace Gkyl
 	*
 	* @return Returns a string of the full file path.
 	*/
+	/*
 	std::string assemble_path(const std::string& species, 
-		const std::string& ftype, int frame, const std::string& extension) 
+		const std::string& ftype, int frame, const std::string& extension,
+		const Options::Options& opts) 
 	{
-		// Load into local variables so code is easier to read.
-		std::string gkyl_dir {Input::get_opt_str(Input::gkyl_dir)};
-		std::string gkyl_casename {Input::get_opt_str(Input::gkyl_casename)};
-
-		return gkyl_dir + "/" + gkyl_casename + "-" + species + "_" + ftype + 
-			"_" + std::to_string(frame) + extension;
+		return opts.gkyl_dir() + "/" + opts.gkyl_casename() + "-" + species 
+			+ "_" + ftype + "_" + std::to_string(frame) + extension;
 	}
+	*/
 
 	/**
 	* @brief Get path to python interface script to postgkyl, read_gkyl\.py.

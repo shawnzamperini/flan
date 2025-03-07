@@ -9,11 +9,11 @@
 
 #include <vector> 
 
-#include "options.h"
 #include "background.h"
 #include "impurity.h"
 #include "impurity_stats.h"
 #include "openadas.h"
+#include "options.h"
 
 
 namespace Impurity
@@ -39,7 +39,8 @@ namespace Impurity
 	*
 	* @param bkg Reference to the loaded Background object
 	*/
-	double get_birth_x(const Background::Background& bkg);
+	double get_birth_x(const Background::Background& bkg, 
+		const Options::Options& opts);
 
 	/**
 	* @brief Get starting y location to pass into an Impurity object
@@ -50,7 +51,8 @@ namespace Impurity
 	*
 	* @param bkg Reference to the loaded Background object
 	*/
-	double get_birth_y(const Background::Background& bkg);
+	double get_birth_y(const Background::Background& bkg,
+		const Options::Options& opts);
 
 	/**
 	* @brief Get starting z location to pass into an Impurity object
@@ -60,7 +62,8 @@ namespace Impurity
 	*
 	* @param bkg Reference to the loaded Background object
 	*/
-	double get_birth_z(const Background::Background& bkg);
+	double get_birth_z(const Background::Background& bkg,
+		const Options::Options& opts);
 
 	/**
 	* @brief Get starting charge to pass into an Impurity object
@@ -68,7 +71,7 @@ namespace Impurity
 	* Function to return the starting charge for an impurity ion. Right now
 	* this just uses a single value passed in via the input file.
 	*/
-	int get_birth_charge();
+	int get_birth_charge(Options::Options& opts);
 
 	/**
 	* @brief Create a primary impurity ion
@@ -79,7 +82,8 @@ namespace Impurity
 	*
 	* @param bkg Reference to the loaded Background object
 	*/
-	Impurity create_primary_imp(const Background::Background& bkg);
+	Impurity create_primary_imp(const Background::Background& bkg, 
+		const Options::Options& opts);
 	
 	/**
 	* @brief Helper function to get and remove the last element in a vector
@@ -131,6 +135,15 @@ namespace Impurity
 	void lorentz_update(Impurity& imp, const Background::Background& bkg,
 		const double imp_time_step, const int tidx, const int xidx, 
 		const int yidx, const int zidx);
+	
+	/**
+	* @brief Calculate the variable timestep based on the size of the cell
+	* and the collision timescale.
+	*/
+	double get_var_time_step(Impurity& imp, 
+		const Background::Background& bkg, const int tidx, 
+		const int xidx, const int yidx, const int zidx, const double fx, 
+		const double fy, const double fz, const Options::Options& opts);
 		
 	/**
 	* @brief Move particle based on its current velocity and the time step
@@ -168,8 +181,17 @@ namespace Impurity
 	* @return Returns false if particle following is to be terminated, true
 	* otherwise.
 	*/
-	bool check_boundary(const Background::Background& bkg, Impurity& imp);
+	bool check_boundary(const Background::Background& bkg, Impurity& imp,
+		const Options::Options& opts);
 	
+
+	/**
+	* @brief Update particle based on collisions with electrons and ions
+	*/
+	void collision(Impurity& imp, const Background::Background& bkg, 
+		const double imp_time_step, const int tidx, const int xidx, 
+		const int yidx, const int zidx, const Options::Options& opts);
+
 	/**
 	* @brief Controlling function for following an impurity until a terminating
 	* condition is met.
@@ -191,13 +213,9 @@ namespace Impurity
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
-		int& recomb_warnings, const bool imp_coll_on, 
-		const bool imp_iz_recomb_on, const int imp_time_step_opt_int,
-		std::vector<Impurity>& imps, const bool imp_var_reduct_on,
-		const double imp_var_reduct_freq, 
-		const double imp_var_reduct_min_weight, 
-		const std::vector<int> imp_var_reduct_counts);
-
+		int& recomb_warnings, std::vector<Impurity>& imps,
+		const std::vector<int> imp_var_reduct_counts, 
+		const bool imp_var_reduct_on, const Options::Options& opts);
 	/**
 	* @brief Print out warnings if ionization/recombination probabilities were
 	* greater than 1.0 at some point.
