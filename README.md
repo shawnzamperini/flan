@@ -95,7 +95,7 @@ In [3]: fp.plot_frames_xy("imp_density", 0, 99, 0.0, animate_cbar=True, vmin=1e-
 
 This creates an animated plot, a screenshot of which is shown below.
 
-<img src="https://github.com/shawnzamperini/flan/blob/main/docs/flan_ex_v1.jpg" width="250">
+<img src="https://github.com/shawnzamperini/flan/blob/main/docs/flan_ex_v1.png" width="250">
 
 Data can be extracted for more detailed analysis. This will be covered in future `flan_plots` documentation (one day).
 
