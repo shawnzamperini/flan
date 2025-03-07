@@ -691,6 +691,24 @@ namespace Gkyl
 		gkyl_ez.move_into_data(ez);
 	}
 
+	void calc_cell_XYZ_centers(const Options::Options& opts)
+	{
+		for (int i {}; i < std::ssize(gkyl_x); ++i)
+		{
+			for (int j {}; j < std::ssize(gkyl_y); ++j)
+			{
+				for (int k {}; k < std::ssize(gkyl_z); ++k)
+				{
+					// Get the three Cartesian coordinates and store within
+					// out 3D vector of 3-tuples
+					gkyl_XYZ(i,j,k) = opts.mapc2p()(gkyl_x[i], gkyl_y[j], 
+						gkyl_z[k]);
+				}
+			}
+		}
+
+	}
+
 	/**
 	* @brief Move data from the global (to the Gkyl namespace) into a
 	* Background object and return.

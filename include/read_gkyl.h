@@ -80,6 +80,8 @@ namespace Gkyl
 	// Calculate the electric field components as the gradient of the potential.
 	void calc_elec_field();
 
+	void calc_cell_XYZ_centers(const Options::Options& opts);
+
 	// Move all the data loaded into global arrays into a Background object and
 	// return it.
 	Background::Background create_bkg();
