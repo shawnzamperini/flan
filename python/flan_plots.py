@@ -180,6 +180,7 @@ class FlanPlots:
 			mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
 			
 			cbar = fig.colorbar(mesh, ax=ax1)
+			ax1.set_facecolor("grey")
 			ax1.set_aspect("equal")
 			ax1.set_title("{:.2f} us".format(time * 1e6))
 			ax1.set_xlabel(xlabel, fontsize=g_fontsize)
