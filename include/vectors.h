@@ -85,10 +85,16 @@ namespace Vectors
 		int get_size();
 
 		/**
-		* @brief Get the 1D vector containing all the data
+		* @brief Get the 1D vector containing all the data (const)
 		* @return Returns a 1D vector of underlying data type
 		*/
-		std::vector<T> get_data();
+		const std::vector<T>& get_data() const;
+
+		/**
+		* @brief Get the 1D vector containing all the data (non-const)
+		* @return Returns a 1D vector of underlying data type
+		*/
+		std::vector<T>& get_data();
 
 		/**
 		* @brief Convert from 3D index to the 1D one used in the underlying 
@@ -120,6 +126,15 @@ namespace Vectors
 		* abstraction of operator=...
 		*/
 		void move_into_data(Vectors::Vector3D<T>& vec);
+
+		/**
+		* @brief Resize Vector3D to the passed in dimensions
+		*
+		* This is needed to add a layer of safety. One could resize m_data
+		* themselves, but then they would also need to set dim1, dim2 and dim3.
+		* This function takes care of that to prevent that accident.
+		*/
+		void resize(const int dim1, const int dim2, const int dim3);
 	};
 
 	/**

@@ -70,7 +70,10 @@ namespace Vectors
 	int Vector3D<T>::get_size() {return m_size;}
 
 	template <typename T>
-	std::vector<T> Vector3D<T>::get_data() {return m_data;}
+	const std::vector<T>& Vector3D<T>::get_data() const {return m_data;}
+
+	template <typename T>
+	std::vector<T>& Vector3D<T>::get_data() {return m_data;}
 	
 	template <typename T>
 	int Vector3D<T>::calc_index(const int i, const int j, const int k) const
@@ -101,6 +104,16 @@ namespace Vectors
 
 		// Move the data into this
 		m_data = std::move(vec.m_data);
+	}
+
+	template <typename T>
+	void Vector3D<T>::resize(const int dim1, const int dim2, const int dim3)
+	{
+		// When we resize, we need to make sure to update the dimension sizes
+		m_data.resize(dim1 * dim2 * dim3);
+		m_dim1 = dim1;
+		m_dim2 = dim2;
+		m_dim3 = dim3;
 	}
 	
 	// ************************

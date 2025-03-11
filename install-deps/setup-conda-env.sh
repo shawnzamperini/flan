@@ -35,6 +35,8 @@ pip install -e .
 # 5. Install additional dependencies needed by flan here
 conda install conda-forge::netcdf4 -y
 conda install ipython -y
+conda install scipy -y
+conda install tqdm -y
 
 # 6. Return back to the top flan directory and install the python scripts as
 # the flan package so they can be found by the main code (and future python
@@ -46,3 +48,6 @@ pip install -e .
 # Flan needs to know where to find this script. This is implemented via an
 # environment variable called READ_GKYL_PY. 
 conda env config vars set READ_GKYL_PY=$FLANROOT/python/read_gkyl.py
+
+# 8. Again, but for the script used to calculate the electric field.
+conda env config vars set CALC_ELEC_FIELD_PY=$FLANROOT/python/calc_elec_field.py

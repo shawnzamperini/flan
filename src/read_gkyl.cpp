@@ -4,20 +4,21 @@
 * @brief Routines handling reading in a plasma background from Gkeyll
 */
 
-#include <iostream>
+#include <filesystem>
 #include <fstream>
+#include <functional>  // For std::multiplies
+#include <iostream>
+#include <numeric>     // For std::accumulate
 #include <string>
 #include <sstream>
-#include <tuple>
 #include <type_traits> // For std::is_same
-#include <numeric>     // For std::accumulate
-#include <functional>  // For std::multiplies
+#include <tuple>
 
+#include "background.h"
+#include "constants.h"
+#include "options.h"
 #include "read_gkyl.h"
 #include "vectors.h"
-#include "constants.h"
-#include "background.h"
-#include "options.h"
 
 namespace Gkyl
 {
@@ -39,9 +40,14 @@ namespace Gkyl
 	Vectors::Vector4D<double> gkyl_ti {};
 	Vectors::Vector4D<double> gkyl_vp {};
 	Vectors::Vector4D<double> gkyl_b {}; 
-	Vectors::Vector4D<double> gkyl_ex {};
-	Vectors::Vector4D<double> gkyl_ey {};
-	Vectors::Vector4D<double> gkyl_ez {};
+	Vectors::Vector4D<double> gkyl_eX {};
+	Vectors::Vector4D<double> gkyl_eY {};
+	Vectors::Vector4D<double> gkyl_eZ {};
+
+	// Vectors to hold the cell centers in X,Y,Z space
+	Vectors::Vector3D<double> gkyl_X {};
+	Vectors::Vector3D<double> gkyl_Y {};
+	Vectors::Vector3D<double> gkyl_Z {};
 
 	/**
 	* @brief Entry point for reading Gkeyll data into Flan. 
@@ -53,6 +59,8 @@ namespace Gkyl
 	*/
 	Background::Background read_gkyl(const Options::Options& opts)
 	{	
+		using namespace std::string_literals;
+
 		// Load each needed dataset from Gkeyll
 		std::cout << "Loading Gkeyll data...\n";
 		std::cout << "  - Electron density\n";
@@ -65,11 +73,26 @@ namespace Gkyl
 		read_potential(opts);
 		std::cout << "  - Magnetic field\n";
 		read_magnetic_field(opts);
-		std::cout << "\n";
+
+		// Calculate the Cartesian (X,Y,Z) coordinate of each cell center
+		std::cout << "  - X,Y,Z coordinates...\n";
+		calc_cell_XYZ_centers(opts);
+
+		// Write out the (X,Y,Z) coordinates so that we can load them in python
+		// to take advantage of scipy library in calculating gradients on
+		// irregular grids (i.e., for the electric field). 
+		write_XYZ(opts);
 
 		// Calculate the 3 electric field components from the potential
-		std::cout << "Calculating electric field...\n";
 		calc_elec_field();
+
+		// Then read each electric field component
+		std::cout << "  - Electric field (X)\n";
+		read_elec_field("X"s);
+		std::cout << "  - Electric field (Y)\n";
+		read_elec_field("Y"s);
+		std::cout << "  - Electric field (Z)\n";
+		read_elec_field("Z"s);
 
 		// With all our arrays assembled, encapsulate them into a Background
 		// class object with move semantics then return.
@@ -108,7 +131,7 @@ namespace Gkyl
 	* Flan. This path is stored as an environment variable that is set
 	* as part of the flan conda environment.
 	*
-	* @return Returns string containing the full path to read_gkyl\.py.
+	* @return Returns string containing the full path to read_gkyl.py.
 	*/
 	std::string get_read_gkyl_py()
 	{
@@ -562,137 +585,76 @@ namespace Gkyl
 	}
 
 	/**
-	* @brief Calculate gradient with a second order approximation.
-	* 
-	* Implementation of gradient as used by numpy.gradient. This is a second
-	* order approximation of the derivative.
+	* @brief Get path to python script for calculating the electric field, 
+	* calc_elec_field.py.
 	*
-	* @param hd See equation.
-	* @param hs See equation.
-	* @param fd See equation.
-	* @param fs See equation.
-	* @param f See equation.
+	* Function to return the full path to calc_elec_field.py, which uses
+	* the files cell_center_XYZ.csv and bkg_from_pgkyl_potential.csv to
+	* calculate the electric field components from the potential gradient.
+	* This path is stored as an environment variable that is set
+	* as part of the flan conda environment.
 	*
-	* @return Returns the value of the gradient.
+	* @return Returns string containing the full path to calc_elec_field.py.
 	*/
-	double calc_gradient(const double hd, const double hs, const double fd, 
-		const double fs, const double f)
+	std::string get_calc_elec_field_py()
 	{
-		return (hs*hs*fd + (hd*hd - hs*hs) * f - hd*hd*fs) / 
-			(hs*hd*(hd+hs));
+		if (const char* calc_elec_field_py {std::getenv("CALC_ELEC_FIELD_PY")})
+		{
+			return static_cast<std::string>(calc_elec_field_py);
+		}
+		else
+		{
+			std::cerr << "Error! CALC_ELEC_FIELD_PY is not set. Please set "
+				<< "this to the full path to the calc_elec_field.py script. "
+				<< "E.g.:\n"
+				<< "  CALC_ELEC_FIELD_PY=/path/to/flan/python/"
+				<< "calc_elec_field.py\n";
+			return std::string {};
+		}
 	}
-
-	/**
-	* @brief Calculate electric field from potential gradient.
-	*
-	* Calculate the electric field components as the gradient of the potential.
-	* The gradient is calculated using the same implementation used in
-	* numpy.gradient, which can be found here:
-	* https://numpy.org/doc/stable/reference/generated/numpy.gradient.html
-	*/
 	void calc_elec_field()
 	{
-		// Initialize empty 4D vectors
-		Vectors::Vector4D<double> ex {gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
-			gkyl_vp.get_dim3(), gkyl_vp.get_dim4()};
-		Vectors::Vector4D<double> ey {gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
-			gkyl_vp.get_dim3(), gkyl_vp.get_dim4()};
-		Vectors::Vector4D<double> ez {gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
-			gkyl_vp.get_dim3(), gkyl_vp.get_dim4()};
-		
-
-		// Calculate Ex.
-		for (int i {}; i < std::ssize(gkyl_times); ++i)
+		// See if a file already exists and load it. If not, calculate it.
+		// Let the user know one has been loaded, just in case they want Flan
+		// to recalculate the values.
+		std::string eX_fname {"bkg_from_pgkyl_elec_field_X.csv"};
+		std::string eY_fname {"bkg_from_pgkyl_elec_field_Y.csv"};
+		std::string eZ_fname {"bkg_from_pgkyl_elec_field_Z.csv"};
+		if ((std::filesystem::exists(eX_fname) && 
+			std::filesystem::exists(eY_fname) &&
+			std::filesystem::exists(eZ_fname)))
 		{
-			for (int j {}; j < std::ssize(gkyl_x); ++j)
-			{
-				for (int k {}; k < std::ssize(gkyl_y); ++k)
-				{
-					for (int l {}; l < std::ssize(gkyl_z); ++l)
-					{
-						// Edges
-						if (j == 0)
-						{
-							double h {gkyl_x[1] - gkyl_x[0]};
-							ex(i,j,k,l) = -(gkyl_vp(i,1,k,l) 
-								- gkyl_vp(i,0,k,l)) / h;
-						}
-						else if (j == std::ssize(gkyl_x) - 1)
-						{
-							double h {gkyl_x[j] - gkyl_x[j-1]};
-							ex(i,j,k,l) = -(gkyl_vp(i,j,k,l) 
-								- gkyl_vp(i,j-1,k,l)) / h;
-						}
-
-						// Everywhere else
-						else
-						{
-							double hd {gkyl_x[j+1] - gkyl_x[j]};
-							double hs {gkyl_x[j] - gkyl_x[j-1]};
-							double fd {gkyl_vp(i,j+1,k,l)};
-							double fs {gkyl_vp(i,j-1,k,l)};
-							double f {gkyl_vp(i,j,k,l)};
-							ex(i,j,k,l) = -calc_gradient(hd, hs, fd, fs, f);
-						}
-
-						// Repeat for Ey
-						if (k == 0)
-						{
-							double h {gkyl_y[1] - gkyl_y[0]};
-							ey(i,j,k,l) = -(gkyl_vp(i,j,1,l) 
-								- gkyl_vp(i,j,0,l)) / h;
-						}
-						else if (k == std::ssize(gkyl_y) - 1)
-						{
-							double h {gkyl_y[k] - gkyl_y[k-1]};
-							ey(i,j,k,l) = -(gkyl_vp(i,j,k,l) 
-								- gkyl_vp(i,j,k-1,l)) / h;
-						}
-						else
-						{
-							double hd {gkyl_y[k+1] - gkyl_y[k]};
-							double hs {gkyl_y[k] - gkyl_y[k-1]};
-							double fd {gkyl_vp(i,j,k+1,l)};
-							double fs {gkyl_vp(i,j,k-1,l)};
-							double f {gkyl_vp(i,j,k,l)};
-							ey(i,j,k,l) = -calc_gradient(hd, hs, fd, fs, f);
-						}
-
-						// Repeat for Ez
-						if (l == 0)
-						{
-							double h {gkyl_z[1] - gkyl_z[0]};
-							ez(i,j,k,l) = -(gkyl_vp(i,j,k,1) 
-								- gkyl_vp(i,j,k,0)) / h;
-						}
-						else if (l == std::ssize(gkyl_z) - 1)
-						{
-							double h {gkyl_z[l] - gkyl_z[l-1]};
-							ez(i,j,k,l) = -(gkyl_vp(i,j,k,l) 
-								- gkyl_vp(i,j,k,l-1)) / h;
-						}
-						else
-						{
-							double hd {gkyl_z[l+1] - gkyl_z[l]};
-							double hs {gkyl_z[l] - gkyl_z[l-1]};
-							double fd {gkyl_vp(i,j,k,l+1)};
-							double fs {gkyl_vp(i,j,k,l-1)};
-							double f {gkyl_vp(i,j,k,l)};
-							ez(i,j,k,l) = -calc_gradient(hd, hs, fd, fs, f);
-						}
-					}
-				}
-			}
+			std::cout << "Electric field files located. Skipping "
+				<< "calculation.\n";
 		}
+		else
+		{
+			// Execute python script to calculate electric field. First load
+			// full path to python script.
+			std::string calc_elec_field_py {get_calc_elec_field_py()};
 
-		// Move results into arrays. 
-		gkyl_ex.move_into_data(ex);
-		gkyl_ey.move_into_data(ey);
-		gkyl_ez.move_into_data(ez);
+			// The convert to a command
+			std::stringstream calc_elec_field_cmd_ss {};
+			calc_elec_field_cmd_ss << "python " << calc_elec_field_py; 
+			std::string tmp_str {calc_elec_field_cmd_ss.str()};
+			const char* calc_elec_field_cmd {tmp_str.c_str()};
+				
+			// And execute it
+			[[maybe_unused]] int sys_result {system(calc_elec_field_cmd)};
+		}
 	}
-
+	
 	void calc_cell_XYZ_centers(const Options::Options& opts)
 	{
+		// Resize the arrays since we know by now how big they need to be
+		int dim1 {static_cast<int>(std::ssize(gkyl_x))};
+		int dim2 {static_cast<int>(std::ssize(gkyl_y))};
+		int dim3 {static_cast<int>(std::ssize(gkyl_z))};
+		gkyl_X.resize(dim1, dim2, dim3);
+		gkyl_Y.resize(dim1, dim2, dim3);
+		gkyl_Z.resize(dim1, dim2, dim3);
+
+		// Loop through every x, y, z value to calculate each X, Y, Z
 		for (int i {}; i < std::ssize(gkyl_x); ++i)
 		{
 			for (int j {}; j < std::ssize(gkyl_y); ++j)
@@ -700,13 +662,87 @@ namespace Gkyl
 				for (int k {}; k < std::ssize(gkyl_z); ++k)
 				{
 					// Get the three Cartesian coordinates and store within
-					// out 3D vector of 3-tuples
-					gkyl_XYZ(i,j,k) = opts.mapc2p()(gkyl_x[i], gkyl_y[j], 
+					// our 3D vector of 3-tuples
+					auto [X, Y, Z] = opts.mapc2p()(gkyl_x[i], gkyl_y[j], 
 						gkyl_z[k]);
+					gkyl_X(i,j,k) = X;
+					gkyl_Y(i,j,k) = Y;
+					gkyl_Z(i,j,k) = Z;
 				}
 			}
 		}
+	}
 
+	void read_elec_field(const std::string& comp)
+	{
+		
+		// Calll for correct file and array based on component
+		if (comp == "X")
+		{
+			Vectors::Vector4D<double> tmp_data 
+				{load_values<double>("elec_field_X")};
+			gkyl_eX.move_into_data(tmp_data);
+		}
+		else if (comp == "Y")
+		{
+			Vectors::Vector4D<double> tmp_data 
+				{load_values<double>("elec_field_Y")};
+			gkyl_eY.move_into_data(tmp_data);
+		}
+		else if (comp == "Z")
+		{
+			Vectors::Vector4D<double> tmp_data 
+				{load_values<double>("elec_field_Z")};
+			gkyl_eZ.move_into_data(tmp_data);
+		}
+		else
+		{
+			std::cerr << "read_elec_field error! Unrecognized comp: " << comp
+				<< '\n';
+		}
+	}
+
+	/**
+	* @brief Write out Cartesian (X,Y,Z) coordinates of cell centers
+	*
+	* This function writes to a file of X,Y,Z coordinates,
+	* so that we can read them into a python script and take advantage of
+	* the scipy library to easily calculate a gradient on an irregular grid.
+	*/
+	void write_XYZ(const Options::Options& opts)
+	{
+		// Open up file for writing
+		std::ofstream XYZ_file {"cell_center_XYZ.csv"};	
+		if (!XYZ_file)
+		{
+			std::cerr << "Error creating cell_center_XYZ.csv!\n";
+		}
+
+		// Print header info
+		XYZ_file << "# This file contains the Cartesian X,Y,Z coordinates of\n"
+			     << "# the Gkeyll grid at each cell center. They are\n"
+				 << "# calculated using the mapc2p function passed in from\n"
+				 << "# the input file. The first line in this file are the\n"
+				 << "# dimensions of the data. The coordinates\n"
+				 << "# are then printed one at a time with X Y Z on each \n"
+				 << "# line.\n";
+
+		// Print out shape of data
+		XYZ_file << gkyl_X.get_dim1() << " " << gkyl_X.get_dim2() << " "
+			<< gkyl_X.get_dim3() << '\n';
+
+		// Print out the coordinates
+		for (int i {}; i < std::ssize(gkyl_x); ++i)
+		{
+			for (int j {}; j < std::ssize(gkyl_y); ++j)
+			{
+				for (int k {}; k < std::ssize(gkyl_z); ++k)
+				{
+					XYZ_file << gkyl_X(i,j,k) << " " << gkyl_Y(i,j,k) << " "
+						<< gkyl_Z(i,j,k) << '\n';
+				}
+			}
+		}
 	}
 
 	/**
@@ -733,10 +769,13 @@ namespace Gkyl
 		bkg.move_into_ti(gkyl_ti);
 		bkg.move_into_vp(gkyl_vp);
 		bkg.move_into_b(gkyl_b);
-		bkg.move_into_ex(gkyl_ex);
-		bkg.move_into_ey(gkyl_ey);
-		bkg.move_into_ez(gkyl_ez);
-		
+		bkg.move_into_eX(gkyl_eX);
+		bkg.move_into_eY(gkyl_eY);
+		bkg.move_into_eZ(gkyl_eZ);
+		bkg.move_into_X(gkyl_X);
+		bkg.move_into_Y(gkyl_Y);
+		bkg.move_into_Z(gkyl_Z);
+
 		// Okay to return by value since C++11 uses move semantics here.
 		return bkg;
 	}

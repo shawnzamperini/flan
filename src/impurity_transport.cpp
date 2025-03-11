@@ -76,11 +76,12 @@ namespace Impurity
 		double x_imp = get_birth_x(bkg, opts);
 		double y_imp = get_birth_y(bkg, opts);
 		double z_imp = get_birth_z(bkg, opts);
+		auto [X_imp, Y_imp, Z_imp] = opts.mapc2p()(x_imp, y_imp, z_imp);
 
 		// Assume starting at rest, but if this ever changes do it here
-		double vx_imp {0.0};
-		double vy_imp {0.0};
-		double vz_imp {0.0};
+		double vX_imp {0.0};
+		double vY_imp {0.0};
+		double vZ_imp {0.0};
 
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);
@@ -89,8 +90,9 @@ namespace Impurity
 		// objects they by definition start with weight = 1.0.
 		double imp_weight {1.0};
 		double imp_mass {opts.imp_mass_amu() * Constants::amu_to_kg};
-		return {t_imp, x_imp, y_imp, z_imp, vx_imp, vy_imp, vz_imp, 
-			imp_weight, charge_imp, imp_mass, opts.imp_atom_num()};
+		return {t_imp, x_imp, y_imp, z_imp, X_imp, Y_imp, Z_imp, vX_imp, 
+			vY_imp, vZ_imp, imp_weight, charge_imp, imp_mass, 
+			opts.imp_atom_num()};
 	}
 
 	template <typename T>
@@ -151,30 +153,18 @@ namespace Impurity
 		const double imp_time_step, const int tidx, const int xidx, 
 		const int yidx, const int zidx)
 	{
-		// Impurity's charge
-		double imp_q {imp.get_charge() * -Constants::charge_e};
-
-		//std::cout << "Ex, Ey, Ez = " << bkg.get_ex()(tidx, xidx, yidx, zidx)
-		//	<< bkg.get_ey()(tidx, xidx, yidx, zidx) 
-		//	<< bkg.get_ez()(tidx, xidx, yidx, zidx) << "\n";
-		//std::cout << "Bz = " << bkg.get_b()(tidx, xidx, yidx, zidx) << "\n";
-
-		// Each component of the Lorentz force
-		double fx {imp_q * (bkg.get_ex()(tidx, xidx, yidx, zidx) + 
-			imp.get_vy() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fy {imp_q * (bkg.get_ey()(tidx, xidx, yidx, zidx) + 
-			-imp.get_vx() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fz {imp_q * bkg.get_ez()(tidx, xidx, yidx, zidx)};
+		// Each component of the Lorentz force in physical space
+		auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, zidx);
 
 		// Change in velocity over time step
-		double dvx {fx * imp_time_step / imp.get_mass()};
-		double dvy {fy * imp_time_step / imp.get_mass()};
-		double dvz {fz * imp_time_step / imp.get_mass()};
+		double dvX {fX * imp_time_step / imp.get_mass()};
+		double dvY {fY * imp_time_step / imp.get_mass()};
+		double dvZ {fZ * imp_time_step / imp.get_mass()};
 
-		// Update particle velocity
-		imp.set_vx(imp.get_vx() + dvx);
-		imp.set_vy(imp.get_vy() + dvy);
-		imp.set_vz(imp.get_vz() + dvz);
+		// Update particle velocity in physical space
+		imp.set_vX(imp.get_vX() + dvX);
+		imp.set_vY(imp.get_vY() + dvY);
+		imp.set_vZ(imp.get_vZ() + dvZ);
 	}
 
 	std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
@@ -184,15 +174,20 @@ namespace Impurity
 		// Impurity's charge
 		double imp_q {imp.get_charge() * -Constants::charge_e};
 
-		// Each component of the Lorentz force
-		double fx {imp_q * (bkg.get_ex()(tidx, xidx, yidx, zidx) + 
-			imp.get_vy() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fy {imp_q * (bkg.get_ey()(tidx, xidx, yidx, zidx) + 
-			-imp.get_vx() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fz {imp_q * bkg.get_ez()(tidx, xidx, yidx, zidx)};
+		//std::cout << "Ex, Ey, Ez = " << bkg.get_eX()(tidx, xidx, yidx, zidx)
+		//	<< bkg.get_eY()(tidx, xidx, yidx, zidx) 
+		//	<< bkg.get_eZ()(tidx, xidx, yidx, zidx) << "\n";
+		//std::cout << "Bz = " << bkg.get_b()(tidx, xidx, yidx, zidx) << "\n";
+
+		// Each component of the Lorentz force in physical space
+		double fX {imp_q * (bkg.get_eX()(tidx, xidx, yidx, zidx) + 
+			imp.get_vY() * bkg.get_b()(tidx, xidx, yidx, zidx))};
+		double fY {imp_q * (bkg.get_eY()(tidx, xidx, yidx, zidx) + 
+			-imp.get_vX() * bkg.get_b()(tidx, xidx, yidx, zidx))};
+		double fZ {imp_q * bkg.get_eZ()(tidx, xidx, yidx, zidx)};
 
 		// Return as tuple
-		return std::make_tuple(fx, fy, fz);
+		return std::make_tuple(fX, fY, fZ);
 	}
 
 	double get_var_time_step_trans(Impurity& imp, 
@@ -200,6 +195,8 @@ namespace Impurity
 		const int zidx, const double fx, const double fy, const double fz,
 		const Options::Options& opts)
 	{
+		return opts.imp_time_step();
+		/*
 		// v0 = velocity before forces are applied
 		// v1 = v0 + dv = velocity after forces are applied
 		//
@@ -277,6 +274,7 @@ namespace Impurity
 			dt = opts.imp_time_step_min();
 		}
 		return dt;
+		*/
 	}
 
 	double get_var_time_step(Impurity& imp, 
@@ -284,6 +282,12 @@ namespace Impurity
 		const int xidx, const int yidx, const int zidx, const double fx, 
 		const double fy, const double fz, const Options::Options& opts)
 	{
+		// A temporary thing
+		std::cerr << "Error! Variable time step is not working yet with new"
+			<< " geometry. Defaulting to input value.\n";
+		return opts.imp_time_step();
+
+		/*
 		// If impurity is at rest, just choose a very low number to kick
 		// things off.
 		double imp_v {std::sqrt(imp.get_vx()*imp.get_vx() 
@@ -318,26 +322,27 @@ namespace Impurity
 
 			return dt_trans;
 		}
+		*/
 	}
 
-	void step(Impurity& imp, const double fx, const double fy, const double fz, 
+	void step(Impurity& imp, const double fX, const double fY, const double fZ, 
 		const double imp_time_step)
 	{
 		// Change in velocity over time step (this is just F = m * dv/dt)
-		double dvx {fx * imp_time_step / imp.get_mass()};
-		double dvy {fy * imp_time_step / imp.get_mass()};
-		double dvz {fz * imp_time_step / imp.get_mass()};
+		double dvX {fX * imp_time_step / imp.get_mass()};
+		double dvY {fY * imp_time_step / imp.get_mass()};
+		double dvZ {fZ * imp_time_step / imp.get_mass()};
 
 		// Update particle velocity
-		imp.set_vx(imp.get_vx() + dvx);
-		imp.set_vy(imp.get_vy() + dvy);
-		imp.set_vz(imp.get_vz() + dvz);
+		imp.set_vX(imp.get_vX() + dvX);
+		imp.set_vY(imp.get_vY() + dvY);
+		imp.set_vZ(imp.get_vZ() + dvZ);
 
 		// Update particle time and position
 		imp.set_t(imp.get_t() + imp_time_step);
-		imp.set_x(imp.get_x() + imp.get_vx() * imp_time_step);
-		imp.set_y(imp.get_y() + imp.get_vy() * imp_time_step);
-		imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);
+		imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
+		imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
+		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
 	}
 
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
@@ -356,8 +361,8 @@ namespace Impurity
 		// Add each velocity component to the running sum for this location
 		if (imp_stats.get_vel_stats())
 		{
-			imp_stats.add_vels(tidx, xidx, yidx, zidx, imp.get_vx(), 
-				imp.get_vy(), imp.get_vz());
+			imp_stats.add_vels(tidx, xidx, yidx, zidx, imp.get_vX(), 
+				imp.get_vY(), imp.get_vZ());
 		}
 
 		// Add value of gyroradius to running sum at this location
@@ -447,14 +452,14 @@ namespace Impurity
 			// Get nearest time index
 			int tidx {get_nearest_index(bkg.get_times(), imp.get_t())};
 
-			// Get x,y,z indices
+			// Get x,y,z indices in computational space
 			int xidx {get_nearest_cell_index(bkg.get_grid_x(), imp.get_x())};
 			int yidx {get_nearest_cell_index(bkg.get_grid_y(), imp.get_y())};
 			int zidx {get_nearest_cell_index(bkg.get_grid_z(), imp.get_z())};
 
 			// Calculate Lorentz force components. First loop these are all
 			// zero if particles start at rest.
-			auto [fx, fy, fz] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
+			auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
 				zidx);
 
 			// Variance reduction scheme. This may change the particle's 
@@ -471,8 +476,8 @@ namespace Impurity
 
 			// Calculate variable time step (if necessary)
 			if (opts.imp_time_step_opt_int() == 1) imp_time_step = 
-				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fx, 
-				fy, fz, opts);
+				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fX, 
+				fY, fZ, opts);
 
 			// Check for a collision
 			if (opts.imp_collisions_int() > 0)
@@ -497,7 +502,7 @@ namespace Impurity
 
 			// Last thing is move particle to a new location
 			//step(imp, imp_time_step);
-			step(imp, fx, fy, fz, imp_time_step);
+			step(imp, fX, fY, fZ, imp_time_step);
 
 			// Check for ionization or recombination
 			if (opts.imp_iz_recomb_int() > 0)

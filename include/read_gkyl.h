@@ -80,7 +80,14 @@ namespace Gkyl
 	// Calculate the electric field components as the gradient of the potential.
 	void calc_elec_field();
 
+	// Calculate cell X,Y,Z coordinates for center of cells
 	void calc_cell_XYZ_centers(const Options::Options& opts);
+
+	// Read in a electric field component (X,Y,Z) into the local array
+	void read_elec_field(const std::string& comp);
+
+	// Write out cell X,Y,Z coordinates.
+	void write_XYZ(const Options::Options& opts);
 
 	// Move all the data loaded into global arrays into a Background object and
 	// return it.

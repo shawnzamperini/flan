@@ -28,6 +28,13 @@ namespace SaveResults
 		const std::string& var_name, const netCDF::NcDim& dim, 
 		const std::string& description, const std::string& units);
 
+	// Save a 3D vector into nc_file. dims must be matched by the programmer.
+	template <typename T>
+	void save_vector_3d(const netCDF::NcFile& nc_file, 
+		const Vectors::Vector3D<T>& vec, 
+		const std::string& var_name, const netCDF::NcDim& dim1,
+		const netCDF::NcDim& dim2, const netCDF::NcDim& dim3, 
+		const std::string& description, const std::string& units);
 	
 	// Save a 4D vector into nc_file. The correct NcDim (dim) must be passed 
 	// in - it on the programmer to do this correctly. Currently all 

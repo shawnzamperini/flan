@@ -115,7 +115,8 @@ namespace Impurity
 	* the first element that is larger than value, we have the cell index. That
 	* lets us skip a few extra step that get_nearest_index has to do.
 	*
-	* @param grid_edges Vector containing the grid edges for the cells
+	* @param grid_edges Vector containing the grid edges for the cells in 
+	* computational space
 	* @param value Value to find nearest cell for
 	*/
 	template <typename T>
@@ -135,6 +136,17 @@ namespace Impurity
 	void lorentz_update(Impurity& imp, const Background::Background& bkg,
 		const double imp_time_step, const int tidx, const int xidx, 
 		const int yidx, const int zidx);
+
+	/**
+	* @brief Calculate each X,Y,Z component of the Lorentz force in physical
+	* space.
+	*
+	* @return Returns 3-tuple of doubles of each Lorentz force component,
+	* [fX, fY, fZ].
+	*/
+	std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
+		const Background::Background& bkg, const int tidx, const int xidx, 
+		const int yidx, const int zidx);
 	
 	/**
 	* @brief Calculate the variable timestep based on the size of the cell
@@ -142,8 +154,8 @@ namespace Impurity
 	*/
 	double get_var_time_step(Impurity& imp, 
 		const Background::Background& bkg, const int tidx, 
-		const int xidx, const int yidx, const int zidx, const double fx, 
-		const double fy, const double fz, const Options::Options& opts);
+		const int xidx, const int yidx, const int zidx, const double fX, 
+		const double fY, const double fZ, const Options::Options& opts);
 		
 	/**
 	* @brief Move particle based on its current velocity and the time step

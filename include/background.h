@@ -32,9 +32,12 @@ namespace Background
 		Vectors::Vector4D<double> m_ti {};
 		Vectors::Vector4D<double> m_vp {};
 		Vectors::Vector4D<double> m_b {};
-		Vectors::Vector4D<double> m_ex {};
-		Vectors::Vector4D<double> m_ey {};
-		Vectors::Vector4D<double> m_ez {};
+		Vectors::Vector4D<double> m_eX {};
+		Vectors::Vector4D<double> m_eY {};
+		Vectors::Vector4D<double> m_eZ {};
+		Vectors::Vector3D<double> m_X {};
+		Vectors::Vector3D<double> m_Y {};
+		Vectors::Vector3D<double> m_Z {};
 		int m_dim1 {};
 		int m_dim2 {};
 		int m_dim3 {};
@@ -55,9 +58,12 @@ namespace Background
 		const Vectors::Vector4D<double>& get_ti() const;
 		const Vectors::Vector4D<double>& get_vp() const;
 		const Vectors::Vector4D<double>& get_b() const;
-		const Vectors::Vector4D<double>& get_ex() const;
-		const Vectors::Vector4D<double>& get_ey() const;
-		const Vectors::Vector4D<double>& get_ez() const;
+		const Vectors::Vector4D<double>& get_eX() const;
+		const Vectors::Vector4D<double>& get_eY() const;
+		const Vectors::Vector4D<double>& get_eZ() const;
+		const Vectors::Vector3D<double>& get_X() const;
+		const Vectors::Vector3D<double>& get_Y() const;
+		const Vectors::Vector3D<double>& get_Z() const;
 		int get_dim1() const;
 		int get_dim2() const;
 		int get_dim3() const;
@@ -116,9 +122,12 @@ namespace Background
 		void move_into_ti(Vectors::Vector4D<double>& ti);
 		void move_into_vp(Vectors::Vector4D<double>& vp);
 		void move_into_b(Vectors::Vector4D<double>& b);
-		void move_into_ex(Vectors::Vector4D<double>& ex); 
-		void move_into_ey(Vectors::Vector4D<double>& ey);
-		void move_into_ez(Vectors::Vector4D<double>& ez);
+		void move_into_eX(Vectors::Vector4D<double>& eX); 
+		void move_into_eY(Vectors::Vector4D<double>& eY);
+		void move_into_eZ(Vectors::Vector4D<double>& eZ);
+		void move_into_X(Vectors::Vector3D<double>& X);
+		void move_into_Y(Vectors::Vector3D<double>& Y);
+		void move_into_Z(Vectors::Vector3D<double>& Z);
 	};
 }
 

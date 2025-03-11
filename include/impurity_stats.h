@@ -27,9 +27,9 @@ namespace Impurity
 		Vectors::Vector4D<int> m_counts {};
 		Vectors::Vector4D<double> m_weights {};
 		Vectors::Vector4D<double> m_density {};
-		Vectors::Vector4D<double> m_vx {};
-		Vectors::Vector4D<double> m_vy {};
-		Vectors::Vector4D<double> m_vz {};
+		Vectors::Vector4D<double> m_vX {};
+		Vectors::Vector4D<double> m_vY {};
+		Vectors::Vector4D<double> m_vZ {};
 		Vectors::Vector4D<double> m_gyrorad {};
 		bool m_vel_stats {};
 
@@ -43,9 +43,9 @@ namespace Impurity
 		Vectors::Vector4D<int>& get_counts();
 		Vectors::Vector4D<double>& get_weights();
 		Vectors::Vector4D<double>& get_density();
-		Vectors::Vector4D<double>& get_vx();
-		Vectors::Vector4D<double>& get_vy();
-		Vectors::Vector4D<double>& get_vz();
+		Vectors::Vector4D<double>& get_vX();
+		Vectors::Vector4D<double>& get_vY();
+		Vectors::Vector4D<double>& get_vZ();
 		Vectors::Vector4D<double>& get_gyrorad();
 		bool get_vel_stats();
 
@@ -64,7 +64,7 @@ namespace Impurity
 		// Function add each velocity component to the corresponding array
 		// location
 		void add_vels(const int tidx, const int xidx, const int yidx,
-			const int zidx, const double vx, const double vy, const double vz);
+			const int zidx, const double vX, const double vY, const double vZ);
 
 		// Function add the calculated gyroradius to the corresponding array
 		// location

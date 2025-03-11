@@ -12,8 +12,10 @@ namespace Impurity
 	* @brief Straightforward implementation of an impurity particle 
 	*
 	* Impurity particle class. Contains:
-	*   t,x,y,z: Coordinates of the particle in space-time
-	*   vx,vy,vz: Velocity components of the particle
+	*   t: Time of the particle
+	*   x,y,z: Coordinates of the particle in computational space
+	*   X,Y,Z: Coordinates of the particle in Cartesian space
+	*   vX,vY,vZ: Velocity components of the particle in Cartesian space
 	*   weight: The Monte Carlo weight of the particle
 	*   charge: Current charge of the particle
 	*   mass: The mass of the particle (kg)
@@ -25,9 +27,12 @@ namespace Impurity
 		double m_x {};
 		double m_y {};
 		double m_z {};
-		double m_vx {};
-		double m_vy {};
-		double m_vz {};
+		double m_X {};
+		double m_Y {};
+		double m_Z {};
+		double m_vX {};
+		double m_vY {};
+		double m_vZ {};
 		double m_weight {};
 		int m_charge {};
 		double m_mass {};
@@ -46,8 +51,9 @@ namespace Impurity
 		* @brief Constructor: Fully specify each member variable
 		*/
 		Impurity(const double t, const double x, 
-			const double y, const double z, const double vx, const double vy, 
-			const double vz, const double weight, const int charge, 
+			const double y, const double z, const double X, const double Y, 
+			const double Z, const double vX, const double vY, 
+			const double vZ, const double weight, const int charge, 
 			const double mass, const int atom_num);
 		
 		/**
@@ -61,35 +67,50 @@ namespace Impurity
 		*/
 		double get_t() const;
 		/**
-		* @brief Accessor for particle x position (m)
+		* @brief Accessor for particle x position in computational space
 		* @return Returns particle x position as double
 		*/
 		double get_x() const;
 		/**
-		* @brief Accessor for particle y position (m)
+		* @brief Accessor for particle y position  in computational space
 		* @return Returns particle y position as double
 		*/
 		double get_y() const;
 		/**
-		* @brief Accessor for particle z position (m)
+		* @brief Accessor for particle z position in computational space
 		* @return Returns particle z position as double
 		*/
 		double get_z() const;
 		/**
+		* @brief Accessor for particle X position (m)
+		* @return Returns particle x position as double
+		*/
+		double get_X() const;
+		/**
+		* @brief Accessor for particle Y position (m)
+		* @return Returns particle y position as double
+		*/
+		double get_Y() const;
+		/**
+		* @brief Accessor for particle Z position (m)
+		* @return Returns particle z position as double
+		*/
+		double get_Z() const;
+		/**
 		* @brief Accessor for particle x velocity (m/s)
 		* @return Returns particle x velocity as double
 		*/
-		double get_vx() const;
+		double get_vX() const;
 		/**
 		* @brief Accessor for particle y velocity (m/s)
 		* @return Returns particle y velocity as double
 		*/
-		double get_vy() const;
+		double get_vY() const;
 		/**
 		* @brief Accessor for particle z velocity (m/s)
 		* @return Returns particle z velocity as double
 		*/
-		double get_vz() const;
+		double get_vZ() const;
 		/**
 		* @brief Accessor for particle mass (kg)
 		* @return Returns particle mass as double
@@ -127,17 +148,29 @@ namespace Impurity
 		*/
 		void set_z(double z);
 		/**
+		* @brief Setter for particle X position
+		*/
+		void set_X(double X);
+		/**
+		* @brief Setter for particle Y position
+		*/
+		void set_Y(double Y);
+		/**
+		* @brief Setter for particle Z position
+		*/
+		void set_Z(double Z);
+		/**
 		* @brief Setter for particle x velocity
 		*/
-		void set_vx(double vx);
+		void set_vX(double vX);
 		/**
 		* @brief Setter for particle y velocity
 		*/
-		void set_vy(double vy);
+		void set_vY(double vY);
 		/**
 		* @brief Setter for particle z velocity
 		*/
-		void set_vz(double vz);
+		void set_vZ(double vZ);
 		/**
 		* @brief Setter for particle charge
 		*/

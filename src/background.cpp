@@ -25,9 +25,12 @@ namespace Background
 	const Vectors::Vector4D<double>& Background::get_ti() const {return m_ti;}
 	const Vectors::Vector4D<double>& Background::get_vp() const {return m_vp;}
 	const Vectors::Vector4D<double>& Background::get_b() const {return m_b;}
-	const Vectors::Vector4D<double>& Background::get_ex() const {return m_ex;}
-	const Vectors::Vector4D<double>& Background::get_ey() const {return m_ey;}
-	const Vectors::Vector4D<double>& Background::get_ez() const {return m_ez;}
+	const Vectors::Vector4D<double>& Background::get_eX() const {return m_eX;}
+	const Vectors::Vector4D<double>& Background::get_eY() const {return m_eY;}
+	const Vectors::Vector4D<double>& Background::get_eZ() const {return m_eZ;}
+	const Vectors::Vector3D<double>& Background::get_X() const {return m_X;}
+	const Vectors::Vector3D<double>& Background::get_Y() const {return m_Y;}
+	const Vectors::Vector3D<double>& Background::get_Z() const {return m_Z;}
 	int Background::get_dim1() const {return m_dim1;}
 	int Background::get_dim2() const {return m_dim2;}
 	int Background::get_dim3() const {return m_dim3;}
@@ -44,7 +47,7 @@ namespace Background
 				std::cerr << "Error! In Background, " << data << " has" 
 					<< " different dimensions from what already has been" 
 					<< " set. This indicates the data is not being read" 
-					<< "	in correctly or is from different Gkeyll runs."
+					<< " in correctly or is from different Gkeyll runs."
 					<< '\n';
 				std::cerr << "  Previous dim: m_dim" << dim_num << " = " 
 					<< m_dim << '\n';
@@ -154,20 +157,38 @@ namespace Background
 		set_dims(b, "b");
 		m_b.move_into_data(b);
 	}
-	void Background::move_into_ex(Vectors::Vector4D<double>& ex) 
+	void Background::move_into_eX(Vectors::Vector4D<double>& eX) 
 	{
-		set_dims(ex, "ex");
-		m_ex.move_into_data(ex);
+		set_dims(eX, "eX");
+		m_eX.move_into_data(eX);
 	}
-	void Background::move_into_ey(Vectors::Vector4D<double>& ey) 
+	void Background::move_into_eY(Vectors::Vector4D<double>& eY) 
 	{
-		set_dims(ey, "ey");
-		m_ey.move_into_data(ey);
+		set_dims(eY, "eY");
+		m_eY.move_into_data(eY);
 	}
-	void Background::move_into_ez(Vectors::Vector4D<double>& ez) 
+	void Background::move_into_eZ(Vectors::Vector4D<double>& eZ) 
 	{
-		set_dims(ez, "ez");
-		m_ez.move_into_data(ez);
+		set_dims(eZ, "eZ");
+		m_eZ.move_into_data(eZ);
+	}
+	void Background::move_into_X(Vectors::Vector3D<double>& X) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(X, "X");
+		m_X.move_into_data(X);
+	}
+	void Background::move_into_Y(Vectors::Vector3D<double>& Y) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(Y, "Y");
+		m_Y.move_into_data(Y);
+	}
+	void Background::move_into_Z(Vectors::Vector3D<double>& Z) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(Z, "Z");
+		m_Z.move_into_data(Z);
 	}
 }
 
