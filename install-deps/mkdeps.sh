@@ -20,6 +20,7 @@ BUILD_ZLIB=
 BUILD_HDF5=
 BUILD_NETCDF_C=
 BUILD_NETCDF_CXX=
+INSTALL_NANOFLANN=
 SETUP_CONDA_ENV=
 
 # By default make a new build-opts.sh file.
@@ -65,6 +66,7 @@ and C++ compilers to use.
 --build-hdf5                Should we build HDF5? Needed for NetCDF-C
 --build-netcdf-c            Should we build netCDF?
 --build-netcdf-cxx          Should we build the netCDF C++ interface?
+--install-nanoflann         Should we install the (header-only) nanoflann library?
 --setup-conda-env           Should we setup the conda environment?
 --new-build-opts            Should we create a new build-opts.sh file?
 
@@ -175,6 +177,10 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_NETCDF_CXX="$value"
       ;;
+   --install-nanoflann)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      INSTALL_NANOFLANN="$value"
+      ;;
    --new-build-opts)
       [ -n "$value" ] || die "Missing value in flag $key."
       NEW_BUILD_OPTS="$value"
@@ -276,6 +282,14 @@ build_netcdf-cxx() {
    fi
 }
 
+install_nanoflann() {
+   if [ "$INSTALL_NANOFLANN" = "yes" ]
+   then
+      echo "Installing nanoflann"
+      ./install-nanoflann.sh
+   fi
+}
+
 setup_conda_env() {
    if [ "$SETUP_CONDA_ENV" = "yes" ]
    then
@@ -297,4 +311,6 @@ build_hdf5  # netcdf-c dependency
 build_netcdf-c
 build_netcdf-cxx
 
+# Order not important for these
+install-nanoflann
 setup_conda_env
