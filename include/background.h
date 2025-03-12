@@ -27,6 +27,9 @@ namespace Background
 		std::vector<double> m_grid_x {};
 		std::vector<double> m_grid_y {};
 		std::vector<double> m_grid_z {};
+		std::vector<int> m_xidx {};
+		std::vector<int> m_yidx {};
+		std::vector<int> m_zidx {};
 		Vectors::Vector4D<double> m_ne {};
 		Vectors::Vector4D<double> m_te {};
 		Vectors::Vector4D<double> m_ti {};
@@ -50,6 +53,9 @@ namespace Background
 		const std::vector<double>& get_x() const;
 		const std::vector<double>& get_y() const;
 		const std::vector<double>& get_z() const;
+		const std::vector<int>& get_xidx() const;
+		const std::vector<int>& get_yidx() const;
+		const std::vector<int>& get_zidx() const;
 		const std::vector<double>& get_grid_x() const;
 		const std::vector<double>& get_grid_y() const;
 		const std::vector<double>& get_grid_z() const;
@@ -114,6 +120,9 @@ namespace Background
 		void move_into_x(std::vector<double>& x);
 		void move_into_y(std::vector<double>& y);
 		void move_into_z(std::vector<double>& z);
+		void move_into_xidx(std::vector<int>& xidx);
+		void move_into_yidx(std::vector<int>& yidx);
+		void move_into_zidx(std::vector<int>& zidx);
 		void move_into_grid_x(std::vector<double>& grid_x);
 		void move_into_grid_y(std::vector<double>& grid_y);
 		void move_into_grid_z(std::vector<double>& grid_z);

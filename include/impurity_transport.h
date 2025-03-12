@@ -12,6 +12,7 @@
 #include "background.h"
 #include "impurity.h"
 #include "impurity_stats.h"
+#include "kdtree.h"
 #include "openadas.h"
 #include "options.h"
 
@@ -163,7 +164,9 @@ namespace Impurity
 	* @param imp Impurity object that is updated within function
 	* @param imp_time_step Size of time step specified in input file
 	*/
-	void step(Impurity& imp, const double imp_time_step);
+	void step(Impurity& imp, const double fX, const double fY, const double fZ, 
+		const double imp_time_step, const Background::Background& bkg, 
+		std::unique_ptr<KDTree::KDTree_t>& kdtree);
 
 	/**
 	* @brief Record/score particle in the ImpurityStats object
@@ -227,7 +230,9 @@ namespace Impurity
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
 		int& recomb_warnings, std::vector<Impurity>& imps,
 		const std::vector<int> imp_var_reduct_counts, 
-		const bool imp_var_reduct_on, const Options::Options& opts);
+		const bool imp_var_reduct_on, 
+		std::unique_ptr<KDTree::KDTree_t>& kdtree,
+		const Options::Options& opts);
 	/**
 	* @brief Print out warnings if ionization/recombination probabilities were
 	* greater than 1.0 at some point.
@@ -256,7 +261,9 @@ namespace Impurity
 	*/
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb, const Options::Options& opts);
+		const OpenADAS::OpenADAS& oa_recomb, 
+		std::unique_ptr<KDTree::KDTree_t>& kdtree,
+		const Options::Options& opts);
 
 	/**
 	* @brief Entry level function to impurity following routines

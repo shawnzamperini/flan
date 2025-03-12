@@ -36,6 +36,11 @@ link_directories(
 	${FLANSOFT}/netcdf-c/lib
 )
 
+if(UNIX AND NOT APPLE) # This applies to Linux platforms
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+endif()
+
+
 # Add a shared library
 add_library(flan SHARED ${SOURCES})
 

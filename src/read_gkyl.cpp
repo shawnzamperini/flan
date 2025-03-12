@@ -32,6 +32,9 @@ namespace Gkyl
 	std::vector<double> gkyl_x {};  // Cell centers
 	std::vector<double> gkyl_y {};
 	std::vector<double> gkyl_z {};
+	std::vector<int> gkyl_xidx {};  // Cell center idxs mapped to the
+	std::vector<int> gkyl_yidx {};  // (flattened) X,Y,Z data
+	std::vector<int> gkyl_zidx {};  
 	std::vector<double> gkyl_grid_x {};  // Grid edges
 	std::vector<double> gkyl_grid_y {};
 	std::vector<double> gkyl_grid_z {};
@@ -653,6 +656,9 @@ namespace Gkyl
 		gkyl_X.resize(dim1, dim2, dim3);
 		gkyl_Y.resize(dim1, dim2, dim3);
 		gkyl_Z.resize(dim1, dim2, dim3);
+		gkyl_xidx.resize(dim1 * dim2 * dim3);
+		gkyl_yidx.resize(dim1 * dim2 * dim3);
+		gkyl_zidx.resize(dim1 * dim2 * dim3);
 
 		// Loop through every x, y, z value to calculate each X, Y, Z
 		for (int i {}; i < std::ssize(gkyl_x); ++i)
@@ -668,6 +674,14 @@ namespace Gkyl
 					gkyl_X(i,j,k) = X;
 					gkyl_Y(i,j,k) = Y;
 					gkyl_Z(i,j,k) = Z;
+
+					// Store the indices in computational coordinates that this
+					// physical coordinate cooresponds to. Can just use
+					// calc_index from the 3D vector (each X, Y, Z calc_index
+					// gives the same thing).
+					gkyl_xidx[gkyl_X.calc_index(i,j,k)] = i;
+					gkyl_yidx[gkyl_Y.calc_index(i,j,k)] = j;
+					gkyl_zidx[gkyl_Z.calc_index(i,j,k)] = k;
 				}
 			}
 		}
@@ -761,6 +775,9 @@ namespace Gkyl
 		bkg.move_into_x(gkyl_x);
 		bkg.move_into_y(gkyl_y);
 		bkg.move_into_z(gkyl_z);
+		bkg.move_into_xidx(gkyl_xidx);
+		bkg.move_into_yidx(gkyl_yidx);
+		bkg.move_into_zidx(gkyl_zidx);
 		bkg.move_into_grid_x(gkyl_grid_x);
 		bkg.move_into_grid_y(gkyl_grid_y);
 		bkg.move_into_grid_z(gkyl_grid_z);

@@ -17,6 +17,7 @@
 #include "impurity.h"
 #include "impurity_stats.h"
 #include "impurity_transport.h"
+#include "kdtree.h"
 #include "openadas.h"
 #include "options.h"
 #include "random.h"
@@ -326,7 +327,8 @@ namespace Impurity
 	}
 
 	void step(Impurity& imp, const double fX, const double fY, const double fZ, 
-		const double imp_time_step)
+		const double imp_time_step, const Background::Background& bkg,
+		std::unique_ptr<KDTree::KDTree_t>& kdtree)
 	{
 		// Change in velocity over time step (this is just F = m * dv/dt)
 		double dvX {fX * imp_time_step / imp.get_mass()};
@@ -338,11 +340,28 @@ namespace Impurity
 		imp.set_vY(imp.get_vY() + dvY);
 		imp.set_vZ(imp.get_vZ() + dvZ);
 
-		// Update particle time and position
+		// Update particle time and position in physical space
 		imp.set_t(imp.get_t() + imp_time_step);
 		imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
 		imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
 		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
+
+		// Find what index in the physical coordinates is closest
+		std::cout << "Finding nearest neighbors...\n";
+		std::size_t nearest_idx {KDTree::nearest_neighbor(kdtree, imp.get_X(),
+			imp.get_Y(), imp.get_Z())};
+
+		// Get the computational coordinate indices and update particle
+		// position with these values
+		std::cout << "Updating computational coordinates... " << nearest_idx
+			<< "\n";
+		std::cout << " " << bkg.get_xidx().size() << '\n';
+		int xidx {bkg.get_xidx()[nearest_idx]};
+		int yidx {bkg.get_yidx()[nearest_idx]};
+		int zidx {bkg.get_zidx()[nearest_idx]};
+		imp.set_x(bkg.get_x()[xidx]);
+		imp.set_y(bkg.get_y()[yidx]);
+		imp.set_z(bkg.get_z()[zidx]);
 	}
 
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
@@ -430,7 +449,9 @@ namespace Impurity
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
 		int& recomb_warnings, std::vector<Impurity>& imps,
 		const std::vector<int> imp_var_reduct_counts, 
-		const bool imp_var_reduct_on, const Options::Options& opts)
+		const bool imp_var_reduct_on, 
+		std::unique_ptr<KDTree::KDTree_t>& kdtree,
+		const Options::Options& opts)
 	{
 		// Timestep of impurity transport simulation. It can be a constant
 		// value (set here), or set on the fly based on a reasonable criteria.
@@ -443,8 +464,8 @@ namespace Impurity
 		}
 
 		// For debugging purposes (only works with one thread)
-		//static int imp_id {0};
-		//imp_id++;
+		static int imp_id {0};
+		imp_id++;
 
 		bool continue_following {true};
 		while (continue_following)
@@ -487,12 +508,12 @@ namespace Impurity
 			}
 
 			// Debugging
-			//std::cout << "id, tidx, q, t, x, y, z, dt, fx, fy, fz: " 
-			//	<< imp_id << ", " << tidx << ", "
-			//	<< imp.get_charge() << ", "<< imp.get_t() << ", " 
-			//	<< ", " << imp.get_x() << ", " << imp.get_y() 
-			//	<< ", " << imp.get_z() << ", " << imp_time_step 
-			//	<< ", " << fx << ", " << fy << ", " << fz << '\n';
+			std::cout << "id, tidx, q, t, x, y, z, dt, fX, fY, fZ: " 
+				<< imp_id << ", " << tidx << ", "
+				<< imp.get_charge() << ", "<< imp.get_t() << ", " 
+				<< ", " << imp.get_x() << ", " << imp.get_y() 
+				<< ", " << imp.get_z() << ", " << imp_time_step 
+				<< ", " << fX << ", " << fY << ", " << fZ << '\n';
 
 			// Update statistics. Need to do this after the time step is
 			// calculated (if it is), but before the particle moves into 
@@ -502,7 +523,7 @@ namespace Impurity
 
 			// Last thing is move particle to a new location
 			//step(imp, imp_time_step);
-			step(imp, fX, fY, fZ, imp_time_step);
+			step(imp, fX, fY, fZ, imp_time_step, bkg, kdtree);
 
 			// Check for ionization or recombination
 			if (opts.imp_iz_recomb_int() > 0)
@@ -539,7 +560,9 @@ namespace Impurity
 
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb, const Options::Options& opts)
+		const OpenADAS::OpenADAS& oa_recomb, 
+		std::unique_ptr<KDTree::KDTree_t>& kdtree,
+		const Options::Options& opts)
 	{
 		// Variance reduction requires ionization/recombination be on
 		//if (imp_var_reduct_on && !imp_iz_recomb_on)
@@ -650,7 +673,8 @@ namespace Impurity
 				// Begin following Impurity
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
 					ioniz_warnings, recomb_warnings, imps,
-					imp_var_reduct_counts, imp_var_reduct_control, opts);
+					imp_var_reduct_counts, imp_var_reduct_control, kdtree, 
+					opts);
 				//std::cout << "imps.size() = " << imps.size() << '\n';
 				++tot_imp_count;
 			}
@@ -708,8 +732,15 @@ namespace Impurity
 		OpenADAS::OpenADAS oa_recomb {opts.openadas_root(), 
 			opts.openadas_year(), opts.imp_atom_num(), "acd"};
 
+		// Build KD-tree, which is used for nearest-neighbor searches between
+		// particle X,Y,Z position and a known X,Y,Z position of the background
+		// plasma.
+		std::cout << "Building KDTree...\n";
+		std::unique_ptr<KDTree::KDTree_t> kdtree {
+			KDTree::build_tree(bkg.get_X(), bkg.get_Y(), bkg.get_Z())};
+
 		// Execute main particle following loop.
-		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts);
+		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, kdtree, opts);
 	
 		// Convert the statistics into meaningful quantities. We are scaling
 		// the density by the scale factor.

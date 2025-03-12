@@ -12,7 +12,6 @@
 #include <tuple>
 #include <variant>
 
-
 /**
 * @brief Alias for function pointer to mapc2p function.
 *
@@ -31,5 +30,6 @@ using Mapc2p_ptr = std::function<std::tuple<double, double, double>
 */
 using Inputs = std::map<std::string, std::variant<int, double, std::string, 
 	Mapc2p_ptr>>;
+
 
 #endif

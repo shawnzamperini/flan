@@ -77,7 +77,8 @@ namespace Gkyl
 	double calc_gradient(const double hd, const double hs, const double fd, 
 		const double fs, const double f);
 
-	// Calculate the electric field components as the gradient of the potential.
+	// Calculate the electric field components as the gradient of the 
+	// potential.
 	void calc_elec_field();
 
 	// Calculate cell X,Y,Z coordinates for center of cells
