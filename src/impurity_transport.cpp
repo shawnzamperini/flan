@@ -347,15 +347,12 @@ namespace Impurity
 		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
 
 		// Find what index in the physical coordinates is closest
-		std::cout << "Finding nearest neighbors...\n";
+		//std::cout << "Finding nearest neighbors...\n";
 		std::size_t nearest_idx {KDTree::nearest_neighbor(kdtree, imp.get_X(),
 			imp.get_Y(), imp.get_Z())};
 
 		// Get the computational coordinate indices and update particle
 		// position with these values
-		std::cout << "Updating computational coordinates... " << nearest_idx
-			<< "\n";
-		std::cout << " " << bkg.get_xidx().size() << '\n';
 		int xidx {bkg.get_xidx()[nearest_idx]};
 		int yidx {bkg.get_yidx()[nearest_idx]};
 		int zidx {bkg.get_zidx()[nearest_idx]};
@@ -385,7 +382,7 @@ namespace Impurity
 		}
 
 		// Add value of gyroradius to running sum at this location
-		imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
+		//imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
 	}
 
 	bool check_boundary(const Background::Background& bkg, Impurity& imp,
@@ -464,8 +461,8 @@ namespace Impurity
 		}
 
 		// For debugging purposes (only works with one thread)
-		static int imp_id {0};
-		imp_id++;
+		//static int imp_id {0};
+		//imp_id++;
 
 		bool continue_following {true};
 		while (continue_following)
@@ -508,12 +505,14 @@ namespace Impurity
 			}
 
 			// Debugging
-			std::cout << "id, tidx, q, t, x, y, z, dt, fX, fY, fZ: " 
-				<< imp_id << ", " << tidx << ", "
-				<< imp.get_charge() << ", "<< imp.get_t() << ", " 
-				<< ", " << imp.get_x() << ", " << imp.get_y() 
-				<< ", " << imp.get_z() << ", " << imp_time_step 
-				<< ", " << fX << ", " << fY << ", " << fZ << '\n';
+			//std::cout << "id, tidx, q, t, x, y, z, dt, fX, fY, fZ, X, Y, Z: " 
+			//	<< imp_id << ", " << tidx << ", "
+			//	<< imp.get_charge() << ", "<< imp.get_t() << ", " 
+			//	<< ", " << imp.get_x() << ", " << imp.get_y() 
+			//	<< ", " << imp.get_z() << ", " << imp_time_step 
+			//	<< ", " << fX << ", " << fY << ", " << fZ << ", " 
+			//	<< imp.get_X() << ", " << imp.get_Y() << ", " 
+			//	<< imp.get_Z() << '\n';
 
 			// Update statistics. Need to do this after the time step is
 			// calculated (if it is), but before the particle moves into 

@@ -219,7 +219,10 @@ namespace Impurity
 		const int yidx, const int zidx, const Impurity& imp, 
 		const Background::Background& bkg)
 	{
+		// Need to assemble things as vectors and then do dot products with 
+		// the B field to get vperp. To-do, as B is not stored as a vector.
 		std::cerr << "gyroradius calculation incorrect! not calculating.\n";
+
 		/*
 		// Calculate gyroradius and add it to the running total. Charge must
 		// be 1 or higher since neutrals do not gyrate. 
@@ -253,8 +256,9 @@ namespace Impurity
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)
 	{
-		std::cerr << "density calculation not correct! not calculating.\n";
-		/*
+		// Should be able to use the Jacobian to calculate the volume of
+		// each cell...
+		//std::cerr << "density calculation not correct! not calculating.\n";
 
 		// Need to loop through the entire Vector4D. Unconventional 
 		// indentation here just to keep it clean.
@@ -271,15 +275,17 @@ namespace Impurity
 			double dy {bkg.get_grid_y()[k+1] - bkg.get_grid_y()[k]};
 			double dz {bkg.get_grid_z()[l+1] - bkg.get_grid_z()[l]};
 
+			// Volume in physical space is jacob * dx * dy * dz
+			double cell_vol {bkg.get_J()(j,k,l) * dx * dy * dz};
+
 			// Normalize each weight value by the volume and total number of
 			// particles launched. This goes from units of (s) to (s/m3). 
-			m_density(i,j,k,l) = m_weights(i,j,k,l) / (dx * dy * dz) 
+			m_density(i,j,k,l) = m_weights(i,j,k,l) / cell_vol 
 				/ tot_imp_num * imp_source_scale_fact;
 		}
 		}
 		}	
 		}
-		*/
 
 	}
 	

@@ -16,6 +16,13 @@
 
 namespace Gkyl
 {
+	// Alias for tuple to hold all the grid data to be passed around
+	using grid_data_t = std::tuple<std::vector<double>&, 
+		std::vector<double>&, std::vector<double>&, std::vector<double>&, 
+		std::vector<double>&, std::vector<double>&, std::vector<double>&,
+		Vectors::Vector3D<double>&, Vectors::Vector3D<double>&,
+		Vectors::Vector3D<double>&, std::vector<int>&, std::vector<int>&,
+		std::vector<int>&>;
 
 	// Entry point for reading Gkeyll data into Flan. 
 	Background::Background read_gkyl(const Options::Options& opts);
@@ -58,19 +65,38 @@ namespace Gkyl
 	// The data is loaded and placed into gkyl_data accordingly.
 	template <typename T>
 	void read_data_pgkyl(const std::string& species, 
-		const std::string& data_type, Vectors::Vector4D<T>& gkyl_data, 
-		const Options::Options& opts, const double species_mass_amu=0);
+		const std::string& data_type, grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_data, const Options::Options& opts, 
+		const double species_mass_amu=0);
 
 	// Calcuate the electric field using the gradient of gkyl_vp. This must
 	// be run after read_potential.
 	void calc_elec_field();
 
 	// Read in the corresponding Gkeyll data into vectors.
-	void read_elec_density(const Options::Options& opts);
-	void read_elec_temperature(const Options::Options& opts);
-	void read_ion_temperature(const Options::Options& opts);
-	void read_potential(const Options::Options& opts);
-	void read_magnetic_field(const Options::Options& opts);
+	template <typename T>
+	void read_elec_density(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_ne, const Options::Options& opts);
+
+	template <typename T>
+	void read_elec_temperature(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_te, const Options::Options& opts);
+
+	template <typename T>
+	void read_ion_temperature(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_ti, const Options::Options& opts);
+
+	template <typename T>
+	void read_potential(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_vp, const Options::Options& opts);
+
+	template <typename T>
+	void read_magnetic_field(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_b, const Options::Options& opts);
+
+	template <typename T>
+	void read_jacobian(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_J, const Options::Options& opts);
 
 	// Implementation of gradient as used by numpy.gradient. This is a second
 	// order approximation of the derivative.
@@ -82,13 +108,16 @@ namespace Gkyl
 	void calc_elec_field();
 
 	// Calculate cell X,Y,Z coordinates for center of cells
-	void calc_cell_XYZ_centers(const Options::Options& opts);
+	void calc_cell_XYZ_centers(grid_data_t& grid_data, 
+		const Options::Options& opts);
 
 	// Read in a electric field component (X,Y,Z) into the local array
-	void read_elec_field(const std::string& comp);
+	void read_elec_field(Vectors::Vector4D<double>& gkyl_eX, 
+		Vectors::Vector4D<double>& gkyl_eY, 
+		Vectors::Vector4D<double>& gkyl_eZ);
 
 	// Write out cell X,Y,Z coordinates.
-	void write_XYZ(const Options::Options& opts);
+	void write_XYZ(grid_data_t& grid_data, const Options::Options& opts);
 
 	// Move all the data loaded into global arrays into a Background object and
 	// return it.

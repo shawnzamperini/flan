@@ -34,6 +34,7 @@ namespace Background
 	const Vectors::Vector3D<double>& Background::get_X() const {return m_X;}
 	const Vectors::Vector3D<double>& Background::get_Y() const {return m_Y;}
 	const Vectors::Vector3D<double>& Background::get_Z() const {return m_Z;}
+	const Vectors::Vector3D<double>& Background::get_J() const {return m_J;}
 	int Background::get_dim1() const {return m_dim1;}
 	int Background::get_dim2() const {return m_dim2;}
 	int Background::get_dim3() const {return m_dim3;}
@@ -204,6 +205,12 @@ namespace Background
 		// Need a Vector3D version of set_dims
 		//set_dims(Z, "Z");
 		m_Z.move_into_data(Z);
+	}
+	void Background::move_into_J(Vectors::Vector3D<double>& J) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(J, "J");
+		m_J.move_into_data(J);
 	}
 }
 

@@ -261,7 +261,8 @@ namespace Vectors
 		Vector4D& operator=(Vector4D&& other) noexcept;
 
 		/**
-		* @brief Helper function that checks if other is of the same shape as this
+		* @brief Helper function that checks if other is of the same shape as 
+		* this
 		* Vector4D.
 		* @return Return true if they're the same shape, false (and an error 
 		* message) if not
@@ -282,6 +283,13 @@ namespace Vectors
 		//void move_into_data(Vectors::Vector4D<T>& vec);
 		void move_into_data(Vector4D<T>&& vec);
 		void move_into_data(Vector4D<T>& vec);
+
+		/**
+		* @brief Slice a single dimension (which returns a vector with one 
+		* lower dimensionality).
+		* @return Returns a Vector3D
+		*/
+		Vector3D<T> slice_dim1(int dim_index);
 
 		/**
 		* @brief Slice a single dimension (which returns a vector with one 

@@ -293,6 +293,28 @@ namespace Vectors
 	}
 
 	template <typename T>
+	Vector3D<T> Vector4D<T>::slice_dim1(int dim_index)
+	{
+		// Sticking to traditional indexing variables to help make it clear
+		// i = dim1, j = dim2, k = dim3, l = dim4
+		Vector3D<T> vec {m_dim2, m_dim3, m_dim4};
+		for (int j {}; j < m_dim2; ++j)
+		{
+			for (int k {}; k < m_dim3; ++k)
+			{
+				for (int l {}; l < m_dim4; ++l)
+				{
+					// from calc_index just i = dim_index
+					int index = dim_index * (m_dim2 * m_dim3 * m_dim4) + j 
+						* (m_dim3 * m_dim4) + k * m_dim4 + l;
+					vec(j, k, l) = m_data[index];
+				}
+			}
+		}
+		return vec;
+	}
+
+	template <typename T>
 	Vector3D<T> Vector4D<T>::slice_dim4(int dim_index)
 	{
 		Vector3D<T> vec {m_dim1, m_dim2, m_dim3};

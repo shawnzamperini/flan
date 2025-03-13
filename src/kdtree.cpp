@@ -44,12 +44,8 @@ namespace KDTree
 		double query_pt[3] = {X_pt, Y_pt, Z_pt};
 
 		// Perform nearest neighbor search
-		std::cout << "result_set...\n";
 		nanoflann::KNNResultSet<double> result_set {1}; // 1 nearest neighbor
-		std::cout << "init...\n";
 		result_set.init(&nearest_index, &distance_sq);
-		std::cout << "findNeighbors... " << X_pt << " " << Y_pt << " " 
-			<< Z_pt << "\n";
 		tree->findNeighbors(result_set, &query_pt[0]);
 
 		// Return
