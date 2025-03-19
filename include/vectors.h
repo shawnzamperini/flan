@@ -105,6 +105,24 @@ namespace Vectors
 		int calc_index(const int i, const int j, const int k) const;
 	
 		/**
+		* @brief Get the index along the first dimension from an index
+		* calculated by calc_index.
+		*/
+		int get_i(const int idx) const;
+
+		/**
+		* @brief Get the index along the second dimension from an index
+		* calculated by calc_index.
+		*/
+		int get_j(const int idx) const;
+
+		/**
+		* @brief Get the index along the third dimension from an index
+		* calculated by calc_index.
+		*/
+		int get_k(const int idx) const;
+
+		/**
 		* @brief Overload parentheses to act as indexing.
 		* @return Returns reference to value represented by this index of 
 		* indicated data type

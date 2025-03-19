@@ -17,9 +17,6 @@ namespace Background
 	const std::vector<double>& Background::get_x() const {return m_x;}
 	const std::vector<double>& Background::get_y() const {return m_y;}
 	const std::vector<double>& Background::get_z() const {return m_z;}
-	const std::vector<int>& Background::get_xidx() const {return m_xidx;}
-	const std::vector<int>& Background::get_yidx() const {return m_yidx;}
-	const std::vector<int>& Background::get_zidx() const {return m_zidx;}
 	const std::vector<double>& Background::get_grid_x() const {return m_grid_x;}
 	const std::vector<double>& Background::get_grid_y() const {return m_grid_y;}
 	const std::vector<double>& Background::get_grid_z() const {return m_grid_z;}
@@ -27,7 +24,9 @@ namespace Background
 	const Vectors::Vector4D<double>& Background::get_te() const {return m_te;}
 	const Vectors::Vector4D<double>& Background::get_ti() const {return m_ti;}
 	const Vectors::Vector4D<double>& Background::get_vp() const {return m_vp;}
-	const Vectors::Vector4D<double>& Background::get_b() const {return m_b;}
+	const Vectors::Vector4D<double>& Background::get_bX() const {return m_bX;}
+	const Vectors::Vector4D<double>& Background::get_bY() const {return m_bY;}
+	const Vectors::Vector4D<double>& Background::get_bZ() const {return m_bZ;}
 	const Vectors::Vector4D<double>& Background::get_eX() const {return m_eX;}
 	const Vectors::Vector4D<double>& Background::get_eY() const {return m_eY;}
 	const Vectors::Vector4D<double>& Background::get_eZ() const {return m_eZ;}
@@ -124,18 +123,6 @@ namespace Background
 	{
 		m_z = std::move(z);	
 	}
-	void Background::move_into_xidx(std::vector<int>& xidx)
-	{
-		m_xidx = std::move(xidx);	
-	}
-	void Background::move_into_yidx(std::vector<int>& yidx)
-	{
-		m_yidx = std::move(yidx);	
-	}
-	void Background::move_into_zidx(std::vector<int>& zidx)
-	{
-		m_zidx = std::move(zidx);	
-	}
 	void Background::move_into_grid_x(std::vector<double>& grid_x)
 	{
 		m_grid_x = std::move(grid_x);	
@@ -168,10 +155,20 @@ namespace Background
 		set_dims(vp, "vp");
 		m_vp.move_into_data(vp);
 	}
-	void Background::move_into_b(Vectors::Vector4D<double>& b) 
+	void Background::move_into_bX(Vectors::Vector4D<double>& bX) 
 	{
-		set_dims(b, "b");
-		m_b.move_into_data(b);
+		set_dims(bX, "bX");
+		m_bX.move_into_data(bX);
+	}
+	void Background::move_into_bY(Vectors::Vector4D<double>& bY) 
+	{
+		set_dims(bY, "bY");
+		m_bY.move_into_data(bY);
+	}
+	void Background::move_into_bZ(Vectors::Vector4D<double>& bZ) 
+	{
+		set_dims(bZ, "bZ");
+		m_bZ.move_into_data(bZ);
 	}
 	void Background::move_into_eX(Vectors::Vector4D<double>& eX) 
 	{

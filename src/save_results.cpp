@@ -241,8 +241,14 @@ namespace SaveResults
 			dim1, dim2, dim3, dim4, desc, "(V/m)");
 			
 		// Magnetic field
-		desc = "magnetic field";
-		save_vector_4d(nc_file, bkg.get_b(), "bmag", 
+		desc = "magnetic field (X)";
+		save_vector_4d(nc_file, bkg.get_bX(), "bmag_X", 
+			dim1, dim2, dim3, dim4, desc, "(T)");
+		desc = "magnetic field (Y)";
+		save_vector_4d(nc_file, bkg.get_bY(), "bmag_Y", 
+			dim1, dim2, dim3, dim4, desc, "(T)");
+		desc = "magnetic field (Z)";
+		save_vector_4d(nc_file, bkg.get_bZ(), "bmag_Z", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 
 		// Impurity counts

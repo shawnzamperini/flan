@@ -36,6 +36,9 @@ namespace Impurity
 	double Impurity::get_x() const {return m_x;}
 	double Impurity::get_y() const {return m_y;}
 	double Impurity::get_z() const {return m_z;}
+	double Impurity::get_prevX() const {return m_prevX;}
+	double Impurity::get_prevY() const {return m_prevY;}
+	double Impurity::get_prevZ() const {return m_prevZ;}
 	double Impurity::get_X() const {return m_X;}
 	double Impurity::get_Y() const {return m_Y;}
 	double Impurity::get_Z() const {return m_Z;}
@@ -51,8 +54,26 @@ namespace Impurity
 	void Impurity::set_x(double x) {m_x = x;}
 	void Impurity::set_y(double y) {m_y = y;}
 	void Impurity::set_z(double z) {m_z = z;}
-	void Impurity::set_X(double X) {m_X = X;} void Impurity::set_Y(double Y) {m_Y = Y;}
-	void Impurity::set_Z(double Z) {m_Z = Z;}
+
+	// When setting X,Y,Z, make sure to assign the exiting value to prevX 
+	// before overwriting it. Some unique cases we don't want to do this,
+	// so give an option if not.
+	void Impurity::set_X(double X, bool set_prev)
+	{
+		if (set_prev) m_prevX = m_X;
+		m_X = X;
+	} 
+	void Impurity::set_Y(double Y, bool set_prev)
+	{
+		if (set_prev) m_prevY = m_Y;
+		m_Y = Y;
+	}
+	void Impurity::set_Z(double Z, bool set_prev)
+	{
+		if (set_prev) m_prevZ = m_Z;
+		m_Z = Z;
+	}
+
 	void Impurity::set_vX(double vX) {m_vX = vX;}
 	void Impurity::set_vY(double vY) {m_vY = vY;}
 	void Impurity::set_vZ(double vZ) {m_vZ = vZ;}

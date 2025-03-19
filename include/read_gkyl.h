@@ -21,8 +21,7 @@ namespace Gkyl
 		std::vector<double>&, std::vector<double>&, std::vector<double>&, 
 		std::vector<double>&, std::vector<double>&, std::vector<double>&,
 		Vectors::Vector3D<double>&, Vectors::Vector3D<double>&,
-		Vectors::Vector3D<double>&, std::vector<int>&, std::vector<int>&,
-		std::vector<int>&>;
+		Vectors::Vector3D<double>&>;
 
 	// Entry point for reading Gkeyll data into Flan. 
 	Background::Background read_gkyl(const Options::Options& opts);
@@ -92,7 +91,8 @@ namespace Gkyl
 
 	template <typename T>
 	void read_magnetic_field(grid_data_t& grid_data, 
-		Vectors::Vector4D<T>& gkyl_b, const Options::Options& opts);
+		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY, 
+		Vectors::Vector4D<T>& gkyl_bZ, const Options::Options& opts);
 
 	template <typename T>
 	void read_jacobian(grid_data_t& grid_data, 
@@ -112,7 +112,8 @@ namespace Gkyl
 		const Options::Options& opts);
 
 	// Read in a electric field component (X,Y,Z) into the local array
-	void read_elec_field(Vectors::Vector4D<double>& gkyl_eX, 
+	void read_elec_field(grid_data_t& grid_data, 
+		Vectors::Vector4D<double>& gkyl_eX, 
 		Vectors::Vector4D<double>& gkyl_eY, 
 		Vectors::Vector4D<double>& gkyl_eZ);
 

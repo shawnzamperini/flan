@@ -80,6 +80,27 @@ namespace Vectors
 	{
 		return i * (m_dim2 * m_dim3) + j * m_dim3 + k;
 	}
+
+	// Get the first index (i) from a value calculated from calc_index
+	template <typename T>
+	int Vector3D<T>::get_i(const int idx) const
+	{
+		return static_cast<int>(idx / (m_dim2 * m_dim3));
+	}
+
+	// Get the second index (j) from a value calculated from calc_index
+	template <typename T>
+	int Vector3D<T>::get_j(const int idx) const
+	{
+		return static_cast<int>(idx / m_dim3) % m_dim2;
+	}
+
+	// Get the first index (k) from a value calculated from calc_index
+	template <typename T>
+	int Vector3D<T>::get_k(const int idx) const
+	{
+		return idx % m_dim3;
+	}
 		
 	template <typename T>
 	T& Vector3D<T>::operator()(int i, int j, int k)

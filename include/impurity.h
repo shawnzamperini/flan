@@ -30,6 +30,9 @@ namespace Impurity
 		double m_X {};
 		double m_Y {};
 		double m_Z {};
+		double m_prevX {};
+		double m_prevY {};
+		double m_prevZ {};
 		double m_vX {};
 		double m_vY {};
 		double m_vZ {};
@@ -82,18 +85,33 @@ namespace Impurity
 		*/
 		double get_z() const;
 		/**
+		* @brief Accessor for particle's previous X position (m)
+		* @return Returns particle's previous X position as double
+		*/
+		double get_prevX() const;
+		/**
+		* @brief Accessor for particle's previous Y position (m)
+		* @return Returns particle's previous Y position as double
+		*/
+		double get_prevY() const;
+		/**
+		* @brief Accessor for particle's previous Z position (m)
+		* @return Returns particle's previous Z position as double
+		*/
+		double get_prevZ() const;
+		/**
 		* @brief Accessor for particle X position (m)
-		* @return Returns particle x position as double
+		* @return Returns particle X position as double
 		*/
 		double get_X() const;
 		/**
 		* @brief Accessor for particle Y position (m)
-		* @return Returns particle y position as double
+		* @return Returns particle Y position as double
 		*/
 		double get_Y() const;
 		/**
 		* @brief Accessor for particle Z position (m)
-		* @return Returns particle z position as double
+		* @return Returns particle Z position as double
 		*/
 		double get_Z() const;
 		/**
@@ -150,15 +168,15 @@ namespace Impurity
 		/**
 		* @brief Setter for particle X position
 		*/
-		void set_X(double X);
+		void set_X(double X, bool set_prev = true);
 		/**
 		* @brief Setter for particle Y position
 		*/
-		void set_Y(double Y);
+		void set_Y(double Y, bool set_prev = true);
 		/**
 		* @brief Setter for particle Z position
 		*/
-		void set_Z(double Z);
+		void set_Z(double Z, bool set_prev = true);
 		/**
 		* @brief Setter for particle x velocity
 		*/

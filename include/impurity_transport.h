@@ -196,8 +196,12 @@ namespace Impurity
 	* @return Returns false if particle following is to be terminated, true
 	* otherwise.
 	*/
-	bool check_boundary(const Background::Background& bkg, Impurity& imp,
-		const Options::Options& opts);
+	bool check_boundary(const Background::Background& bkg, 
+		Impurity& imp, const Options::Options& opts, const int tidx,
+		const int xidx, const int yidx, const int zidx, 
+		const double imp_time_step, std::unique_ptr<KDTree::KDTree_t>& kdtree);
+	//bool check_boundary(const Background::Background& bkg, Impurity& imp,
+	//	const Options::Options& opts);
 	
 
 	/**

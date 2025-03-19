@@ -28,8 +28,9 @@ namespace KDTree
 		// Build KD-Tree. {dims, cloud, max leaf}. Not sure what max leaf does
 		// yet. I am using index here because that's what the examples called
 		// it. Maybe I'm mixing terminology up here in a bad way, idk.
+		constexpr int max_leaf_size {10};
 		auto index = std::make_unique<KDTree_t>(3, cloud, 
-			nanoflann::KDTreeSingleIndexAdaptorParams(10));
+			nanoflann::KDTreeSingleIndexAdaptorParams(max_leaf_size));
 		index->buildIndex();
 		return index;
 	}
@@ -38,17 +39,22 @@ namespace KDTree
 	std::size_t nearest_neighbor(std::unique_ptr<KDTree_t>& tree, 
 		const double X_pt, const double Y_pt, const double Z_pt)
 	{
-		// Variables for nearest neighbor search
-		std::size_t nearest_index;
-		double distance_sq;
-		double query_pt[3] = {X_pt, Y_pt, Z_pt};
 
-		// Perform nearest neighbor search
-		nanoflann::KNNResultSet<double> result_set {1}; // 1 nearest neighbor
-		result_set.init(&nearest_index, &distance_sq);
-		tree->findNeighbors(result_set, &query_pt[0]);
+		// From pointcloud_kdd_radius.cpp
+		double query_pt[3] = {X_pt, Y_pt, Z_pt};
+		size_t                num_results = 1;
+        std::vector<uint32_t> ret_index(num_results);
+        std::vector<double>    out_dist_sqr(num_results);
+
+        num_results = tree->knnSearch(
+            &query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
+
+        // In case of less points in the tree than requested:
+        //ret_index.resize(num_results);
+        //out_dist_sqr.resize(num_results);
 
 		// Return
-		return nearest_index;
+		//return nearest_index;
+		return ret_index[0];
 	}
 }

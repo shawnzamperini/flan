@@ -18,6 +18,7 @@
 #include "impurity_stats.h"
 #include "impurity_transport.h"
 #include "kdtree.h"
+#include "moeller_trumbore.h"
 #include "openadas.h"
 #include "options.h"
 #include "random.h"
@@ -36,32 +37,44 @@ namespace Impurity
 		const Options::Options& opts)
 	{	
 		// Uniformily distributed between xmin, xmax.
-		return Random::get(opts.imp_xmin(), opts.imp_xmax());
+		double start_x {Random::get(opts.imp_xmin(), opts.imp_xmax())};
+
+		// We need to start the impurity at the cell center, otherwise the 
+		// code my autolocate it somewhere further away.
+		int xidx {get_nearest_cell_index(bkg.get_grid_x(), start_x)};
+		return bkg.get_x()[xidx];
+
 	}
 
 	double get_birth_y(const Background::Background& bkg, 
 		const Options::Options& opts)
 	{
 		// Start at specific point
+		double start_y {};
 		if (opts.imp_ystart_opt_int() == 0)
 		{
-			return opts.imp_ystart_val();
+			 start_y = opts.imp_ystart_val();
 		}
 
 		// Start between a range (here defaults to the full y-width of the 
 		// simulation volume).
 		else if (opts.imp_ystart_opt_int() == 1)
 		{
-			return Random::get(bkg.get_y_min(), bkg.get_y_max());
+			start_y = Random::get(bkg.get_y_min(), bkg.get_y_max());
 		}
 		
-		return 0.0;
+		// We need to start the impurity at the cell center, otherwise the 
+		// code my autolocate it somewhere further away.
+		int yidx {get_nearest_cell_index(bkg.get_grid_y(), start_y)};
+		return bkg.get_y()[yidx];
 	}
 
 	double get_birth_z(const Background::Background& bkg,
 		const Options::Options& opts)
 	{
-		return opts.imp_zstart_val();
+		double start_z {opts.imp_zstart_val()};
+		int zidx {get_nearest_cell_index(bkg.get_grid_z(), start_z)};
+		return bkg.get_z()[zidx];
 	}
 	
 	int get_birth_charge(const Options::Options& opts)
@@ -175,17 +188,37 @@ namespace Impurity
 		// Impurity's charge
 		double imp_q {imp.get_charge() * -Constants::charge_e};
 
-		//std::cout << "Ex, Ey, Ez = " << bkg.get_eX()(tidx, xidx, yidx, zidx)
-		//	<< bkg.get_eY()(tidx, xidx, yidx, zidx) 
-		//	<< bkg.get_eZ()(tidx, xidx, yidx, zidx) << "\n";
-		//std::cout << "Bz = " << bkg.get_b()(tidx, xidx, yidx, zidx) << "\n";
+		// Electric and magnetic field components
+		double eX {bkg.get_eX()(tidx, xidx, yidx, zidx)};
+		double eY {bkg.get_eY()(tidx, xidx, yidx, zidx)};
+		double eZ {bkg.get_eZ()(tidx, xidx, yidx, zidx)};
+		double bX {bkg.get_bX()(tidx, xidx, yidx, zidx)};
+		double bY {bkg.get_bY()(tidx, xidx, yidx, zidx)};
+		double bZ {bkg.get_bZ()(tidx, xidx, yidx, zidx)};
+
+		// Impurity velocity components
+		double vX {imp.get_vX()};
+		double vY {imp.get_vY()};
+		double vZ {imp.get_vZ()};
+
+		//std::cout << "  Ex, Ey, Ez = " << eX << ", " << eY << ", " << eZ 
+		//	<< "\n";
+		//std::cout << "  Bx, By, Bz, B = " << bX << ", " << bY << ", " << bZ 
+		//	<< ", " << std::sqrt(bX*bX + bY*bY + bZ*bZ) << "\n";
+		//std::cout << "  vX, vY, vZ = " << vX << ", " << vY << ", " << vZ 
+		//	<< "\n";
+		// Each component of the Lorentz force in physical space
+		//double fX {imp_q * (bkg.get_eX()(tidx, xidx, yidx, zidx) + 
+		//	imp.get_vY() * bkg.get_b()(tidx, xidx, yidx, zidx))
+		//	-imp.get_vZ() * bkg.get_b()(tidx, xidx, yidx, zidx)};
+		//double fY {imp_q * (bkg.get_eY()(tidx, xidx, yidx, zidx) + 
+		//	-imp.get_vX() * bkg.get_b()(tidx, xidx, yidx, zidx))};
+		//double fZ {imp_q * bkg.get_eZ()(tidx, xidx, yidx, zidx)};
 
 		// Each component of the Lorentz force in physical space
-		double fX {imp_q * (bkg.get_eX()(tidx, xidx, yidx, zidx) + 
-			imp.get_vY() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fY {imp_q * (bkg.get_eY()(tidx, xidx, yidx, zidx) + 
-			-imp.get_vX() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fZ {imp_q * bkg.get_eZ()(tidx, xidx, yidx, zidx)};
+		double fX {imp_q * (eX + vY * bZ - vZ * bY)};
+		double fY {imp_q * (eY + vZ * bX - vX * bZ)};
+		double fZ {imp_q * (eZ + vX * bY - vY * bX)};
 
 		// Return as tuple
 		return std::make_tuple(fX, fY, fZ);
@@ -352,10 +385,11 @@ namespace Impurity
 			imp.get_Y(), imp.get_Z())};
 
 		// Get the computational coordinate indices and update particle
-		// position with these values
-		int xidx {bkg.get_xidx()[nearest_idx]};
-		int yidx {bkg.get_yidx()[nearest_idx]};
-		int zidx {bkg.get_zidx()[nearest_idx]};
+		// position with these values. Can use any of X,Y,Z, just need it for
+		// the get_i, etc. function which is the same among each.
+		int xidx {bkg.get_X().get_i(nearest_idx)};
+		int yidx {bkg.get_X().get_j(nearest_idx)};
+		int zidx {bkg.get_X().get_k(nearest_idx)};
 		imp.set_x(bkg.get_x()[xidx]);
 		imp.set_y(bkg.get_y()[yidx]);
 		imp.set_z(bkg.get_z()[zidx]);
@@ -385,45 +419,335 @@ namespace Impurity
 		//imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
 	}
 
-	bool check_boundary(const Background::Background& bkg, Impurity& imp,
-		const Options::Options& opts)
+	// Get bounding quadrilateral in the x direction in physical coordinates.
+	// Must go around the edge of the grid, no cutting across the middle.
+	std::array <double, 12> get_x_bound_vertices(
+		const Background::Background& bkg, const Options::Options& opts,
+		const int xidx, const int yidx, const int zidx)
+	{
+		// Vertex #1 @ (xidx, yidx, zidx)
+		auto [v1x, v1y, v1z] = opts.mapc2p()(bkg.get_grid_x()[xidx], 
+			bkg.get_grid_y()[yidx], bkg.get_grid_z()[zidx]);
+
+		// Vertex #2 @ (xidx, yidx+1, zidx)
+		auto [v2x, v2y, v2z] = opts.mapc2p()(bkg.get_grid_x()[xidx], 
+			bkg.get_grid_y()[yidx+1], bkg.get_grid_z()[zidx]);
+
+		// Vertex #3 @ (xidx, yidx+1, zidx+1)
+		auto [v3x, v3y, v3z] = opts.mapc2p()(bkg.get_grid_x()[xidx], 
+			bkg.get_grid_y()[yidx+1], bkg.get_grid_z()[zidx+1]);
+			
+		// Vertex #4 @ (xidx, yidx, zidx+1)
+		auto [v4x, v4y, v4z] = opts.mapc2p()(bkg.get_grid_x()[xidx], 
+			bkg.get_grid_y()[yidx], bkg.get_grid_z()[zidx+1]);
+
+		return std::array<double, 12> {v1x, v1y, v1z, v2x, v2y, v2z, 
+			v3x, v3y, v3z, v4x, v4y, v4z};
+	}
+
+	// Get bounding quadrilateral in the y direction in physical coordinates
+	// Must go around the edge of the grid, no cutting across the middle.
+	std::array <double, 12> get_y_bound_vertices(
+		const Background::Background& bkg, const Options::Options& opts,
+		const int xidx, const int yidx, const int zidx)
+	{
+		// Vertex #1 @ (xidx, yidx, zidx)
+		auto [v1x, v1y, v1z] = opts.mapc2p()(bkg.get_grid_x()[xidx], 
+			bkg.get_grid_y()[yidx], bkg.get_grid_z()[zidx]);
+
+		// Vertex #2 @ (xidx+1, yidx, zidx)
+		auto [v2x, v2y, v2z] = opts.mapc2p()(bkg.get_grid_x()[xidx+1], 
+			bkg.get_grid_y()[yidx], bkg.get_grid_z()[zidx]);
+
+		// Vertex #3 @ (xidx+1, yidx, zidx+1)
+		auto [v3x, v3y, v3z] = opts.mapc2p()(bkg.get_grid_x()[xidx+1], 
+			bkg.get_grid_y()[yidx], bkg.get_grid_z()[zidx+1]);
+			
+		// Vertex #4 @ (xidx, yidx, zidx+1)
+		auto [v4x, v4y, v4z] = opts.mapc2p()(bkg.get_grid_x()[xidx], 
+			bkg.get_grid_y()[yidx], bkg.get_grid_z()[zidx+1]);
+
+		return std::array<double, 12> {v1x, v1y, v1z, v2x, v2y, v2z, 
+			v3x, v3y, v3z, v4x, v4y, v4z};
+	}
+
+	// Get bounding quadrilateral in the z direction in physical coordinates
+	// Must go around the edge of the grid, no cutting across the middle.
+	std::array <double, 12> get_z_bound_vertices(
+		const Background::Background& bkg, const Options::Options& opts,
+		const int xidx, const int yidx, const int zidx)
+	{
+		// Vertex #1 @ (xidx, yidx, zidx)
+		auto [v1x, v1y, v1z] = opts.mapc2p()(bkg.get_grid_x()[xidx], 
+			bkg.get_grid_y()[yidx], bkg.get_grid_z()[zidx]);
+
+		// Vertex #2 @ (xidx+1, yidx, zidx)
+		auto [v2x, v2y, v2z] = opts.mapc2p()(bkg.get_grid_x()[xidx+1], 
+			bkg.get_grid_y()[yidx], bkg.get_grid_z()[zidx]);
+
+		// Vertex #3 @ (xidx+1, yidx+1, zidx)
+		auto [v3x, v3y, v3z] = opts.mapc2p()(bkg.get_grid_x()[xidx+1], 
+			bkg.get_grid_y()[yidx+1], bkg.get_grid_z()[zidx]);
+			
+		// Vertex #4 @ (xidx, yidx+1, zidx)
+		auto [v4x, v4y, v4z] = opts.mapc2p()(bkg.get_grid_x()[xidx], 
+			bkg.get_grid_y()[yidx+1], bkg.get_grid_z()[zidx]);
+
+		return std::array<double, 12> {v1x, v1y, v1z, v2x, v2y, v2z, 
+			v3x, v3y, v3z, v4x, v4y, v4z};
+	}
+
+	bool check_boundary(const Background::Background& bkg, 
+		Impurity& imp, const Options::Options& opts, const int tidx, 
+		const int xidx, const int yidx, const int zidx, 
+		const double imp_time_step, std::unique_ptr<KDTree::KDTree_t>& kdtree)
 	{
 		// If we've run past the time range covered by the background plasma
 		// then we're done
 		if (imp.get_t() > bkg.get_t_max()) return false; 
 
-		// The x boundaries are treated as absorbing. Could certianly add
-		// different options here in the future. There can be Gkeyll
-		// artifact near the x bounds, so there is an additional option to 
-		// consider anything within imp_xbound_buffer as absorbed.
-		//const double imp_xbound_buffer {Input::get_opt_dbl(
-		//	Input::imp_xbound_buffer)};
-		if (imp.get_x() <= bkg.get_grid_x()[0] + opts.imp_xbound_buffer())
+		// If we're at the edge of the computational grid in x, check for
+		// crossing the boundary. Absorbing boundary condition.
+		if (xidx == 0 || xidx == std::ssize(bkg.get_x()) - 1)
 		{
-			return false;
-		}
-		if (imp.get_x() >= bkg.get_grid_x().back() - opts.imp_xbound_buffer()) 
-		{
-			return false;
+			// Need to pass in either x+1 or x depending on condition!
+			std::array <double, 12> xbv {};
+			if (xidx == 0) xbv = get_x_bound_vertices(bkg, opts, xidx, yidx, 
+				zidx);
+			else if (xidx == std::ssize(bkg.get_x()) - 1) xbv = 
+				get_x_bound_vertices(bkg, opts, xidx+1, yidx, zidx);
+
+			// See at what fraction of the particle path we hit the boundary,
+			// if we did. Breaking my formatting rules since this is a very
+			// long function call (it's straightforward though).
+			// Return -1 if not intersect, and the frac between 0-1 if so.
+			double intersect_frac {MoellerTrumbore::get_intersect_frac(
+				imp.get_prevX(), imp.get_prevY(), imp.get_prevZ(),   // p1
+					imp.get_X(),     imp.get_Y(),     imp.get_Z(),   // p2 
+						 xbv[0],          xbv[1],          xbv[2],   // v1
+						 xbv[3],          xbv[4],          xbv[5],   // v2
+						 xbv[6],          xbv[7],          xbv[8],   // v3
+						 xbv[9],          xbv[10],        xbv[11])}; // v4
+
+			// If -1, no intersect. If not, we intersected. Don't care where
+			// since this is an absorbing boundary, it suffices to know we did.
+			if (intersect_frac < 0)
+			{
+				//std::cout << "X absorbed!\n " 
+				//	<< imp.get_prevX() << "    " << imp.get_X() << "\n"
+				//	<< imp.get_prevY() << "    " << imp.get_Y() << "\n"
+				//	<< imp.get_prevZ() << "    " << imp.get_Z() << "\n";
+				return false;
+			}
 		}
 
-		// Absorbing z boundaries
-		if (imp.get_z() <= bkg.get_grid_z()[0]) return false;
-		if (imp.get_z() >= bkg.get_grid_z().back()) return false;
-
-		// Periodic y boundaries. This means if an impurity crosses one of
-		// these boundaries it will wrap around to the other one.
-		if (imp.get_y() < bkg.get_grid_y()[0])
+		// If we're at the edge of the computational grid in z, check for
+		// crossing the boundary. Absorbing boundary condition.
+		if (zidx == 0 || zidx == std::ssize(bkg.get_z()) - 1)
 		{
-			double dy {imp.get_y() - bkg.get_grid_y()[0]};
-			imp.set_y(bkg.get_grid_y().back() + dy);
-		}
-		if (imp.get_y() > bkg.get_grid_y().back())
-		{
-			double dy {imp.get_y() - bkg.get_grid_y().back()};
-			imp.set_y(bkg.get_grid_y()[0] + dy);
+			std::array <double, 12> zbv {};
+			if (zidx == 0) zbv = get_z_bound_vertices(bkg, opts, xidx, yidx, 
+				zidx);
+			else if (zidx == std::ssize(bkg.get_z()) - 1) zbv = 
+				get_z_bound_vertices(bkg, opts, xidx, yidx, zidx+1);
+
+			// See at what fraction of the particle path we hit the boundary,
+			// if we did. Breaking my formatting rules since this is a very
+			// long function call (it's straightforward though).
+			// Return -1 if not intersect, and the frac between 0-1 if so.
+			double intersect_frac {MoellerTrumbore::get_intersect_frac(
+				imp.get_prevX(), imp.get_prevY(), imp.get_prevZ(),   // p1
+					imp.get_X(),     imp.get_Y(),     imp.get_Z(),   // p2 
+						 zbv[0],          zbv[1],          zbv[2],   // v1
+						 zbv[3],          zbv[4],          zbv[5],   // v2
+						 zbv[6],          zbv[7],          zbv[8],   // v3
+						 zbv[9],          zbv[10],        zbv[11])}; // v4
+
+			// If -1, no intersect. If not, we intersected. Don't care where
+			// since this is an absorbing boundary, it suffices to know we did.
+			if (intersect_frac < 0)
+			{
+				//std::cout << "Z absorbed!\n " 
+				//	<< imp.get_prevX() << "    " << imp.get_X() << "\n"
+				//	<< imp.get_prevY() << "    " << imp.get_Y() << "\n"
+				//	<< imp.get_prevZ() << "    " << imp.get_Z() << "\n";
+				return false;
+			}
 		}
 
+		// If we're at the edge of the computational grid in y, check for
+		// crossing the boundary. Periodic boundary condition.
+		if (yidx == 0 || yidx == std::ssize(bkg.get_y()) - 1)
+		{
+			//std::cout << "Checking for y bound intersection..." << yidx 
+			//	<< '\n';
+			std::array <double, 12> ybv {};
+			if (yidx == 0) ybv = get_y_bound_vertices(bkg, opts, xidx, yidx, 
+				yidx);
+			else if (yidx == std::ssize(bkg.get_y()) - 1) ybv = 
+				get_y_bound_vertices(bkg, opts, xidx, yidx+1, zidx);
+
+			// See at what fraction of the particle path we hit the boundary,
+			// if we did. Breaking my formatting rules since this is a very
+			// long function call (it's straightforward though).
+			// Return -1 if not intersect, and the frac between 0-1 if so.
+			double intersect_frac {MoellerTrumbore::get_intersect_frac(
+				imp.get_prevX(), imp.get_prevY(), imp.get_prevZ(),   // p1
+					imp.get_X(),     imp.get_Y(),     imp.get_Z(),   // p2 
+						 ybv[0],          ybv[1],          ybv[2],   // v1
+						 ybv[3],          ybv[4],          ybv[5],   // v2
+						 ybv[6],          ybv[7],          ybv[8],   // v3
+						 ybv[9],          ybv[10],        ybv[11])}; // v4
+
+			// If -1, no intersect. If not, we intersected. Don't care where
+			// since this is an absorbing boundary, it suffices to know we did.
+			if (intersect_frac < 0) return true;
+
+			// If there is an intersection, move particle back in time to put 
+			// it on the boundary by subtracting the portion of the vector 
+			// past the boundary. The false is set_prev. We don't want to
+			// assign the previous coordinate here since we are effectively
+			// taking a step backwards to do this step again in stages.
+			//std::cout << " Backing up X,Y,Z:\n";
+			double X_excess {(1 - intersect_frac) * (imp.get_X() 
+				- imp.get_prevX())};
+			double Y_excess {(1 - intersect_frac) * (imp.get_Y() 
+				- imp.get_prevY())};
+			double Z_excess {(1 - intersect_frac) * (imp.get_Z() 
+				- imp.get_prevZ())};
+			//imp.set_X(imp.get_X() - X_excess, false);
+			//imp.set_Y(imp.get_Y() - Y_excess, false);
+			//imp.set_Z(imp.get_Z() - Z_excess, false);
+
+			// Additonal steps for a periodic boundary. It very difficult to
+			// perfectly preserve the physical coordinates without actually
+			// tracking the position in computational space (we would need
+			// a mapp2c in addition to a mapc2p, but it doesn't exist). So we
+			// do an approximation based on the grid nodes, since we can easily
+			// say, "this node corresponds to this node on the other side of
+			// "the grid". If we need to loop the particle back 
+			// around the grid for periodic conditions, we first find the 
+			// nearest node and move the particle there. Then we know where
+			// to loop it around: if yidx = 0, then reassign yidx to 
+			// grid_y.size()-1, and vice-versa. Then change the particle's
+			// physical coordinates to this new node, and finish the time step
+			// (potentially triggering a boundary condition again recursively).
+
+			// Periodic boundary condition, so just wrap it around in the 
+			// y index. The -1 is because of zero-indexing.
+			int len_y {static_cast<int>(std::ssize(bkg.get_y()))};
+			int new_yidx {};
+			if (yidx == len_y - 1) new_yidx = 0;
+			else if (yidx == 0) new_yidx = len_y - 1;
+
+			// Find nearest grid node. We are checking against the four 
+			// coordinates represented by the cell face we are crossing.
+			double vert_dist {std::numeric_limits<double>::max()};
+			int near_id {};
+			for (int i {}; i < 4; i++)
+			{
+				// Calculate distance to each vertex, and assign its number
+				// to near_id (near_id=1 is v1, etc.).
+				double dist_sq {
+					(imp.get_X() - ybv[i*3]) * (imp.get_X() - ybv[i*3]) +
+					(imp.get_Y() - ybv[i*3+1]) * (imp.get_Y() - ybv[i*3+1]) +
+					(imp.get_Z() - ybv[i*3+2]) * (imp.get_Z() - ybv[i*3+2])};
+				if (dist_sq < vert_dist)
+				{
+					vert_dist = dist_sq;
+					near_id = i + 1;
+				}
+			}
+			
+			// Reset particle position to one of these indices
+			// Vertex #1 @ (xidx, yidx, zidx)
+			// Vertex #2 @ (xidx+1, yidx, zidx)
+			// Vertex #3 @ (xidx+1, yidx, zidx+1)
+			// Vertex #4 @ (xidx, yidx, zidx+1)
+			int new_xidx {};
+			int new_zidx {};
+			if (near_id == 1)
+			{
+				new_xidx = xidx;
+				new_zidx = zidx;
+			}
+			else if (near_id == 2)
+			{
+				new_xidx = xidx + 1;
+				new_zidx = zidx;
+			}
+			else if (near_id == 3)
+			{
+				new_xidx = xidx + 1;
+				new_zidx = zidx + 1;
+			}
+			else if (near_id == 4)
+			{
+				new_xidx = xidx;
+				new_zidx = zidx + 1;
+			}
+
+			// Update computational coordinates, which are actually just the
+			// center coordinates of whatever cell it is in (and thus use the
+			// original indices for x and z).
+			imp.set_x(bkg.get_x()[xidx]);
+			imp.set_y(bkg.get_y()[new_yidx]);
+			imp.set_z(bkg.get_z()[zidx]);
+
+			// Update physical coordinates at the new node on the other side 
+			// of the grid.
+			auto [X, Y, Z] = opts.mapc2p()(bkg.get_grid_x()[new_xidx], 
+				bkg.get_grid_y()[new_yidx], bkg.get_grid_z()[new_zidx]);
+			imp.set_X(X, false);
+			imp.set_Y(Y, false);
+			imp.set_Z(Z, false);
+
+			// Now take the length of the step that was cutoff for going out
+			// of bounds, and move the particle that distance from the node
+			// it has been placed at towards the cell center. We can't just
+			// continue it along the vector it was going at, because we have
+			// no gaurantee it'll finish in the cell, it could end up outside
+			// and then it's pretty much lost for good since we do not check if
+			// the physical coordinates exist within a grid element. 
+
+			// Unit vector pointing towards cell center, calculate components
+			// then normalize to unit length
+			double unit_X {bkg.get_X()(new_xidx, new_yidx, new_zidx) 
+				- imp.get_X()};
+			double unit_Y {bkg.get_Y()(new_xidx, new_yidx, new_zidx) 
+				- imp.get_Y()};
+			double unit_Z {bkg.get_Z()(new_xidx, new_yidx, new_zidx) 
+				- imp.get_Z()};
+			double unit_mag {std::sqrt(unit_X * unit_X + unit_Y * unit_Y 
+				+ unit_Z * unit_Z)};
+			unit_X = unit_X / unit_mag;
+			unit_Y = unit_Y / unit_mag;
+			unit_Z = unit_Z / unit_mag;
+
+			// Magnitude of the excess distance that went past
+			double excess_mag {std::sqrt(X_excess * X_excess 
+				+ Y_excess * Y_excess + Z_excess * Z_excess)};
+
+			// If excess_mag > unit_mag, we are overshooting the center
+			// coordinates. This could be fine, but we don't know if we are
+			// overshooting the center and blasting off the grid. Solution is
+			// to decrease time step.
+			if (excess_mag > unit_mag)
+			{
+				std::cout << "Warning! The periodic boundary algorithm has "
+					<< "detected too large a time step. Consider reducing "
+					<< "the timestep if possible. Debug: " << excess_mag << " " 
+					<< unit_mag << '\n';
+			}
+
+			// Update particle position to move along the unit vector towards
+			// the center by excess_mag distance
+			imp.set_X(imp.get_X() + unit_X * excess_mag);
+			imp.set_Y(imp.get_Y() + unit_Y * excess_mag);
+			imp.set_Z(imp.get_Z() + unit_Z * excess_mag);
+		}
+
+		// No boundary condition met
 		return true;
 	}
 
@@ -505,12 +829,16 @@ namespace Impurity
 			}
 
 			// Debugging
-			//std::cout << "id, tidx, q, t, x, y, z, dt, fX, fY, fZ, X, Y, Z: " 
-			//	<< imp_id << ", " << tidx << ", "
+			//std::cout << "Before step\n";
+			//std::cout << "  id, tidx, q, t, x, y, z, dt, fX, fY, fZ, " << 
+			//	"vX, vY, vZ, X, Y, Z: \n"
+			//	<< " " << imp_id << ", " << tidx << ", "
 			//	<< imp.get_charge() << ", "<< imp.get_t() << ", " 
 			//	<< ", " << imp.get_x() << ", " << imp.get_y() 
-			//	<< ", " << imp.get_z() << ", " << imp_time_step 
-			//	<< ", " << fX << ", " << fY << ", " << fZ << ", " 
+			//	<< ", " << imp.get_z() << ", " << imp_time_step << '\n'
+			//	<< "  " << fX << ", " << fY << ", " << fZ << ", " 
+			//	<< imp.get_vX() << ", " << imp.get_vY() << ", " 
+			//	<< imp.get_vZ() << ", "
 			//	<< imp.get_X() << ", " << imp.get_Y() << ", " 
 			//	<< imp.get_Z() << '\n';
 
@@ -524,6 +852,19 @@ namespace Impurity
 			//step(imp, imp_time_step);
 			step(imp, fX, fY, fZ, imp_time_step, bkg, kdtree);
 
+			//std::cout << "After step\n";
+			//std::cout << "  id, tidx, q, t, x, y, z, dt, fX, fY, fZ, " << 
+			//	"vX, vY, vZ, X, Y, Z: \n"
+			//	<< " " << imp_id << ", " << tidx << ", "
+			//	<< imp.get_charge() << ", "<< imp.get_t() << ", " 
+			//	<< ", " << imp.get_x() << ", " << imp.get_y() 
+			//	<< ", " << imp.get_z() << ", " << imp_time_step << '\n'
+			//	<< "  " << fX << ", " << fY << ", " << fZ << ", " 
+			//	<< imp.get_vX() << ", " << imp.get_vY() << ", " 
+			//	<< imp.get_vZ() << ", "
+			//	<< imp.get_X() << ", " << imp.get_Y() << ", " 
+			//	<< imp.get_Z() << '\n';
+
 			// Check for ionization or recombination
 			if (opts.imp_iz_recomb_int() > 0)
 			{
@@ -533,7 +874,8 @@ namespace Impurity
 			}
 
 			// Check for a terminating or boundary conditions
-			continue_following = check_boundary(bkg, imp, opts);
+			continue_following = check_boundary(bkg, imp, opts, tidx, xidx, 
+				yidx, zidx, imp_time_step, kdtree);
 		}
 
 	}

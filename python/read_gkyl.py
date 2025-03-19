@@ -23,10 +23,16 @@ def read_binary(args, comp, value_scale=1.0):
             data_dname = "prim_moms"
         elif (args.gkyl_data_type == "potential"):
             data_dname = "field"
-        elif (args.gkyl_data_type == "magnetic_field"):
-            data_dname = "bmag"
+
+        # bcart is actually the components of the unit vector of the magentic 
+        # field in each X, Y, Z direction.
+        elif (args.gkyl_data_type in ["magnetic_unit_X", "magnetic_unit_Y", 
+            "magnetic_unit_Z"]):
+            data_dname = "bcart"
         elif (args.gkyl_data_type == "jacobian"):
             data_dname = "jacobgeo"
+        elif (args.gkyl_data_type == "magnetic_magnitude"):
+            data_dname = "bmag"
         
         # Some different ways each file name is constructed
         if (args.gkyl_data_type in ["density", "temperature"]):
@@ -37,7 +43,8 @@ def read_binary(args, comp, value_scale=1.0):
             path = args.gkyl_dir + "/" + args.gkyl_case_name + \
                 "-" + data_dname + "_" + str(frame) \
                 + ".gkyl"
-        elif (args.gkyl_data_type in ["magnetic_field", "jacobian"]):
+        elif (args.gkyl_data_type in ["magnetic_unit_X", "magnetic_unit_Y", 
+            "magnetic_unit_Z", "jacobian", "magnetic_magnitude"]):
             path = args.gkyl_dir + "/" + args.gkyl_case_name + \
                 "-" + data_dname \
                 + ".gkyl"
@@ -75,7 +82,7 @@ def read_binary(args, comp, value_scale=1.0):
             print("Error! basis_type = {:} not supported yet.".format(data.ctx["basis_type"]))
 
         # Add time
-        if (args.gkyl_data_type not in ["magnetic_field", "jacobian"]):
+        if (args.gkyl_data_type not in ["jacobian"]):
             times.append(data.ctx["time"])
 
         # Get grid and values. For each dimension, grid is one element larger
@@ -90,10 +97,10 @@ def read_binary(args, comp, value_scale=1.0):
         value *= value_scale
         values.append(value)
 
-		# Ignore this comment below. We actually do want to do this so that the
-		# magnetic field conforms to the other data arrays. One day if we
-		# ever do electromagnetic simulations we won't need to change as much
-		# code. 
+        # Ignore this comment below. We actually do want to do this so that the
+        # magnetic field conforms to the other data arrays. One day if we
+        # ever do electromagnetic simulations we won't need to change as much
+        # code. 
         # If doing magnetic field, this is only to be done once since
         # we otherwise would be repeating the same information each frame.
         #if (args.gkyl_data_type == "magnetic_field"):
@@ -116,7 +123,8 @@ def save_csv(args, times, grid, values):
     # Add an informative header just for clarity's sake. The magnetic field
     # is just one array (electrostatic approximation for now), so there
     # are no times to write.
-    if (args.gkyl_data_type not in ["magnetic_field", "jacobian"]):
+    if (args.gkyl_data_type not in ["magnetic_unit_X", "magnetic_unit_Y", 
+        "magnetic_unit_Z", "magnetic_magnitude", "jacobian"]):
         header = (
                  "# The times of each Gkeyll frame. The first line is an\n"
                  "# integer telling how many values follow.\n"
@@ -193,8 +201,9 @@ def main():
     parser.add_argument("--gkyl_species", type=str, help="name of the species to load")
     parser.add_argument("--gkyl_species_mass_amu", type=float, help="mass of the species in amu")
     parser.add_argument("--gkyl_data_type", type=str, 
-		help="name of the type of data file to load", choices=["density", 
-		"temperature", "potential", "magnetic_field", "jacobian"])
+        help="name of the type of data file to load", choices=["density", 
+        "temperature", "potential", "magnetic_unit_X", "magnetic_unit_Y",
+        "magnetic_unit_Z", "jacobian", "magnetic_magnitude"])
     parser.add_argument("--gkyl_basis_type", type=str, help="DG basis type", choices=["serendipity"])
     parser.add_argument("--gkyl_poly_order", type=int, help="DG poly order")
 
@@ -206,8 +215,8 @@ def main():
     if (args.gkyl_file_type == "binary"):
 
         # Load density
-        if (args.gkyl_data_type in ["density", "potential", "magnetic_field",
-			"jacobian"]):
+        if (args.gkyl_data_type in ["density", "potential", "jacobian", 
+            "magnetic_magnitude"]):
             value_scale = 1.0
             comp = 0
 
@@ -225,6 +234,17 @@ def main():
             m = 1.661e-27 * args.gkyl_species_mass_amu
             value_scale = m / 1.602e-19
             comp = 1
+
+        # Magnetic field components
+        elif (args.gkyl_data_type == "magnetic_unit_X"):
+            value_scale = 1.0
+            comp = 0
+        elif (args.gkyl_data_type == "magnetic_unit_Y"):
+            value_scale = 1.0
+            comp = 1
+        elif (args.gkyl_data_type == "magnetic_unit_Z"):
+            value_scale = 1.0
+            comp = 2
 
         else:
             print("Error! Unrecognized gkyl_data_type: {}".format(args.gkyl_data_type))

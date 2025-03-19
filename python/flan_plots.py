@@ -55,8 +55,9 @@ class FlanPlots:
 		
 		# Valid options that can be loaded.
 		valid_opts = ["electron_dens", "electron_temp", "ion_temp", 
-			"plasma_pot", "elec_X", "elec_Y", "elec_Z", "bmag", "imp_counts",
-			"imp_density", "imp_vX", "imp_vY", "imp_vZ", "imp_gyrorad"]
+			"plasma_pot", "elec_X", "elec_Y", "elec_Z", "bmag_X", "bmag_Y", 
+			"bmag_Z", "imp_counts", "imp_density", "imp_vX", "imp_vY", 
+			"imp_vZ", "imp_gyrorad"]
 
 		# Throw an error if a valid option wasn't chosen.
 		if (data_name not in valid_opts):

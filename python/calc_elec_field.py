@@ -76,26 +76,97 @@ def calc_elec_field(XYZ, pot):
 	# coordinates to calculate the gradient from
 	tree = cKDTree(XYZ)
 
-	# Function to calculate gradient at a specific point. Thanks Copilot!
-	def calculate_gradient(idx, values):
+	# Function to calculate gradient at a specific point. There are two options:
+	#
+	# mode = 0 (number nearest)
+	#   This implementation looks for a given number of nearest neighbors 
+	#   (hence the name _num_near) and will reduce the number of neighbors if 
+	#   the algorithm fails until it does not fail.
+	# mode = 1 (radius) DOESN'T REALLY WORK THAT WELL
+	#   This implementation uses a radius and considers all points within that
+	#   radius for calculating the gradient. A minimal number of points is
+	#   required, otherwise the search radius will be increased until that
+	#   minimum number of points is found.
+	def calculate_gradient(idx, values, mode=0):
+		
+		# Point at which to caluclate gradient
 		point = XYZ[idx]
 
-		# Query the nearest neighbors. We choose the 6 nearest neighbors in
-		# the spirit of getting the two nearest in each coordinate direction.
-		# Note: getting the 6 nearest is k=7.
-		distances, indices = tree.query(point, k=7)
-		
-		# Skip the current point itself (indices[0] is the same point)
-		neighbors = indices[1:]
-		neighbor_points = XYZ[neighbors]
-		neighbor_values = values[neighbors]
+		# We choose the 6 nearest neighbors in the spirit of getting the two 
+		# nearest in each coordinate direction. Note: getting the 6 nearest 
+		# is k=7 when we call query below.
+		num_nearest = 6
 
-		# Build the system of equations to solve (least squares)
-		A = neighbor_points - point  # Differences in positions
-		b = neighbor_values - values[idx]  # Differences in scalar values
+		# We set the initial radius to half a mm since it seems like a 
+		# reasonable enough starting point. Number of points is set to 3, since
+		# you can't really do much with less than that, but we don't want to be
+		# over stringent. These could be made input options to Flan.
+		radius = 5e-5
+		radius_increment = 5e-5
+		min_num = 3
+		max_num = 15
 
-		# Solve the least squares problem A * grad = b
-		grad, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+		while True: 
+
+			if mode == 0:
+
+				# Query tree for num_nearest neighbors. The +1 is because the
+				# first returned is point (distance is technically 0, so it is 
+				# the nearest point to itself, silly). 
+				distances, indices = tree.query(point, k=num_nearest+1)
+
+			elif mode == 1:
+
+				# Query tree for all points within radius.
+				while True:
+					indices = tree.query_ball_point(point, radius)
+
+					# If enough points were found, move on
+					if len(indices) >= min_num: break
+
+					# If we didn't find enough points, increase search radius
+					radius += radius_increment
+
+			# Gotta cap things somewhere. If we are pulling in too many points,
+			# default to number of nearest neighbors algorithm.
+			if mode == 1 and len(indices) > max_num:
+				mode = 0
+				continue
+			
+			# Skip the current point itself (indices[0] is the same point)
+			neighbors = indices[1:]
+			neighbor_points = XYZ[neighbors]
+			neighbor_values = values[neighbors]
+
+			# Build the system of equations to solve (least squares)
+			A = neighbor_points - point  # Differences in positions
+			b = neighbor_values - values[idx]  # Differences in scalar values
+
+			# Solve the least squares problem A * grad = b
+			grad, res, _, _ = np.linalg.lstsq(A, b, rcond=None)
+			
+			# If a residual is returned it generally means you got a bad fit.
+			if res.size > 0:
+				if (mode == 0):
+					
+					# Generally not possible, since at some point we will be
+					# asking it to draw a line between two points which should
+					# always work.
+					if (num_nearest == 1):
+						print("Error! Unable to get a good least squares fit for")
+						print("electric field calculation! Data is suspect.")
+						break
+					else:
+
+						# Try including less points
+						num_nearest -= 1
+				elif (mode == 1):
+					
+					# Try more points
+					radius += radius_increment
+			else:
+				break
+
 		return grad
 	
 	# Go through one frame at a time
@@ -111,7 +182,7 @@ def calc_elec_field(XYZ, pot):
 
 		# Need to loop through every point and calculate the gradient there
 		for i in range(0, len(pot_vals)):
-			grad = calculate_gradient(i, pot_vals)
+			grad = calculate_gradient(i, pot_vals, mode=0)
 			elec_vals_X[i] = -grad[0]
 			elec_vals_Y[i] = -grad[1]
 			elec_vals_Z[i] = -grad[2]

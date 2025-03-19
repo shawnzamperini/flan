@@ -4,6 +4,7 @@
 * @brief Routines handling reading in a plasma background from Gkeyll
 */
 
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <functional>  // For std::multiplies
@@ -46,9 +47,9 @@ namespace Gkyl
 		std::vector<double> gkyl_x {};  // Cell centers
 		std::vector<double> gkyl_y {};
 		std::vector<double> gkyl_z {};
-		std::vector<int> gkyl_xidx {};  // Cell center idxs mapped to the
-		std::vector<int> gkyl_yidx {};  // (flattened) X,Y,Z data
-		std::vector<int> gkyl_zidx {};  
+		//std::vector<int> gkyl_xidx {};  // Cell center idxs mapped to the
+		//std::vector<int> gkyl_yidx {};  // (flattened) X,Y,Z data
+		//std::vector<int> gkyl_zidx {};  
 		std::vector<double> gkyl_grid_x {};  // Grid edges
 		std::vector<double> gkyl_grid_y {};
 		std::vector<double> gkyl_grid_z {};
@@ -60,7 +61,9 @@ namespace Gkyl
 		Vectors::Vector4D<double> gkyl_te {};
 		Vectors::Vector4D<double> gkyl_ti {};
 		Vectors::Vector4D<double> gkyl_vp {};
-		Vectors::Vector4D<double> gkyl_b {}; 
+		Vectors::Vector4D<double> gkyl_bX {}; 
+		Vectors::Vector4D<double> gkyl_bY {}; 
+		Vectors::Vector4D<double> gkyl_bZ {}; 
 		Vectors::Vector4D<double> gkyl_eX {};
 		Vectors::Vector4D<double> gkyl_eY {};
 		Vectors::Vector4D<double> gkyl_eZ {};
@@ -77,12 +80,9 @@ namespace Gkyl
 		//  grid_data[7]  = gkyl_X
 		//  grid_data[8]  = gkyl_Y
 		//  grid_data[9]  = gkyl_Z
-		//  grid_data[10] = gkyl_xidx
-		//  grid_data[11] = gkyl_yidx
-		//  grid_data[12] = gkyl_zidx
+		std::cout << "No longer need gkyl_xidx, etc. anymore. Remove!\n";
 		grid_data_t grid_data {gkyl_times, gkyl_x, gkyl_y, gkyl_z, 
-			gkyl_grid_x, gkyl_grid_y, gkyl_grid_z, gkyl_X, gkyl_Y, gkyl_Z,
-			gkyl_xidx, gkyl_yidx, gkyl_zidx};
+			gkyl_grid_x, gkyl_grid_y, gkyl_grid_z, gkyl_X, gkyl_Y, gkyl_Z};
 
 		// Load each needed dataset from Gkeyll
 		std::cout << "Loading Gkeyll data...\n";
@@ -95,7 +95,7 @@ namespace Gkyl
 		std::cout << "  - Plasma potential\n";
 		read_potential(grid_data, gkyl_vp, opts);
 		std::cout << "  - Magnetic field\n";
-		read_magnetic_field(grid_data, gkyl_b, opts);
+		read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, opts);
 
 		// Calculate the Cartesian (X,Y,Z) coordinate of each cell center
 		std::cout << "  - X,Y,Z coordinates\n";
@@ -111,11 +111,36 @@ namespace Gkyl
 
 		// Then read each electric field component
 		std::cout << "  - Electric field\n";
-		read_elec_field(gkyl_eX, gkyl_eY, gkyl_eZ);
+		read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
 
 		// Read in Jacobian
 		std::cout << "  - Jacobian\n";
 		read_jacobian(grid_data, gkyl_J, opts);
+
+		// The unit vector is actually a bit finnickyo n the gkyl side of
+		// things. It's not actually guaranteed to be 1.0 magnitude at the
+		// cell centers which I guess is where it's calculated. So right now we
+		// just hope the relative sizes of each component are mostly correct,
+		// renormalize to 1.0 unit vector magnitude before multiplying by bmag.
+		for (int i {}; i < std::ssize(std::get<0>(grid_data)); ++i)  // t
+		{
+		for (int j {}; j < std::ssize(std::get<1>(grid_data)); ++j)  // x
+		{
+		for (int k {}; k < std::ssize(std::get<2>(grid_data)); ++k)  // y
+		{
+		for (int l {}; l < std::ssize(std::get<3>(grid_data)); ++l)  // z
+		{
+			if (i == 0)
+			{
+				//std::cout << "X, Y, Z, bX, bY, bZ: " << gkyl_X(j,k,l) << ", "
+				//	<< gkyl_Y(j,k,l) << ", " << gkyl_Z(j,k,l)
+				//	<< ", " << gkyl_bX(i,j,k,l) << ", " 
+				//	<< gkyl_bY(i,j,k,l) << ", " << gkyl_bZ(i,j,k,l) << '\n';
+			}
+		}
+		}
+		}
+		}
 
 		// With all our arrays assembled, encapsulate them into a Background
 		// class object with move semantics then return.
@@ -127,9 +152,9 @@ namespace Gkyl
 		bkg.move_into_x(gkyl_x);
 		bkg.move_into_y(gkyl_y);
 		bkg.move_into_z(gkyl_z);
-		bkg.move_into_xidx(gkyl_xidx);
-		bkg.move_into_yidx(gkyl_yidx);
-		bkg.move_into_zidx(gkyl_zidx);
+		//bkg.move_into_xidx(gkyl_xidx);
+		//bkg.move_into_yidx(gkyl_yidx);
+		//bkg.move_into_zidx(gkyl_zidx);
 		bkg.move_into_grid_x(gkyl_grid_x);
 		bkg.move_into_grid_y(gkyl_grid_y);
 		bkg.move_into_grid_z(gkyl_grid_z);
@@ -137,7 +162,9 @@ namespace Gkyl
 		bkg.move_into_te(gkyl_te);
 		bkg.move_into_ti(gkyl_ti);
 		bkg.move_into_vp(gkyl_vp);
-		bkg.move_into_b(gkyl_b);
+		bkg.move_into_bX(gkyl_bX);
+		bkg.move_into_bY(gkyl_bY);
+		bkg.move_into_bZ(gkyl_bZ);
 		bkg.move_into_eX(gkyl_eX);
 		bkg.move_into_eY(gkyl_eY);
 		bkg.move_into_eZ(gkyl_eZ);
@@ -549,7 +576,11 @@ namespace Gkyl
 		// will just rely on any of the other data file being created first,
 		// where they will create a _interp_settings.csv file with the 
 		// basis type and poly order that we need to pass in.
-		if ((data_type == "magnetic_field") || (data_type == "jacobian"))
+		if (data_type == "magnetic_unit_X" || 
+			data_type == "magnetic_unit_Y" || 
+			data_type == "magnetic_unit_Z" || 
+			data_type == "magnetic_magnitude" || 
+			data_type == "jacobian")
 		{
 			std::vector<std::string> interp_settings = load_interp_settings();
 			read_gkyl_cmd_ss << " --gkyl_basis_type=" << interp_settings[0]
@@ -644,18 +675,64 @@ namespace Gkyl
 	}
 
 	/**
-	* @brief Read magnetic field into gkyl_b.
+	* @brief Read magnetic field into gkyl_bX, gkyl_bY and gkyl_bZ.
 	*/
 	template <typename T>
 	void read_magnetic_field(grid_data_t& grid_data, 
-		Vectors::Vector4D<T>& gkyl_b, const Options::Options& opts)
+		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY,
+		Vectors::Vector4D<T>& gkyl_bZ, const Options::Options& opts)
 	{
 		using namespace std::string_literals;
 
-		// Call pgkyl to load data into gkyl_b. There is no species
-		// name with the potential file so just putting a placeholder
-		// string. The script handles things.
-		read_data_pgkyl("null"s, "magnetic_field", grid_data, gkyl_b, opts);
+		// There is no species name with the magnetic field files so just 
+		// putting a placeholder string. The script handles things. 
+		// These are actually the unit vector components of the magnetic field
+		// so call once for each component. We multiply by the magnitude
+		// later.
+		read_data_pgkyl("null"s, "magnetic_unit_X", grid_data, gkyl_bX, opts);
+		read_data_pgkyl("null"s, "magnetic_unit_Y", grid_data, gkyl_bY, opts);
+		read_data_pgkyl("null"s, "magnetic_unit_Z", grid_data, gkyl_bZ, opts);
+
+		// Load the magnetic field magnitude at each location
+		Vectors::Vector4D<double> gkyl_bmag {}; 
+		read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
+			opts);
+
+		// The unit vector is actually a bit finnickyo n the gkyl side of
+		// things. It's not actually guaranteed to be 1.0 magnitude at the
+		// cell centers which I guess is where it's calculated. So right now we
+		// just hope the relative sizes of each component are mostly correct,
+		// renormalize to 1.0 unit vector magnitude before multiplying by bmag.
+		for (int i {}; i < std::ssize(std::get<0>(grid_data)); ++i)  // t
+		{
+		for (int j {}; j < std::ssize(std::get<1>(grid_data)); ++j)  // x
+		{
+		for (int k {}; k < std::ssize(std::get<2>(grid_data)); ++k)  // y
+		{
+		for (int l {}; l < std::ssize(std::get<3>(grid_data)); ++l)  // z
+		{
+			// Unit vector magnitude. Ideally 1.0, but life is not always so 
+			// gentle. If the unit vector is just straight up wrong, then this
+			// throws off the entire simulation. Need to asks a Gkeyll
+			// developer if it's going to be correct or not.
+			double unit_mag {gkyl_bX(i,j,k,l) * gkyl_bX(i,j,k,l)
+				+ gkyl_bY(i,j,k,l) * gkyl_bY(i,j,k,l)
+				+ gkyl_bZ(i,j,k,l) * gkyl_bZ(i,j,k,l)};
+			
+			// Renormalize each component, and multiply by the magnetic
+			// field magnitude for each component.
+			gkyl_bX(i,j,k,l) = gkyl_bX(i,j,k,l) * gkyl_bmag(i,j,k,l) 
+				/ unit_mag;
+			gkyl_bY(i,j,k,l) = gkyl_bY(i,j,k,l) * gkyl_bmag(i,j,k,l)
+				/ unit_mag;
+			gkyl_bZ(i,j,k,l) = gkyl_bZ(i,j,k,l) * gkyl_bmag(i,j,k,l) 
+				/ unit_mag;
+		}
+		}
+		}
+		}
+
+
 	}
 
 	/**
@@ -701,6 +778,7 @@ namespace Gkyl
 			return std::string {};
 		}
 	}
+	
 	void calc_elec_field()
 	{
 		// See if a file already exists and load it. If not, calculate it.
@@ -746,29 +824,14 @@ namespace Gkyl
 		//  grid_data[7]  = gkyl_X
 		//  grid_data[8]  = gkyl_Y
 		//  grid_data[9]  = gkyl_Z
-		//  grid_data[10] = gkyl_xidx
-		//  grid_data[11] = gkyl_yidx
-		//  grid_data[12] = gkyl_zidx
 
 		// Resize the arrays since we know by now how big they need to be
-		//int dim1 {static_cast<int>(std::ssize(gkyl_x))};
-		//int dim2 {static_cast<int>(std::ssize(gkyl_y))};
-		//int dim3 {static_cast<int>(std::ssize(gkyl_z))};
 		int dim1 {static_cast<int>(std::ssize(std::get<1>(grid_data)))};
 		int dim2 {static_cast<int>(std::ssize(std::get<2>(grid_data)))};
 		int dim3 {static_cast<int>(std::ssize(std::get<3>(grid_data)))};
-		//gkyl_X.resize(dim1, dim2, dim3);
-		//gkyl_Y.resize(dim1, dim2, dim3);
-		//gkyl_Z.resize(dim1, dim2, dim3);
 		std::get<7>(grid_data).resize(dim1, dim2, dim3); // gkyl_X
 		std::get<8>(grid_data).resize(dim1, dim2, dim3); // gkyl_Y
 		std::get<9>(grid_data).resize(dim1, dim2, dim3); // gkyl_Z
-		//gkyl_xidx.resize(dim1 * dim2 * dim3);
-		//gkyl_yidx.resize(dim1 * dim2 * dim3);
-		//gkyl_zidx.resize(dim1 * dim2 * dim3);
-		std::get<10>(grid_data).resize(dim1 * dim2 * dim3); // gkyl_xidx
-		std::get<11>(grid_data).resize(dim1 * dim2 * dim3); // gkyl_yidx
-		std::get<12>(grid_data).resize(dim1 * dim2 * dim3); // gkyl_zidx
 
 		// Loop through every x, y, z value to calculate each X, Y, Z
 		for (int i {}; i < std::ssize(std::get<1>(grid_data)); ++i)
@@ -777,6 +840,7 @@ namespace Gkyl
 			{
 				for (int k {}; k < std::ssize(std::get<3>(grid_data)); ++k)
 				{
+
 					// Get the three Cartesian coordinates and store within
 					// our 3D vector of 3-tuples
 					auto [X, Y, Z] = opts.mapc2p()(std::get<1>(grid_data)[i], 
@@ -784,38 +848,66 @@ namespace Gkyl
 					std::get<7>(grid_data)(i,j,k) = X;
 					std::get<8>(grid_data)(i,j,k) = Y;
 					std::get<9>(grid_data)(i,j,k) = Z;
-
-					// Store the indices in computational coordinates that this
-					// physical coordinate cooresponds to. Can just use
-					// calc_index from the 3D vector (each X, Y, Z calc_index
-					// gives the same thing).
-					std::get<10>(grid_data)[std::get<7>(grid_data)
-						.calc_index(i,j,k)] = i;
-					std::get<11>(grid_data)[std::get<8>(grid_data)
-						.calc_index(i,j,k)] = j;
-					std::get<12>(grid_data)[std::get<9>(grid_data)
-						.calc_index(i,j,k)] = k;
 				}
 			}
 		}
 	}
 
-	void read_elec_field(Vectors::Vector4D<double>& gkyl_eX, 
-		Vectors::Vector4D<double>& gkyl_eY, Vectors::Vector4D<double>& gkyl_eZ)
+	void read_elec_field(grid_data_t& grid_data, 
+		Vectors::Vector4D<double>& gkyl_eX, Vectors::Vector4D<double>& gkyl_eY, 
+		Vectors::Vector4D<double>& gkyl_eZ)
 	{
 		// Ex	
 		Vectors::Vector4D<double> tmp_dataX
 			{load_values<double>("elec_field_X")};
-		gkyl_eX.move_into_data(tmp_dataX);
 
 		// Ey
 		Vectors::Vector4D<double> tmp_dataY
 			{load_values<double>("elec_field_Y")};
-		gkyl_eY.move_into_data(tmp_dataY);
 
 		// Ez
 		Vectors::Vector4D<double> tmp_dataZ
 			{load_values<double>("elec_field_Z")};
+
+		// We apply a fix here. The y boundaries are treated as periodic (in
+		// Gkeyll this need not always be true!). At the edge of the boundaries
+		// the gradient calculation for the electric field can get messed up
+		// because it does not have as many cells to calculate a gradient from.
+		// So we mitigate this by assigning the edge cells a weighted average
+		// from the "bounding" values in the y direction.
+		// Consider if y has 6 cells:
+		//
+		//    |-----|-----|-----|
+		// iy 4     5     0     1
+		//             ^
+		//          end of grid here, periodic
+		//          so we restart at iy=0
+		//
+		// The problem cells are 0 and 5. We (arbitrarily) assign those as:
+		//  iy=0   Ex = (1/3) * Ex_4 + (2/3) * Ex_1
+		//  iy=5   Ex = (2/3) * Ex_4 + (1/3) * Ex_1
+		// So we are taking the bounding two "reliable" E values at iy=1,4 and
+		// reassigning the values at iy=0,5 with the weighted averages since
+		// it is not clear what else we can do in this situation.
+		int leny {static_cast<int>(std::ssize(std::get<2>(grid_data)))};
+		for (int i {}; i < std::ssize(std::get<0>(grid_data)); i++)  // t
+		for (int j {}; j < std::ssize(std::get<1>(grid_data)); j++)  // x
+		for (int l {}; l < std::ssize(std::get<3>(grid_data)); l++)  // z
+		{
+		{
+		{
+			// Just naming these variables according to the example above.
+			double eX1 {tmp_dataX(i,j,1,l)};
+			double eX4 {tmp_dataX(i,j,leny-2,l)};
+			tmp_dataX(i,j,0,l) = (1.0/3.0) * eX4 + (2.0/3.0) * eX1;
+			tmp_dataX(i,j,leny-1,l) = (2.0/3.0) * eX4 + (1.0/3.0) * eX1;
+		}
+		}
+		}
+
+		// Move into arrays
+		gkyl_eY.move_into_data(tmp_dataY);
+		gkyl_eX.move_into_data(tmp_dataX);
 		gkyl_eZ.move_into_data(tmp_dataZ);
 	}
 
@@ -838,9 +930,6 @@ namespace Gkyl
 		//  grid_data[7]  = gkyl_X
 		//  grid_data[8]  = gkyl_Y
 		//  grid_data[9]  = gkyl_Z
-		//  grid_data[10] = gkyl_xidx
-		//  grid_data[11] = gkyl_yidx
-		//  grid_data[12] = gkyl_zidx
 
 		// Open up file for writing
 		std::ofstream XYZ_file {"cell_center_XYZ.csv"};	
@@ -877,44 +966,4 @@ namespace Gkyl
 			}
 		}
 	}
-
-	/**
-	* @brief Move data from the global (to the Gkyl namespace) into a
-	* Background object and return.
-	*
-	* @return Returns a filled-in Background object to perform an impurity
-	* transport simulation on.
-	*/
-	/*
-	Background::Background create_bkg()
-	{
-		Background::Background bkg {};
-
-		// Move each of the vectors we've created into our bkg object
-		bkg.move_into_times(gkyl_times);
-		bkg.move_into_x(gkyl_x);
-		bkg.move_into_y(gkyl_y);
-		bkg.move_into_z(gkyl_z);
-		bkg.move_into_xidx(gkyl_xidx);
-		bkg.move_into_yidx(gkyl_yidx);
-		bkg.move_into_zidx(gkyl_zidx);
-		bkg.move_into_grid_x(gkyl_grid_x);
-		bkg.move_into_grid_y(gkyl_grid_y);
-		bkg.move_into_grid_z(gkyl_grid_z);
-		bkg.move_into_ne(gkyl_ne);
-		bkg.move_into_te(gkyl_te);
-		bkg.move_into_ti(gkyl_ti);
-		bkg.move_into_vp(gkyl_vp);
-		bkg.move_into_b(gkyl_b);
-		bkg.move_into_eX(gkyl_eX);
-		bkg.move_into_eY(gkyl_eY);
-		bkg.move_into_eZ(gkyl_eZ);
-		bkg.move_into_X(gkyl_X);
-		bkg.move_into_Y(gkyl_Y);
-		bkg.move_into_Z(gkyl_Z);
-
-		// Okay to return by value since C++11 uses move semantics here.
-		return bkg;
-	}
-	*/
 }
