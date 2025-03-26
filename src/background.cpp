@@ -33,6 +33,9 @@ namespace Background
 	const Vectors::Vector3D<double>& Background::get_X() const {return m_X;}
 	const Vectors::Vector3D<double>& Background::get_Y() const {return m_Y;}
 	const Vectors::Vector3D<double>& Background::get_Z() const {return m_Z;}
+	const Vectors::Vector3D<double>& Background::get_grid_X() const {return m_grid_X;}
+	const Vectors::Vector3D<double>& Background::get_grid_Y() const {return m_grid_Y;}
+	const Vectors::Vector3D<double>& Background::get_grid_Z() const {return m_grid_Z;}
 	const Vectors::Vector3D<double>& Background::get_J() const {return m_J;}
 	int Background::get_dim1() const {return m_dim1;}
 	int Background::get_dim2() const {return m_dim2;}
@@ -202,6 +205,24 @@ namespace Background
 		// Need a Vector3D version of set_dims
 		//set_dims(Z, "Z");
 		m_Z.move_into_data(Z);
+	}
+	void Background::move_into_grid_X(Vectors::Vector3D<double>& grid_X) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(grid_X, "grid_X");
+		m_grid_X.move_into_data(grid_X);
+	}
+	void Background::move_into_grid_Y(Vectors::Vector3D<double>& grid_Y) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(grid_Y, "grid_Y");
+		m_grid_Y.move_into_data(grid_Y);
+	}
+	void Background::move_into_grid_Z(Vectors::Vector3D<double>& grid_Z) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(grid_Z, "grid_Z");
+		m_grid_Z.move_into_data(grid_Z);
 	}
 	void Background::move_into_J(Vectors::Vector3D<double>& J) 
 	{

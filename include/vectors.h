@@ -64,25 +64,25 @@ namespace Vectors
 		* @brief Get first dimension size
 		* @return Returns dimension as an int
 		*/
-		int get_dim1();
+		int get_dim1() const;
 
 		/**
 		* @brief Get second dimension size
 		* @return Returns dimension as an int
 		*/
-		int get_dim2();
+		int get_dim2() const;
 
 		/**
 		* @brief Get third dimension size
 		* @return Returns dimension as an int
 		*/
-		int get_dim3();
+		int get_dim3() const;
 
 		/**
 		* @brief Get size of underlying data
 		* @return Returns size as an int
 		*/
-		int get_size();
+		int get_size() const;
 
 		/**
 		* @brief Get the 1D vector containing all the data (const)
@@ -104,6 +104,12 @@ namespace Vectors
 		*/
 		int calc_index(const int i, const int j, const int k) const;
 	
+		/**
+		* @brief Get the i,j,k indices from a given index in the underlying
+		* 1D data (i.e., inverse of calc_index).
+		*/
+		std::tuple<int, int, int> get_ijk(const int idx);
+
 		/**
 		* @brief Get the index along the first dimension from an index
 		* calculated by calc_index.

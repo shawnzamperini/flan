@@ -13,7 +13,7 @@ def load_XYZ():
 	"""
 
 	# Name of file, shouldn't change
-	XYZ_file = "cell_center_XYZ.csv"
+	XYZ_file = "bkg_from_pgkyl_cell_XYZ.csv"
 	"""
 	# Line with data dimensions, also shouldn't change
 	dim_line_num = 8

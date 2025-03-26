@@ -14,6 +14,8 @@
 * type.
 */
 
+#include <algorithm>
+#include <tuple>
 #include <vector>
 
 #include "vectors.h"
@@ -58,16 +60,16 @@ namespace Vectors
 	}
 
 	template <typename T>
-	int Vector3D<T>::get_dim1() {return m_dim1;}
+	int Vector3D<T>::get_dim1() const {return m_dim1;}
 
 	template <typename T>
-	int Vector3D<T>::get_dim2() {return m_dim2;}
+	int Vector3D<T>::get_dim2() const {return m_dim2;}
 
 	template <typename T>
-	int Vector3D<T>::get_dim3() {return m_dim3;}
+	int Vector3D<T>::get_dim3() const {return m_dim3;}
 
 	template <typename T>
-	int Vector3D<T>::get_size() {return m_size;}
+	int Vector3D<T>::get_size() const {return m_size;}
 
 	template <typename T>
 	const std::vector<T>& Vector3D<T>::get_data() const {return m_data;}
@@ -79,6 +81,21 @@ namespace Vectors
 	int Vector3D<T>::calc_index(const int i, const int j, const int k) const
 	{
 		return i * (m_dim2 * m_dim3) + j * m_dim3 + k;
+	}
+
+	// Get the i,j,k indices from a given index (that generally has been 
+	// calculated by calc_index).
+	template <typename T>
+	std::tuple<int, int, int> Vector3D<T>::get_ijk(const int idx)
+	{
+		// Calculate each index
+		int i {idx / (m_dim2 * m_dim3)};  // int division
+		int remainder {idx % (m_dim2 * m_dim3)};
+		int j {remainder / m_dim3};
+		int k {remainder % m_dim3};
+
+		// Return as tuple
+		return {i, j, k};
 	}
 
 	// Get the first index (i) from a value calculated from calc_index

@@ -209,6 +209,18 @@ namespace SaveResults
 		save_vector_3d(nc_file, bkg.get_Z(), "Z", dim2, dim3, dim4, desc, 
 			"(m)");
 
+		// Grid edges in physical space - X, Y, Z
+		// Note dims are dim2, dim3 and dim4
+		desc = "X grid edges";
+		save_vector_3d(nc_file, bkg.get_grid_X(), "grid_X", grid_dim2, grid_dim3, grid_dim4, desc, 
+			"(m)");
+		desc = "Y grid edges";
+		save_vector_3d(nc_file, bkg.get_grid_Y(), "grid_Y", grid_dim2, grid_dim3, grid_dim4, desc, 
+			"(m)");
+		desc = "Z grid edges";
+		save_vector_3d(nc_file, bkg.get_grid_Z(), "grid_Z", grid_dim2, grid_dim3, grid_dim4, desc, 
+			"(m)");
+
 		// Electron density
 		desc = "electron density";
 		save_vector_4d(nc_file, bkg.get_ne(), "electron_dens", 

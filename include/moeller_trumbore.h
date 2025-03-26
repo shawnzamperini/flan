@@ -1,6 +1,8 @@
 #ifndef MOELLER_TRUMBORE_H
 #define MOELLER_TRUMBORE_H
 
+#include <cmath>
+
 /**
 * @file moeller_trumbore.h
 *
@@ -39,6 +41,13 @@ namespace MoellerTrumbore
         {
             return {x * scalar, y * scalar, z * scalar};
         }
+			
+		// Normalize function
+		vec3 normalize() const 
+		{
+			double magnitude = std::sqrt(x * x + y * y + z * z);
+			return {x / magnitude, y / magnitude, z / magnitude};
+		}
     };
 
     /**
@@ -60,6 +69,21 @@ namespace MoellerTrumbore
     */
     vec3 cross(const vec3& v1, const vec3& v2);
 
+	/**
+	* @brief Check if ray intersects with the quadrilateral surface defined 
+	* by v1, v2, v3, v4.
+	*
+	* @return Retuns true if it does, false if not
+	*/
+    bool check_intersect(
+        const double p1x, const double p1y, const double p1z,
+        const double p2x, const double p2y, const double p2z, 
+        const double v1x, const double v1y, const double v1z, 
+        const double v2x, const double v2y, const double v2z, 
+        const double v3x, const double v3y, const double v3z, 
+        const double v4x, const double v4y, const double v4z,
+		const bool debug=false);
+
     /**
     * @brief Get the fraction along the line segment from p1-->p2 at which it
     * intersects with the quadrilateral surface defined by v1, v2, v3, v4.
@@ -67,8 +91,8 @@ namespace MoellerTrumbore
     * @return Returns fraction between 0 and 1 if intersection, -1 otherwise.
     */
     double get_intersect_frac(
-        const double p1x, const double p1y, const double p2z,
-        const double p2x, const double p2y, const double p1z, 
+        const double p1x, const double p1y, const double p1z,
+        const double p2x, const double p2y, const double p2z, 
         const double v1x, const double v1y, const double v1z, 
         const double v2x, const double v2y, const double v2z, 
         const double v3x, const double v3y, const double v3z, 

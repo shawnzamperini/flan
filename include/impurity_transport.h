@@ -164,9 +164,11 @@ namespace Impurity
 	* @param imp Impurity object that is updated within function
 	* @param imp_time_step Size of time step specified in input file
 	*/
-	void step(Impurity& imp, const double fX, const double fY, const double fZ, 
+	bool step(Impurity& imp, const double fX, const double fY, const double fZ, 
 		const double imp_time_step, const Background::Background& bkg, 
-		std::unique_ptr<KDTree::KDTree_t>& kdtree);
+		std::unique_ptr<KDTree::KDTree_t>& kdtree, 
+		const Options::Options& opts, const int tidx, int& xidx, int& yidx, 
+		int& zidx, bool& continue_following);
 
 	/**
 	* @brief Record/score particle in the ImpurityStats object
@@ -183,6 +185,36 @@ namespace Impurity
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
 		const Background::Background& bkg, const int tidx, const int xidx, 
 		const int yidx, const int zidx, const double imp_time_step);
+
+	std::array <double, 12> get_x_bound_vertices(
+		const Background::Background& bkg,
+		const int xidx, const int yidx, const int zidx);
+
+	std::array <double, 12> get_y_bound_vertices(
+		const Background::Background& bkg,
+		const int xidx, const int yidx, const int zidx);
+
+	std::array <double, 12> get_z_bound_vertices(
+		const Background::Background& bkg,
+		const int xidx, const int yidx, const int zidx);
+
+	/**
+	* @brief Check if the coordinates at (X,Y,Z) are in the computational cell
+	* represented by (xidx,yidx,zidx).
+	*/
+	bool check_in_cell(const Background::Background& bkg, 
+		const double X, const double Y, const double Z, const int xidx, 
+		const int yidx, const int zidx, const bool debug=false);
+
+	/**
+	* @brief Find what cell an impurity is in. Updates xidx, yidx and zidx
+	* in place and returns true if a containing cell is found. Returns false
+	* if not, and xidx, yidx and zidx are left unchanged.
+	*/
+	bool find_containing_cell(Impurity& imp, 
+		const Background::Background& bkg, 
+		int& xidx, int& yidx, int& zidx, 
+		std::unique_ptr<KDTree::KDTree_t>& kdtree);
 
 	/**
 	* @brief Check if an Impurity has encountered a boundary condition.

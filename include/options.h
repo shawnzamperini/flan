@@ -45,6 +45,9 @@ namespace Options
 		double m_gkyl_ion_mass_amu                 {2.014};
 		std::string m_gkyl_file_type            {"binary"};
 
+		// Geometry options
+		std::string m_geotype                {"undefined"};
+
 		// Impurity chracteristics
 		int m_imp_atom_num                            {74};
 		double m_imp_mass_amu                     {183.84};
@@ -91,6 +94,7 @@ namespace Options
 		int m_imp_time_step_opt_int {0};
 		int m_imp_vel_stats_int {0};
 		int m_imp_iz_recomb_int {0};
+		int m_geotype_int {0};
 
 	public:
 
@@ -107,6 +111,7 @@ namespace Options
 		void set_gkyl_elec_mass_amu(double gkyl_elec_mass_amu);
 		void set_gkyl_ion_mass_amu(double gkyl_ion_mass_amu);
 		void set_gkyl_file_type(std::string gkyl_file_type);
+		void set_geotype(std::string gkyl_file_type);
 		void set_imp_atom_num(int imp_atom_num);
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
@@ -143,6 +148,7 @@ namespace Options
 		const double gkyl_elec_mass_amu() const;
 		const double gkyl_ion_mass_amu() const;
 		const std::string& gkyl_file_type() const;
+		const std::string& geotype() const;
 		const int imp_atom_num() const;
 		const double imp_mass_amu() const;
 		const int imp_init_charge() const;
@@ -176,6 +182,7 @@ namespace Options
 		const int imp_time_step_opt_int() const;
 		const int imp_vel_stats_int() const;
 		const int imp_iz_recomb_int() const;
+		const int geotype_int() const;
 	};
 
 }

@@ -40,6 +40,9 @@ namespace Background
 		Vectors::Vector3D<double> m_X {};
 		Vectors::Vector3D<double> m_Y {};
 		Vectors::Vector3D<double> m_Z {};
+		Vectors::Vector3D<double> m_grid_X {};
+		Vectors::Vector3D<double> m_grid_Y {};
+		Vectors::Vector3D<double> m_grid_Z {};
 		Vectors::Vector3D<double> m_J {};
 		int m_dim1 {};
 		int m_dim2 {};
@@ -69,6 +72,9 @@ namespace Background
 		const Vectors::Vector3D<double>& get_X() const;
 		const Vectors::Vector3D<double>& get_Y() const;
 		const Vectors::Vector3D<double>& get_Z() const;
+		const Vectors::Vector3D<double>& get_grid_X() const;
+		const Vectors::Vector3D<double>& get_grid_Y() const;
+		const Vectors::Vector3D<double>& get_grid_Z() const;
 		const Vectors::Vector3D<double>& get_J() const;
 		int get_dim1() const;
 		int get_dim2() const;
@@ -136,6 +142,9 @@ namespace Background
 		void move_into_X(Vectors::Vector3D<double>& X);
 		void move_into_Y(Vectors::Vector3D<double>& Y);
 		void move_into_Z(Vectors::Vector3D<double>& Z);
+		void move_into_grid_X(Vectors::Vector3D<double>& grid_X);
+		void move_into_grid_Y(Vectors::Vector3D<double>& grid_Y);
+		void move_into_grid_Z(Vectors::Vector3D<double>& grid_Z);
 		void move_into_J(Vectors::Vector3D<double>& J);
 	};
 }

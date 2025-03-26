@@ -45,6 +45,7 @@ endif()
 add_library(flan SHARED ${SOURCES})
 
 # Compilation flags
+#target_compile_options(flan PRIVATE -Wall -O3 -fopenmp -g)
 target_compile_options(flan PRIVATE -Wall -O3 -fopenmp)
 
 # Specify the libraries to link against. I am not fully certain why we need
