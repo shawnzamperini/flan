@@ -17,6 +17,7 @@
 
 #include "background.h"
 #include "constants.h"
+#include "flan_types.h"
 #include "options.h"
 #include "read_gkyl.h"
 #include "vectors.h"
@@ -36,30 +37,36 @@ namespace Gkyl
 		// I feel like the logic could've shaken out better here, but in the 
 		// end the data in these arrays are moved into a Background object 
 		// (not copied) and then go out of scope, so end of the day it's fine. 
-		std::vector<double> gkyl_times {};
-		std::vector<double> gkyl_x {};  // Cell centers
-		std::vector<double> gkyl_y {};
-		std::vector<double> gkyl_z {};
-		std::vector<double> gkyl_grid_x {};  // Grid edges
-		std::vector<double> gkyl_grid_y {};
-		std::vector<double> gkyl_grid_z {};
-		Vectors::Vector3D<double> gkyl_X {}; // Cell centers in physical space
-		Vectors::Vector3D<double> gkyl_Y {};
-		Vectors::Vector3D<double> gkyl_Z {};
-		Vectors::Vector3D<double> gkyl_grid_X {}; // Grid edges in physical 
-		Vectors::Vector3D<double> gkyl_grid_Y {}; // space
-		Vectors::Vector3D<double> gkyl_grid_Z {};
-		Vectors::Vector4D<double> gkyl_J {};
-		Vectors::Vector4D<double> gkyl_ne {};
-		Vectors::Vector4D<double> gkyl_te {};
-		Vectors::Vector4D<double> gkyl_ti {};
-		Vectors::Vector4D<double> gkyl_vp {};
-		Vectors::Vector4D<double> gkyl_bX {}; 
-		Vectors::Vector4D<double> gkyl_bY {}; 
-		Vectors::Vector4D<double> gkyl_bZ {}; 
-		Vectors::Vector4D<double> gkyl_eX {};
-		Vectors::Vector4D<double> gkyl_eY {};
-		Vectors::Vector4D<double> gkyl_eZ {};
+		std::vector<BkgFPType> gkyl_times {};
+		std::vector<BkgFPType> gkyl_x {};  // Cell centers
+		std::vector<BkgFPType> gkyl_y {};
+		std::vector<BkgFPType> gkyl_z {};
+		std::vector<BkgFPType> gkyl_grid_x {};  // Grid edges
+		std::vector<BkgFPType> gkyl_grid_y {};
+		std::vector<BkgFPType> gkyl_grid_z {};
+		Vectors::Vector3D<BkgFPType> gkyl_X {}; // Cell centers in physical space
+		Vectors::Vector3D<BkgFPType> gkyl_Y {};
+		Vectors::Vector3D<BkgFPType> gkyl_Z {};
+		Vectors::Vector3D<BkgFPType> gkyl_grid_X {}; // Grid edges in physical 
+		Vectors::Vector3D<BkgFPType> gkyl_grid_Y {}; // space
+		Vectors::Vector3D<BkgFPType> gkyl_grid_Z {};
+		Vectors::Vector4D<BkgFPType> gkyl_gij_00 {}; // Metric coefficients
+		Vectors::Vector4D<BkgFPType> gkyl_gij_01 {}; 
+		Vectors::Vector4D<BkgFPType> gkyl_gij_02 {};
+		Vectors::Vector4D<BkgFPType> gkyl_gij_11 {};
+		Vectors::Vector4D<BkgFPType> gkyl_gij_12 {};
+		Vectors::Vector4D<BkgFPType> gkyl_gij_22 {};
+		Vectors::Vector4D<BkgFPType> gkyl_J {};  // Jacobian
+		Vectors::Vector4D<BkgFPType> gkyl_ne {};
+		Vectors::Vector4D<BkgFPType> gkyl_te {};
+		Vectors::Vector4D<BkgFPType> gkyl_ti {};
+		Vectors::Vector4D<BkgFPType> gkyl_vp {};
+		Vectors::Vector4D<BkgFPType> gkyl_bX {}; // Magnetic field components
+		Vectors::Vector4D<BkgFPType> gkyl_bY {}; // in physical space
+		Vectors::Vector4D<BkgFPType> gkyl_bZ {}; 
+		Vectors::Vector4D<BkgFPType> gkyl_eX {}; // Electric field components
+		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physcial space
+		Vectors::Vector4D<BkgFPType> gkyl_eZ {};
 
 		// These are passed to every function call, so save some time/space by 
 		// zipping them up into a tuple and passing together.
@@ -103,16 +110,24 @@ namespace Gkyl
 		// irregular grids (i.e., for the electric field). 
 		write_XYZ(grid_data, opts);
 
-		// Calculate the 3 electric field components from the potential
-		calc_elec_field();
-
-		// Then read each electric field component
+		// Calculate the 3 electric field components from the potential then 
+		// read each electric field component
 		std::cout << "  - Electric field\n";
+		calc_elec_field();
 		read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
 
 		// Read in Jacobian
 		std::cout << "  - Jacobian\n";
 		read_jacobian(grid_data, gkyl_J, opts);
+
+		// Read in metric coefficients. Each has its own vector.
+		std::cout << "  - Metric coefficients\n";
+		read_gij(grid_data, gkyl_gij_00, opts, "00");
+		read_gij(grid_data, gkyl_gij_01, opts, "01");
+		read_gij(grid_data, gkyl_gij_02, opts, "02");
+		read_gij(grid_data, gkyl_gij_11, opts, "11");
+		read_gij(grid_data, gkyl_gij_12, opts, "12");
+		read_gij(grid_data, gkyl_gij_22, opts, "22");
 
 		// With all our arrays assembled, encapsulate them into a Background
 		// class object with move semantics then return.
@@ -150,6 +165,20 @@ namespace Gkyl
 		Vectors::Vector3D gkyl_J_3D {gkyl_J.slice_dim1(0)};
 		bkg.move_into_J(gkyl_J_3D);
 
+		// Likewise for the 6 metric coefficient arrays
+		Vectors::Vector3D gkyl_gij_00_3D {gkyl_gij_00.slice_dim1(0)};
+		bkg.move_into_gij_00(gkyl_gij_00_3D);
+		Vectors::Vector3D gkyl_gij_01_3D {gkyl_gij_01.slice_dim1(0)};
+		bkg.move_into_gij_01(gkyl_gij_01_3D);
+		Vectors::Vector3D gkyl_gij_02_3D {gkyl_gij_02.slice_dim1(0)};
+		bkg.move_into_gij_02(gkyl_gij_02_3D);
+		Vectors::Vector3D gkyl_gij_11_3D {gkyl_gij_11.slice_dim1(0)};
+		bkg.move_into_gij_11(gkyl_gij_11_3D);
+		Vectors::Vector3D gkyl_gij_12_3D {gkyl_gij_12.slice_dim1(0)};
+		bkg.move_into_gij_12(gkyl_gij_12_3D);
+		Vectors::Vector3D gkyl_gij_22_3D {gkyl_gij_22.slice_dim1(0)};
+		bkg.move_into_gij_22(gkyl_gij_22_3D);
+
 		// Okay to return by value since C++11 uses move semantics here.
 		return bkg;
 	}
@@ -174,7 +203,7 @@ namespace Gkyl
 	}
 
 	// Reads in a 1D vector of times corresponding to each frame.
-	std::vector<double> load_times()
+	std::vector<BkgFPType> load_times()
 	{
 		// Filename is treated as a constant.
 		std::string filename {"bkg_from_pgkyl_times.csv"};
@@ -182,7 +211,7 @@ namespace Gkyl
 
 		// Go through one line at a time
 		std::string line {};
-		std::vector<double> times {};
+		std::vector<BkgFPType> times {};
 		int ntimes {};
 		bool ntimes_read {false};
 		while(std::getline(fstream, line))
@@ -218,7 +247,7 @@ namespace Gkyl
 	}
 
 	// Reads in the x, y, z grid nodes using pgkyl.
-	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> 
+	std::tuple<std::vector<BkgFPType>, std::vector<BkgFPType>, std::vector<BkgFPType>> 
 		load_grid()
 	{
 		// Filename is treated as a constant.
@@ -227,9 +256,9 @@ namespace Gkyl
 
 		// Define variables needed for the following loop
 		std::string line {};
-		std::vector<double> grid_x {};
-		std::vector<double> grid_y {};
-		std::vector<double> grid_z {};
+		std::vector<BkgFPType> grid_x {};
+		std::vector<BkgFPType> grid_y {};
+		std::vector<BkgFPType> grid_z {};
 		std::vector<int> dims {};
 		[[maybe_unused]] int ngrid {};
 		bool ngrid_read {false};
@@ -281,7 +310,8 @@ namespace Gkyl
 				else
 				{
 					// Append to each vector accordingly
-					double grid_value {std::stod(line)};
+					BkgFPType grid_value {static_cast<BkgFPType>(
+						std::stod(line))};
 					if (count < dims[0]) 
 						grid_x.push_back(grid_value);
 					else if (count >= dims[0] && count < dims[0] + dims[1]) 
@@ -321,7 +351,7 @@ namespace Gkyl
 
 		// Define variables needed for the following loop
 		std::string line {};
-		std::vector<double> data_flattened {};
+		std::vector<BkgFPType> data_flattened {};
 		std::vector<int> dims {};
 		int ndata {};
 		bool ndata_read {false};
@@ -427,10 +457,10 @@ namespace Gkyl
 	}
 
 	// Calculate cell centers for the given grid points.
-	std::vector<double> cell_centers(std::vector<double>& grid)
+	std::vector<BkgFPType> cell_centers(std::vector<BkgFPType>& grid)
 	{
 
-		std::vector<double> centers (std::ssize(grid) - 1);
+		std::vector<BkgFPType> centers (std::ssize(grid) - 1);
 		for (std::size_t i {}; i < grid.size() - 1; ++i)
 		{
 			centers[i] = grid[i] + (grid[i+1] - grid[i]) / 2.0;
@@ -470,7 +500,13 @@ namespace Gkyl
 			data_type == "magnetic_unit_Y" || 
 			data_type == "magnetic_unit_Z" || 
 			data_type == "magnetic_magnitude" || 
-			data_type == "jacobian")
+			data_type == "jacobian" ||
+			data_type == "metric_coeff00" ||
+			data_type == "metric_coeff01" ||
+			data_type == "metric_coeff02" ||
+			data_type == "metric_coeff11" ||
+			data_type == "metric_coeff12" ||
+			data_type == "metric_coeff22")
 		{
 			std::vector<std::string> interp_settings = load_interp_settings();
 			read_gkyl_cmd_ss << " --gkyl_basis_type=" << interp_settings[0]
@@ -569,7 +605,7 @@ namespace Gkyl
 		read_data_pgkyl("null"s, "magnetic_unit_Z", grid_data, gkyl_bZ, opts);
 
 		// Load the magnetic field magnitude at each location
-		Vectors::Vector4D<double> gkyl_bmag {}; 
+		Vectors::Vector4D<BkgFPType> gkyl_bmag {}; 
 		read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
 			opts);
 
@@ -618,6 +654,21 @@ namespace Gkyl
 		// name with the potential file so just putting a placeholder
 		// string. The script handles things.
 		read_data_pgkyl("null"s, "jacobian", grid_data, gkyl_J, opts);
+	}
+
+	template <typename T>
+	void read_gij(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_gij, const Options::Options& opts,
+		const std::string& idx)
+	{
+		using namespace std::string_literals;
+
+		// Assign the correct string for the index needed. idx is one of
+		// 00, 01, 02, 11, 12, 22.
+		std::string metric_coeff_str {"metric_coeff"};
+		metric_coeff_str += idx;
+
+		read_data_pgkyl("null"s, metric_coeff_str, grid_data, gkyl_gij, opts);
 	}
 
 	std::string get_calc_elec_field_py()
@@ -758,20 +809,20 @@ namespace Gkyl
 	}
 
 	void read_elec_field(grid_data_t& grid_data, 
-		Vectors::Vector4D<double>& gkyl_eX, Vectors::Vector4D<double>& gkyl_eY, 
-		Vectors::Vector4D<double>& gkyl_eZ)
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eZ)
 	{
 		// Ex	
-		Vectors::Vector4D<double> tmp_dataX
-			{load_values<double>("elec_field_X")};
+		Vectors::Vector4D<BkgFPType> tmp_dataX
+			{load_values<BkgFPType>("elec_field_X")};
 
 		// Ey
-		Vectors::Vector4D<double> tmp_dataY
-			{load_values<double>("elec_field_Y")};
+		Vectors::Vector4D<BkgFPType> tmp_dataY
+			{load_values<BkgFPType>("elec_field_Y")};
 
 		// Ez
-		Vectors::Vector4D<double> tmp_dataZ
-			{load_values<double>("elec_field_Z")};
+		Vectors::Vector4D<BkgFPType> tmp_dataZ
+			{load_values<BkgFPType>("elec_field_Z")};
 
 		// Apply fix to y boundaries where the gradient generally messes up
 		elec_field_ybound_fix(grid_data, tmp_dataX);
@@ -785,7 +836,7 @@ namespace Gkyl
 	}
 
 	void elec_field_ybound_fix(grid_data_t& grid_data, 
-		Vectors::Vector4D<double>& ecomp)
+		Vectors::Vector4D<BkgFPType>& ecomp)
 	{
 		// We apply a fix here. The y boundaries are treated as periodic (in
 		// Gkeyll this need not always be true!). At the edge of the boundaries
@@ -815,8 +866,8 @@ namespace Gkyl
 		{
 		{
 			// Just naming these variables according to the example above.
-			double e1 {ecomp(i,j,1,l)};
-			double e4 {ecomp(i,j,leny-2,l)};
+			BkgFPType e1 {ecomp(i,j,1,l)};
+			BkgFPType e4 {ecomp(i,j,leny-2,l)};
 			ecomp(i,j,0,l) = (1.0/3.0) * e4 + (2.0/3.0) * e1;
 			ecomp(i,j,leny-1,l) = (2.0/3.0) * e4 + (1.0/3.0) * e1;
 		}

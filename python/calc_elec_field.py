@@ -59,6 +59,75 @@ def load_potential():
 	pot = np.loadtxt(pot_file, skiprows=6).reshape(dims)
 	return pot
 
+def calc_elec_field_3d(XYZ, pot):
+
+	# No t dimension, hence the [1:] here. Also append 3 to preserve coordinate
+	# groupings.
+	XYZ_shape = list(pot.shape[1:])
+	XYZ_shape.append(3)
+	XYZ_shaped = XYZ.reshape(XYZ_shape)
+
+	def calculate_gradient(i, j, k, values):
+
+		#print("Point ({},{},{})".format(i,j,k))
+		#print(XYZ_shaped[i,j,k])
+	
+		# The 6 neighboring cells and a mask that starts all True. Edge cases
+		# may assign False to mask elements.
+		neighbors = [(i+1,j,k), (i,j+1,k), (i,j,k+1), (i-1,j,k), 
+			(i,j-1,k), (i,j,k-1)]
+		mask = [True, True, True, True, True, True]
+
+		# Edge cases to remove non-existant neighbors by assigning the mask
+		# to False
+		if (i == 0): mask[3] = False 
+		if (i == values.shape[0]-1): mask[0] = False
+		if (j == 0): mask[4] = False 
+		if (j == values.shape[1]-1): mask[1] = False
+		if (k == 0): mask[5] = False 
+		if (k == values.shape[2]-1): mask[2] = False
+
+		# Remove any non-existing neighbors
+		neighbors = [neighbors[m] for m in range(len(neighbors)) if mask[m]]
+
+		# Skip the current point itself (indices[0] is the same point)
+		neighbor_points = [XYZ_shaped[idx] for idx in neighbors]
+		neighbor_values = [values[idx] for idx in neighbors]
+		#print(neighbor_points)
+		#print(neighbor_values)
+
+		# Build the system of equations to solve (least squares)
+		A = neighbor_points - XYZ_shaped[i,j,k]  # Differences in positions
+		b = neighbor_values - values[i,j,k]  # Differences in scalar values
+
+		# Solve the least squares problem A * grad = b
+		grad, res, _, _ = np.linalg.lstsq(A, b, rcond=None)
+		#print("grad & res")
+		#print(grad)
+		#print(res)
+
+		return grad
+
+	# Empty 4D (t,x,y,z) arrays for each electric field component
+	elec_X = np.zeros(pot.shape)
+	elec_Y = np.zeros(pot.shape)
+	elec_Z = np.zeros(pot.shape)
+
+	# Go through one frame at a time
+	print("Calculating potential gradient for each frame...")
+	for t in tqdm(range(pot.shape[0])):
+		for i in range(pot.shape[1]):
+			for j in range(pot.shape[2]):
+				for k in range(pot.shape[3]):
+					grad = calculate_gradient(i, j, k, pot[t])	
+					elec_X[t,i,j,k] = -grad[0]
+					elec_Y[t,i,j,k] = -grad[1]
+					elec_Z[t,i,j,k] = -grad[2]
+
+	# Return each component of electric field
+	return elec_X, elec_Y, elec_Z
+
+
 def calc_elec_field(XYZ, pot):
 	"""
 	Uses a k-nearest neighbor tree to calculate the electric field from the
@@ -76,7 +145,8 @@ def calc_elec_field(XYZ, pot):
 	# coordinates to calculate the gradient from
 	tree = cKDTree(XYZ)
 
-	# Function to calculate gradient at a specific point. There are two options:
+	# Function to calculate gradient at a specific point. There are three 
+	# options:
 	#
 	# mode = 0 (number nearest)
 	#   This implementation looks for a given number of nearest neighbors 
@@ -87,25 +157,40 @@ def calc_elec_field(XYZ, pot):
 	#   radius for calculating the gradient. A minimal number of points is
 	#   required, otherwise the search radius will be increased until that
 	#   minimum number of points is found.
+	# mode = 2 (surrounding cells)
+	#   This implementation calculates the gradient using the surrounding 6 
+	#   cells. So a point at (i,j,k) will use: (i+1,j,k) (i,j+1,k) (i,j,k+1)
+	#   (i-1,j,k) (i,j-1,k) (i,j,k-1). Care is taken to not index beyond the
+	#   domain for cells along the edge of the grid - those cells will just 
+	#   use less cells to calculate the gradient.
 	def calculate_gradient(idx, values, mode=0):
 		
 		# Point at which to caluclate gradient
 		point = XYZ[idx]
 
+		# mode = 0 settings
 		# We choose the 6 nearest neighbors in the spirit of getting the two 
 		# nearest in each coordinate direction. Note: getting the 6 nearest 
 		# is k=7 when we call query below.
-		num_nearest = 6
+		#num_nearest = 6
 
+		# This gaurantees a perfect fit since the resulting equation being
+		# solved is three equations (one per neighbor) with three unknowns
+		# (the gradient values).
+		num_nearest = 3
+
+		# mode = 1 settings
 		# We set the initial radius to half a mm since it seems like a 
 		# reasonable enough starting point. Number of points is set to 3, since
 		# you can't really do much with less than that, but we don't want to be
 		# over stringent. These could be made input options to Flan.
-		radius = 5e-5
-		radius_increment = 5e-5
+		radius = 0.10
+		radius_increment = 0.01
 		min_num = 3
 		max_num = 15
 
+		#print("Point")
+		#print(point)
 		while True: 
 
 			if mode == 0:
@@ -126,6 +211,7 @@ def calc_elec_field(XYZ, pot):
 
 					# If we didn't find enough points, increase search radius
 					radius += radius_increment
+					print("Try running with radius > {}".format(radius))
 
 			# Gotta cap things somewhere. If we are pulling in too many points,
 			# default to number of nearest neighbors algorithm.
@@ -137,6 +223,8 @@ def calc_elec_field(XYZ, pot):
 			neighbors = indices[1:]
 			neighbor_points = XYZ[neighbors]
 			neighbor_values = values[neighbors]
+			#print(neighbor_points)
+			#print(neighbor_values)
 
 			# Build the system of equations to solve (least squares)
 			A = neighbor_points - point  # Differences in positions
@@ -144,8 +232,13 @@ def calc_elec_field(XYZ, pot):
 
 			# Solve the least squares problem A * grad = b
 			grad, res, _, _ = np.linalg.lstsq(A, b, rcond=None)
+			#print("grad & res")
+			#print(grad)
+			#print(res)
+			break
 			
 			# If a residual is returned it generally means you got a bad fit.
+			"""
 			if res.size > 0:
 				if (mode == 0):
 					
@@ -166,6 +259,7 @@ def calc_elec_field(XYZ, pot):
 					radius += radius_increment
 			else:
 				break
+			"""
 
 		return grad
 	
@@ -182,7 +276,7 @@ def calc_elec_field(XYZ, pot):
 
 		# Need to loop through every point and calculate the gradient there
 		for i in range(0, len(pot_vals)):
-			grad = calculate_gradient(i, pot_vals, mode=0)
+			grad = calculate_gradient(i, pot_vals, mode=1)
 			elec_vals_X[i] = -grad[0]
 			elec_vals_Y[i] = -grad[1]
 			elec_vals_Z[i] = -grad[2]
@@ -243,7 +337,9 @@ def main():
 		return None
 
 	# Calculate electric field components from potential gradient
-	elec_field_XYZ = calc_elec_field(XYZ, pot)
+	#elec_field_XYZ = calc_elec_field(XYZ, pot)
+	print("Using calc_elec_field_3d")
+	elec_field_XYZ = calc_elec_field_3d(XYZ, pot)
 
 	# Write out to elec_field.csv
 	write_elec_field(elec_field_XYZ)

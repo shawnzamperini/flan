@@ -12,6 +12,7 @@
 #include <tuple>
 #include <variant>
 
+
 /**
 * @brief Alias for function pointer to mapc2p function.
 *
@@ -31,5 +32,15 @@ using Mapc2p_ptr = std::function<std::tuple<double, double, double>
 using Inputs = std::map<std::string, std::variant<int, double, std::string, 
 	Mapc2p_ptr>>;
 
+/**
+* @brief Floating point type used in most of the simulation.
+*
+* This determines the precision used in the vectors within Background and
+* Statistics classes. This is just to reduce memory overhead, since a
+* Statistics object is copied for each thread, so the memory can balloon 
+* quickly. Only double and float are valid, but others could be added if
+* there is a good reason.
+*/
+using BkgFPType = float;
 
 #endif

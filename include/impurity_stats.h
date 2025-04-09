@@ -10,9 +10,10 @@
 #include <numeric>
 #include <vector>
 
-#include "vectors.h"
-#include "impurity.h"
 #include "background.h"
+#include "flan_types.h"
+#include "impurity.h"
+#include "vectors.h"
 
 namespace Impurity
 {
@@ -25,12 +26,12 @@ namespace Impurity
 		int m_dim4 {};
 		int m_size {};
 		Vectors::Vector4D<int> m_counts {};
-		Vectors::Vector4D<double> m_weights {};
-		Vectors::Vector4D<double> m_density {};
-		Vectors::Vector4D<double> m_vX {};
-		Vectors::Vector4D<double> m_vY {};
-		Vectors::Vector4D<double> m_vZ {};
-		Vectors::Vector4D<double> m_gyrorad {};
+		Vectors::Vector4D<BkgFPType> m_weights {};
+		Vectors::Vector4D<BkgFPType> m_density {};
+		Vectors::Vector4D<BkgFPType> m_vX {};
+		Vectors::Vector4D<BkgFPType> m_vY {};
+		Vectors::Vector4D<BkgFPType> m_vZ {};
+		Vectors::Vector4D<BkgFPType> m_gyrorad {};
 		bool m_vel_stats {};
 
 	public:
@@ -41,12 +42,12 @@ namespace Impurity
 
 		// Accessors
 		Vectors::Vector4D<int>& get_counts();
-		Vectors::Vector4D<double>& get_weights();
-		Vectors::Vector4D<double>& get_density();
-		Vectors::Vector4D<double>& get_vX();
-		Vectors::Vector4D<double>& get_vY();
-		Vectors::Vector4D<double>& get_vZ();
-		Vectors::Vector4D<double>& get_gyrorad();
+		Vectors::Vector4D<BkgFPType>& get_weights();
+		Vectors::Vector4D<BkgFPType>& get_density();
+		Vectors::Vector4D<BkgFPType>& get_vX();
+		Vectors::Vector4D<BkgFPType>& get_vY();
+		Vectors::Vector4D<BkgFPType>& get_vZ();
+		Vectors::Vector4D<BkgFPType>& get_gyrorad();
 		bool get_vel_stats();
 
 		// Overload of + to add counts and weights together, returned as a 
@@ -59,12 +60,13 @@ namespace Impurity
 
 		// Function to increase weights
 		void add_weights(const int tidx, const int xidx, const int yidx, 
-			const int zidx, const double value);
+			const int zidx, const BkgFPType value);
 
 		// Function add each velocity component to the corresponding array
 		// location
 		void add_vels(const int tidx, const int xidx, const int yidx,
-			const int zidx, const double vX, const double vY, const double vZ);
+			const int zidx, const BkgFPType vX, const BkgFPType vY, 
+			const BkgFPType vZ);
 
 		// Function add the calculated gyroradius to the corresponding array
 		// location

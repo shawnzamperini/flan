@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "background.h"
+#include "flan_types.h"
 #include "netcdf"
 #include "options.h"
 #include "save_results.h"
@@ -48,6 +49,10 @@ namespace SaveResults
 			{
 				var = nc_file.addVar(var_name, netCDF::ncDouble, dim);
 			}
+			else if constexpr (std::is_same_v<T, float>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncFloat, dim);
+			}
 			else if constexpr (std::is_same_v<T, int>)
 			{
 				var = nc_file.addVar(var_name, netCDF::ncInt, dim);
@@ -80,8 +85,28 @@ namespace SaveResults
 		else
 		{
 			// Create a 3D variable	
-			netCDF::NcVar var {nc_file.addVar(var_name, netCDF::ncDouble, 
-					{dim1, dim2, dim3})};
+			//netCDF::NcVar var {nc_file.addVar(var_name, netCDF::ncDouble, 
+			//		{dim1, dim2, dim3})};
+
+			// Save as appropriate type. This isn't actually necessary since
+			// netCDF will upcast a float to double, but no point in doing 
+			// that if it'll just take up extra space.
+			netCDF::NcVar var {};
+			if constexpr (std::is_same_v<T, double>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncDouble, 
+					{dim1, dim2, dim3});
+			}
+			else if constexpr (std::is_same_v<T, float>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncFloat, 
+					{dim1, dim2, dim3});
+			}
+			else if constexpr (std::is_same_v<T, int>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncInt, 
+					{dim1, dim2, dim3});
+			}
 
 			// We actually save it as a flattened array no matter the
 			// dimension, which is how we represent the data internally 
@@ -112,8 +137,28 @@ namespace SaveResults
 		else
 		{
 			// Create a 4D variable	
-			netCDF::NcVar var {nc_file.addVar(var_name, netCDF::ncDouble, 
-					{dim1, dim2, dim3, dim4})};
+			//netCDF::NcVar var {nc_file.addVar(var_name, netCDF::ncDouble, 
+			//		{dim1, dim2, dim3, dim4})};
+
+			// Save as appropriate type. This isn't actually necessary since
+			// netCDF will upcast a float to double, but no point in doing 
+			// that if it'll just take up extra space.
+			netCDF::NcVar var {};
+			if constexpr (std::is_same_v<T, double>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncDouble, 
+					{dim1, dim2, dim3, dim4});
+			}
+			else if constexpr (std::is_same_v<T, float>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncFloat, 
+					{dim1, dim2, dim3, dim4});
+			}
+			else if constexpr (std::is_same_v<T, int>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncInt, 
+					{dim1, dim2, dim3, dim4});
+			}
 
 			// We actually save it as a flattened array no matter the
 			// dimension, which is how we represent the data internally 
@@ -157,12 +202,10 @@ namespace SaveResults
 
 		// Dimensions for the arrays containing data at the cell centers. 
 		// First dimension is time, then x, y, z.
-		std::cout << "Creating dimensions...";
 		netCDF::NcDim dim1 {nc_file.addDim("time", bkg.get_dim1())};
 		netCDF::NcDim dim2 {nc_file.addDim("x", bkg.get_dim2())};
 		netCDF::NcDim dim3 {nc_file.addDim("y", bkg.get_dim3())};
 		netCDF::NcDim dim4 {nc_file.addDim("z", bkg.get_dim4())};
-		std::cout << " done\n";
 
 		// Dimensions for the grid points. They're just bigger than the
 		// cell center lengths.
@@ -212,14 +255,14 @@ namespace SaveResults
 		// Grid edges in physical space - X, Y, Z
 		// Note dims are dim2, dim3 and dim4
 		desc = "X grid edges";
-		save_vector_3d(nc_file, bkg.get_grid_X(), "grid_X", grid_dim2, grid_dim3, grid_dim4, desc, 
-			"(m)");
+		save_vector_3d(nc_file, bkg.get_grid_X(), "grid_X", grid_dim2, 
+			grid_dim3, grid_dim4, desc, "(m)");
 		desc = "Y grid edges";
-		save_vector_3d(nc_file, bkg.get_grid_Y(), "grid_Y", grid_dim2, grid_dim3, grid_dim4, desc, 
-			"(m)");
+		save_vector_3d(nc_file, bkg.get_grid_Y(), "grid_Y", grid_dim2, 
+			grid_dim3, grid_dim4, desc, "(m)");
 		desc = "Z grid edges";
-		save_vector_3d(nc_file, bkg.get_grid_Z(), "grid_Z", grid_dim2, grid_dim3, grid_dim4, desc, 
-			"(m)");
+		save_vector_3d(nc_file, bkg.get_grid_Z(), "grid_Z", grid_dim2, 
+			grid_dim3, grid_dim4, desc, "(m)");
 
 		// Electron density
 		desc = "electron density";

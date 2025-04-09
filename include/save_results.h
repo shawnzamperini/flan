@@ -20,7 +20,6 @@ namespace SaveResults
 	void save_results(const Background::Background& bkg,
 		Impurity::Statistics& imp_stats, const Options::Options& opts);
 
-	
 	// Save a 1D vector into nc_file. The correct NcDim (dim) must be passed 
 	// in - it on the programmer to do this correctly.
 	template <typename T>

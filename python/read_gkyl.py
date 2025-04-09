@@ -8,7 +8,13 @@ import sys
 import numpy as np
 
 
-def read_binary(args, comp, value_scale=1.0):
+def read_binary(args, comp, value_scale=1.0, bimax=False):
+    """
+    bimax (bool): Flag for if temperature and density are to be loaded from the
+    BiMaxwellian files. The Gkeyll output is still changing, so in theory this
+    would one day become unecessary, but until then we need to retain this
+    capability to mesh with older sims.
+    """
     
     # Go through one file at a time
     times = []
@@ -18,9 +24,15 @@ def read_binary(args, comp, value_scale=1.0):
 
         # Assemble path and load
         if (args.gkyl_data_type == "density"):
-            data_dname = "M0"
+            if bimax:
+                data_dname = "BiMaxwellianMoments"
+            else:
+                data_dname = "M0"
         elif (args.gkyl_data_type == "temperature"):
-            data_dname = "prim_moms"
+            if bimax:
+                data_dname = "BiMaxwellianMoments"
+            else:
+                data_dname = "prim_moms"
         elif (args.gkyl_data_type == "potential"):
             data_dname = "field"
 
@@ -33,6 +45,10 @@ def read_binary(args, comp, value_scale=1.0):
             data_dname = "jacobgeo"
         elif (args.gkyl_data_type == "magnetic_magnitude"):
             data_dname = "bmag"
+        elif (args.gkyl_data_type in ["metric_coeff00", "metric_coeff01", 
+            "metric_coeff02", "metric_coeff11", "metric_coeff12", 
+            "metric_coeff22"]):
+            data_dname = "gij"
         
         # Some different ways each file name is constructed
         if (args.gkyl_data_type in ["density", "temperature"]):
@@ -44,7 +60,9 @@ def read_binary(args, comp, value_scale=1.0):
                 "-" + data_dname + "_" + str(frame) \
                 + ".gkyl"
         elif (args.gkyl_data_type in ["magnetic_unit_X", "magnetic_unit_Y", 
-            "magnetic_unit_Z", "jacobian", "magnetic_magnitude"]):
+            "magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
+            "metric_coeff00", "metric_coeff01", "metric_coeff02", 
+            "metric_coeff11", "metric_coeff12", "metric_coeff22"]):
             path = args.gkyl_dir + "/" + args.gkyl_case_name + \
                 "-" + data_dname \
                 + ".gkyl"
@@ -77,12 +95,16 @@ def read_binary(args, comp, value_scale=1.0):
 
         # Perform interpolation - add more options as I come across them
         if (data.ctx["basis_type"] == "serendipity"):
-            interp_data = pgkyl.data.GInterpModal(data, data.ctx["poly_order"], "ms")
+            interp_data = pgkyl.data.GInterpModal(data, data.ctx["poly_order"],
+                "ms")
         else:
-            print("Error! basis_type = {:} not supported yet.".format(data.ctx["basis_type"]))
+            print("Error! basis_type = {:} not supported yet."
+                .format(data.ctx["basis_type"]))
 
-        # Add time
-        if (args.gkyl_data_type not in ["jacobian"]):
+        # Add time to time-dependent data.
+        if (args.gkyl_data_type not in ["jacobian", "metric_coeff00", 
+            "metric_coeff01", "metric_coeff02", "metric_coeff11", 
+            "metric_coeff12", "metric_coeff22"]):
             times.append(data.ctx["time"])
 
         # Get grid and values. For each dimension, grid is one element larger
@@ -124,7 +146,9 @@ def save_csv(args, times, grid, values):
     # is just one array (electrostatic approximation for now), so there
     # are no times to write.
     if (args.gkyl_data_type not in ["magnetic_unit_X", "magnetic_unit_Y", 
-        "magnetic_unit_Z", "magnetic_magnitude", "jacobian"]):
+        "magnetic_unit_Z", "magnetic_magnitude", "jacobian", "metric_coeff00", 
+            "metric_coeff01", "metric_coeff02", "metric_coeff11", 
+            "metric_coeff12", "metric_coeff22"]):
         header = (
                  "# The times of each Gkeyll frame. The first line is an\n"
                  "# integer telling how many values follow.\n"
@@ -189,22 +213,37 @@ def main():
     passed in with the command line.
     """
 
+    # Valid options for gkyl_data_type
+    gkyl_data_type_opts = ["density", "temperature", "potential", "magnetic_unit_X", 
+        "magnetic_unit_Y", "magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
+        "metric_coeff00", "metric_coeff01", "metric_coeff02", "metric_coeff11",
+        "metric_coeff12", "metric_coeff22"]
+
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Read Gkeyll data and save it for Flan to read in")
+    parser = argparse.ArgumentParser(
+        description="Read Gkeyll data and save it for Flan to read in")
 
     # Command line arguments
-    parser.add_argument("--gkyl_dir", type=str, help="full path to the directory containing Gkyell simulation results")
-    parser.add_argument("--gkyl_case_name", type=str, help="name of Gkyell simulation to load")
-    parser.add_argument("--gkyl_file_type", type=str, help="type of file for the Gkyell data", choices=["adios1", "adios2", "binary"])
-    parser.add_argument("--gkyl_frame_start", type=int, help="first Gkyell frame to read in")
-    parser.add_argument("--gkyl_frame_end", type=int, help="last Gkyell frame to read in")
-    parser.add_argument("--gkyl_species", type=str, help="name of the species to load")
-    parser.add_argument("--gkyl_species_mass_amu", type=float, help="mass of the species in amu")
+    parser.add_argument("--gkyl_dir", type=str, 
+        help="full path to the directory containing Gkyell simulation results")
+    parser.add_argument("--gkyl_case_name", type=str, 
+        help="name of Gkyell simulation to load")
+    parser.add_argument("--gkyl_file_type", type=str, 
+        help="type of file for the Gkyell data", 
+        choices=["adios1", "adios2", "binary"])
+    parser.add_argument("--gkyl_frame_start", type=int, 
+        help="first Gkyell frame to read in")
+    parser.add_argument("--gkyl_frame_end", type=int, 
+        help="last Gkyell frame to read in")
+    parser.add_argument("--gkyl_species", type=str, 
+        help="name of the species to load")
+    parser.add_argument("--gkyl_species_mass_amu", type=float, 
+        help="mass of the species in amu")
     parser.add_argument("--gkyl_data_type", type=str, 
-        help="name of the type of data file to load", choices=["density", 
-        "temperature", "potential", "magnetic_unit_X", "magnetic_unit_Y",
-        "magnetic_unit_Z", "jacobian", "magnetic_magnitude"])
-    parser.add_argument("--gkyl_basis_type", type=str, help="DG basis type", choices=["serendipity"])
+        help="name of the type of data file to load", 
+        choices=gkyl_data_type_opts)
+    parser.add_argument("--gkyl_basis_type", type=str, help="DG basis type", 
+        choices=["serendipity"])
     parser.add_argument("--gkyl_poly_order", type=int, help="DG poly order")
 
     # Parse arguments
@@ -214,7 +253,8 @@ def main():
     # the data we're after.
     if (args.gkyl_file_type == "binary"):
 
-        # Load density
+        # Load data that does not need to multiplied by anything and exists
+        # in comp=0.
         if (args.gkyl_data_type in ["density", "potential", "jacobian", 
             "magnetic_magnitude"]):
             value_scale = 1.0
@@ -246,11 +286,57 @@ def main():
             value_scale = 1.0
             comp = 2
 
+        # Metric coefficients. These make up a 3x3 array, so technically there 
+        # are 9 different ones to load, but the matrix is symmetric so only
+        # 6 are needed.
+        elif (args.gkyl_data_type in ["metric_coeff00", "metric_coeff01", 
+            "metric_coeff02", "metric_coeff11", "metric_coeff12", 
+            "metric_coeff22"]):
+
+            # No scaling needed
+            value_scale = 1.0
+
+            # Assign each specific component
+            if args.gkyl_data_type == "metric_coeff00": comp = 0
+            if args.gkyl_data_type == "metric_coeff01": comp = 1
+            if args.gkyl_data_type == "metric_coeff02": comp = 2
+            if args.gkyl_data_type == "metric_coeff11": comp = 3
+            if args.gkyl_data_type == "metric_coeff12": comp = 4
+            if args.gkyl_data_type == "metric_coeff22": comp = 5
+
         else:
             print("Error! Unrecognized gkyl_data_type: {}".format(args.gkyl_data_type))
             
-        #print("Reading binary files...")
-        times, grid, values = read_binary(args, comp, value_scale)
+
+        # When using BiMaxwellian files, the temperature needs an extra step.
+        # this is because we have Tpar and Tperp. We want just the isotropic
+        # temperature, which we can approximate as T = (Tpar + 2Tperp) / 3.
+        # This is just the arithemetic mean. So we load both, and then estimate
+        # it.
+        if (args.gkyl_data_type == "temperature"):
+            try:
+                times, grid, values = read_binary(args, comp, value_scale)
+
+            # Attempt looking for BiMaxwellian files then
+            except FileNotFoundError:
+
+                # Tpar/m = 2, Tperp/m = 3
+                times, grid, values_par = read_binary(args, 2, value_scale, True)
+                times, grid, values_perp = read_binary(args, 3, value_scale, True)
+                values = (np.array(values_par) + 2 * np.array(values_perp)) / 3
+
+        # Density could be stored in prim_moments or BiMaxwellian, try both.
+        elif (args.gkyl_data_type == "density"):
+            try: 
+                times, grid, values = read_binary(args, comp, value_scale)
+            except FileNotFoundError:
+
+                # Is in comp = 0
+                times, grid, values = read_binary(args, 0, value_scale, True)
+
+        # Everything else has its own file
+        else:
+            times, grid, values = read_binary(args, comp, value_scale)
 
     else:
         print("Error! Only binary Gkyell files (.gkyl) are currently supported.")

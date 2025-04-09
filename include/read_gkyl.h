@@ -10,19 +10,20 @@
 #include <string>
 #include <vector>
 
-#include "vectors.h"
 #include "background.h"
+#include "flan_types.h"
 #include "options.h"
+#include "vectors.h"
 
 namespace Gkyl
 {
 	// Alias for tuple to hold all the grid data to be passed around
-	using grid_data_t = std::tuple<std::vector<double>&, 
-		std::vector<double>&, std::vector<double>&, std::vector<double>&, 
-		std::vector<double>&, std::vector<double>&, std::vector<double>&,
-		Vectors::Vector3D<double>&, Vectors::Vector3D<double>&,
-		Vectors::Vector3D<double>&, Vectors::Vector3D<double>&, 
-		Vectors::Vector3D<double>&, Vectors::Vector3D<double>&>;
+	using grid_data_t = std::tuple<std::vector<BkgFPType>&, 
+		std::vector<BkgFPType>&, std::vector<BkgFPType>&, std::vector<BkgFPType>&, 
+		std::vector<BkgFPType>&, std::vector<BkgFPType>&, std::vector<BkgFPType>&,
+		Vectors::Vector3D<BkgFPType>&, Vectors::Vector3D<BkgFPType>&,
+		Vectors::Vector3D<BkgFPType>&, Vectors::Vector3D<BkgFPType>&, 
+		Vectors::Vector3D<BkgFPType>&, Vectors::Vector3D<BkgFPType>&>;
 
 	/**
 	* @brief Entry point for reading Gkeyll data into Flan. 
@@ -57,14 +58,14 @@ namespace Gkyl
 	*
 	* @return Return a vector of the times.
 	*/
-	std::vector<double> load_times();
+	std::vector<BkgFPType> load_times();
 
 	/**
 	* @brief Reads in the x, y, z grid nodes using pgkyl.
 	*
 	* @return Returns a tuple of 3 vectors containing the grid edges - (x,y,z)
 	*/
-	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> 
+	std::tuple<std::vector<BkgFPType>, std::vector<BkgFPType>, std::vector<BkgFPType>> 
 		load_grid();
 
 	/**
@@ -99,7 +100,7 @@ namespace Gkyl
 	* @return Returns a vector of the cell centers that is one less in length
 	* than grid.
 	*/
-	std::vector<double> cell_centers(std::vector<double>& grid);
+	std::vector<BkgFPType> cell_centers(std::vector<BkgFPType>& grid);
 
 	/**
 	* @brief Function to read in Gkeyll data using a python interface to postgkyl
@@ -176,6 +177,14 @@ namespace Gkyl
 	void read_jacobian(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_J, const Options::Options& opts);
 
+	/*
+	* @brief Read metric coefficient gij component into gkyl_gijXX.
+	*/
+	template <typename T>
+	void read_gij(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_gij, const Options::Options& opts,
+		const std::string& idx);
+
 	/**
 	* @brief Get path to python script for calculating the electric field, 
 	* calc_elec_field.py.
@@ -211,9 +220,9 @@ namespace Gkyl
 	* @brief Read in electric field components (X,Y,Z) into arrays
 	*/
 	void read_elec_field(grid_data_t& grid_data, 
-		Vectors::Vector4D<double>& gkyl_eX, 
-		Vectors::Vector4D<double>& gkyl_eY, 
-		Vectors::Vector4D<double>& gkyl_eZ);
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eZ);
 
 	/**
 	* @brief Apply a fix to the y boundaries of the electric field where the
@@ -224,7 +233,7 @@ namespace Gkyl
 	* havent been able to figure it out.
 	*/
 	void elec_field_ybound_fix(grid_data_t& grid_data, 
-		Vectors::Vector4D<double>& ecomp);
+		Vectors::Vector4D<BkgFPType>& ecomp);
 
 	/**
 	* @brief Write out Cartesian (X,Y,Z) coordinates of cell centers

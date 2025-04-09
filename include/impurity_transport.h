@@ -12,7 +12,6 @@
 #include "background.h"
 #include "impurity.h"
 #include "impurity_stats.h"
-#include "kdtree.h"
 #include "openadas.h"
 #include "options.h"
 
@@ -124,21 +123,6 @@ namespace Impurity
 	int get_nearest_cell_index(const std::vector<T>& grid_edges, const T value);
 
 	/**
-	* @brief Update impurity velocity based on the Lorentz force
-	*
-	* @param imp Impurity object that is updated within function
-	* @param bkg Reference to the loaded Background object
-	* @param imp_time_step Size of time step specified in input file
-	* @param tidx Index in time array imp is at
-	* @param xidx Index in x array imp is at
-	* @param yidx Index in y array imp is at
-	* @param zidx Index in z array imp is at
-	*/
-	void lorentz_update(Impurity& imp, const Background::Background& bkg,
-		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx);
-
-	/**
 	* @brief Calculate each X,Y,Z component of the Lorentz force in physical
 	* space.
 	*
@@ -166,9 +150,8 @@ namespace Impurity
 	*/
 	bool step(Impurity& imp, const double fX, const double fY, const double fZ, 
 		const double imp_time_step, const Background::Background& bkg, 
-		std::unique_ptr<KDTree::KDTree_t>& kdtree, 
 		const Options::Options& opts, const int tidx, int& xidx, int& yidx, 
-		int& zidx, bool& continue_following);
+		int& zidx);
 
 	/**
 	* @brief Record/score particle in the ImpurityStats object
@@ -213,14 +196,16 @@ namespace Impurity
 	*/
 	bool find_containing_cell(Impurity& imp, 
 		const Background::Background& bkg, 
-		int& xidx, int& yidx, int& zidx, 
-		std::unique_ptr<KDTree::KDTree_t>& kdtree);
+		int& xidx, int& yidx, int& zidx, const bool debug=false);
 
 	/**
 	* @brief Check if an Impurity has encountered a boundary condition.
 	*
 	* A boundary condition could be absorbing or reflecting, depends on the 
-	* simulation settings and boundary.
+	* simulation settings and boundary. Passing yidx as a reference is 
+	* intentional because check_boundary_y can update it as part of a 
+	* periodic boundary condition (x and z are absorbing, so unneeded at this
+	* point).
 	*
 	* @param bkg Reference to the loaded Background object
 	* @param imp The Impurity object to check for boundary condition
@@ -230,8 +215,8 @@ namespace Impurity
 	*/
 	bool check_boundary(const Background::Background& bkg, 
 		Impurity& imp, const Options::Options& opts, const int tidx,
-		const int xidx, const int yidx, const int zidx, 
-		const double imp_time_step, std::unique_ptr<KDTree::KDTree_t>& kdtree);
+		int& xidx, int& yidx, int& zidx, 
+		const double imp_time_step);
 	//bool check_boundary(const Background::Background& bkg, Impurity& imp,
 	//	const Options::Options& opts);
 	
@@ -267,7 +252,6 @@ namespace Impurity
 		int& recomb_warnings, std::vector<Impurity>& imps,
 		const std::vector<int> imp_var_reduct_counts, 
 		const bool imp_var_reduct_on, 
-		std::unique_ptr<KDTree::KDTree_t>& kdtree,
 		const Options::Options& opts);
 	/**
 	* @brief Print out warnings if ionization/recombination probabilities were
@@ -298,7 +282,6 @@ namespace Impurity
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, 
-		std::unique_ptr<KDTree::KDTree_t>& kdtree,
 		const Options::Options& opts);
 
 	/**

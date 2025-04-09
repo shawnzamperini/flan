@@ -417,6 +417,8 @@ namespace Vectors
 // needed definitions so the linker can see them. Hurts flexibility, but not
 // an issue since it's pretty straightforward.
 template class Vectors::Vector3D<int>;
+template class Vectors::Vector3D<float>;
 template class Vectors::Vector3D<double>;
 template class Vectors::Vector4D<int>;
+template class Vectors::Vector4D<float>;
 template class Vectors::Vector4D<double>;

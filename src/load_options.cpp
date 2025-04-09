@@ -112,6 +112,12 @@ namespace Options
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
+			else if (key == "geotype") 
+			{
+				auto set_func = std::bind(&Options::set_geotype, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
 			
 			else if (key == "imp_atom_num") 
 			{

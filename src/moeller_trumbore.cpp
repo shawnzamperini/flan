@@ -284,8 +284,10 @@ namespace MoellerTrumbore
         const double v4x, const double v4y, const double v4z)
     {
         // Break surface up into two triangles. v1->v2->v3 and v3->v4->v1.
-        triangle3 tri1 {{v1x, v1y, v1z}, {v2x, v2y, v2z}, {v3x, v3y, v3z}};
-        triangle3 tri2 {{v3x, v3y, v3z}, {v4x, v4y, v4z}, {v1x, v1y, v1z}};
+        //triangle3 tri1 {{v1x, v1y, v1z}, {v2x, v2y, v2z}, {v3x, v3y, v3z}};
+        //triangle3 tri2 {{v3x, v3y, v3z}, {v4x, v4y, v4z}, {v1x, v1y, v1z}};
+        triangle3 tri1 {{v3x, v3y, v3z}, {v2x, v2y, v2z}, {v1x, v1y, v1z}};
+        triangle3 tri2 {{v1x, v1y, v1z}, {v4x, v4y, v4z}, {v3x, v3y, v3z}};
 
         // Same triangles, but in reverse order
         //triangle3 tri3 {{v3x, v3y, v3z}, {v2x, v2y, v2z}, {v1x, v1y, v1z}};
