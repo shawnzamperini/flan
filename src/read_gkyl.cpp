@@ -474,8 +474,19 @@ namespace Gkyl
 	void read_data_pgkyl(const std::string& species, 
 		const std::string& data_type, grid_data_t& grid_data,
 		Vectors::Vector4D<T>& gkyl_data, const Options::Options& opts, 
-		const double species_mass_amu)
+		const double species_mass_amu, const bool force_load)
 	{
+		// Check if file already exists and load it to save time. Can force
+		// loading if we want to circumvent this.
+		std::string filename {"bkg_from_pgkyl_" + data_type + ".csv"};
+		if (std::filesystem::exists(filename) && !force_load)
+		{
+			std::cout << "Previous file located\n";
+			Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
+			gkyl_data.move_into_data(tmp_data);
+			return;
+		}
+
 		// Ensure READ_GKYL_PY is defined, returning it if so.
 		std::string read_gkyl_py {get_read_gkyl_py()};
 
@@ -551,9 +562,11 @@ namespace Gkyl
 	void read_elec_density(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_ne, const Options::Options& opts)
 	{
-		// Call pgkyl to load data into gkyl_ne
+		// Call pgkyl to load data into gkyl_ne. We force load the density
+		// since it gets called first, and we need at least one load to 
+		// load all the grid data.
 		read_data_pgkyl(opts.gkyl_elec_name(), "density", grid_data, gkyl_ne, 
-			opts);
+			opts, 0, true);
 	}
 
 	template <typename T>
@@ -700,8 +713,7 @@ namespace Gkyl
 			std::filesystem::exists(eY_fname) &&
 			std::filesystem::exists(eZ_fname)))
 		{
-			std::cout << "Electric field files located. Skipping "
-				<< "calculation.\n";
+			std::cout << "Previous file located\n";
 		}
 		else
 		{
@@ -789,6 +801,7 @@ namespace Gkyl
 		// Loop through every x, y, z value to calculate each X, Y, Z
 		for (int i {}; i < dim1; ++i)
 		{
+			std::cout << i+1 << "/" << dim1 << '\n';
 			for (int j {}; j < dim2; ++j)
 			{
 				for (int k {}; k < dim3; ++k)

@@ -114,6 +114,7 @@ def calc_elec_field_3d(XYZ, pot):
 	elec_Z = np.zeros(pot.shape)
 
 	# Go through one frame at a time
+	# To-do: Parallelize this loop, probably with numba
 	print("Calculating potential gradient for each frame...")
 	for t in tqdm(range(pot.shape[0])):
 		for i in range(pot.shape[1]):

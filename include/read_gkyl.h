@@ -128,7 +128,7 @@ namespace Gkyl
 	void read_data_pgkyl(const std::string& species, 
 		const std::string& data_type, grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_data, const Options::Options& opts, 
-		const double species_mass_amu=0);
+		const double species_mass_amu=0, const bool force_load=false);
 
 	// Calcuate the electric field using the gradient of gkyl_vp. This must
 	// be run after read_potential.

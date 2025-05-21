@@ -26,7 +26,7 @@ namespace VarianceReduction
 		// Variance reduction (particle splitting) is done if the particle is
 		// in a low-count region, defined by whatever is passed in for
 		// imp_var_reduct_counts.
-		if (imp_stats.get_counts()(tidx, xidx, yidx, zidx) < 
+		if (imp_stats.get_counts()(tidx, xidx, yidx, zidx) <= 
 			imp_var_reduct_counts[tidx])
 		{
 			//std::cout << "Low-count region detected\n";

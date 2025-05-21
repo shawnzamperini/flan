@@ -134,6 +134,8 @@ namespace Options
 			if (imp_iz_recomb == "off") m_imp_iz_recomb_int = 0;
 			else if (imp_iz_recomb == "on") m_imp_iz_recomb_int = 1;
 		}
+	void Options::set_print_interval(int print_interval) 
+		{m_print_interval = print_interval;}
 	void Options::set_openadas_root(std::string openadas_root) 
 		{m_openadas_root = openadas_root;}
 	void Options::set_openadas_year(int openadas_year) 
@@ -206,6 +208,8 @@ namespace Options
 		{return m_imp_xbound_buffer;}
 	const std::string& Options::imp_iz_recomb() const 
 		{return m_imp_iz_recomb;}
+	const int Options::print_interval() const 
+		{return m_print_interval;}
 	const std::string& Options::openadas_root() const 
 		{return m_openadas_root;}
 	const int Options::openadas_year() const 

@@ -72,6 +72,7 @@ namespace Options
 		std::string m_imp_vel_stats                {"off"};
 		double m_imp_xbound_buffer                   {0.0};
 		std::string m_imp_iz_recomb                 {"on"};
+		int m_print_interval                          {10};
 
 		// OpenADAS options
 		std::string m_openadas_root          {"undefined"};
@@ -133,6 +134,7 @@ namespace Options
 		void set_imp_vel_stats(std::string imp_vel_stats);
 		void set_imp_xbound_buffer(double imp_xbound_buffer);
 		void set_imp_iz_recomb(std::string imp_iz_recomb);
+		void set_print_interval(int print_interval);
 		void set_openadas_root(std::string openadas_root);
 		void set_openadas_year(int openadas_year);
 		void set_mapc2p(Mapc2p_ptr mapc2p);
@@ -170,6 +172,7 @@ namespace Options
 		const std::string& imp_vel_stats() const;
 		const double imp_xbound_buffer() const;
 		const std::string& imp_iz_recomb() const;
+		const int print_interval() const;
 		const std::string& openadas_root() const;
 		const int openadas_year() const;
 		const Mapc2p_ptr mapc2p() const;

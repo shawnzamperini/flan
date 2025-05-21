@@ -266,6 +266,13 @@ namespace Options
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
+
+			else if (key == "print_interval") 
+			{
+				auto set_func = std::bind(&Options::set_print_interval, &opts, 
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
 			
 			else if (key == "openadas_root") 
 			{

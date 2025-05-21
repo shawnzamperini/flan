@@ -47,9 +47,11 @@ namespace Impurity
 		// super subtle yet extremely important and can have surprisingly
 		// huge and confusing implication if you neglect it. I lost years off 
 		// my life figuring this out.
-		int xidx {get_nearest_cell_index(bkg.get_grid_x(), 
-			static_cast<BkgFPType>(start_x))};
-		return static_cast<double>(bkg.get_grid_x()[xidx]);
+		//int xidx {get_nearest_cell_index(bkg.get_grid_x(), 
+		//	static_cast<BkgFPType>(start_x))};
+		//return static_cast<double>(bkg.get_grid_x()[xidx]);
+
+		return start_x;
 	}
 
 	double get_birth_y(const Background::Background& bkg, 
@@ -75,24 +77,40 @@ namespace Impurity
 		// super subtle yet extremely important and can have surprisingly
 		// huge and confusing implication if you neglect it. I lost years off 
 		// my life figuring this out.
-		int yidx {get_nearest_cell_index(bkg.get_grid_y(), 
-			static_cast<BkgFPType>(start_y))};
-		return static_cast<double>(bkg.get_grid_y()[yidx]);
+		//int yidx {get_nearest_cell_index(bkg.get_grid_y(), 
+		//	static_cast<BkgFPType>(start_y))};
+		//return static_cast<double>(bkg.get_grid_y()[yidx]);
+
+		return start_y;
 	}
 
 	double get_birth_z(const Background::Background& bkg,
 		const Options::Options& opts)
 	{
-		double start_z {opts.imp_zstart_val()};
+		double start_z {};
+		if (opts.imp_zstart_opt_int() == 0)
+		{
+			 start_z = opts.imp_zstart_val();
+		}
+
+		// Start between a range (here defaults to the full z-width of the 
+		// simulation volume).
+		else if (opts.imp_zstart_opt_int() == 1)
+		{
+			start_z = Random::get(static_cast<double>(bkg.get_z_min()), 
+				static_cast<double>(bkg.get_z_max()));
+		}
 
 		// We need to start the impurity at a grid node, otherwise the 
 		// code may autolocate it somewhere further away. This is actually
 		// super subtle yet extremely important and can have surprisingly
 		// huge and confusing implication if you neglect it. I lost years off 
 		// my life figuring this out.
-		int zidx {get_nearest_cell_index(bkg.get_grid_z(), 
-			static_cast<BkgFPType>(start_z))};
-		return static_cast<double>(bkg.get_grid_z()[zidx]);
+		//int zidx {get_nearest_cell_index(bkg.get_grid_z(), 
+		//	static_cast<BkgFPType>(start_z))};
+		//return static_cast<double>(bkg.get_grid_z()[zidx]);
+
+		return start_z;
 	}
 
 	int get_birth_charge(const Options::Options& opts)
@@ -219,9 +237,24 @@ namespace Impurity
 		//          ^
 		//        lower
 		//
-		// In this example, we want 1 returned, so we return 2 - 1 = 1. 
+		// In this example, we want 1 returned, so we return 2 - 1 = 1. If
+		// value is outside the range, return the index of the respective end
+		// of the vector.
+		int index = std::distance(grid_edges.begin(), lower);
+
+		// If less than everything, return the first cell.
 		if (lower == grid_edges.begin()) return 0;
-		else return lower - grid_edges.begin() - 1;
+
+		// If larger than everything, return the last cell. Note end() is the
+		// iterator that points past the last element of a vector, so to return
+		// the cell we need to subtract by 2. 
+		else if (lower == grid_edges.end()) 
+		{
+			return index - 2;
+		}
+
+		//else return lower - grid_edges.begin() - 1;
+		else return index - 1;
 	}
 
 	std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
@@ -356,15 +389,14 @@ namespace Impurity
 		const double fy, const double fz, const Options::Options& opts)
 	{
 		// A temporary thing
-		std::cerr << "Error! Variable time step is not working yet with new"
-			<< " geometry. Defaulting to input value.\n";
-		return opts.imp_time_step();
+		//std::cerr << "Error! Variable time step is not working yet with new"
+		//	<< " geometry. Defaulting to input value.\n";
+		//return opts.imp_time_step();
 
-		/*
 		// If impurity is at rest, just choose a very low number to kick
 		// things off.
-		double imp_v {std::sqrt(imp.get_vx()*imp.get_vx() 
-			+ imp.get_vy()*imp.get_vy() + imp.get_vz()*imp.get_vz())};
+		double imp_v {std::sqrt(imp.get_vX()*imp.get_vX() 
+			+ imp.get_vY()*imp.get_vY() + imp.get_vZ()*imp.get_vZ())};
 		if (imp_v < Constants::small)
 		{
 			return 1e-15;
@@ -372,8 +404,12 @@ namespace Impurity
 		else
 		{
 			// Calculate time step for reasonable transport calculation
-			double dt_trans {get_var_time_step_trans(imp, bkg, xidx, yidx, 
-				zidx, fx, fy, fz, opts)};
+			//double dt_trans {get_var_time_step_trans(imp, bkg, xidx, yidx, 
+			//	zidx, fx, fy, fz, opts)};
+
+			// Unsure how to calculate this, so just assign to whatever is 
+			// input.
+			double dt_trans {opts.imp_time_step()};
 
 			// Calculate time step for a reasonable collisions calculation
 			// (if necessary). Don't do this if the impurity is neutral, it
@@ -395,7 +431,6 @@ namespace Impurity
 
 			return dt_trans;
 		}
-		*/
 	}
 
 	// Returns true if particle intersects x boundary
@@ -1358,9 +1393,9 @@ namespace Impurity
 
 			// Calculate variable time step (if necessary). NOT TRUSTWORTHY
 			// YET AFTER UPGRADING PARTICLE FOLLOWING.
-			//if (opts.imp_time_step_opt_int() == 1) imp_time_step = 
-			//	get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fX, 
-			//	fY, fZ, opts);
+			if (opts.imp_time_step_opt_int() == 1) imp_time_step = 
+				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fX, 
+				fY, fZ, opts);
 
 			// Check for a collision
 			if (opts.imp_collisions_int() > 0)
@@ -1492,7 +1527,7 @@ namespace Impurity
 
 		// Print progress this many times
 		//constexpr int prog_interval {10};
-		constexpr int prog_interval {100};
+		const int prog_interval {opts.print_interval()};
 	
 		// Loop through one impurity at a time, tracking it from its birth
 		// time/location to the end. Dynamic scheduling likely the best here 
