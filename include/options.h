@@ -47,6 +47,7 @@ namespace Options
 
 		// Geometry options
 		std::string m_geotype                {"undefined"};
+		double m_lcfs_x                              {0.0};
 
 		// Impurity chracteristics
 		int m_imp_atom_num                            {74};
@@ -113,6 +114,7 @@ namespace Options
 		void set_gkyl_ion_mass_amu(double gkyl_ion_mass_amu);
 		void set_gkyl_file_type(std::string gkyl_file_type);
 		void set_geotype(std::string gkyl_file_type);
+		void set_lcfs_x(double lcfs_x);
 		void set_imp_atom_num(int imp_atom_num);
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
@@ -151,6 +153,7 @@ namespace Options
 		const double gkyl_ion_mass_amu() const;
 		const std::string& gkyl_file_type() const;
 		const std::string& geotype() const;
+		const double lcfs_x() const;
 		const int imp_atom_num() const;
 		const double imp_mass_amu() const;
 		const int imp_init_charge() const;

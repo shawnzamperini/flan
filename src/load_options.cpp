@@ -119,6 +119,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 			
+			else if (key == "lcfs_x") 
+			{
+				auto set_func = std::bind(&Options::set_lcfs_x, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "imp_atom_num") 
 			{
 				auto set_func = std::bind(&Options::set_imp_atom_num, &opts, 

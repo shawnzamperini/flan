@@ -847,11 +847,22 @@ namespace Impurity
         imp.set_y(imp.get_y() + dy);
         imp.set_z(imp.get_z() + dz);
 
-        // Bound checking (move to separate function). Absorbing x,z.
-        if (imp.get_x() < bkg.get_grid_x()[0] || 
-            imp.get_x() > bkg.get_grid_x().back()) return false;
-        if (imp.get_z() < bkg.get_grid_z()[0] || 
-            imp.get_z() > bkg.get_grid_z().back()) return false;
+        // Bound checking (move to separate function). 
+		// Absorbing at maximum x
+        //if (imp.get_x() < bkg.get_grid_x()[0] || 
+        //    imp.get_x() > bkg.get_grid_x().back()) return false;
+		if (imp.get_x() > bkg.get_grid_x().back()) return false;
+
+		// At minimum x move the particle to a random y,z cell. This is a
+		// rough approximation to entering the core and leaving it 
+		// somewhere else.
+		else if (imp.get_x() < bkg.get_grid_x()[0])
+		{
+			imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
+				static_cast<double>(bkg.get_y_max())));
+			imp.set_z(Random::get(static_cast<double>(bkg.get_z_min()), 
+				static_cast<double>(bkg.get_z_max())));
+		}
 
         // Periodic y boundary
         if (imp.get_y() < bkg.get_grid_y()[0])
@@ -864,6 +875,26 @@ namespace Impurity
             imp.set_y(bkg.get_grid_y()[0] + (imp.get_y() 
 				- bkg.get_grid_y().back()));
         }
+
+		// Absorbing z boundary in SOL, periodic in core
+		if (imp.get_x() > opts.lcfs_x())
+		{
+			if (imp.get_z() < bkg.get_grid_z()[0] || 
+				imp.get_z() > bkg.get_grid_z().back()) return false;
+		}
+		else
+		{
+			if (imp.get_z() < bkg.get_grid_z()[0])
+			{
+				imp.set_z(bkg.get_grid_z().back() + (imp.get_z() 
+					- bkg.get_grid_z()[0]));
+			}
+			else if (imp.get_z() > bkg.get_grid_z().back())
+			{
+				imp.set_z(bkg.get_grid_z()[0] + (imp.get_z() 
+					- bkg.get_grid_z().back()));
+			}
+		}
 
 		return true;
 	}

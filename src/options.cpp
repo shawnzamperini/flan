@@ -58,6 +58,8 @@ namespace Options
 					<< '\n';
 			}
 		}
+	void Options::set_lcfs_x(double lcfs_x) 
+		{m_lcfs_x = lcfs_x;}
 	void Options::set_imp_atom_num(int imp_atom_num) 
 		{m_imp_atom_num = imp_atom_num;}
 	void Options::set_imp_mass_amu(double imp_mass_amu) 
@@ -166,6 +168,8 @@ namespace Options
 		{return m_gkyl_file_type;}
 	const std::string& Options::geotype() const 
 		{return m_geotype;}
+	const double Options::lcfs_x() const 
+		{return m_lcfs_x;}
 	const int Options::imp_atom_num() const 
 		{return m_imp_atom_num;}
 	const double Options::imp_mass_amu() const 
