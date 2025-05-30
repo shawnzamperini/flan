@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "background.h"
+#include "boris.h"
 #include "collisions.h"
 #include "constants.h"
 #include "flan_types.h"
@@ -135,49 +136,6 @@ namespace Impurity
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);
 	
-		//double R {std::sqrt(X_imp*X_imp + Y_imp*Y_imp)};
-		//std::cout << "Primary created at: " << X_imp << ", " << Y_imp << 
-		//	", " << Z_imp << "  (" << x_imp << ", " << y_imp << ", "
-		//	<< z_imp << ")  R = " << R << "\n";
-
-		/*
-		// It is prudent to do a sanity check here that the cell checking
-		// algorithm registers that the particle is in the cell it starts in.
-		// If this error trips, something is wrong with the algorithm.
-		// Since we start a particle at a specific grid node, it could end up
-		// in any of the four cells that connect to a node, so we check each
-		// of those.
-		int xidx {get_nearest_cell_index(bkg.get_grid_x(), x_imp)};
-		int yidx {get_nearest_cell_index(bkg.get_grid_y(), y_imp)};
-		int zidx {get_nearest_cell_index(bkg.get_grid_z(), z_imp)};
-
-		Impurity tmp_imp {0, x_imp, y_imp, z_imp, X_imp, Y_imp, Z_imp, vX_imp,
-			vY_imp, vZ_imp, 1.0, 1, 1.0, 74};
-		std::cout << "Starting xidx,yidx,zidx: " << xidx << ", " << yidx 
-			<< ", " << zidx << '\n';
-		bool in_cell {find_containing_cell(tmp_imp, bkg, xidx, yidx, zidx)};
-		std::cout << "Real xidx,yidx,zidx: " << xidx << ", " << yidx 
-			<< ", " << zidx << '\n';
-
-		in_cell = check_in_cell(bkg, X_imp, Y_imp, Z_imp, xidx, yidx, 
-			zidx, false);
-		if (!in_cell)
-		{
-			double R {std::sqrt(X_imp*X_imp + Y_imp*Y_imp)};
-			double phi {std::atan2(Y_imp, X_imp)};
-			std::cerr << "Error! Impurity failed sanity check on if the "
-				<< "cell checking algorithm registers the initial starting "
-				<< "cell correctly. This is a programming error and must be "
-				<< "fixed."
-				<< '\n' << "  (xidx,yidx,zidx) = (" << xidx << ", " << yidx 
-				<< ", " << zidx << ")\n"
-				<< "  (X,Y,Z) = (" << X_imp << ", " << Y_imp
-				<< ", " << Z_imp << ")\n"
-				<< "  (R,phi,Z) = (" << R << ", " << phi << ", " << Z_imp
-				<< ")\n";
-		}
-		*/
-
 		// Return a temporary Impurity object. Since these are primary Impurity
 		// objects they by definition start with weight = 1.0.
 		double imp_weight {1.0};
@@ -446,14 +404,18 @@ namespace Impurity
 		}
 
 		// Change in velocity over time step (this is just F = m * dv/dt)
-		double dvX {fX * imp_time_step / imp.get_mass()};
-		double dvY {fY * imp_time_step / imp.get_mass()};
-		double dvZ {fZ * imp_time_step / imp.get_mass()};
+		//double dvX {fX * imp_time_step / imp.get_mass()};
+		//double dvY {fY * imp_time_step / imp.get_mass()};
+		//double dvZ {fZ * imp_time_step / imp.get_mass()};
 
 		// Update particle velocity
-		imp.set_vX(imp.get_vX() + dvX);
-		imp.set_vY(imp.get_vY() + dvY);
-		imp.set_vZ(imp.get_vZ() + dvZ);
+		//imp.set_vX(imp.get_vX() + dvX);
+		//imp.set_vY(imp.get_vY() + dvY);
+		//imp.set_vZ(imp.get_vZ() + dvZ);
+
+		// Use Boris algorithm to update particle velocity
+		Boris::update_velocity(imp, bkg, imp_time_step, tidx, xidx, yidx, 
+			zidx);
 
 		// Update particle position in physical space.
 		imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
@@ -617,6 +579,13 @@ namespace Impurity
 		int zidx {get_nearest_cell_index(bkg.get_grid_z(), 
 			static_cast<BkgFPType>(imp.get_z()))};
 		find_containing_cell(imp, bkg, xidx, yidx, zidx);
+
+		// Boris algorithm: The velocity stored in the Impurity objects
+		// will actually be the velocity at a half timestep earlier, i.e.,
+		// at t - dt/2. So we still need to push the particle velocity
+		// back by half a time step.
+		Boris::update_velocity(imp, bkg, -imp_time_step / 2.0, tidx, xidx, 
+			yidx, zidx);
 
 		// Record starting position in statistics arrays
 		record_stats(imp_stats, imp, bkg, tidx, xidx, yidx, zidx, 
