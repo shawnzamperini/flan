@@ -1,6 +1,6 @@
 # This version is likely a bit too strict, it is just the one I built this with
 cmake_minimum_required(VERSION 3.31)
-project(flan VERSION 0.3.0)
+project(flan VERSION 0.4.0)
 
 # User must specify where the dependencies are stored via the FLANSOFT variable
 if(NOT DEFINED FLANSOFT)
