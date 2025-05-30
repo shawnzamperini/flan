@@ -112,7 +112,20 @@ namespace Options
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
+			else if (key == "geotype") 
+			{
+				auto set_func = std::bind(&Options::set_geotype, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
 			
+			else if (key == "lcfs_x") 
+			{
+				auto set_func = std::bind(&Options::set_lcfs_x, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "imp_atom_num") 
 			{
 				auto set_func = std::bind(&Options::set_imp_atom_num, &opts, 
@@ -259,6 +272,13 @@ namespace Options
 				auto set_func = std::bind(&Options::set_imp_iz_recomb, &opts, 
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "print_interval") 
+			{
+				auto set_func = std::bind(&Options::set_print_interval, &opts, 
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
 			}
 			
 			else if (key == "openadas_root") 

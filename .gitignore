@@ -8,3 +8,13 @@ install-deps/adios*
 install-deps/boost*
 install-deps/msgpack-c*
 *.swp
+*.tar.gz
+install-deps/hdf5-*
+install-deps/netcdf-c*
+install-deps/netcdf-cxx4*
+install-deps/zlib-*
+python/flan.egg-info*
+src/flan.egg-info*
+docs/html*
+docs/latex*
+Doxyfile.bak

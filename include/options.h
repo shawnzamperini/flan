@@ -45,6 +45,10 @@ namespace Options
 		double m_gkyl_ion_mass_amu                 {2.014};
 		std::string m_gkyl_file_type            {"binary"};
 
+		// Geometry options
+		std::string m_geotype                {"undefined"};
+		double m_lcfs_x                              {0.0};
+
 		// Impurity chracteristics
 		int m_imp_atom_num                            {74};
 		double m_imp_mass_amu                     {183.84};
@@ -69,6 +73,7 @@ namespace Options
 		std::string m_imp_vel_stats                {"off"};
 		double m_imp_xbound_buffer                   {0.0};
 		std::string m_imp_iz_recomb                 {"on"};
+		int m_print_interval                          {10};
 
 		// OpenADAS options
 		std::string m_openadas_root          {"undefined"};
@@ -91,6 +96,7 @@ namespace Options
 		int m_imp_time_step_opt_int {0};
 		int m_imp_vel_stats_int {0};
 		int m_imp_iz_recomb_int {0};
+		int m_geotype_int {0};
 
 	public:
 
@@ -107,6 +113,8 @@ namespace Options
 		void set_gkyl_elec_mass_amu(double gkyl_elec_mass_amu);
 		void set_gkyl_ion_mass_amu(double gkyl_ion_mass_amu);
 		void set_gkyl_file_type(std::string gkyl_file_type);
+		void set_geotype(std::string gkyl_file_type);
+		void set_lcfs_x(double lcfs_x);
 		void set_imp_atom_num(int imp_atom_num);
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
@@ -128,6 +136,7 @@ namespace Options
 		void set_imp_vel_stats(std::string imp_vel_stats);
 		void set_imp_xbound_buffer(double imp_xbound_buffer);
 		void set_imp_iz_recomb(std::string imp_iz_recomb);
+		void set_print_interval(int print_interval);
 		void set_openadas_root(std::string openadas_root);
 		void set_openadas_year(int openadas_year);
 		void set_mapc2p(Mapc2p_ptr mapc2p);
@@ -143,6 +152,8 @@ namespace Options
 		const double gkyl_elec_mass_amu() const;
 		const double gkyl_ion_mass_amu() const;
 		const std::string& gkyl_file_type() const;
+		const std::string& geotype() const;
+		const double lcfs_x() const;
 		const int imp_atom_num() const;
 		const double imp_mass_amu() const;
 		const int imp_init_charge() const;
@@ -164,6 +175,7 @@ namespace Options
 		const std::string& imp_vel_stats() const;
 		const double imp_xbound_buffer() const;
 		const std::string& imp_iz_recomb() const;
+		const int print_interval() const;
 		const std::string& openadas_root() const;
 		const int openadas_year() const;
 		const Mapc2p_ptr mapc2p() const;
@@ -176,6 +188,7 @@ namespace Options
 		const int imp_time_step_opt_int() const;
 		const int imp_vel_stats_int() const;
 		const int imp_iz_recomb_int() const;
+		const int geotype_int() const;
 	};
 
 }

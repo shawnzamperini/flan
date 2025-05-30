@@ -14,8 +14,6 @@ MPICXX=mpicxx
 # should be installed.
 BUILD_ADIOS2=
 BUILD_OPENMPI=
-BUILD_BOOST=
-BUILD_MSGPACK=
 BUILD_ZLIB=
 BUILD_HDF5=
 BUILD_NETCDF_C=
@@ -50,8 +48,7 @@ MPICXX                      C, C++, MPI C and MPI C++ compilers to use
                             Default is $HOME/flansoft
 --flanroot=DIR              Flanroot is the top-level directory of Flan. This
                             should be taken care of automatically and the
-                            user should nto need to specify it.
---boost-inc-dir             Directory where boost is installed (for msgpack)
+                            user should not need to specify it.
 
 The following flags specify which libraries to build. By default, only
 builds libraries that haven't yet been built or can't be found. 
@@ -151,14 +148,6 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_ADIOS2="$value"
       ;;
-   --build-boost)
-      [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_BOOST="$value"
-      ;;
-   --build-msgpack)
-      [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_MSGPACK="$value"
-      ;;
    --build-zlib)
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_ZLIB="$value"
@@ -228,22 +217,6 @@ build_adios2() {
     fi
 }
 
-build_boost() {
-   if [ "$BUILD_BOOST" = "yes" ]
-   then
-      echo "Building boost"
-      ./build-boost.sh
-   fi
-}
-
-build_msgpack() {
-   if [ "$BUILD_MSGPACK" = "yes" ]
-   then
-      echo "Building msgpack"
-      ./build-msgpack.sh
-   fi
-}
-
 build_zlib() {
    if [ "$BUILD_ZLIB" = "yes" ]
    then
@@ -288,8 +261,6 @@ echo "Installations will be in $PREFIX"
 
 # On the chopping block
 #build_adios2
-#build_boost
-#build_msgpack
 
 # Order matters for these four
 build_zlib  # HDF5 (and thus netcdf-c) dependency
@@ -297,4 +268,5 @@ build_hdf5  # netcdf-c dependency
 build_netcdf-c
 build_netcdf-cxx
 
+# Order not important for these
 setup_conda_env

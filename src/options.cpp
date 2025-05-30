@@ -1,6 +1,8 @@
 /**
 * @file options.cpp
 */
+#include <iostream>
+#include <string>
 #include <tuple>
 
 #include "options.h"
@@ -45,6 +47,19 @@ namespace Options
 		{m_gkyl_ion_mass_amu = gkyl_ion_mass_amu;}
 	void Options::set_gkyl_file_type(std::string gkyl_file_type) 
 		{m_gkyl_file_type = gkyl_file_type;}
+	void Options::set_geotype(std::string geotype) 
+		{
+			m_geotype = geotype;
+			if (geotype == "simple helical") m_geotype_int = 0;
+			else if (geotype == "toroidal") m_geotype_int = 1;
+			else
+			{
+				std::cerr << "Error! geotype not recognized: " << geotype 
+					<< '\n';
+			}
+		}
+	void Options::set_lcfs_x(double lcfs_x) 
+		{m_lcfs_x = lcfs_x;}
 	void Options::set_imp_atom_num(int imp_atom_num) 
 		{m_imp_atom_num = imp_atom_num;}
 	void Options::set_imp_mass_amu(double imp_mass_amu) 
@@ -62,6 +77,11 @@ namespace Options
 			m_imp_ystart_opt = imp_ystart_opt;
 			if (imp_ystart_opt == "single_value") m_imp_ystart_opt_int = 0;
 			else if (imp_ystart_opt == "range") m_imp_ystart_opt_int = 1;
+			else
+			{
+				std::cerr << "Error! imp_ystart_opt not recognized: " 
+					<< imp_ystart_opt << '\n';
+			}
 		}
 	void Options::set_imp_ystart_val(double imp_ystart_val) 
 		{m_imp_ystart_val = imp_ystart_val;}
@@ -116,6 +136,8 @@ namespace Options
 			if (imp_iz_recomb == "off") m_imp_iz_recomb_int = 0;
 			else if (imp_iz_recomb == "on") m_imp_iz_recomb_int = 1;
 		}
+	void Options::set_print_interval(int print_interval) 
+		{m_print_interval = print_interval;}
 	void Options::set_openadas_root(std::string openadas_root) 
 		{m_openadas_root = openadas_root;}
 	void Options::set_openadas_year(int openadas_year) 
@@ -144,6 +166,10 @@ namespace Options
 		{return m_gkyl_ion_mass_amu;}
 	const std::string& Options::gkyl_file_type() const 
 		{return m_gkyl_file_type;}
+	const std::string& Options::geotype() const 
+		{return m_geotype;}
+	const double Options::lcfs_x() const 
+		{return m_lcfs_x;}
 	const int Options::imp_atom_num() const 
 		{return m_imp_atom_num;}
 	const double Options::imp_mass_amu() const 
@@ -186,6 +212,8 @@ namespace Options
 		{return m_imp_xbound_buffer;}
 	const std::string& Options::imp_iz_recomb() const 
 		{return m_imp_iz_recomb;}
+	const int Options::print_interval() const 
+		{return m_print_interval;}
 	const std::string& Options::openadas_root() const 
 		{return m_openadas_root;}
 	const int Options::openadas_year() const 
@@ -208,6 +236,8 @@ namespace Options
 		{return m_imp_vel_stats_int;}
 	const int Options::imp_iz_recomb_int() const
 		{return m_imp_iz_recomb_int;}
+	const int Options::geotype_int() const
+		{return m_geotype_int;}
 	
 
 }

@@ -14,6 +14,7 @@
 #include "background.h"
 #include "collisions.h"
 #include "constants.h"
+#include "flan_types.h"
 #include "impurity.h"
 #include "impurity_stats.h"
 #include "impurity_transport.h"
@@ -28,41 +29,89 @@ namespace Impurity
 {
 	double get_birth_t(const Background::Background& bkg)
 	{
-		return Random::get(bkg.get_t_min(), bkg.get_t_max());
+		// The random get uses doubles, so need to make sure we are passing
+		// double if float is used for BkgFPType
+		return Random::get(static_cast<double>(bkg.get_t_min()), 
+			static_cast<double>(bkg.get_t_max()));
 	}
 
 	double get_birth_x(const Background::Background& bkg,
 		const Options::Options& opts)
 	{	
 		// Uniformily distributed between xmin, xmax.
-		return Random::get(opts.imp_xmin(), opts.imp_xmax());
+		double start_x {Random::get(opts.imp_xmin(), opts.imp_xmax())};
+
+		// We need to start the impurity at a grid node, otherwise the 
+		// code may autolocate it somewhere further away. This is actually
+		// super subtle yet extremely important and can have surprisingly
+		// huge and confusing implication if you neglect it. I lost years off 
+		// my life figuring this out.
+		//int xidx {get_nearest_cell_index(bkg.get_grid_x(), 
+		//	static_cast<BkgFPType>(start_x))};
+		//return static_cast<double>(bkg.get_grid_x()[xidx]);
+
+		return start_x;
 	}
 
 	double get_birth_y(const Background::Background& bkg, 
 		const Options::Options& opts)
 	{
 		// Start at specific point
+		double start_y {};
 		if (opts.imp_ystart_opt_int() == 0)
 		{
-			return opts.imp_ystart_val();
+			 start_y = opts.imp_ystart_val();
 		}
 
 		// Start between a range (here defaults to the full y-width of the 
 		// simulation volume).
 		else if (opts.imp_ystart_opt_int() == 1)
 		{
-			return Random::get(bkg.get_y_min(), bkg.get_y_max());
+			start_y = Random::get(static_cast<double>(bkg.get_y_min()), 
+				static_cast<double>(bkg.get_y_max()));
 		}
 		
-		return 0.0;
+		// We need to start the impurity at a grid node, otherwise the 
+		// code may autolocate it somewhere further away. This is actually
+		// super subtle yet extremely important and can have surprisingly
+		// huge and confusing implication if you neglect it. I lost years off 
+		// my life figuring this out.
+		//int yidx {get_nearest_cell_index(bkg.get_grid_y(), 
+		//	static_cast<BkgFPType>(start_y))};
+		//return static_cast<double>(bkg.get_grid_y()[yidx]);
+
+		return start_y;
 	}
 
 	double get_birth_z(const Background::Background& bkg,
 		const Options::Options& opts)
 	{
-		return opts.imp_zstart_val();
+		double start_z {};
+		if (opts.imp_zstart_opt_int() == 0)
+		{
+			 start_z = opts.imp_zstart_val();
+		}
+
+		// Start between a range (here defaults to the full z-width of the 
+		// simulation volume).
+		else if (opts.imp_zstart_opt_int() == 1)
+		{
+			start_z = Random::get(static_cast<double>(bkg.get_z_min()), 
+				static_cast<double>(bkg.get_z_max()));
+		}
+
+		// We need to start the impurity at a grid node, otherwise the 
+		// code may autolocate it somewhere further away. This is actually
+		// super subtle yet extremely important and can have surprisingly
+		// huge and confusing implication if you neglect it. I lost years off 
+		// my life figuring this out.
+		//int zidx {get_nearest_cell_index(bkg.get_grid_z(), 
+		//	static_cast<BkgFPType>(start_z))};
+		//return static_cast<double>(bkg.get_grid_z()[zidx]);
+
+		return start_z;
 	}
-	
+
 	int get_birth_charge(const Options::Options& opts)
 	{
 		return opts.imp_init_charge();
@@ -76,21 +125,66 @@ namespace Impurity
 		double x_imp = get_birth_x(bkg, opts);
 		double y_imp = get_birth_y(bkg, opts);
 		double z_imp = get_birth_z(bkg, opts);
+		auto [X_imp, Y_imp, Z_imp] = opts.mapc2p()(x_imp, y_imp, z_imp);
 
 		// Assume starting at rest, but if this ever changes do it here
-		double vx_imp {0.0};
-		double vy_imp {0.0};
-		double vz_imp {0.0};
+		double vX_imp {0.0};
+		double vY_imp {0.0};
+		double vZ_imp {0.0};
 
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);
 	
+		//double R {std::sqrt(X_imp*X_imp + Y_imp*Y_imp)};
+		//std::cout << "Primary created at: " << X_imp << ", " << Y_imp << 
+		//	", " << Z_imp << "  (" << x_imp << ", " << y_imp << ", "
+		//	<< z_imp << ")  R = " << R << "\n";
+
+		/*
+		// It is prudent to do a sanity check here that the cell checking
+		// algorithm registers that the particle is in the cell it starts in.
+		// If this error trips, something is wrong with the algorithm.
+		// Since we start a particle at a specific grid node, it could end up
+		// in any of the four cells that connect to a node, so we check each
+		// of those.
+		int xidx {get_nearest_cell_index(bkg.get_grid_x(), x_imp)};
+		int yidx {get_nearest_cell_index(bkg.get_grid_y(), y_imp)};
+		int zidx {get_nearest_cell_index(bkg.get_grid_z(), z_imp)};
+
+		Impurity tmp_imp {0, x_imp, y_imp, z_imp, X_imp, Y_imp, Z_imp, vX_imp,
+			vY_imp, vZ_imp, 1.0, 1, 1.0, 74};
+		std::cout << "Starting xidx,yidx,zidx: " << xidx << ", " << yidx 
+			<< ", " << zidx << '\n';
+		bool in_cell {find_containing_cell(tmp_imp, bkg, xidx, yidx, zidx)};
+		std::cout << "Real xidx,yidx,zidx: " << xidx << ", " << yidx 
+			<< ", " << zidx << '\n';
+
+		in_cell = check_in_cell(bkg, X_imp, Y_imp, Z_imp, xidx, yidx, 
+			zidx, false);
+		if (!in_cell)
+		{
+			double R {std::sqrt(X_imp*X_imp + Y_imp*Y_imp)};
+			double phi {std::atan2(Y_imp, X_imp)};
+			std::cerr << "Error! Impurity failed sanity check on if the "
+				<< "cell checking algorithm registers the initial starting "
+				<< "cell correctly. This is a programming error and must be "
+				<< "fixed."
+				<< '\n' << "  (xidx,yidx,zidx) = (" << xidx << ", " << yidx 
+				<< ", " << zidx << ")\n"
+				<< "  (X,Y,Z) = (" << X_imp << ", " << Y_imp
+				<< ", " << Z_imp << ")\n"
+				<< "  (R,phi,Z) = (" << R << ", " << phi << ", " << Z_imp
+				<< ")\n";
+		}
+		*/
+
 		// Return a temporary Impurity object. Since these are primary Impurity
 		// objects they by definition start with weight = 1.0.
 		double imp_weight {1.0};
 		double imp_mass {opts.imp_mass_amu() * Constants::amu_to_kg};
-		return {t_imp, x_imp, y_imp, z_imp, vx_imp, vy_imp, vz_imp, 
-			imp_weight, charge_imp, imp_mass, opts.imp_atom_num()};
+		return {t_imp, x_imp, y_imp, z_imp, X_imp, Y_imp, Z_imp, vX_imp, 
+			vY_imp, vZ_imp, imp_weight, charge_imp, imp_mass, 
+			opts.imp_atom_num()};
 	}
 
 	template <typename T>
@@ -142,39 +236,24 @@ namespace Impurity
 		//          ^
 		//        lower
 		//
-		// In this example, we want 1 returned, so we return 2 - 1 = 1. 
+		// In this example, we want 1 returned, so we return 2 - 1 = 1. If
+		// value is outside the range, return the index of the respective end
+		// of the vector.
+		int index = std::distance(grid_edges.begin(), lower);
+
+		// If less than everything, return the first cell.
 		if (lower == grid_edges.begin()) return 0;
-		else return lower - grid_edges.begin() - 1;
-	}
 
-	void lorentz_update(Impurity& imp, const Background::Background& bkg,
-		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx)
-	{
-		// Impurity's charge
-		double imp_q {imp.get_charge() * -Constants::charge_e};
+		// If larger than everything, return the last cell. Note end() is the
+		// iterator that points past the last element of a vector, so to return
+		// the cell we need to subtract by 2. 
+		else if (lower == grid_edges.end()) 
+		{
+			return index - 2;
+		}
 
-		//std::cout << "Ex, Ey, Ez = " << bkg.get_ex()(tidx, xidx, yidx, zidx)
-		//	<< bkg.get_ey()(tidx, xidx, yidx, zidx) 
-		//	<< bkg.get_ez()(tidx, xidx, yidx, zidx) << "\n";
-		//std::cout << "Bz = " << bkg.get_b()(tidx, xidx, yidx, zidx) << "\n";
-
-		// Each component of the Lorentz force
-		double fx {imp_q * (bkg.get_ex()(tidx, xidx, yidx, zidx) + 
-			imp.get_vy() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fy {imp_q * (bkg.get_ey()(tidx, xidx, yidx, zidx) + 
-			-imp.get_vx() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fz {imp_q * bkg.get_ez()(tidx, xidx, yidx, zidx)};
-
-		// Change in velocity over time step
-		double dvx {fx * imp_time_step / imp.get_mass()};
-		double dvy {fy * imp_time_step / imp.get_mass()};
-		double dvz {fz * imp_time_step / imp.get_mass()};
-
-		// Update particle velocity
-		imp.set_vx(imp.get_vx() + dvx);
-		imp.set_vy(imp.get_vy() + dvy);
-		imp.set_vz(imp.get_vz() + dvz);
+		//else return lower - grid_edges.begin() - 1;
+		else return index - 1;
 	}
 
 	std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
@@ -184,15 +263,33 @@ namespace Impurity
 		// Impurity's charge
 		double imp_q {imp.get_charge() * -Constants::charge_e};
 
-		// Each component of the Lorentz force
-		double fx {imp_q * (bkg.get_ex()(tidx, xidx, yidx, zidx) + 
-			imp.get_vy() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fy {imp_q * (bkg.get_ey()(tidx, xidx, yidx, zidx) + 
-			-imp.get_vx() * bkg.get_b()(tidx, xidx, yidx, zidx))};
-		double fz {imp_q * bkg.get_ez()(tidx, xidx, yidx, zidx)};
+		// Electric and magnetic field components
+		double eX {bkg.get_eX()(tidx, xidx, yidx, zidx)};
+		double eY {bkg.get_eY()(tidx, xidx, yidx, zidx)};
+		double eZ {bkg.get_eZ()(tidx, xidx, yidx, zidx)};
+		double bX {bkg.get_bX()(tidx, xidx, yidx, zidx)};
+		double bY {bkg.get_bY()(tidx, xidx, yidx, zidx)};
+		double bZ {bkg.get_bZ()(tidx, xidx, yidx, zidx)};
+
+		// Impurity velocity components
+		double vX {imp.get_vX()};
+		double vY {imp.get_vY()};
+		double vZ {imp.get_vZ()};
+
+		//std::cout << "  Ex, Ey, Ez = " << eX << ", " << eY << ", " << eZ 
+		//	<< "\n";
+		//std::cout << "  Bx, By, Bz, B = " << bX << ", " << bY << ", " << bZ 
+		//	<< ", " << std::sqrt(bX*bX + bY*bY + bZ*bZ) << "\n";
+		//std::cout << "  vX, vY, vZ = " << vX << ", " << vY << ", " << vZ 
+		//	<< "\n";
+
+		// Each component of the Lorentz force in physical space
+		double fX {imp_q * (eX + vY * bZ - vZ * bY)};
+		double fY {imp_q * (eY + vZ * bX - vX * bZ)};
+		double fZ {imp_q * (eZ + vX * bY - vY * bX)};
 
 		// Return as tuple
-		return std::make_tuple(fx, fy, fz);
+		return std::make_tuple(fX, fY, fZ);
 	}
 
 	double get_var_time_step_trans(Impurity& imp, 
@@ -200,6 +297,8 @@ namespace Impurity
 		const int zidx, const double fx, const double fy, const double fz,
 		const Options::Options& opts)
 	{
+		return opts.imp_time_step();
+		/*
 		// v0 = velocity before forces are applied
 		// v1 = v0 + dv = velocity after forces are applied
 		//
@@ -237,9 +336,12 @@ namespace Impurity
 		double zwidth {bkg.get_grid_z()[zidx+1] - bkg.get_grid_z()[zidx]};
 		double min_width {std::min({xwidth, ywidth, zwidth})};
 		
+		// Don't forget to sqrt it.
+		min_width = std::sqrt(min_width);
+
 		// Velocity and force magnitudes
-		double v {std::sqrt(imp.get_vx()*imp.get_vx() 
-			+ imp.get_vy()*imp.get_vy() + imp.get_vz()*imp.get_vz())};  
+		double v {std::sqrt(imp.get_vX()*imp.get_vX() 
+			+ imp.get_vY()*imp.get_vY() + imp.get_vZ()*imp.get_vZ())};  
 		double f {std::sqrt(fx*fx + fy*fy + fz*fz)};
 
 		// The force can be zero if the particle has recombined to a
@@ -277,6 +379,7 @@ namespace Impurity
 			dt = opts.imp_time_step_min();
 		}
 		return dt;
+		*/
 	}
 
 	double get_var_time_step(Impurity& imp, 
@@ -284,10 +387,15 @@ namespace Impurity
 		const int xidx, const int yidx, const int zidx, const double fx, 
 		const double fy, const double fz, const Options::Options& opts)
 	{
+		// A temporary thing
+		//std::cerr << "Error! Variable time step is not working yet with new"
+		//	<< " geometry. Defaulting to input value.\n";
+		//return opts.imp_time_step();
+
 		// If impurity is at rest, just choose a very low number to kick
 		// things off.
-		double imp_v {std::sqrt(imp.get_vx()*imp.get_vx() 
-			+ imp.get_vy()*imp.get_vy() + imp.get_vz()*imp.get_vz())};
+		double imp_v {std::sqrt(imp.get_vX()*imp.get_vX() 
+			+ imp.get_vY()*imp.get_vY() + imp.get_vZ()*imp.get_vZ())};
 		if (imp_v < Constants::small)
 		{
 			return 1e-15;
@@ -295,8 +403,12 @@ namespace Impurity
 		else
 		{
 			// Calculate time step for reasonable transport calculation
-			double dt_trans {get_var_time_step_trans(imp, bkg, xidx, yidx, 
-				zidx, fx, fy, fz, opts)};
+			//double dt_trans {get_var_time_step_trans(imp, bkg, xidx, yidx, 
+			//	zidx, fx, fy, fz, opts)};
+
+			// Unsure how to calculate this, so just assign to whatever is 
+			// input.
+			double dt_trans {opts.imp_time_step()};
 
 			// Calculate time step for a reasonable collisions calculation
 			// (if necessary). Don't do this if the impurity is neutral, it
@@ -320,24 +432,108 @@ namespace Impurity
 		}
 	}
 
-	void step(Impurity& imp, const double fx, const double fy, const double fz, 
-		const double imp_time_step)
+	bool step(Impurity& imp, const double fX, const double fY, const double fZ, 
+		const double imp_time_step, const Background::Background& bkg,
+		const Options::Options& opts, const int tidx, int& xidx, int& yidx, 
+		int& zidx)
 	{
+		// If we've run past the time range covered by the background plasma
+		// then we're done
+		imp.set_t(imp.get_t() + imp_time_step);
+		if (imp.get_t() > bkg.get_t_max())
+		{
+			return false;
+		}
+
 		// Change in velocity over time step (this is just F = m * dv/dt)
-		double dvx {fx * imp_time_step / imp.get_mass()};
-		double dvy {fy * imp_time_step / imp.get_mass()};
-		double dvz {fz * imp_time_step / imp.get_mass()};
+		double dvX {fX * imp_time_step / imp.get_mass()};
+		double dvY {fY * imp_time_step / imp.get_mass()};
+		double dvZ {fZ * imp_time_step / imp.get_mass()};
 
 		// Update particle velocity
-		imp.set_vx(imp.get_vx() + dvx);
-		imp.set_vy(imp.get_vy() + dvy);
-		imp.set_vz(imp.get_vz() + dvz);
+		imp.set_vX(imp.get_vX() + dvX);
+		imp.set_vY(imp.get_vY() + dvY);
+		imp.set_vZ(imp.get_vZ() + dvZ);
 
-		// Update particle time and position
-		imp.set_t(imp.get_t() + imp_time_step);
-		imp.set_x(imp.get_x() + imp.get_vx() * imp_time_step);
-		imp.set_y(imp.get_y() + imp.get_vy() * imp_time_step);
-		imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);
+		// Update particle position in physical space.
+		imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
+		imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
+		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
+
+        // Using the metric coefficients, update the particle position in 
+        // computational space. The equation is derived from Dhaeseleer 2.4.2.
+        // The equations are:
+        //   dx = g00*dX + g10*dY + g20*dZ
+        //   dy = g01*dX + g11*dY + g21*dZ
+        //   dz = g02*dX + g12*dY + g22*dZ
+        // Where I've already accounted for the fact that gij is symmetric and
+        // swapped variables according (e.g., gij01 = gij10). 
+        double dX {imp.get_X() - imp.get_prevX()};
+        double dY {imp.get_Y() - imp.get_prevY()};
+        double dZ {imp.get_Z() - imp.get_prevZ()};
+        double dx {bkg.get_gij_00()(xidx, yidx, zidx) * dX
+            + bkg.get_gij_01()(xidx, yidx, zidx) * dY 
+            + bkg.get_gij_02()(xidx, yidx, zidx) * dZ};
+        double dy {bkg.get_gij_01()(xidx, yidx, zidx) * dX
+            + bkg.get_gij_11()(xidx, yidx, zidx) * dY 
+            + bkg.get_gij_22()(xidx, yidx, zidx) * dZ};
+        double dz {bkg.get_gij_02()(xidx, yidx, zidx) * dX
+            + bkg.get_gij_12()(xidx, yidx, zidx) * dY 
+            + bkg.get_gij_22()(xidx, yidx, zidx) * dZ};
+        imp.set_x(imp.get_x() + dx);
+        imp.set_y(imp.get_y() + dy);
+        imp.set_z(imp.get_z() + dz);
+
+        // Bound checking (move to separate function). 
+		// Absorbing at maximum x
+        //if (imp.get_x() < bkg.get_grid_x()[0] || 
+        //    imp.get_x() > bkg.get_grid_x().back()) return false;
+		if (imp.get_x() > bkg.get_grid_x().back()) return false;
+
+		// At minimum x move the particle to a random y,z cell. This is a
+		// rough approximation to entering the core and leaving it 
+		// somewhere else.
+		else if (imp.get_x() < bkg.get_grid_x()[0])
+		{
+			imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
+				static_cast<double>(bkg.get_y_max())));
+			imp.set_z(Random::get(static_cast<double>(bkg.get_z_min()), 
+				static_cast<double>(bkg.get_z_max())));
+		}
+
+        // Periodic y boundary
+        if (imp.get_y() < bkg.get_grid_y()[0])
+        {
+            imp.set_y(bkg.get_grid_y().back() + (imp.get_y() 
+				- bkg.get_grid_y()[0]));
+        }
+        else if (imp.get_y() > bkg.get_grid_y().back())
+        {
+            imp.set_y(bkg.get_grid_y()[0] + (imp.get_y() 
+				- bkg.get_grid_y().back()));
+        }
+
+		// Absorbing z boundary in SOL, periodic in core
+		if (imp.get_x() > opts.lcfs_x())
+		{
+			if (imp.get_z() < bkg.get_grid_z()[0] || 
+				imp.get_z() > bkg.get_grid_z().back()) return false;
+		}
+		else
+		{
+			if (imp.get_z() < bkg.get_grid_z()[0])
+			{
+				imp.set_z(bkg.get_grid_z().back() + (imp.get_z() 
+					- bkg.get_grid_z()[0]));
+			}
+			else if (imp.get_z() > bkg.get_grid_z().back())
+			{
+				imp.set_z(bkg.get_grid_z()[0] + (imp.get_z() 
+					- bkg.get_grid_z().back()));
+			}
+		}
+
+		return true;
 	}
 
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
@@ -351,59 +547,31 @@ namespace Impurity
 		// weight times the time step. This is Monte Carlo stuff, best read
 		// the literature if you don't recognize it.
 		imp_stats.add_weights(tidx, xidx, yidx, zidx, 
-			imp.get_weight() * imp_time_step);
+			static_cast<BkgFPType>(imp.get_weight() * imp_time_step));
 
 		// Add each velocity component to the running sum for this location
 		if (imp_stats.get_vel_stats())
 		{
-			imp_stats.add_vels(tidx, xidx, yidx, zidx, imp.get_vx(), 
-				imp.get_vy(), imp.get_vz());
+			imp_stats.add_vels(tidx, xidx, yidx, zidx, 
+				static_cast<BkgFPType>(imp.get_vX()), 
+				static_cast<BkgFPType>(imp.get_vY()), 
+				static_cast<BkgFPType>(imp.get_vZ()));
 		}
 
 		// Add value of gyroradius to running sum at this location
-		imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
+		//imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
 	}
 
-	bool check_boundary(const Background::Background& bkg, Impurity& imp,
-		const Options::Options& opts)
+	void find_containing_cell(Impurity& imp, 
+		const Background::Background& bkg, 
+		int& xidx, int& yidx, int& zidx, const bool debug)
 	{
-		// If we've run past the time range covered by the background plasma
-		// then we're done
-		if (imp.get_t() > bkg.get_t_max()) return false; 
-
-		// The x boundaries are treated as absorbing. Could certianly add
-		// different options here in the future. There can be Gkeyll
-		// artifact near the x bounds, so there is an additional option to 
-		// consider anything within imp_xbound_buffer as absorbed.
-		//const double imp_xbound_buffer {Input::get_opt_dbl(
-		//	Input::imp_xbound_buffer)};
-		if (imp.get_x() <= bkg.get_grid_x()[0] + opts.imp_xbound_buffer())
-		{
-			return false;
-		}
-		if (imp.get_x() >= bkg.get_grid_x().back() - opts.imp_xbound_buffer()) 
-		{
-			return false;
-		}
-
-		// Absorbing z boundaries
-		if (imp.get_z() <= bkg.get_grid_z()[0]) return false;
-		if (imp.get_z() >= bkg.get_grid_z().back()) return false;
-
-		// Periodic y boundaries. This means if an impurity crosses one of
-		// these boundaries it will wrap around to the other one.
-		if (imp.get_y() < bkg.get_grid_y()[0])
-		{
-			double dy {imp.get_y() - bkg.get_grid_y()[0]};
-			imp.set_y(bkg.get_grid_y().back() + dy);
-		}
-		if (imp.get_y() > bkg.get_grid_y().back())
-		{
-			double dy {imp.get_y() - bkg.get_grid_y().back()};
-			imp.set_y(bkg.get_grid_y()[0] + dy);
-		}
-
-		return true;
+        xidx = get_nearest_cell_index(bkg.get_grid_x(),     
+            static_cast<BkgFPType>(imp.get_x()));
+        yidx = get_nearest_cell_index(bkg.get_grid_y(), 
+            static_cast<BkgFPType>(imp.get_y()));
+        zidx = get_nearest_cell_index(bkg.get_grid_z(), 
+            static_cast<BkgFPType>(imp.get_z()));
 	}
 
 	void collision(Impurity& imp, const Background::Background& bkg, 
@@ -425,36 +593,59 @@ namespace Impurity
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
 		int& recomb_warnings, std::vector<Impurity>& imps,
 		const std::vector<int> imp_var_reduct_counts, 
-		const bool imp_var_reduct_on, const Options::Options& opts)
+		const bool imp_var_reduct_on, 
+		const Options::Options& opts)
 	{
 		// Timestep of impurity transport simulation. It can be a constant
 		// value (set here), or set on the fly based on a reasonable criteria.
 		// Initialize it with whatever the minimum time step is.
-		//double imp_time_step {Input::get_opt_dbl(Input::imp_time_step_min)};
 		double imp_time_step {opts.imp_time_step_min()};
 		if (opts.imp_time_step_opt_int() == 0)
 		{
 			imp_time_step = opts.imp_time_step();
 		}
 
-		// For debugging purposes (only works with one thread)
-		//static int imp_id {0};
-		//imp_id++;
+		// Get nearest time index
+		int tidx {get_nearest_index(bkg.get_times(), 
+			static_cast<BkgFPType>(imp.get_t()))};
 
+		// Get x,y,z indices in computational space
+		int xidx {get_nearest_cell_index(bkg.get_grid_x(), 
+			static_cast<BkgFPType>(imp.get_x()))};
+		int yidx {get_nearest_cell_index(bkg.get_grid_y(), 
+			static_cast<BkgFPType>(imp.get_y()))};
+		int zidx {get_nearest_cell_index(bkg.get_grid_z(), 
+			static_cast<BkgFPType>(imp.get_z()))};
+		find_containing_cell(imp, bkg, xidx, yidx, zidx);
+
+		// Record starting position in statistics arrays
+		record_stats(imp_stats, imp, bkg, tidx, xidx, yidx, zidx, 
+			imp_time_step);
+
+		// For debugging purposes (only works with one thread)
+		static int imp_id {0};
+		imp_id++;
+		bool debug {false};
+
+		// Begin main particle following loop
 		bool continue_following {true};
 		while (continue_following)
 		{
 			// Get nearest time index
-			int tidx {get_nearest_index(bkg.get_times(), imp.get_t())};
+			int tidx {get_nearest_index(bkg.get_times(), 
+				static_cast<BkgFPType>(imp.get_t()))};
 
-			// Get x,y,z indices
-			int xidx {get_nearest_cell_index(bkg.get_grid_x(), imp.get_x())};
-			int yidx {get_nearest_cell_index(bkg.get_grid_y(), imp.get_y())};
-			int zidx {get_nearest_cell_index(bkg.get_grid_z(), imp.get_z())};
+			// Check for ionization or recombination
+			if (opts.imp_iz_recomb_int() > 0)
+			{
+				OpenADAS::ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, 
+					imp_time_step, tidx, xidx, yidx, zidx, ioniz_warnings, 
+					recomb_warnings);
+			}
 
 			// Calculate Lorentz force components. First loop these are all
 			// zero if particles start at rest.
-			auto [fx, fy, fz] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
+			auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
 				zidx);
 
 			// Variance reduction scheme. This may change the particle's 
@@ -469,10 +660,11 @@ namespace Impurity
 					imp_time_step);
 			}
 
-			// Calculate variable time step (if necessary)
+			// Calculate variable time step (if necessary). NOT TRUSTWORTHY
+			// YET AFTER UPGRADING PARTICLE FOLLOWING.
 			if (opts.imp_time_step_opt_int() == 1) imp_time_step = 
-				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fx, 
-				fy, fz, opts);
+				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fX, 
+				fY, fZ, opts);
 
 			// Check for a collision
 			if (opts.imp_collisions_int() > 0)
@@ -482,35 +674,59 @@ namespace Impurity
 			}
 
 			// Debugging
-			//std::cout << "id, tidx, q, t, x, y, z, dt, fx, fy, fz: " 
-			//	<< imp_id << ", " << tidx << ", "
-			//	<< imp.get_charge() << ", "<< imp.get_t() << ", " 
-			//	<< ", " << imp.get_x() << ", " << imp.get_y() 
-			//	<< ", " << imp.get_z() << ", " << imp_time_step 
-			//	<< ", " << fx << ", " << fy << ", " << fz << '\n';
-
-			// Update statistics. Need to do this after the time step is
-			// calculated (if it is), but before the particle moves into 
-			// a different cell in step.
-			record_stats(imp_stats, imp, bkg, tidx, xidx, yidx, zidx, 
-				imp_time_step);
-
-			// Last thing is move particle to a new location
-			//step(imp, imp_time_step);
-			step(imp, fx, fy, fz, imp_time_step);
-
-			// Check for ionization or recombination
-			if (opts.imp_iz_recomb_int() > 0)
+			if (debug)
 			{
-				OpenADAS::ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, 
-					imp_time_step, tidx, xidx, yidx, zidx, ioniz_warnings, 
-					recomb_warnings);
+				double R {std::sqrt(imp.get_X()*imp.get_X() 
+					+ imp.get_Y()*imp.get_Y() + imp.get_Z()*imp.get_Z())};
+				std::cout << "Before step\n";
+				std::cout << "  id, tidx, q, t, x, y, z, dt, fX, fY, fZ, " << 
+					"vX, vY, vZ, X, Y, Z, R: \n" << " " << imp_id << ", " 
+					<< tidx << ", " << imp.get_charge() << ", "<< imp.get_t() 
+					<< ", " << imp.get_x() << ", " << imp.get_y() << ", " 
+					<< imp.get_z() << ", " << imp_time_step << '\n' << "  " 
+					<< fX << ", " << fY << ", " << fZ << ", " << imp.get_vX() 
+					<< ", " << imp.get_vY() << ", " << imp.get_vZ() << ", "
+					<< imp.get_X() << ", " << imp.get_Y() << ", " 
+					<< imp.get_Z() << ", " << R << '\n' << tidx << " " 
+					<< xidx << " " << yidx << " " << zidx << '\n';
 			}
 
-			// Check for a terminating or boundary conditions
-			continue_following = check_boundary(bkg, imp, opts);
-		}
+			// Perform particle step, update time and tidx. The final location 
+			// of the particle could end up out of the grid. That's what the 
+			// following code does before recording stats.
+			continue_following = step(imp, fX, fY, fZ, imp_time_step, bkg, 
+				opts, tidx, xidx, yidx, zidx);
 
+			if (debug)
+			{
+				double R {std::sqrt(imp.get_X()*imp.get_X() 
+					+ imp.get_Y()*imp.get_Y() + imp.get_Z()*imp.get_Z())};
+				std::cout << "After step\n";
+				std::cout << "  id, tidx, q, t, x, y, z, dt, fX, fY, fZ, " << 
+					"vX, vY, vZ, X, Y, Z, R: \n" << " " << imp_id << ", " 
+					<< tidx << ", " << imp.get_charge() << ", "<< imp.get_t() 
+					<< ", " << imp.get_x() << ", " << imp.get_y() << ", " 
+					<< imp.get_z() << ", " << imp_time_step << '\n' << "  " 
+					<< fX << ", " << fY << ", " << fZ << ", " << imp.get_vX() 
+					<< ", " << imp.get_vY() << ", " << imp.get_vZ() << ", "
+					<< imp.get_X() << ", " << imp.get_Y() << ", " 
+					<< imp.get_Z() << ", " << R << '\n' << tidx << " " 
+					<< xidx << " " << yidx << " " << zidx << '\n';
+			}
+
+			// Update xidx, yidx, zidx with the new position
+			find_containing_cell(imp, bkg, xidx, yidx, zidx);
+			
+			// Record stats in the cell the particle ended in. Note: This is 
+			// only okay for constant time steps. If it is variable, then cells 
+			// that use small time steps could be unfairly influenced by 
+			// neighboring cells with larger time steps. We would need to 
+			// figure out how much of the particle's step was in each cell and 
+			// divide the weight up accordingly. Forgoing this for now, but 
+			// it's a future consideration.
+			if (continue_following) record_stats(imp_stats, imp, bkg, tidx, 
+				xidx, yidx, zidx, imp_time_step);
+		}
 	}
 
 	void print_ioniz_recomb_warn(int ioniz_warnings, int recomb_warnings)
@@ -534,7 +750,8 @@ namespace Impurity
 
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb, const Options::Options& opts)
+		const OpenADAS::OpenADAS& oa_recomb, 
+		const Options::Options& opts)
 	{
 		// Variance reduction requires ionization/recombination be on
 		//if (imp_var_reduct_on && !imp_iz_recomb_on)
@@ -566,7 +783,8 @@ namespace Impurity
 		}
 
 		// Print progress this many times
-		constexpr int prog_interval {10};
+		//constexpr int prog_interval {10};
+		const int prog_interval {opts.print_interval()};
 	
 		// Loop through one impurity at a time, tracking it from its birth
 		// time/location to the end. Dynamic scheduling likely the best here 
@@ -645,7 +863,8 @@ namespace Impurity
 				// Begin following Impurity
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
 					ioniz_warnings, recomb_warnings, imps,
-					imp_var_reduct_counts, imp_var_reduct_control, opts);
+					imp_var_reduct_counts, imp_var_reduct_control, 
+					opts);
 				//std::cout << "imps.size() = " << imps.size() << '\n';
 				++tot_imp_count;
 			}

@@ -6,28 +6,57 @@
 * are template instantiations needed for it to compile. 
 */
 #include <vector>
-#include "vectors.h"
+
 #include "background.h"
+#include "flan_types.h"
+#include "vectors.h"
 
 namespace Background
 {
 
 	// Accessors... I'll get around doxygen commenting these one day...
-	const std::vector<double>& Background::get_times() const {return m_times;}
-	const std::vector<double>& Background::get_x() const {return m_x;}
-	const std::vector<double>& Background::get_y() const {return m_y;}
-	const std::vector<double>& Background::get_z() const {return m_z;}
-	const std::vector<double>& Background::get_grid_x() const {return m_grid_x;}
-	const std::vector<double>& Background::get_grid_y() const {return m_grid_y;}
-	const std::vector<double>& Background::get_grid_z() const {return m_grid_z;}
-	const Vectors::Vector4D<double>& Background::get_ne() const {return m_ne;}
-	const Vectors::Vector4D<double>& Background::get_te() const {return m_te;}
-	const Vectors::Vector4D<double>& Background::get_ti() const {return m_ti;}
-	const Vectors::Vector4D<double>& Background::get_vp() const {return m_vp;}
-	const Vectors::Vector4D<double>& Background::get_b() const {return m_b;}
-	const Vectors::Vector4D<double>& Background::get_ex() const {return m_ex;}
-	const Vectors::Vector4D<double>& Background::get_ey() const {return m_ey;}
-	const Vectors::Vector4D<double>& Background::get_ez() const {return m_ez;}
+	const std::vector<BkgFPType>& Background::get_times() const {return m_times;}
+	const std::vector<BkgFPType>& Background::get_x() const {return m_x;}
+	const std::vector<BkgFPType>& Background::get_y() const {return m_y;}
+	const std::vector<BkgFPType>& Background::get_z() const {return m_z;}
+	const std::vector<BkgFPType>& Background::get_grid_x() const {return m_grid_x;}
+	const std::vector<BkgFPType>& Background::get_grid_y() const {return m_grid_y;}
+	const std::vector<BkgFPType>& Background::get_grid_z() const {return m_grid_z;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_ne() const {return m_ne;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_te() const {return m_te;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_ti() const {return m_ti;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_vp() const {return m_vp;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_bX() const {return m_bX;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_bY() const {return m_bY;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_bZ() const {return m_bZ;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_eX() const {return m_eX;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_eY() const {return m_eY;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_eZ() const {return m_eZ;}
+	const Vectors::Vector3D<BkgFPType>& Background::get_X() const {return m_X;}
+	const Vectors::Vector3D<BkgFPType>& Background::get_Y() const {return m_Y;}
+	const Vectors::Vector3D<BkgFPType>& Background::get_Z() const {return m_Z;}
+	const Vectors::Vector3D<BkgFPType>& Background::get_grid_X() const {return m_grid_X;}
+	const Vectors::Vector3D<BkgFPType>& Background::get_grid_Y() const {return m_grid_Y;}
+	const Vectors::Vector3D<BkgFPType>& Background::get_grid_Z() const {return m_grid_Z;}
+	const Vectors::Vector3D<BkgFPType>& Background::get_J() const {return m_J;}
+	const Vectors::Vector3D<BkgFPType>& Background::get_gij_00() const {
+        return m_gij_00;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_gij_01() const {
+        return m_gij_01;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_gij_02() const {
+        return m_gij_02;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_gij_11() const {
+        return m_gij_11;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_gij_12() const {
+        return m_gij_12;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_gij_22() const {
+        return m_gij_22;
+    }
 	int Background::get_dim1() const {return m_dim1;}
 	int Background::get_dim2() const {return m_dim2;}
 	int Background::get_dim3() const {return m_dim3;}
@@ -44,7 +73,7 @@ namespace Background
 				std::cerr << "Error! In Background, " << data << " has" 
 					<< " different dimensions from what already has been" 
 					<< " set. This indicates the data is not being read" 
-					<< "	in correctly or is from different Gkeyll runs."
+					<< " in correctly or is from different Gkeyll runs."
 					<< '\n';
 				std::cerr << "  Previous dim: m_dim" << dim_num << " = " 
 					<< m_dim << '\n';
@@ -90,84 +119,172 @@ namespace Background
 	}
 		
 	// Helper functions to get the start/end times of the simulation.
-	double Background::get_t_min() const {return m_times.front();}
-	double Background::get_t_max() const {return m_times.back();}
-	double Background::get_x_min() const {return m_x.front();}
-	double Background::get_x_max() const {return m_x.back();}
-	double Background::get_y_min() const {return m_y.front();}
-	double Background::get_y_max() const {return m_y.back();}
-	double Background::get_z_min() const {return m_z.front();}
-	double Background::get_z_max() const {return m_z.back();}
+	BkgFPType Background::get_t_min() const {return m_times.front();}
+	BkgFPType Background::get_t_max() const {return m_times.back();}
+	BkgFPType Background::get_x_min() const {return m_x.front();}
+	BkgFPType Background::get_x_max() const {return m_x.back();}
+	BkgFPType Background::get_y_min() const {return m_y.front();}
+	BkgFPType Background::get_y_max() const {return m_y.back();}
+	BkgFPType Background::get_z_min() const {return m_z.front();}
+	BkgFPType Background::get_z_max() const {return m_z.back();}
 
 	// Setters using move semantics. No idea if this is the proper
 	// way to do it but it works.
-	void Background::move_into_times(std::vector<double>& times)
+	void Background::move_into_times(std::vector<BkgFPType>& times)
 	{
 		m_times = std::move(times);	
 	}
-	void Background::move_into_x(std::vector<double>& x)
+	void Background::move_into_x(std::vector<BkgFPType>& x)
 	{
 		m_x = std::move(x);	
 	}
-	void Background::move_into_y(std::vector<double>& y)
+	void Background::move_into_y(std::vector<BkgFPType>& y)
 	{
 		m_y = std::move(y);	
 	}
-	void Background::move_into_z(std::vector<double>& z)
+	void Background::move_into_z(std::vector<BkgFPType>& z)
 	{
 		m_z = std::move(z);	
 	}
-	void Background::move_into_grid_x(std::vector<double>& grid_x)
+	void Background::move_into_grid_x(std::vector<BkgFPType>& grid_x)
 	{
 		m_grid_x = std::move(grid_x);	
 	}
-	void Background::move_into_grid_y(std::vector<double>& grid_y)
+	void Background::move_into_grid_y(std::vector<BkgFPType>& grid_y)
 	{
 		m_grid_y = std::move(grid_y);	
 	}
-	void Background::move_into_grid_z(std::vector<double>& grid_z)
+	void Background::move_into_grid_z(std::vector<BkgFPType>& grid_z)
 	{
 		m_grid_z = std::move(grid_z);	
 	}
-	void Background::move_into_ne(Vectors::Vector4D<double>& ne) 
+	void Background::move_into_ne(Vectors::Vector4D<BkgFPType>& ne) 
 	{
 		set_dims(ne, "ne");
 		m_ne.move_into_data(ne);
 	}
-	void Background::move_into_te(Vectors::Vector4D<double>& te) 
+	void Background::move_into_te(Vectors::Vector4D<BkgFPType>& te) 
 	{
 		set_dims(te, "te");
 		m_te.move_into_data(te);
 	}
-	void Background::move_into_ti(Vectors::Vector4D<double>& ti) 
+	void Background::move_into_ti(Vectors::Vector4D<BkgFPType>& ti) 
 	{
 		set_dims(ti, "ti");
 		m_ti.move_into_data(ti);
 	}
-	void Background::move_into_vp(Vectors::Vector4D<double>& vp) 
+	void Background::move_into_vp(Vectors::Vector4D<BkgFPType>& vp) 
 	{
 		set_dims(vp, "vp");
 		m_vp.move_into_data(vp);
 	}
-	void Background::move_into_b(Vectors::Vector4D<double>& b) 
+	void Background::move_into_bX(Vectors::Vector4D<BkgFPType>& bX) 
 	{
-		set_dims(b, "b");
-		m_b.move_into_data(b);
+		set_dims(bX, "bX");
+		m_bX.move_into_data(bX);
 	}
-	void Background::move_into_ex(Vectors::Vector4D<double>& ex) 
+	void Background::move_into_bY(Vectors::Vector4D<BkgFPType>& bY) 
 	{
-		set_dims(ex, "ex");
-		m_ex.move_into_data(ex);
+		set_dims(bY, "bY");
+		m_bY.move_into_data(bY);
 	}
-	void Background::move_into_ey(Vectors::Vector4D<double>& ey) 
+	void Background::move_into_bZ(Vectors::Vector4D<BkgFPType>& bZ) 
 	{
-		set_dims(ey, "ey");
-		m_ey.move_into_data(ey);
+		set_dims(bZ, "bZ");
+		m_bZ.move_into_data(bZ);
 	}
-	void Background::move_into_ez(Vectors::Vector4D<double>& ez) 
+	void Background::move_into_eX(Vectors::Vector4D<BkgFPType>& eX) 
 	{
-		set_dims(ez, "ez");
-		m_ez.move_into_data(ez);
+		set_dims(eX, "eX");
+		m_eX.move_into_data(eX);
+	}
+	void Background::move_into_eY(Vectors::Vector4D<BkgFPType>& eY) 
+	{
+		set_dims(eY, "eY");
+		m_eY.move_into_data(eY);
+	}
+	void Background::move_into_eZ(Vectors::Vector4D<BkgFPType>& eZ) 
+	{
+		set_dims(eZ, "eZ");
+		m_eZ.move_into_data(eZ);
+	}
+	void Background::move_into_X(Vectors::Vector3D<BkgFPType>& X) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(X, "X");
+		m_X.move_into_data(X);
+	}
+	void Background::move_into_Y(Vectors::Vector3D<BkgFPType>& Y) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(Y, "Y");
+		m_Y.move_into_data(Y);
+	}
+	void Background::move_into_Z(Vectors::Vector3D<BkgFPType>& Z) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(Z, "Z");
+		m_Z.move_into_data(Z);
+	}
+	void Background::move_into_grid_X(Vectors::Vector3D<BkgFPType>& grid_X) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(grid_X, "grid_X");
+		m_grid_X.move_into_data(grid_X);
+	}
+	void Background::move_into_grid_Y(Vectors::Vector3D<BkgFPType>& grid_Y) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(grid_Y, "grid_Y");
+		m_grid_Y.move_into_data(grid_Y);
+	}
+	void Background::move_into_grid_Z(Vectors::Vector3D<BkgFPType>& grid_Z) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(grid_Z, "grid_Z");
+		m_grid_Z.move_into_data(grid_Z);
+	}
+	void Background::move_into_J(Vectors::Vector3D<BkgFPType>& J) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(J, "J");
+		m_J.move_into_data(J);
+	}
+	void Background::move_into_gij_00(Vectors::Vector3D<BkgFPType>& gij_00) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(gij_00, "gij_00");
+		m_gij_00.move_into_data(gij_00);
+	}
+	void Background::move_into_gij_01(Vectors::Vector3D<BkgFPType>& gij_01) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(gij_01, "gij_01");
+		m_gij_01.move_into_data(gij_01);
+	}
+	void Background::move_into_gij_02(Vectors::Vector3D<BkgFPType>& gij_02) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(gij_02, "gij_02");
+		m_gij_02.move_into_data(gij_02);
+	}
+	void Background::move_into_gij_11(Vectors::Vector3D<BkgFPType>& gij_11) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(gij_11, "gij_11");
+		m_gij_11.move_into_data(gij_11);
+	}
+	void Background::move_into_gij_12(Vectors::Vector3D<BkgFPType>& gij_12) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(gij_12, "gij_12");
+		m_gij_12.move_into_data(gij_12);
+	}
+	void Background::move_into_gij_22(Vectors::Vector3D<BkgFPType>& gij_22) 
+	{
+		// Need a Vector3D version of set_dims
+		//set_dims(gij_22, "gij_22");
+		m_gij_22.move_into_data(gij_22);
 	}
 }
 
@@ -177,5 +294,5 @@ namespace Background
 // an issue since it's pretty straightforward.
 template void Background::Background::set_dims<int>(
 	Vectors::Vector4D<int>& v, const std::string_view data);
-template void Background::Background::set_dims<double>(
-	Vectors::Vector4D<double>& v, const std::string_view data);
+template void Background::Background::set_dims<BkgFPType>(
+	Vectors::Vector4D<BkgFPType>& v, const std::string_view data);

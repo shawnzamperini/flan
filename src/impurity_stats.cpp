@@ -4,15 +4,16 @@
 * @brief Class related to handling impurity transport statistics
 */
 
+#include <cmath>
 #include <numeric>
 #include <vector>
-#include <cmath>
 
-#include "vectors.h"
-#include "impurity_stats.h"
-#include "impurity.h"
 #include "background.h"
 #include "constants.h"
+#include "flan_types.h"
+#include "impurity.h"
+#include "impurity_stats.h"
+#include "vectors.h"
 
 namespace Impurity
 {
@@ -41,12 +42,12 @@ namespace Impurity
 		, m_dim3 {dim3}
 		, m_dim4 {dim4}
 		, m_counts (Vectors::Vector4D<int> {dim1, dim2, dim3, dim4})
-		, m_weights (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
-		, m_density (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
-		//, m_vx (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
-		//, m_vy (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
-		//, m_vz (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
-		, m_gyrorad (Vectors::Vector4D<double> {dim1, dim2, dim3, dim4})
+		, m_weights (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
+		, m_density (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
+		//, m_vx (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
+		//, m_vy (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
+		//, m_vz (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
+		, m_gyrorad (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 		, m_vel_stats {vel_stats}
 	{
 		// Issue: This code seems to not be correct, not sure how yet...
@@ -55,11 +56,11 @@ namespace Impurity
 		if (m_vel_stats)
 		{
 			//std::cout << "Allocating velocity arrays...\n";
-			m_vx.move_into_data(Vectors::Vector4D<double> {dim1, dim2, dim3, 
+			m_vX.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
 				dim4});
-			m_vy.move_into_data(Vectors::Vector4D<double> {dim1, dim2, dim3, 
+			m_vY.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
 				dim4});
-			m_vz.move_into_data(Vectors::Vector4D<double> {dim1, dim2, dim3, 
+			m_vZ.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
 				dim4});
 		}
 	}
@@ -75,61 +76,61 @@ namespace Impurity
 
 	/**
 	* @brief Accessor for weights data
-	* @return Vector4D<double>
+	* @return Vector4D<BkgFPType>
 	* @sa add_weights()
 	*
 	* add_weights() is used to add data into this vector
 	*/
-	Vectors::Vector4D<double>& Statistics::get_weights() {return m_weights;}
+	Vectors::Vector4D<BkgFPType>& Statistics::get_weights() {return m_weights;}
 
 	/**
 	* @brief Accessor for density data
-	* @return Vector4D<double>
+	* @return Vector4D<BkgFPType>
 	* @sa calc_density()
 	*
 	* calc_density() is used to fill this vector.
 	*/
-	Vectors::Vector4D<double>& Statistics::get_density() {return m_density;}
+	Vectors::Vector4D<BkgFPType>& Statistics::get_density() {return m_density;}
 
 	/**
 	* @brief Accessor for x velocity data
-	* @return Vector4D<double>
+	* @return Vector4D<BkgFPType>
 	* @sa calc_vels()
 	*
 	* calc_vels() is used to turn the data in this into an actual velocity.
 	* Before doing that it's just a collection of Monte Carlo type values.
 	*/
-	Vectors::Vector4D<double>& Statistics::get_vx() {return m_vx;}
+	Vectors::Vector4D<BkgFPType>& Statistics::get_vX() {return m_vX;}
 
 	/**
 	* @brief Accessor for y velocity data
-	* @return Vector4D<double>
+	* @return Vector4D<BkgFPType>
 	* @sa calc_vels()
 	*
 	* calc_vels() is used to turn the data in this into an actual velocity.
 	* Before doing that it's just a collection of Monte Carlo type values.
 	*/
-	Vectors::Vector4D<double>& Statistics::get_vy() {return m_vy;}
+	Vectors::Vector4D<BkgFPType>& Statistics::get_vY() {return m_vY;}
 
 	/**
 	* @brief Accessor for z velocity data
-	* @return Vector4D<double>
+	* @return Vector4D<BkgFPType>
 	* @sa calc_vels()
 	*
 	* calc_vels() is used to turn the data in this into an actual velocity.
 	* Before doing that it's just a collection of Monte Carlo type values.
 	*/
-	Vectors::Vector4D<double>& Statistics::get_vz() {return m_vz;}
+	Vectors::Vector4D<BkgFPType>& Statistics::get_vZ() {return m_vZ;}
 
 	/**
 	* @brief Accessor for gyroradius data
-	* @return Vector4D<double>
+	* @return Vector4D<BkgFPType>
 	* @sa calc_gyrorad()
 	*
 	* calc_gyrorad() is used to turn the aggregated data into average
 	* gyroradius values at each location.
 	*/
-	Vectors::Vector4D<double>& Statistics::get_gyrorad() {return m_gyrorad;}
+	Vectors::Vector4D<BkgFPType>& Statistics::get_gyrorad() {return m_gyrorad;}
 
 	/**
 	* @brief Accessor for if velocity stats are being tracked
@@ -156,9 +157,9 @@ namespace Impurity
 		// Only do this is we're tracking velocity stats
 		if (m_vel_stats)
 		{
-			ret_stats.m_vx = m_vx + other.m_vx;
-			ret_stats.m_vy = m_vy + other.m_vy;
-			ret_stats.m_vz = m_vz + other.m_vz;
+			ret_stats.m_vX = m_vX + other.m_vX;
+			ret_stats.m_vY = m_vY + other.m_vY;
+			ret_stats.m_vZ = m_vZ + other.m_vZ;
 		}
 
 		return ret_stats;
@@ -188,7 +189,7 @@ namespace Impurity
 	* @param value Weight to add to the cell
 	*/
 	void Statistics::add_weights(const int tidx, const int xidx, 
-		const int yidx, const int zidx, const double value)
+		const int yidx, const int zidx, const BkgFPType value)
 	{
 		m_weights(tidx, xidx, yidx, zidx) += value;
 	}
@@ -197,12 +198,12 @@ namespace Impurity
 	*
 	*/
 	void Statistics::add_vels(const int tidx, const int xidx, const int yidx,
-		const int zidx, const double vx, const double vy, const double vz)
+		const int zidx, const BkgFPType vX, const BkgFPType vY, const BkgFPType vZ)
 	{
 		// Add velocities to the running total at each cell location
-		m_vx(tidx, xidx, yidx, zidx) += vx;
-		m_vy(tidx, xidx, yidx, zidx) += vy;
-		m_vz(tidx, xidx, yidx, zidx) += vz;
+		m_vX(tidx, xidx, yidx, zidx) += vX;
+		m_vY(tidx, xidx, yidx, zidx) += vY;
+		m_vZ(tidx, xidx, yidx, zidx) += vZ;
 	}
 
 	/**
@@ -219,17 +220,23 @@ namespace Impurity
 		const int yidx, const int zidx, const Impurity& imp, 
 		const Background::Background& bkg)
 	{
+		// Need to assemble things as vectors and then do dot products with 
+		// the B field to get vperp. To-do, as B is not stored as a vector.
+		std::cerr << "gyroradius calculation incorrect! not calculating.\n";
+
+		/*
 		// Calculate gyroradius and add it to the running total. Charge must
 		// be 1 or higher since neutrals do not gyrate. 
 		if (imp.get_charge() > 0)
 		{
-			const double vperp {sqrt(imp.get_vx()*imp.get_vx() 
-				+ imp.get_vy()*imp.get_vy())};
-			const double gyrorad {vperp * imp.get_mass() / 
+			const BkgFPType vperp {sqrt(imp.get_vX()*imp.get_vX() 
+				+ imp.get_vY()*imp.get_vY())};
+			const BkgFPType gyrorad {vperp * imp.get_mass() / 
 				(-imp.get_charge() * Constants::charge_e * 
 				bkg.get_b()(tidx, xidx, yidx, zidx))};
 			m_gyrorad(tidx, xidx, yidx, zidx) += gyrorad;
 		}
+		*/
 	}
 
 	/**
@@ -250,6 +257,10 @@ namespace Impurity
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)
 	{
+		// Should be able to use the Jacobian to calculate the volume of
+		// each cell...
+		//std::cerr << "density calculation not correct! not calculating.\n";
+
 		// Need to loop through the entire Vector4D. Unconventional 
 		// indentation here just to keep it clean.
 		for (int i {}; i < m_dim1; ++i)
@@ -265,9 +276,12 @@ namespace Impurity
 			double dy {bkg.get_grid_y()[k+1] - bkg.get_grid_y()[k]};
 			double dz {bkg.get_grid_z()[l+1] - bkg.get_grid_z()[l]};
 
+			// Volume in physical space is jacob * dx * dy * dz
+			double cell_vol {bkg.get_J()(j,k,l) * dx * dy * dz};
+
 			// Normalize each weight value by the volume and total number of
 			// particles launched. This goes from units of (s) to (s/m3). 
-			m_density(i,j,k,l) = m_weights(i,j,k,l) / (dx * dy * dz) 
+			m_density(i,j,k,l) = m_weights(i,j,k,l) / cell_vol 
 				/ tot_imp_num * imp_source_scale_fact;
 		}
 		}
@@ -304,15 +318,15 @@ namespace Impurity
 				double counts {static_cast<double>(m_counts(i,j,k,l))};
 				if (counts > 0)
 				{
-					m_vx(i,j,k,l) /= counts;
-					m_vy(i,j,k,l) /= counts;
-					m_vz(i,j,k,l) /= counts;
+					m_vX(i,j,k,l) /= counts;
+					m_vY(i,j,k,l) /= counts;
+					m_vZ(i,j,k,l) /= counts;
 				}
 				else
 				{
-					m_vx(i,j,k,l) = 0.0;
-					m_vy(i,j,k,l) = 0.0;
-					m_vz(i,j,k,l) = 0.0;
+					m_vX(i,j,k,l) = 0.0;
+					m_vY(i,j,k,l) = 0.0;
+					m_vZ(i,j,k,l) = 0.0;
 				}
 			}
 			}

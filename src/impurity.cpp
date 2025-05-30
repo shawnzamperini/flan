@@ -11,16 +11,20 @@ namespace Impurity
 	{}
 
 	Impurity::Impurity(const double t, const double x, 
-		const double y, const double z, const double vx, const double vy, 
-		const double vz, const double weight, const int charge, 
+		const double y, const double z, const double X, const double Y, 
+		const double Z, const double vX, const double vY, 
+		const double vZ, const double weight, const int charge, 
 		const double mass, const int atom_num)
 		: m_t {t}
 		, m_x {x}
 		, m_y {y}
 		, m_z {z}
-		, m_vx {vx}
-		, m_vy {vy}
-		, m_vz {vz} 
+		, m_X {X}
+		, m_Y {Y}
+		, m_Z {Z}
+		, m_vX {vX}
+		, m_vY {vY}
+		, m_vZ {vZ} 
 		, m_weight {weight}
 		, m_charge {charge}
 		, m_mass {mass}
@@ -32,9 +36,15 @@ namespace Impurity
 	double Impurity::get_x() const {return m_x;}
 	double Impurity::get_y() const {return m_y;}
 	double Impurity::get_z() const {return m_z;}
-	double Impurity::get_vx() const {return m_vx;}
-	double Impurity::get_vy() const {return m_vy;}
-	double Impurity::get_vz() const {return m_vz;}
+	double Impurity::get_prevX() const {return m_prevX;}
+	double Impurity::get_prevY() const {return m_prevY;}
+	double Impurity::get_prevZ() const {return m_prevZ;}
+	double Impurity::get_X() const {return m_X;}
+	double Impurity::get_Y() const {return m_Y;}
+	double Impurity::get_Z() const {return m_Z;}
+	double Impurity::get_vX() const {return m_vX;}
+	double Impurity::get_vY() const {return m_vY;}
+	double Impurity::get_vZ() const {return m_vZ;}
 	double Impurity::get_mass() const {return m_mass;}
 	int Impurity::get_charge() const {return m_charge;}
 	int Impurity::get_atom_num() const {return m_atom_num;}
@@ -44,8 +54,28 @@ namespace Impurity
 	void Impurity::set_x(double x) {m_x = x;}
 	void Impurity::set_y(double y) {m_y = y;}
 	void Impurity::set_z(double z) {m_z = z;}
-	void Impurity::set_vx(double vx) {m_vx = vx;}
-	void Impurity::set_vy(double vy) {m_vy = vy;}
-	void Impurity::set_vz(double vz) {m_vz = vz;}
+
+	// When setting X,Y,Z, make sure to assign the exiting value to prevX 
+	// before overwriting it. Some unique cases we don't want to do this,
+	// so give an option if not.
+	void Impurity::set_X(double X, bool set_prev)
+	{
+		if (set_prev) m_prevX = m_X;
+		m_X = X;
+	} 
+	void Impurity::set_Y(double Y, bool set_prev)
+	{
+		if (set_prev) m_prevY = m_Y;
+		m_Y = Y;
+	}
+	void Impurity::set_Z(double Z, bool set_prev)
+	{
+		if (set_prev) m_prevZ = m_Z;
+		m_Z = Z;
+	}
+
+	void Impurity::set_vX(double vX) {m_vX = vX;}
+	void Impurity::set_vY(double vY) {m_vY = vY;}
+	void Impurity::set_vZ(double vZ) {m_vZ = vZ;}
 	void Impurity::set_charge(int charge) {m_charge = charge;}
 }

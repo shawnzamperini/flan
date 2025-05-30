@@ -56,10 +56,11 @@ namespace Collisions
 		return vels;
 	}
 
+	// Calculate impurity velocity magnitude
 	double calc_imp_vel(const Impurity::Impurity& imp)
 	{
-		return std::sqrt(imp.get_vx() * imp.get_vx() 
-			+ imp.get_vy() * imp.get_vy() + imp.get_vz() * imp.get_vz());
+		return std::sqrt(imp.get_vX() * imp.get_vX() 
+			+ imp.get_vY() * imp.get_vY() + imp.get_vZ() * imp.get_vZ());
 	}
 	
 	std::array<double, 3> ran_unit_vector()
@@ -143,15 +144,15 @@ namespace Collisions
 			defl_ang)};
 
 		// 3. Apply rotation matrix to find new rotated vector
-		std::array<double, 3> init_vec {imp.get_vx(), imp.get_vy(), 
-			imp.get_vz()};
+		std::array<double, 3> init_vec {imp.get_vX(), imp.get_vY(), 
+			imp.get_vZ()};
 		std::array<double, 3> rotated_vec {multiply_matrix_vector(
 			rotation_matrix, init_vec)}; 
 
 		// 4. Assign new values to impurity.
-		imp.set_vx(rotated_vec[0]);
-		imp.set_vy(rotated_vec[1]);
-		imp.set_vz(rotated_vec[2]);
+		imp.set_vX(rotated_vec[0]);
+		imp.set_vY(rotated_vec[1]);
+		imp.set_vZ(rotated_vec[2]);
 	}
 
 	double calc_momentum_loss_freq(double ne, double te, 
@@ -345,9 +346,9 @@ namespace Collisions
 			// vx1 = a * vx0    and likewise for y and z.
 			// In theory this can be negative if dv < v. This would just mean the
 			// particle is turning around due to a collision I suppose. 
-			imp.set_vx(imp.get_vx() * mom_loss_frac); 
-			imp.set_vy(imp.get_vy() * mom_loss_frac); 
-			imp.set_vz(imp.get_vz() * mom_loss_frac); 
+			imp.set_vX(imp.get_vX() * mom_loss_frac); 
+			imp.set_vY(imp.get_vY() * mom_loss_frac); 
+			imp.set_vZ(imp.get_vZ() * mom_loss_frac); 
 		}
 		else
 		{

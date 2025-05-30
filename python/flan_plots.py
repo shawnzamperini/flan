@@ -55,8 +55,9 @@ class FlanPlots:
 		
 		# Valid options that can be loaded.
 		valid_opts = ["electron_dens", "electron_temp", "ion_temp", 
-			"plasma_pot", "elec_x", "elec_y", "elec_z", "bmag", "imp_counts",
-			"imp_density", "imp_vx", "imp_vy", "imp_vz", "imp_gyrorad"]
+			"plasma_pot", "elec_X", "elec_Y", "elec_Z", "bmag_X", "bmag_Y", 
+			"bmag_Z", "imp_counts", "imp_density", "imp_vX", "imp_vY", 
+			"imp_vZ", "imp_gyrorad"]
 
 		# Throw an error if a valid option wasn't chosen.
 		if (data_name not in valid_opts):
@@ -195,6 +196,83 @@ class FlanPlots:
 
 		return X, Y, data_xy
 
+	def plot_frame_xz(self, data_name, frame, y0, showplot=True, 
+		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
+		xlabel="x (m)", ylabel="z (m)", cbar_label=None):
+		"""
+		Plot data for a given frame at z=z0 in the x, y plane. data_name is
+		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
+		is not found, the nearest value is chosen instead.
+
+		Inputs:
+		 - data_name (str) : Variable name of 4D data from netCDF file. 
+		 - frame (int)     : The time frame to plot data for.
+		 - z0 (float)      : The location where x, y data is plotted at.
+		 - showplot (bool) : Boolean to show a plot or not.
+		 - cmap (str)      : A matplotlib colormap name for the plot.
+		 - norm_type (str) : The normalization of the colorbar. Options are
+		                      "linear" or "log".
+
+		Outputs: Returns a tuple of the x and y grid and the data at each
+		 location.
+	
+		Example Usage:
+		 # Returns data for user to make own plots.
+		 X, Y, data_xy = self.plot_frame_xy("elec_dens", 2, 0.0, showplot=True)
+
+		"""
+
+		# Load cell centers.
+		x, y, z = self.load_cell_centers()
+
+		# Load data at frame.
+		try:
+			data = self.load_data_frame(data_name, frame)
+		except ValueError as e:
+			print(e)
+			return None
+
+		# Time at frame, starting it at zero
+		time = self.nc["time"][frame] - self.nc["time"][0]
+
+		# Find closest z index to input z value
+		y_idx = self.closest_index(y, y0) 
+
+		# Index data at this z location.
+		data_xz = data[:,y_idx,:]
+
+		# Determine colorbar limits.
+		if vmin is None: 
+			vmin = data_xz.min()
+		if vmax is None: 
+			vmax = data_xz.max()
+
+		# Grid the x, y data
+		X, Z = np.meshgrid(x, z)
+		
+		# Optionally plot the data.
+		if showplot:
+			fig, ax1 = plt.subplots()
+
+			# Plot according to the normalization option passed in.
+			norm = self.get_norm(data_xz, norm_type, vmin=vmin, vmax=vmax)
+			mesh = ax1.pcolormesh(X, Z, data_xz.T, cmap=cmap, norm=norm)
+			
+			cbar = fig.colorbar(mesh, ax=ax1)
+			ax1.set_facecolor("grey")
+			#ax1.set_aspect("equal")
+			ax1.set_title("{:.2f} us".format(time * 1e6))
+			ax1.set_xlabel(xlabel, fontsize=g_fontsize)
+			ax1.set_ylabel(ylabel, fontsize=g_fontsize)
+			if cbar_label is None:
+				cbar.set_label(data_name, fontsize=g_fontsize)
+			else:
+				cbar.set_label(cbar_label, fontsize=g_fontsize)
+
+			fig.tight_layout()
+			fig.show()
+
+		return X, Z, data_xz
 
 	def plot_frames_xy(self, data_name, frame_start, frame_end, z0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
@@ -314,4 +392,120 @@ class FlanPlots:
 
 		plt.show()
 
+	def plot_frames_xz(self, data_name, frame_start, frame_end, y0, 
+		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
+		vmin=None, vmax=None, save_path=None, xlabel="x (m)", ylabel="z (m)",
+		cbar_label=None, rsep=0.0):
+		"""
+		Combine multiple plots from plot_frame_xz into an animation.
+		"""
 
+		# If we do not want to animate the colorbar, then we need to loop 
+		# through the data ahead of time to find the limits for the colorbar.
+		if not animate_cbar:
+			skip_vmin = False
+			skip_vmax = False
+			for f in range(frame_start, frame_end+1):
+				
+				try:
+					X, Z, data_xz = self.plot_frame_xz(data_name, f, y0, 
+						showplot=False)
+
+				# TypeError will happen if we put in an invalid option for
+				# data_name.
+				except TypeError:
+					return None
+
+				# Need to set vmin, vmax to values so we can use <,> on them.
+				# If users pass in values for either, those take precedence and
+				# we don't reassign them.
+				if (f == frame_start):
+					if vmin is None: 
+						vmin = data_xz.min()
+					else:
+						skip_vmin = True
+					if vmax is None: 
+						vmax = data_xz.max()
+					else:
+						skip_vmax = True
+				else:
+					if (not skip_vmin and data_xz.min() < vmin): 
+						vmin = data_xz.min()
+					if (not skip_vmax and data_xz.max() > vmax): 
+						vmax = data_xz.max()
+
+		# Setup the first frame.
+		X, Z, data_xz = self.plot_frame_xz(data_name, frame_start, y0, 
+			showplot=False)
+
+		# These commands are copied from plot_xy_frame. I wanted to have
+		# plot_xy_frame return the fig and associated objects, but I couldn't
+		# get around it showing the first figure in addition to the animation
+		# that is later also shown. This is an undesirable effect, so we brute
+		# force it by just copying the same code and reproducing it here.
+		fig, ax1 = plt.subplots()
+		div = make_axes_locatable(ax1)
+		cax = div.append_axes("right", "5%", "5%")
+		norm = self.get_norm(data_xz, norm_type, vmin=vmin, vmax=vmax)
+		mesh = ax1.pcolormesh(X, Z, data_xz.T, cmap=cmap, norm=norm)
+		cbar = fig.colorbar(mesh, cax=cax)
+		ax1.set_facecolor("grey")
+		#ax1.set_aspect("equal")
+		ax1.set_xlabel(xlabel, fontsize=g_fontsize)
+		ax1.set_ylabel(ylabel, fontsize=g_fontsize)
+		ax1.set_title("Frame {}".format(frame_start), fontsize=g_fontsize)
+		if cbar_label is None:
+			cbar.set_label(data_name, fontsize=g_fontsize)
+		else:
+			cbar.set_label(cbar_label, fontsize=g_fontsize)
+		fig.tight_layout()
+		fig.show()
+
+		# Define animation function
+		def animate(i):
+			
+			# Call for the next frame. i is being passed in zero-indexed, so to
+			# get the frame we offset it from the start_frame.
+			X, Z, data_xz = self.plot_frame_xz(data_name, frame_start + i, y0, 
+				showplot=False)
+
+			# Time at frame, starting it at zero
+			time = self.nc["time"][i] - self.nc["time"][0]
+				
+			norm = self.get_norm(data_xz, norm_type, vmin=vmin, vmax=vmax)
+			ax1.clear()
+			mesh = ax1.pcolormesh(X, Z, data_xz.T, cmap=cmap, norm=norm)
+			ax1.set_title("{:.2f} us".format(time * 1e6))
+			ax1.set_xlabel(xlabel, fontsize=g_fontsize)
+			ax1.set_ylabel(ylabel, fontsize=g_fontsize)
+			cax.cla()
+			fig.colorbar(mesh, cax=cax)
+			if cbar_label is None:
+				cbar.set_label(data_name, fontsize=g_fontsize)
+			else:
+				cbar.set_label(cbar_label, fontsize=g_fontsize)
+
+			# Update the plot with the data from this frame.
+			#ax1.clear()
+			#mesh.set_array(data_xy.T)
+			#vmin = data_xy.min()
+			#vmax = data_xy.max()
+			#mesh.set_clim(vmin, vmax)
+			#cbar.update_normal(mesh)
+
+			return mesh,
+
+		# Generate animation
+		anim = animation.FuncAnimation(fig, animate, frames=frame_end-frame_start)
+
+		# If save_path is provided, save the file there as a gif. 
+		if (save_path is not None):
+			print("Saving animation...")
+			anim.save(save_path + ".gif", writer=PillowWriter(fps=15))
+
+			# Seems to be issues with this. Issue for another day I guess.
+			#writer = animation.FFMpegWriter(fps=10, extra_args=["-vf", 
+			#	"scale=trunc(iw/2)*2:trunc(ih/2)*2"])
+			#anim.save(save_path + ".mp4", writer=writer) 
+
+		plt.show()

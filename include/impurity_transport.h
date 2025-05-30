@@ -115,25 +115,22 @@ namespace Impurity
 	* the first element that is larger than value, we have the cell index. That
 	* lets us skip a few extra step that get_nearest_index has to do.
 	*
-	* @param grid_edges Vector containing the grid edges for the cells
+	* @param grid_edges Vector containing the grid edges for the cells in 
+	* computational space
 	* @param value Value to find nearest cell for
 	*/
 	template <typename T>
 	int get_nearest_cell_index(const std::vector<T>& grid_edges, const T value);
 
 	/**
-	* @brief Update impurity velocity based on the Lorentz force
+	* @brief Calculate each X,Y,Z component of the Lorentz force in physical
+	* space.
 	*
-	* @param imp Impurity object that is updated within function
-	* @param bkg Reference to the loaded Background object
-	* @param imp_time_step Size of time step specified in input file
-	* @param tidx Index in time array imp is at
-	* @param xidx Index in x array imp is at
-	* @param yidx Index in y array imp is at
-	* @param zidx Index in z array imp is at
+	* @return Returns 3-tuple of doubles of each Lorentz force component,
+	* [fX, fY, fZ].
 	*/
-	void lorentz_update(Impurity& imp, const Background::Background& bkg,
-		const double imp_time_step, const int tidx, const int xidx, 
+	std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
+		const Background::Background& bkg, const int tidx, const int xidx, 
 		const int yidx, const int zidx);
 	
 	/**
@@ -142,8 +139,8 @@ namespace Impurity
 	*/
 	double get_var_time_step(Impurity& imp, 
 		const Background::Background& bkg, const int tidx, 
-		const int xidx, const int yidx, const int zidx, const double fx, 
-		const double fy, const double fz, const Options::Options& opts);
+		const int xidx, const int yidx, const int zidx, const double fX, 
+		const double fY, const double fZ, const Options::Options& opts);
 		
 	/**
 	* @brief Move particle based on its current velocity and the time step
@@ -151,7 +148,10 @@ namespace Impurity
 	* @param imp Impurity object that is updated within function
 	* @param imp_time_step Size of time step specified in input file
 	*/
-	void step(Impurity& imp, const double imp_time_step);
+	bool step(Impurity& imp, const double fX, const double fY, const double fZ, 
+		const double imp_time_step, const Background::Background& bkg, 
+		const Options::Options& opts, const int tidx, int& xidx, int& yidx, 
+		int& zidx);
 
 	/**
 	* @brief Record/score particle in the ImpurityStats object
@@ -170,20 +170,12 @@ namespace Impurity
 		const int yidx, const int zidx, const double imp_time_step);
 
 	/**
-	* @brief Check if an Impurity has encountered a boundary condition.
-	*
-	* A boundary condition could be absorbing or reflecting, depends on the 
-	* simulation settings and boundary.
-	*
-	* @param bkg Reference to the loaded Background object
-	* @param imp The Impurity object to check for boundary condition
-	*
-	* @return Returns false if particle following is to be terminated, true
-	* otherwise.
+	* @brief Find what cell an impurity is in. Updates xidx, yidx and zidx
+	* in place.
 	*/
-	bool check_boundary(const Background::Background& bkg, Impurity& imp,
-		const Options::Options& opts);
-	
+	void find_containing_cell(Impurity& imp, 
+		const Background::Background& bkg, 
+		int& xidx, int& yidx, int& zidx, const bool debug=false);
 
 	/**
 	* @brief Update particle based on collisions with electrons and ions
@@ -215,7 +207,8 @@ namespace Impurity
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
 		int& recomb_warnings, std::vector<Impurity>& imps,
 		const std::vector<int> imp_var_reduct_counts, 
-		const bool imp_var_reduct_on, const Options::Options& opts);
+		const bool imp_var_reduct_on, 
+		const Options::Options& opts);
 	/**
 	* @brief Print out warnings if ionization/recombination probabilities were
 	* greater than 1.0 at some point.
@@ -244,7 +237,8 @@ namespace Impurity
 	*/
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb, const Options::Options& opts);
+		const OpenADAS::OpenADAS& oa_recomb, 
+		const Options::Options& opts);
 
 	/**
 	* @brief Entry level function to impurity following routines

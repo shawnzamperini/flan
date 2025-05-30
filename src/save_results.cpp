@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "background.h"
+#include "flan_types.h"
 #include "netcdf"
 #include "options.h"
 #include "save_results.h"
@@ -48,6 +49,10 @@ namespace SaveResults
 			{
 				var = nc_file.addVar(var_name, netCDF::ncDouble, dim);
 			}
+			else if constexpr (std::is_same_v<T, float>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncFloat, dim);
+			}
 			else if constexpr (std::is_same_v<T, int>)
 			{
 				var = nc_file.addVar(var_name, netCDF::ncInt, dim);
@@ -64,6 +69,57 @@ namespace SaveResults
 		}
 	}
 
+	// Save a 3D vector into nc_file. dims must be matched by the programmer.
+	template <typename T>
+	void save_vector_3d(const netCDF::NcFile& nc_file, 
+		const Vectors::Vector3D<T>& vec, 
+		const std::string& var_name, const netCDF::NcDim& dim1,
+		const netCDF::NcDim& dim2, const netCDF::NcDim& dim3, 
+		const std::string& description, const std::string& units)
+	{
+		if (vec.get_data().size() == 0)
+		{
+			std::cerr << "NetCDF Error! " << var_name << " is zero-length."
+				<< " Skipping.\n";
+		}
+		else
+		{
+			// Create a 3D variable	
+			//netCDF::NcVar var {nc_file.addVar(var_name, netCDF::ncDouble, 
+			//		{dim1, dim2, dim3})};
+
+			// Save as appropriate type. This isn't actually necessary since
+			// netCDF will upcast a float to double, but no point in doing 
+			// that if it'll just take up extra space.
+			netCDF::NcVar var {};
+			if constexpr (std::is_same_v<T, double>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncDouble, 
+					{dim1, dim2, dim3});
+			}
+			else if constexpr (std::is_same_v<T, float>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncFloat, 
+					{dim1, dim2, dim3});
+			}
+			else if constexpr (std::is_same_v<T, int>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncInt, 
+					{dim1, dim2, dim3});
+			}
+
+			// We actually save it as a flattened array no matter the
+			// dimension, which is how we represent the data internally 
+			// already. So just throw that data in there.
+			var.putVar(vec.get_data().data());
+
+			// Add description
+			var.putAtt("description", description);
+
+			// Add units
+			var.putAtt("units", units);
+		}
+	}
 	// Save a 4D vector into nc_file. dims must be matched by the programmer.
 	template <typename T>
 	void save_vector_4d(const netCDF::NcFile& nc_file, 
@@ -81,8 +137,28 @@ namespace SaveResults
 		else
 		{
 			// Create a 4D variable	
-			netCDF::NcVar var {nc_file.addVar(var_name, netCDF::ncDouble, 
-					{dim1, dim2, dim3, dim4})};
+			//netCDF::NcVar var {nc_file.addVar(var_name, netCDF::ncDouble, 
+			//		{dim1, dim2, dim3, dim4})};
+
+			// Save as appropriate type. This isn't actually necessary since
+			// netCDF will upcast a float to double, but no point in doing 
+			// that if it'll just take up extra space.
+			netCDF::NcVar var {};
+			if constexpr (std::is_same_v<T, double>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncDouble, 
+					{dim1, dim2, dim3, dim4});
+			}
+			else if constexpr (std::is_same_v<T, float>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncFloat, 
+					{dim1, dim2, dim3, dim4});
+			}
+			else if constexpr (std::is_same_v<T, int>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncInt, 
+					{dim1, dim2, dim3, dim4});
+			}
 
 			// We actually save it as a flattened array no matter the
 			// dimension, which is how we represent the data internally 
@@ -126,12 +202,10 @@ namespace SaveResults
 
 		// Dimensions for the arrays containing data at the cell centers. 
 		// First dimension is time, then x, y, z.
-		std::cout << "Creating dimensions...";
 		netCDF::NcDim dim1 {nc_file.addDim("time", bkg.get_dim1())};
 		netCDF::NcDim dim2 {nc_file.addDim("x", bkg.get_dim2())};
 		netCDF::NcDim dim3 {nc_file.addDim("y", bkg.get_dim3())};
 		netCDF::NcDim dim4 {nc_file.addDim("z", bkg.get_dim4())};
-		std::cout << " done\n";
 
 		// Dimensions for the grid points. They're just bigger than the
 		// cell center lengths.
@@ -143,24 +217,52 @@ namespace SaveResults
 		desc = "time for each frame";
 		save_vector_1d(nc_file, bkg.get_times(), "time", dim1, desc, "(s)");
 
-		// Cell centers - x, y, z
+		// Cell centers in computational space - x, y, z
+		// We don't actually know what the dimensions will be, since it depends
+		// on the computational coordinates used.
 		desc = "x cell centers";
-		save_vector_1d(nc_file, bkg.get_x(), "x", dim2, desc, "(m)");
+		save_vector_1d(nc_file, bkg.get_x(), "x", dim2, desc, "(?)");
 		desc = "y cell centers";
-		save_vector_1d(nc_file, bkg.get_y(), "y", dim3, desc, "(m)");
+		save_vector_1d(nc_file, bkg.get_y(), "y", dim3, desc, "(?)");
 		desc = "z cell centers";
-		save_vector_1d(nc_file, bkg.get_z(), "z", dim4, desc, "(m)");
+		save_vector_1d(nc_file, bkg.get_z(), "z", dim4, desc, "(?)");
 		
 		// Grid edges - x, y, z
+		// We don't actually know what the dimensions will be, since it depends
+		// on the computational coordinates used.
 		desc = "x grid edges";
 		save_vector_1d(nc_file, bkg.get_grid_x(), "grid_x", grid_dim2, desc, 
-			"(m)");
+			"(?)");
 		desc = "y grid edges";
 		save_vector_1d(nc_file, bkg.get_grid_y(), "grid_y", grid_dim3, desc, 
-			"(m)");
+			"(?)");
 		desc = "z grid edges";
 		save_vector_1d(nc_file, bkg.get_grid_z(), "grid_z", grid_dim4, desc, 
+			"(?)");
+
+		// Cell centers in physical space - X, Y, Z
+		// Note dims are dim2, dim3 and dim4
+		desc = "X cell centers";
+		save_vector_3d(nc_file, bkg.get_X(), "X", dim2, dim3, dim4, desc, 
 			"(m)");
+		desc = "Y cell centers";
+		save_vector_3d(nc_file, bkg.get_Y(), "Y", dim2, dim3, dim4, desc, 
+			"(m)");
+		desc = "Z cell centers";
+		save_vector_3d(nc_file, bkg.get_Z(), "Z", dim2, dim3, dim4, desc, 
+			"(m)");
+
+		// Grid edges in physical space - X, Y, Z
+		// Note dims are dim2, dim3 and dim4
+		desc = "X grid edges";
+		save_vector_3d(nc_file, bkg.get_grid_X(), "grid_X", grid_dim2, 
+			grid_dim3, grid_dim4, desc, "(m)");
+		desc = "Y grid edges";
+		save_vector_3d(nc_file, bkg.get_grid_Y(), "grid_Y", grid_dim2, 
+			grid_dim3, grid_dim4, desc, "(m)");
+		desc = "Z grid edges";
+		save_vector_3d(nc_file, bkg.get_grid_Z(), "grid_Z", grid_dim2, 
+			grid_dim3, grid_dim4, desc, "(m)");
 
 		// Electron density
 		desc = "electron density";
@@ -183,19 +285,25 @@ namespace SaveResults
 			dim1, dim2, dim3, dim4, desc, "(V)");
 
 		// Electric field
-		desc = "electric field (x)";
-		save_vector_4d(nc_file, bkg.get_ex(), "elec_x", 
+		desc = "electric field (X)";
+		save_vector_4d(nc_file, bkg.get_eX(), "elec_X", 
 			dim1, dim2, dim3, dim4, desc, "(V/m)");
-		desc = "electric field (y)";
-		save_vector_4d(nc_file, bkg.get_ey(), "elec_y", 
+		desc = "electric field (Y)";
+		save_vector_4d(nc_file, bkg.get_eY(), "elec_Y", 
 			dim1, dim2, dim3, dim4, desc, "(V/m)");
-		desc = "electric field (z)";
-		save_vector_4d(nc_file, bkg.get_ez(), "elec_z", 
+		desc = "electric field (Z)";
+		save_vector_4d(nc_file, bkg.get_eZ(), "elec_Z", 
 			dim1, dim2, dim3, dim4, desc, "(V/m)");
 			
 		// Magnetic field
-		desc = "magnetic field";
-		save_vector_4d(nc_file, bkg.get_b(), "bmag", 
+		desc = "magnetic field (X)";
+		save_vector_4d(nc_file, bkg.get_bX(), "bmag_X", 
+			dim1, dim2, dim3, dim4, desc, "(T)");
+		desc = "magnetic field (Y)";
+		save_vector_4d(nc_file, bkg.get_bY(), "bmag_Y", 
+			dim1, dim2, dim3, dim4, desc, "(T)");
+		desc = "magnetic field (Z)";
+		save_vector_4d(nc_file, bkg.get_bZ(), "bmag_Z", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 
 		// Impurity counts
@@ -210,19 +318,19 @@ namespace SaveResults
 	
 		if (imp_stats.get_vel_stats())
 		{
-			// Impurity average x velocity
-			desc = "impurity x velocity";
-			save_vector_4d(nc_file, imp_stats.get_vx(), "imp_vx", 
+			// Impurity average X velocity in physical space
+			desc = "impurity X velocity";
+			save_vector_4d(nc_file, imp_stats.get_vX(), "imp_vX", 
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 
-			// Impurity average y velocity
-			desc = "impurity y velocity";
-			save_vector_4d(nc_file, imp_stats.get_vy(), "imp_vy", 
+			// Impurity average Y velocity in physical space
+			desc = "impurity Y velocity";
+			save_vector_4d(nc_file, imp_stats.get_vY(), "imp_vY", 
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 
-			// Impurity average z velocity
-			desc = "impurity z velocity";
-			save_vector_4d(nc_file, imp_stats.get_vz(), "imp_vz", 
+			// Impurity average Z velocity in physical space
+			desc = "impurity Z velocity";
+			save_vector_4d(nc_file, imp_stats.get_vZ(), "imp_vZ", 
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 		}
 		

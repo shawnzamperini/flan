@@ -64,31 +64,37 @@ namespace Vectors
 		* @brief Get first dimension size
 		* @return Returns dimension as an int
 		*/
-		int get_dim1();
+		int get_dim1() const;
 
 		/**
 		* @brief Get second dimension size
 		* @return Returns dimension as an int
 		*/
-		int get_dim2();
+		int get_dim2() const;
 
 		/**
 		* @brief Get third dimension size
 		* @return Returns dimension as an int
 		*/
-		int get_dim3();
+		int get_dim3() const;
 
 		/**
 		* @brief Get size of underlying data
 		* @return Returns size as an int
 		*/
-		int get_size();
+		int get_size() const;
 
 		/**
-		* @brief Get the 1D vector containing all the data
+		* @brief Get the 1D vector containing all the data (const)
 		* @return Returns a 1D vector of underlying data type
 		*/
-		std::vector<T> get_data();
+		const std::vector<T>& get_data() const;
+
+		/**
+		* @brief Get the 1D vector containing all the data (non-const)
+		* @return Returns a 1D vector of underlying data type
+		*/
+		std::vector<T>& get_data();
 
 		/**
 		* @brief Convert from 3D index to the 1D one used in the underlying 
@@ -98,6 +104,30 @@ namespace Vectors
 		*/
 		int calc_index(const int i, const int j, const int k) const;
 	
+		/**
+		* @brief Get the i,j,k indices from a given index in the underlying
+		* 1D data (i.e., inverse of calc_index).
+		*/
+		std::tuple<int, int, int> get_ijk(const int idx);
+
+		/**
+		* @brief Get the index along the first dimension from an index
+		* calculated by calc_index.
+		*/
+		int get_i(const int idx) const;
+
+		/**
+		* @brief Get the index along the second dimension from an index
+		* calculated by calc_index.
+		*/
+		int get_j(const int idx) const;
+
+		/**
+		* @brief Get the index along the third dimension from an index
+		* calculated by calc_index.
+		*/
+		int get_k(const int idx) const;
+
 		/**
 		* @brief Overload parentheses to act as indexing.
 		* @return Returns reference to value represented by this index of 
@@ -120,6 +150,15 @@ namespace Vectors
 		* abstraction of operator=...
 		*/
 		void move_into_data(Vectors::Vector3D<T>& vec);
+
+		/**
+		* @brief Resize Vector3D to the passed in dimensions
+		*
+		* This is needed to add a layer of safety. One could resize m_data
+		* themselves, but then they would also need to set dim1, dim2 and dim3.
+		* This function takes care of that to prevent that accident.
+		*/
+		void resize(const int dim1, const int dim2, const int dim3);
 	};
 
 	/**
@@ -246,7 +285,8 @@ namespace Vectors
 		Vector4D& operator=(Vector4D&& other) noexcept;
 
 		/**
-		* @brief Helper function that checks if other is of the same shape as this
+		* @brief Helper function that checks if other is of the same shape as 
+		* this
 		* Vector4D.
 		* @return Return true if they're the same shape, false (and an error 
 		* message) if not
@@ -267,6 +307,13 @@ namespace Vectors
 		//void move_into_data(Vectors::Vector4D<T>& vec);
 		void move_into_data(Vector4D<T>&& vec);
 		void move_into_data(Vector4D<T>& vec);
+
+		/**
+		* @brief Slice a single dimension (which returns a vector with one 
+		* lower dimensionality).
+		* @return Returns a Vector3D
+		*/
+		Vector3D<T> slice_dim1(int dim_index);
 
 		/**
 		* @brief Slice a single dimension (which returns a vector with one 

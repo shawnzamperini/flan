@@ -14,6 +14,8 @@
 * type.
 */
 
+#include <algorithm>
+#include <tuple>
 #include <vector>
 
 #include "vectors.h"
@@ -58,24 +60,63 @@ namespace Vectors
 	}
 
 	template <typename T>
-	int Vector3D<T>::get_dim1() {return m_dim1;}
+	int Vector3D<T>::get_dim1() const {return m_dim1;}
 
 	template <typename T>
-	int Vector3D<T>::get_dim2() {return m_dim2;}
+	int Vector3D<T>::get_dim2() const {return m_dim2;}
 
 	template <typename T>
-	int Vector3D<T>::get_dim3() {return m_dim3;}
+	int Vector3D<T>::get_dim3() const {return m_dim3;}
 
 	template <typename T>
-	int Vector3D<T>::get_size() {return m_size;}
+	int Vector3D<T>::get_size() const {return m_size;}
 
 	template <typename T>
-	std::vector<T> Vector3D<T>::get_data() {return m_data;}
+	const std::vector<T>& Vector3D<T>::get_data() const {return m_data;}
+
+	template <typename T>
+	std::vector<T>& Vector3D<T>::get_data() {return m_data;}
 	
 	template <typename T>
 	int Vector3D<T>::calc_index(const int i, const int j, const int k) const
 	{
 		return i * (m_dim2 * m_dim3) + j * m_dim3 + k;
+	}
+
+	// Get the i,j,k indices from a given index (that generally has been 
+	// calculated by calc_index).
+	template <typename T>
+	std::tuple<int, int, int> Vector3D<T>::get_ijk(const int idx)
+	{
+		// Calculate each index
+		int i {idx / (m_dim2 * m_dim3)};  // int division
+		int remainder {idx % (m_dim2 * m_dim3)};
+		int j {remainder / m_dim3};
+		int k {remainder % m_dim3};
+
+		// Return as tuple
+		return {i, j, k};
+	}
+
+	// Get the first index (i) from a value calculated from calc_index
+	template <typename T>
+	int Vector3D<T>::get_i(const int idx) const
+	{
+		return static_cast<int>(idx / (m_dim2 * m_dim3));
+	}
+
+	// Get the second index (j) from a value calculated from calc_index
+	template <typename T>
+	int Vector3D<T>::get_j(const int idx) const
+	{
+		return static_cast<int>(idx / m_dim3) % m_dim2;
+	}
+
+	// Get the first index (k) from a value calculated from calc_index
+	template <typename T>
+	int Vector3D<T>::get_k(const int idx) const
+	{
+		return idx % m_dim3;
 	}
 		
 	template <typename T>
@@ -101,6 +142,16 @@ namespace Vectors
 
 		// Move the data into this
 		m_data = std::move(vec.m_data);
+	}
+
+	template <typename T>
+	void Vector3D<T>::resize(const int dim1, const int dim2, const int dim3)
+	{
+		// When we resize, we need to make sure to update the dimension sizes
+		m_data.resize(dim1 * dim2 * dim3);
+		m_dim1 = dim1;
+		m_dim2 = dim2;
+		m_dim3 = dim3;
 	}
 	
 	// ************************
@@ -280,6 +331,28 @@ namespace Vectors
 	}
 
 	template <typename T>
+	Vector3D<T> Vector4D<T>::slice_dim1(int dim_index)
+	{
+		// Sticking to traditional indexing variables to help make it clear
+		// i = dim1, j = dim2, k = dim3, l = dim4
+		Vector3D<T> vec {m_dim2, m_dim3, m_dim4};
+		for (int j {}; j < m_dim2; ++j)
+		{
+			for (int k {}; k < m_dim3; ++k)
+			{
+				for (int l {}; l < m_dim4; ++l)
+				{
+					// from calc_index just i = dim_index
+					int index = dim_index * (m_dim2 * m_dim3 * m_dim4) + j 
+						* (m_dim3 * m_dim4) + k * m_dim4 + l;
+					vec(j, k, l) = m_data[index];
+				}
+			}
+		}
+		return vec;
+	}
+
+	template <typename T>
 	Vector3D<T> Vector4D<T>::slice_dim4(int dim_index)
 	{
 		Vector3D<T> vec {m_dim1, m_dim2, m_dim3};
@@ -344,6 +417,8 @@ namespace Vectors
 // needed definitions so the linker can see them. Hurts flexibility, but not
 // an issue since it's pretty straightforward.
 template class Vectors::Vector3D<int>;
+template class Vectors::Vector3D<float>;
 template class Vectors::Vector3D<double>;
 template class Vectors::Vector4D<int>;
+template class Vectors::Vector4D<float>;
 template class Vectors::Vector4D<double>;

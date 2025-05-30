@@ -26,7 +26,7 @@ namespace VarianceReduction
 		// Variance reduction (particle splitting) is done if the particle is
 		// in a low-count region, defined by whatever is passed in for
 		// imp_var_reduct_counts.
-		if (imp_stats.get_counts()(tidx, xidx, yidx, zidx) < 
+		if (imp_stats.get_counts()(tidx, xidx, yidx, zidx) <= 
 			imp_var_reduct_counts[tidx])
 		{
 			//std::cout << "Low-count region detected\n";
@@ -135,9 +135,9 @@ namespace VarianceReduction
 
 		// Create secondary Impurity with new weight and charge.
 		Impurity::Impurity secondary_imp {imp.get_t(), imp.get_x(), 
-			imp.get_y(), imp.get_z(), imp.get_vx(), imp.get_vy(), imp.get_vz(), 
-			secondary_weight, secondary_charge, imp.get_mass(), 
-			imp.get_atom_num()};
+			imp.get_y(), imp.get_z(), imp.get_X(), imp.get_Y(), imp.get_Z(), 
+			imp.get_vX(), imp.get_vY(), imp.get_vZ(), secondary_weight, 
+			secondary_charge, imp.get_mass(), imp.get_atom_num()};
 
 		// Add to list of impurities to be followed.
 		imps.push_back(secondary_imp);

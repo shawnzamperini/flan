@@ -1,6 +1,6 @@
 # This version is likely a bit too strict, it is just the one I built this with
 cmake_minimum_required(VERSION 3.31)
-project(flan VERSION 0.3.0)
+project(flan VERSION 0.4.0)
 
 # User must specify where the dependencies are stored via the FLANSOFT variable
 if(NOT DEFINED FLANSOFT)
@@ -36,10 +36,16 @@ link_directories(
 	${FLANSOFT}/netcdf-c/lib
 )
 
+if(UNIX AND NOT APPLE) # This applies to Linux platforms
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+endif()
+
+
 # Add a shared library
 add_library(flan SHARED ${SOURCES})
 
 # Compilation flags
+#target_compile_options(flan PRIVATE -Wall -O3 -fopenmp -g)
 target_compile_options(flan PRIVATE -Wall -O3 -fopenmp)
 
 # Specify the libraries to link against. I am not fully certain why we need

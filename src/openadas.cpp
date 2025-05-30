@@ -346,7 +346,7 @@ namespace OpenADAS
 		if (imp.get_charge() > 0)
 		{
 			recomb_rate = oa_recomb.get_rate_coeff(imp.get_charge()-1, 
-			local_ne, local_te);
+				local_ne, local_te);
 		}
 
 		/*
