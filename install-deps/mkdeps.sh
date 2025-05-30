@@ -14,13 +14,10 @@ MPICXX=mpicxx
 # should be installed.
 BUILD_ADIOS2=
 BUILD_OPENMPI=
-BUILD_BOOST=
-BUILD_MSGPACK=
 BUILD_ZLIB=
 BUILD_HDF5=
 BUILD_NETCDF_C=
 BUILD_NETCDF_CXX=
-INSTALL_NANOFLANN=
 SETUP_CONDA_ENV=
 
 # By default make a new build-opts.sh file.
@@ -51,8 +48,7 @@ MPICXX                      C, C++, MPI C and MPI C++ compilers to use
                             Default is $HOME/flansoft
 --flanroot=DIR              Flanroot is the top-level directory of Flan. This
                             should be taken care of automatically and the
-                            user should nto need to specify it.
---boost-inc-dir             Directory where boost is installed (for msgpack)
+                            user should not need to specify it.
 
 The following flags specify which libraries to build. By default, only
 builds libraries that haven't yet been built or can't be found. 
@@ -66,7 +62,6 @@ and C++ compilers to use.
 --build-hdf5                Should we build HDF5? Needed for NetCDF-C
 --build-netcdf-c            Should we build netCDF?
 --build-netcdf-cxx          Should we build the netCDF C++ interface?
---install-nanoflann         Should we install the (header-only) nanoflann library?
 --setup-conda-env           Should we setup the conda environment?
 --new-build-opts            Should we create a new build-opts.sh file?
 
@@ -153,14 +148,6 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_ADIOS2="$value"
       ;;
-   --build-boost)
-      [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_BOOST="$value"
-      ;;
-   --build-msgpack)
-      [ -n "$value" ] || die "Missing value in flag $key."
-      BUILD_MSGPACK="$value"
-      ;;
    --build-zlib)
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_ZLIB="$value"
@@ -176,10 +163,6 @@ do
    --build-netcdf-cxx)
       [ -n "$value" ] || die "Missing value in flag $key."
       BUILD_NETCDF_CXX="$value"
-      ;;
-   --install-nanoflann)
-      [ -n "$value" ] || die "Missing value in flag $key."
-      INSTALL_NANOFLANN="$value"
       ;;
    --new-build-opts)
       [ -n "$value" ] || die "Missing value in flag $key."
@@ -234,22 +217,6 @@ build_adios2() {
     fi
 }
 
-build_boost() {
-   if [ "$BUILD_BOOST" = "yes" ]
-   then
-      echo "Building boost"
-      ./build-boost.sh
-   fi
-}
-
-build_msgpack() {
-   if [ "$BUILD_MSGPACK" = "yes" ]
-   then
-      echo "Building msgpack"
-      ./build-msgpack.sh
-   fi
-}
-
 build_zlib() {
    if [ "$BUILD_ZLIB" = "yes" ]
    then
@@ -282,14 +249,6 @@ build_netcdf-cxx() {
    fi
 }
 
-install_nanoflann() {
-   if [ "$INSTALL_NANOFLANN" = "yes" ]
-   then
-      echo "Installing nanoflann"
-      ./install-nanoflann.sh
-   fi
-}
-
 setup_conda_env() {
    if [ "$SETUP_CONDA_ENV" = "yes" ]
    then
@@ -302,8 +261,6 @@ echo "Installations will be in $PREFIX"
 
 # On the chopping block
 #build_adios2
-#build_boost
-#build_msgpack
 
 # Order matters for these four
 build_zlib  # HDF5 (and thus netcdf-c) dependency
@@ -312,5 +269,4 @@ build_netcdf-c
 build_netcdf-cxx
 
 # Order not important for these
-install-nanoflann
 setup_conda_env

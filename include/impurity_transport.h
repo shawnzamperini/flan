@@ -169,57 +169,13 @@ namespace Impurity
 		const Background::Background& bkg, const int tidx, const int xidx, 
 		const int yidx, const int zidx, const double imp_time_step);
 
-	std::array <double, 12> get_x_bound_vertices(
-		const Background::Background& bkg,
-		const int xidx, const int yidx, const int zidx);
-
-	std::array <double, 12> get_y_bound_vertices(
-		const Background::Background& bkg,
-		const int xidx, const int yidx, const int zidx);
-
-	std::array <double, 12> get_z_bound_vertices(
-		const Background::Background& bkg,
-		const int xidx, const int yidx, const int zidx);
-
-	/**
-	* @brief Check if the coordinates at (X,Y,Z) are in the computational cell
-	* represented by (xidx,yidx,zidx).
-	*/
-	bool check_in_cell(const Background::Background& bkg, 
-		const double X, const double Y, const double Z, const int xidx, 
-		const int yidx, const int zidx, const bool debug=false);
-
 	/**
 	* @brief Find what cell an impurity is in. Updates xidx, yidx and zidx
-	* in place and returns true if a containing cell is found. Returns false
-	* if not, and xidx, yidx and zidx are left unchanged.
+	* in place.
 	*/
-	bool find_containing_cell(Impurity& imp, 
+	void find_containing_cell(Impurity& imp, 
 		const Background::Background& bkg, 
 		int& xidx, int& yidx, int& zidx, const bool debug=false);
-
-	/**
-	* @brief Check if an Impurity has encountered a boundary condition.
-	*
-	* A boundary condition could be absorbing or reflecting, depends on the 
-	* simulation settings and boundary. Passing yidx as a reference is 
-	* intentional because check_boundary_y can update it as part of a 
-	* periodic boundary condition (x and z are absorbing, so unneeded at this
-	* point).
-	*
-	* @param bkg Reference to the loaded Background object
-	* @param imp The Impurity object to check for boundary condition
-	*
-	* @return Returns false if particle following is to be terminated, true
-	* otherwise.
-	*/
-	bool check_boundary(const Background::Background& bkg, 
-		Impurity& imp, const Options::Options& opts, const int tidx,
-		int& xidx, int& yidx, int& zidx, 
-		const double imp_time_step);
-	//bool check_boundary(const Background::Background& bkg, Impurity& imp,
-	//	const Options::Options& opts);
-	
 
 	/**
 	* @brief Update particle based on collisions with electrons and ions
