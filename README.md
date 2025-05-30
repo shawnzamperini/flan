@@ -110,4 +110,4 @@ Interfacing with Flan data and making some basic plots are handled via a [python
 ## Upcoming Changes
 
 - Investigate if GPUs can be used to speed up transport calculations
-- Expand code to non-Cartesian geometries (e.g., tokamak coordinates)
+- ~~Expand code to non-Cartesian geometries (e.g., tokamak coordinates)~~
