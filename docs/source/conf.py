@@ -3,7 +3,7 @@
 # -- Project information
 
 project = 'Flan'
-copyright = '2025, Zamperini'
+copyright = '2024, shawnzamperini'
 author = 'Zamperini'
 
 release = '0.1'
