@@ -71,6 +71,9 @@ namespace OpenADAS
 		openadas_path.append("/");
 		openadas_path.append(rate_type);
 		openadas_path.append(std::to_string(openadas_year));
+		openadas_path.append("/");
+		openadas_path.append(rate_type);
+		openadas_path.append(std::to_string(openadas_year));
 		openadas_path.append("_");
 		openadas_path.append(imp_name); 
 		openadas_path.append(".dat");
