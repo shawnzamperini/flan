@@ -27,7 +27,7 @@ namespace Options
 		std::cout << "Loading input...\n";
 		
 		// Loop through every input option. key is a string of the option, and
-		// var stand for "variant", which is a type that can contain multiple
+		// var stands for "variant", which is a type that can contain multiple
 		// types. We dissect var into the underlying type within assign_option.
 		for (const auto& [key, var] : inpts)
 		{
@@ -109,12 +109,6 @@ namespace Options
 			else if (key == "gkyl_file_type") 
 			{
 				auto set_func = std::bind(&Options::set_gkyl_file_type, &opts, 
-					std::placeholders::_1);
-				assign_option<std::string>(set_func, var, key);
-			}
-			else if (key == "geotype") 
-			{
-				auto set_func = std::bind(&Options::set_geotype, &opts, 
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
@@ -206,6 +200,13 @@ namespace Options
 			else if (key == "var_red") 
 			{
 				auto set_func = std::bind(&Options::set_var_red, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "var_red_mode") 
+			{
+				auto set_func = std::bind(&Options::set_var_red_mode, &opts, 
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}

@@ -182,7 +182,9 @@ namespace Impurity
 	*/
 	void collision(Impurity& imp, const Background::Background& bkg, 
 		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx, const Options::Options& opts);
+		const int yidx, const int zidx, const Options::Options& opts, 
+		std::vector<Impurity>& imps, const std::vector<int>& var_red_counts, 
+		Statistics& imp_stats);
 
 	/**
 	* @brief Controlling function for following an impurity until a terminating

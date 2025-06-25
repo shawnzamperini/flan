@@ -452,15 +452,24 @@ namespace Impurity
         //    imp.get_x() > bkg.get_grid_x().back()) return false;
 		if (imp.get_x() > bkg.get_grid_x().back()) return false;
 
-		// At minimum x move the particle to a random y,z cell. This is a
-		// rough approximation to entering the core and leaving it 
-		// somewhere else.
-		else if (imp.get_x() < bkg.get_grid_x()[0])
+		// Minimum x can also be absorbing (0) or mimic a core boundary (1)
+		if (opts.min_xbound_type_int() == 0)
 		{
-			imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
-				static_cast<double>(bkg.get_y_max())));
-			imp.set_z(Random::get(static_cast<double>(bkg.get_z_min()), 
-				static_cast<double>(bkg.get_z_max())));
+			if (imp.get_x() < bkg.get_grid_x()[0]) return false;
+		}
+
+		else if (opts.min_xbound_type_int() == 1)
+		{
+			// At minimum x move the particle to a random y,z cell. This is a
+			// rough approximation to entering the core and leaving it 
+			// somewhere else.
+			if (imp.get_x() < bkg.get_grid_x()[0])
+			{
+				imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
+					static_cast<double>(bkg.get_y_max())));
+				imp.set_z(Random::get(static_cast<double>(bkg.get_z_min()), 
+					static_cast<double>(bkg.get_z_max())));
+			}
 		}
 
         // Periodic y boundary
@@ -538,16 +547,24 @@ namespace Impurity
 
 	void collision(Impurity& imp, const Background::Background& bkg, 
 		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx, const Options::Options& opts)
+		const int yidx, const int zidx, const Options::Options& opts,
+		std::vector<Impurity>& imps, const std::vector<int>& var_red_counts, 
+		Statistics& imp_stats)
 	{
-		// Local plasma propoerties
+		// See if (inelastic) collision should create a split secondary
+		// particle or not.
+		bool split_particle {VarianceReduction::check_split_particle(imp, tidx, 
+			xidx, yidx, zidx, opts, var_red_counts, imp_stats)};
+
+		// Local plasma properties
 		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
 		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
 		double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
 
-		// Impurity modified within collision step
+		// Impurity modified within collision step, potentially add a secondary 
+		// split particle to imps
 		Collisions::collision_update(imp, local_te, local_ti, local_ne, 
-			imp_time_step, opts);
+			imp_time_step, opts, split_particle, imps);
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
@@ -621,6 +638,7 @@ namespace Impurity
 			// weight and create a secondary Impurity to be followed. It
 			// currently is based on ionization/recombination, hence that also
 			// needs to be on to work.
+			/*
 			if (var_red_on && opts.imp_iz_recomb_int() > 0)
 			{
 				VarianceReduction::split_particle_main(imp, tidx, xidx, yidx, 
@@ -628,6 +646,7 @@ namespace Impurity
 					var_red_counts, bkg, oa_ioniz, oa_recomb, 
 					imp_time_step);
 			}
+			*/
 
 			// Calculate variable time step (if necessary). NOT TRUSTWORTHY
 			// YET AFTER UPGRADING PARTICLE FOLLOWING.
@@ -639,7 +658,7 @@ namespace Impurity
 			if (opts.imp_collisions_int() > 0)
 			{
 				collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx, 
-					opts);
+					opts, imps, var_red_counts, imp_stats);
 			}
 
 			// Debugging
@@ -781,10 +800,10 @@ namespace Impurity
 				// This variable is just an integer saying "every X particles
 				// followed, update the variance reduction counts". It needs to
 				// be greater than zero.
-				int var_red_med_mod {static_cast<int>(
+				int var_red_freq_int {static_cast<int>(
 					static_cast<double>(opts.imp_num()) / omp_get_num_threads() 
 					* opts.var_red_freq())};
-				if (var_red_med_mod == 0) var_red_med_mod = 1;
+				if (var_red_freq_int == 0) var_red_freq_int = 1;
 
 				// Update variance reduction counts according to the variance
 				// reduction frequency (var_red_freq), which is a number 
@@ -792,11 +811,11 @@ namespace Impurity
 				// execute this if statement 10 times during the simulation.
 				// The modifier determines what fraction of the median is
 				// considered low-count. Lower values = more splitting.
-				if (priv_count % var_red_med_mod == 0 && priv_count > 0)
+				if (priv_count % var_red_freq_int == 0 && priv_count > 0)
 				{
 					var_red_counts = 
 						VarianceReduction::get_counts(imp_stats, 
-						var_red_med_mod);
+						opts.var_red_med_mod());
 
 					// We use this separate boolean (initially false) to
 					// control if variance reduction occurs so that the
