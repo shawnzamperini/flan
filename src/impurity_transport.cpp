@@ -554,8 +554,8 @@ namespace Impurity
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
 		int& recomb_warnings, std::vector<Impurity>& imps,
-		const std::vector<int> imp_var_reduct_counts, 
-		const bool imp_var_reduct_on, 
+		const std::vector<int> var_red_counts, 
+		const bool var_red_on, 
 		const Options::Options& opts)
 	{
 		// Timestep of impurity transport simulation. It can be a constant
@@ -621,11 +621,11 @@ namespace Impurity
 			// weight and create a secondary Impurity to be followed. It
 			// currently is based on ionization/recombination, hence that also
 			// needs to be on to work.
-			if (imp_var_reduct_on && opts.imp_iz_recomb_int() > 0)
+			if (var_red_on && opts.imp_iz_recomb_int() > 0)
 			{
 				VarianceReduction::split_particle_main(imp, tidx, xidx, yidx, 
-					zidx, imp_stats, imps, opts.imp_var_reduct_min_weight(), 
-					imp_var_reduct_counts, bkg, oa_ioniz, oa_recomb, 
+					zidx, imp_stats, imps, opts.var_red_min_weight(), 
+					var_red_counts, bkg, oa_ioniz, oa_recomb, 
 					imp_time_step);
 			}
 
@@ -723,8 +723,8 @@ namespace Impurity
 		const Options::Options& opts)
 	{
 		// Variance reduction requires ionization/recombination be on
-		//if (imp_var_reduct_on && !imp_iz_recomb_on)
-		if (opts.imp_var_reduct_int() > 0 && opts.imp_iz_recomb_int() == 0)
+		//if (var_red_on && !imp_iz_recomb_on)
+		if (opts.var_red_int() > 0 && opts.imp_iz_recomb_int() == 0)
 		{
 			std::cout << "Warning! Variance reduction requires "
 				<< "imp_ioniz_recomb be set to 'yes'. Variance reduction will"
@@ -733,7 +733,7 @@ namespace Impurity
 
 		// Vector of counts at each frame, below which is considered a 
 		// low-count region (as defined in variance_reduction.get_counts).
-		std::vector<int> imp_var_reduct_counts (
+		std::vector<int> var_red_counts (
 			imp_stats.get_counts().get_dim1(), 0);
 
 		// https://stackoverflow.com/questions/29633531/user-defined-
@@ -764,46 +764,49 @@ namespace Impurity
 		int prim_imp_count {};
 		int tot_imp_count {};
 		int priv_count {};
-		bool imp_var_reduct_control {false};
+		bool var_red_control {false};
 		#pragma omp parallel for schedule(dynamic) \
-			firstprivate(priv_count, imp_var_reduct_counts) \
-			firstprivate(imp_var_reduct_control) \
+			firstprivate(priv_count, var_red_counts) \
+			firstprivate(var_red_control) \
 			shared(bkg, oa_ioniz, oa_recomb) \
 			reduction(+: imp_stats, ioniz_warnings, recomb_warnings) \
-			reduction(+: tot_imp_count)
+			//reduction(+: tot_imp_count)
 		for (int i = 0; i < opts.imp_num(); ++i)
 		{
 
 			// Periodically determine what number of counts qualifies for 
 			// splitting a particle, if necessary. 
-			if (opts.imp_var_reduct_int() > 0 && priv_count > 0)
+			if (opts.var_red_int() > 0 && priv_count > 0)
 			{
 				// This variable is just an integer saying "every X particles
 				// followed, update the variance reduction counts". It needs to
 				// be greater than zero.
-				int imp_var_reduct_mod {static_cast<int>(
+				int var_red_med_mod {static_cast<int>(
 					static_cast<double>(opts.imp_num()) / omp_get_num_threads() 
-					* opts.imp_var_reduct_freq())};
-				if (imp_var_reduct_mod == 0) imp_var_reduct_mod = 1;
+					* opts.var_red_freq())};
+				if (var_red_med_mod == 0) var_red_med_mod = 1;
 
 				// Update variance reduction counts according to the variance
-				// reduction frequency (imp_var_reduct_freq), which is a number 
+				// reduction frequency (var_red_freq), which is a number 
 				// between 0 and 1. So for example, a value of 0.10 would 
 				// execute this if statement 10 times during the simulation.
-				if (priv_count % imp_var_reduct_mod == 0 && priv_count > 0)
+				// The modifier determines what fraction of the median is
+				// considered low-count. Lower values = more splitting.
+				if (priv_count % var_red_med_mod == 0 && priv_count > 0)
 				{
-					imp_var_reduct_counts = 
-						VarianceReduction::get_counts(imp_stats, 1.0);
+					var_red_counts = 
+						VarianceReduction::get_counts(imp_stats, 
+						var_red_med_mod);
 
 					// We use this separate boolean (initially false) to
 					// control if variance reduction occurs so that the
 					// simulation can run through for a bit and learn
 					// what a low-count region qualifies as. 
-					imp_var_reduct_control = true;
+					var_red_control = true;
 
-					//for (auto c : imp_var_reduct_counts)
+					//for (auto c : var_red_counts)
 					//{
-					//	std::cout << "imp_var_reduct_counts = " << c << '\n';
+					//	std::cout << "var_red_counts = " << c << '\n';
 					//}
 				}
 			}	
@@ -832,10 +835,13 @@ namespace Impurity
 				// Begin following Impurity
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
 					ioniz_warnings, recomb_warnings, imps,
-					imp_var_reduct_counts, imp_var_reduct_control, 
+					var_red_counts, var_red_control, 
 					opts);
 				//std::cout << "imps.size() = " << imps.size() << '\n';
-				++tot_imp_count;
+				#pragma omp critical
+				{
+					++tot_imp_count;
+				}
 			}
 
 			// Print out progress at intervals set by prog_interval (i.e.,
@@ -857,8 +863,13 @@ namespace Impurity
 						double perc_complete {static_cast<double>(
 							prim_imp_count) / opts.imp_num() * 100};
 						std::cout << "Followed " << prim_imp_count << "/" 
-							<< opts.imp_num() << " impurities (" 
+							<< opts.imp_num() << " primary impurities (" 
 							<< static_cast<int>(perc_complete) << "%)\n";
+
+						// Give user an update on secondary impurities, since
+						// most the time can actually be spent following these.
+						std::cout << "  Secondary impurities followed: " 
+							<< tot_imp_count - prim_imp_count << '\n';
 					}
 				}
 			}
@@ -869,10 +880,6 @@ namespace Impurity
 
 		// Let user know how many, if any, warnings occured.
 		print_ioniz_recomb_warn(ioniz_warnings, recomb_warnings);
-
-		// Let user know how many secondary impurities were followed.
-		std::cout << "Secondary impurities followed: " << tot_imp_count 
-			- prim_imp_count << '\n';
 	}
 
 	Statistics follow_impurities(Background::Background& bkg, 

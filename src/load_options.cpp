@@ -203,24 +203,32 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 			
-			else if (key == "imp_var_reduct") 
+			else if (key == "var_red") 
 			{
-				auto set_func = std::bind(&Options::set_imp_var_reduct, &opts, 
+				auto set_func = std::bind(&Options::set_var_red, &opts, 
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
 			
-			else if (key == "imp_var_reduct_freq") 
+			else if (key == "var_red_freq") 
 			{
-				auto set_func = std::bind(&Options::set_imp_var_reduct_freq, 
+				auto set_func = std::bind(&Options::set_var_red_freq, 
 					&opts, std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}
 			
-			else if (key == "imp_var_reduct_min_weight") 
+			else if (key == "var_red_min_weight") 
 			{
 				auto set_func = std::bind(
-					&Options::set_imp_var_reduct_min_weight, &opts, 
+					&Options::set_var_red_min_weight, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "var_red_med_mod") 
+			{
+				auto set_func = std::bind(
+					&Options::set_var_red_med_mod, &opts, 
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}

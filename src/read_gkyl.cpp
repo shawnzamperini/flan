@@ -831,7 +831,7 @@ namespace Gkyl
 		// Loop through every x, y, z value to calculate each X, Y, Z
 		for (int i {}; i < dim1; ++i)
 		{
-			std::cout << i+1 << "/" << dim1 << '\n';
+			//std::cout << i+1 << "/" << dim1 << '\n';
 			for (int j {}; j < dim2; ++j)
 			{
 				for (int k {}; k < dim3; ++k)
