@@ -1,5 +1,5 @@
 # This version is likely a bit too strict, it is just the one I built this with
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.26)
 project(flan VERSION 0.4.0)
 
 # User must specify where the dependencies are stored via the FLANSOFT variable
@@ -33,6 +33,7 @@ include_directories(
 # Link to the directories with each library
 link_directories(
 	${FLANSOFT}/netcdf-cxx4/lib
+	${FLANSOFT}/netcdf-cxx4/lib64
 	${FLANSOFT}/netcdf-c/lib
 )
 
