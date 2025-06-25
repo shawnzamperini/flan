@@ -477,13 +477,32 @@ namespace Gkyl
 		const double species_mass_amu, const bool force_load)
 	{
 		// Check if file already exists and load it to save time. Can force
-		// loading if we want to circumvent this.
-		std::string filename {"bkg_from_pgkyl_" + data_type + ".csv"};
+		// loading if we want to circumvent this. Account for the fact that
+		// some files have the species name in them.
+		std::string filename {};
+		if (data_type == "density" || data_type == "temperature")
+		{
+			filename = "bkg_from_pgkyl_" + species + "_" + data_type + ".csv";
+		}
+		else
+		{
+			filename = "bkg_from_pgkyl_" + data_type + ".csv";
+		}
+
 		if (std::filesystem::exists(filename) && !force_load)
 		{
 			std::cout << "Previous file located\n";
-			Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
-			gkyl_data.move_into_data(tmp_data);
+			if (data_type == "density" || data_type == "temperature")
+			{
+				Vectors::Vector4D<T> tmp_data {
+					load_values<T>(species + "_" + data_type)};
+				gkyl_data.move_into_data(tmp_data);
+			}
+			else
+			{
+				Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
+				gkyl_data.move_into_data(tmp_data);
+			}
 			return;
 		}
 
@@ -554,8 +573,19 @@ namespace Gkyl
 		// the tmp rvalue and then pass it in, where the data is then
 		// moved from tmp into gkyl_data. 
 		//std::cout << "Loading " << data_type << "...\n";
-		Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
-		gkyl_data.move_into_data(tmp_data);
+		if (data_type == "density" || data_type == "temperature")
+		{
+			// Some data is for specific species, which is going to be saved
+			// as [species]_[data_type].
+			Vectors::Vector4D<T> tmp_data {
+				load_values<T>(species + "_" + data_type)};
+			gkyl_data.move_into_data(tmp_data);
+		}
+		else
+		{
+			Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
+			gkyl_data.move_into_data(tmp_data);
+		}
 	}
 
 	template <typename T>
@@ -801,7 +831,7 @@ namespace Gkyl
 		// Loop through every x, y, z value to calculate each X, Y, Z
 		for (int i {}; i < dim1; ++i)
 		{
-			std::cout << i+1 << "/" << dim1 << '\n';
+			//std::cout << i+1 << "/" << dim1 << '\n';
 			for (int j {}; j < dim2; ++j)
 			{
 				for (int k {}; k < dim3; ++k)

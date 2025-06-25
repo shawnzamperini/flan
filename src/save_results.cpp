@@ -334,10 +334,16 @@ namespace SaveResults
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 		}
 		
-		// Gyroradius
-		desc = "average impurity gyroradius";
-		save_vector_4d(nc_file, imp_stats.get_gyrorad(), "imp_gyrorad", 
-			dim1, dim2, dim3, dim4, desc, "(m)");
+		// Gyroradius - commenting out since it may not be useful, but
+        // maybe one day it will be
+		//desc = "average impurity gyroradius";
+		//save_vector_4d(nc_file, imp_stats.get_gyrorad(), "imp_gyrorad", 
+		//	dim1, dim2, dim3, dim4, desc, "(m)");
+
+        // Jacobian
+		desc = "Jacobian";
+		save_vector_3d(nc_file, bkg.get_J(), "jacobian", grid_dim2, 
+			grid_dim3, grid_dim4, desc, "()");
 	}
 
 }

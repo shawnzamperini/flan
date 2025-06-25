@@ -14,20 +14,20 @@ namespace VarianceReduction
 	void split_particle_main(Impurity::Impurity& imp, const int tidx, 
 		const int xidx, const int yidx, const int zidx, 
 		Impurity::Statistics& imp_stats, std::vector<Impurity::Impurity>& imps,
-		const double imp_var_reduct_min_weight, 
-		const std::vector<int>& imp_var_reduct_counts,
+		const double var_red_min_weight, 
+		const std::vector<int>& var_red_counts,
 		const Background::Background& bkg, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, const double imp_time_step)
 	{
 		// First check if particle's weight is higher than the user-defined
 		// minimum weight. Without this we'd go on splitting forever.
-		if (imp.get_weight() < imp_var_reduct_min_weight) return;
+		if (imp.get_weight() < var_red_min_weight) return;
 
 		// Variance reduction (particle splitting) is done if the particle is
 		// in a low-count region, defined by whatever is passed in for
-		// imp_var_reduct_counts.
+		// var_red_counts.
 		if (imp_stats.get_counts()(tidx, xidx, yidx, zidx) <= 
-			imp_var_reduct_counts[tidx])
+			var_red_counts[tidx])
 		{
 			//std::cout << "Low-count region detected\n";
 			// To split the particle, we need an outcome that has a 
@@ -92,7 +92,7 @@ namespace VarianceReduction
 		// Sort vector
 		std::sort(frame_counts.begin(), frame_counts.end());
 
-		// Calculate and save median. Some potential integer divsion here
+		// Calculate and save median. Some potential integer division here
 		// but it's fine.
 		if (n % 2 == 0) 
 		{

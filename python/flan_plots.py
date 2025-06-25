@@ -120,7 +120,7 @@ class FlanPlots:
 
 	def plot_frame_xy(self, data_name, frame, z0, showplot=True, 
 		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
-		xlabel="x (m)", ylabel="y (m)", cbar_label=None):
+		xlabel="x (m)", ylabel="y (m)", cbar_label=None, rsep=0.0):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -178,7 +178,7 @@ class FlanPlots:
 
 			# Plot according to the normalization option passed in.
 			norm = self.get_norm(data_xy, norm_type, vmin=vmin, vmax=vmax)
-			mesh = ax1.pcolormesh(X, Y, data_xy.T, cmap=cmap, norm=norm)
+			mesh = ax1.pcolormesh(X-rsep, Y, data_xy.T, cmap=cmap, norm=norm)
 			
 			cbar = fig.colorbar(mesh, ax=ax1)
 			ax1.set_facecolor("grey")

@@ -186,7 +186,16 @@ def save_csv(args, times, grid, values):
              "# Then each array for each frame is printed out flattened\n"
              "# using C-style indexing.\n"
              ) 
-    with open(fname_base + args.gkyl_data_type + ".csv", "w") as f:
+    
+    # Data like density and temperature could be ion or electron (or some other
+    # species), so we need to add that extra qualifier.
+    if args.gkyl_data_type in ["density", "temperature"]:
+        fname = fname_base + args.gkyl_species + "_" + \
+            args.gkyl_data_type + ".csv"
+    else:
+        fname = fname_base + args.gkyl_data_type + ".csv"
+
+    with open(fname, "w") as f:
         f.write(header)
         num_vals = "{:d} {:d} {:d} {:d}\n".format(len(values), values[0].shape[0], 
                 values[0].shape[1], values[0].shape[2]) 

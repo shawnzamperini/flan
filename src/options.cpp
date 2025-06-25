@@ -99,16 +99,22 @@ namespace Options
 			if (imp_collisions == "off") m_imp_collisions_int = 0;
 			else if (imp_collisions == "on") m_imp_collisions_int = 1;
 		}
-	void Options::set_imp_var_reduct(std::string imp_var_reduct) 
+	void Options::set_var_red(std::string var_red) 
 		{
-			m_imp_var_reduct = imp_var_reduct;
-			if (imp_var_reduct == "off") m_imp_var_reduct_int = 0;
-			else if (imp_var_reduct == "on") m_imp_var_reduct_int = 1;
+			m_var_red = var_red;
+			if (var_red == "off") m_var_red_int = 0;
+			else if (var_red == "on") m_var_red_int = 1;
 		}
-	void Options::set_imp_var_reduct_freq(double imp_var_reduct_freq) 
-		{m_imp_var_reduct_freq = imp_var_reduct_freq;}
-	void Options::set_imp_var_reduct_min_weight(double imp_var_reduct_min_weight) 
-		{m_imp_var_reduct_min_weight = imp_var_reduct_min_weight;}
+
+	void Options::set_var_red_freq(double var_red_freq) 
+		{m_var_red_freq = var_red_freq;}
+	
+	void Options::set_var_red_min_weight(double var_red_min_weight) 
+		{m_var_red_min_weight = var_red_min_weight;}
+	
+	void Options::set_var_red_med_mod(double var_red_med_mod) 
+		{m_var_red_med_mod = var_red_med_mod;}
+	
 	void Options::set_imp_time_step_opt(std::string imp_time_step_opt) 
 		{
 			m_imp_time_step_opt = imp_time_step_opt;
@@ -116,6 +122,7 @@ namespace Options
 			else if (imp_time_step_opt == "variable") 
 				m_imp_time_step_opt_int = 1;
 		}
+	
 	void Options::set_imp_time_step(double imp_time_step) 
 		{m_imp_time_step = imp_time_step;}
 	void Options::set_imp_time_step_min(double imp_time_step_min) 
@@ -192,12 +199,14 @@ namespace Options
 		{return m_imp_zstart_val;}
 	const std::string& Options::imp_collisions() const 
 		{return m_imp_collisions;}
-	const std::string& Options::imp_var_reduct() const 
-		{return m_imp_var_reduct;}
-	const double Options::imp_var_reduct_freq() const 
-		{return m_imp_var_reduct_freq;}
-	const double Options::imp_var_reduct_min_weight() const 
-		{return m_imp_var_reduct_min_weight;}
+	const std::string& Options::var_red() const 
+		{return m_var_red;}
+	const double Options::var_red_freq() const 
+		{return m_var_red_freq;}
+	const double Options::var_red_min_weight() const 
+		{return m_var_red_min_weight;}
+	const double Options::var_red_med_mod() const 
+		{return m_var_red_med_mod;}
 	const std::string& Options::imp_time_step_opt() const 
 		{return m_imp_time_step_opt;}
 	const double Options::imp_time_step() const 
@@ -228,8 +237,8 @@ namespace Options
 		{return m_imp_zstart_opt_int;}
 	const int Options::imp_collisions_int() const
 		{return m_imp_collisions_int;}
-	const int Options::imp_var_reduct_int() const
-		{return m_imp_var_reduct_int;}
+	const int Options::var_red_int() const
+		{return m_var_red_int;}
 	const int Options::imp_time_step_opt_int() const
 		{return m_imp_time_step_opt_int;}
 	const int Options::imp_vel_stats_int() const

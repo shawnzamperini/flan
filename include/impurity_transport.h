@@ -206,8 +206,8 @@ namespace Impurity
 		Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, int& ioniz_warnings, 
 		int& recomb_warnings, std::vector<Impurity>& imps,
-		const std::vector<int> imp_var_reduct_counts, 
-		const bool imp_var_reduct_on, 
+		const std::vector<int> var_red_counts, 
+		const bool var_red_on, 
 		const Options::Options& opts);
 	/**
 	* @brief Print out warnings if ionization/recombination probabilities were
