@@ -16,3 +16,4 @@ Contents
 .. toctree::
 
    Installation.rst
+   beginnerGuide.rst
