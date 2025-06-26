@@ -1,7 +1,5 @@
 ===================================
-
 Welcome to the installation page!
-
 ===================================
 
 Before installing flan, ensure you have a working installation of Anaconda on your machine. If you have that, then installing Flan should only require three commands. Navigate to the top directory of Flan and do the following:
