@@ -1,13 +1,13 @@
-===================================
+===============================================================================================
 Welcome to the dependencies/installation page!
-===================================
+===============================================================================================
 Dependencies
-------------
+-----------------------------------------------------------------------------------------------
 CMake is used as a build system. The :literal:`mkdeps` shell script should handle installing all the dependencies, but they are: NetCDF, zlib, HDF5. Anaconda is also required, as the interface to Gkeyll (more specifically, the post-processing Gkeyll suite `postgkyl <https://github.com/ammarhakim/postgkyl/tree/main>`_) is written in python. A conda environment is automatically setup by :literal:`mkdeps` to handle this.
 
 
 Installation
--------------
+-----------------------------------------------------------------------------------------------
 Before installing flan, ensure you have a working installation of Anaconda on your machine. If you have that, then installing Flan should only require three commands. Navigate to the top directory of Flan and do the following:
 
 1. Install dependencies: :literal:`machines/mkdeps.[machine].sh` 
