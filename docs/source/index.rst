@@ -1,4 +1,4 @@
-Welcome to FLan's documentation!
+Welcome to Flan's documentation!
 ===================================
 
 **Flan** (/flaan/) is a Fully kinetic Monte Carlo code that was developed to follow trace amount of impurities in a turbulent plasma. Flan hosts its documentation on readthedocs.
