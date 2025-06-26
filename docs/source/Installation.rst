@@ -25,3 +25,4 @@ Before installing flan, ensure you have a working installation of Anaconda on yo
 This process installs the :literal:`flan` library in the :literal:`lib` directory and activates the :literal:`(flan)` conda environment. To run :literal:`flan`, one writes an input file in C++ and then compiles it with Flan. This process is detailed next, but it is important to note that the executable must be ran within the :literal:`(flan)` conda environment!
 
 
+.. toctree::
