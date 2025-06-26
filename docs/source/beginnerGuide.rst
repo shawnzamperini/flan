@@ -59,7 +59,7 @@ Once finished, we can plot the data using the provided :literal:`flan_plots` pyt
 
 This creates an animated plot, a screenshot of which is shown below.
 
-.. image:: flan/docs/flan_ex_v1.png
+.. image:: ../flan_ex_v1.png
 
 Data can be extracted for more detailed analysis. This will be covered in future :literal:`flan_plots` documentation (one day).
 
