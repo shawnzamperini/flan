@@ -33,7 +33,7 @@ fi
 
 # Create a simple CMakeLists.txt file
 cat <<EOF > CMakeLists.txt
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.26)
 project(\$1 LANGUAGES CXX)
 find_package(flan REQUIRED HINTS "$1/lib/cmake")
 add_executable(\$1 \$1.cpp)

@@ -2,11 +2,16 @@
 cmake_minimum_required(VERSION 3.26)
 project(flan VERSION 0.4.0)
 
+# Load options from when the dependencies were built. Contains FLANSOFT
+# and FLANROOT
+include(${CMAKE_CURRENT_SOURCE_DIR}/install-deps/build-opts.cmake REQUIRED)
+
 # User must specify where the dependencies are stored via the FLANSOFT variable
-if(NOT DEFINED FLANSOFT)
-	set(FLANSOFT $ENV{HOME}/flansoft)
-endif()
+#if(NOT DEFINED FLANSOFT)
+#	set(FLANSOFT $ENV{HOME}/flansoft)
+#endif()
 message(STATUS "FLANSOFT set to ${FLANSOFT}")
+message(STATUS "FLANROOT set to ${FLANROOT}")
 
 # Print out version and make configuration header file so version is accessible
 # within flan
@@ -32,7 +37,7 @@ include_directories(
 
 # Link to the directories with each library
 link_directories(
-	${FLANSOFT}/netcdf-cxx4/lib
+	${FLANSOFT}/netcdf-cxx4/lib	
 	${FLANSOFT}/netcdf-cxx4/lib64
 	${FLANSOFT}/netcdf-c/lib
 )
@@ -56,7 +61,7 @@ target_link_libraries(flan PRIVATE -fopenmp netcdf netcdf-cxx4)
 # Set the rpath so we can find the netCDF shared library
 set_target_properties(flan PROPERTIES
     BUILD_WITH_INSTALL_RPATH TRUE
-    INSTALL_RPATH ${FLANSOFT}/netcdf-cxx4/lib
+    INSTALL_RPATH "${FLANSOFT}/netcdf-c/lib;${FLANSOFT}/netcdf-cxx4/lib;${FLANSOFT}/netcdf-cxx4/lib64"
 )
 
 # Install in lib and include
@@ -82,8 +87,8 @@ install(EXPORT flan_targets
 # can execute the generate script as part of the build process.
 add_custom_command(
 	OUTPUT script_output.txt
-	COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/generate_flan_setup.sh ${CMAKE_SOURCE_DIR}
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts
+	COMMAND bash ${FLANROOT}/scripts/generate_flan_setup.sh ${FLANROOT} ${FLANSOFT}
+	WORKING_DIRECTORY ${FLANROOT}/scripts
 	COMMENT "Generating flan_setup.sh"
 )
 add_custom_target(flan_setup ALL DEPENDS script_output.txt)

@@ -32,6 +32,7 @@ namespace OpenADAS
 		// These are the ACD and SCD files, respectively.
 		std::string openadas_path {get_openadas_path(openadas_root, 
 			openadas_year, imp_atom_num, rate_type)};
+		std::cout << "ADAS: Loading " << openadas_path << '\n';
 
 		// Open file
 		std::ifstream openadas_stream {openadas_path};

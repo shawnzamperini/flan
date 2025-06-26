@@ -21,6 +21,9 @@
 
 void flan(const Inputs& inpts)
 {
+	// For printing output, flush buffer after every output operation
+	std::cout << std::unitbuf;
+
 	// Load version info from config.h file
 	std::cout << "Welcome to Flan v" << PROJECT_VERSION << "\n";
 
