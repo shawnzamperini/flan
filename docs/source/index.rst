@@ -12,9 +12,10 @@ how to  the project.
 
 Contents
 --------
-Installation.rst
+
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
-   
-   
+   Installation.rst
