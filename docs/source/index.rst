@@ -12,6 +12,7 @@ how to  the project.
 
 Contents
 --------
+Installation.rst
 
 .. toctree::
 
