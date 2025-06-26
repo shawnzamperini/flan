@@ -8,7 +8,7 @@ how to  the project.
 
 .. note::
 
-   This project is under active development.
+   This project is under active development. Edit
 
 Contents
 --------
