@@ -207,11 +207,8 @@ MPICC=$MPICC
 MPICXX=$MPICXX
 
 EOF1
-#fi
 
 # Likewise make build-opts that CMake can read in
-#if [ "$NEW_BUILD_OPTS" = "yes" ]
-#then
 cat <<EOF1 > build-opts.cmake
 # Generated automatically! Do not edit
 set(FLANSOFT "$PREFIX")
