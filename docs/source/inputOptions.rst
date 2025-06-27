@@ -107,47 +107,47 @@ Input Options Table
 .. _A1:
 
 **A1**  
-  Describe std::string m_gkyl_dir (default: "undefined")
+  Describe std::string m_gkyl_dir. Can take any string. (default: "undefined")
 
 .. _A2:
 
 **A2**  
-  Describe std::string m_gkyl_casename (default: "undefined")
+  Describe std::string m_gkyl_casename. Can take any string.  (default: "undefined")
 
 .. _A3:
 
 **A3**  
-  Describe int m_gkyl_frame_start (default: 0)
+  Describe int m_gkyl_frame_start. Can take any integer less than the total number of frames (-1?) (default: 0)
 
 .. _A4:
 
 **A4**  
-  Describe int m_gkyl_frame_end (default: 1)
+  Describe int m_gkyl_frame_end. Can take any integer greater than (or equal to?) the frame_start and less than (or equal to?) the total number of frames. (default: 1)
 
 .. _A5:
 
 **A5**  
-  Describe std::string m_gkyl_elec_name (default: "elc")
+  Describe std::string m_gkyl_elec_name. Can take any string.  (default: "elc")
 
 .. _A6:
 
 **A6**  
-  Describe std::string m_gkyl_ion_name (default: "ion")
+  Describe std::string m_gkyl_ion_name. Can take any string.  (default: "ion")
 
 .. _A7:
 
 **A7**  
-  Describe double m_gkyl_elec_mass_amu (default: 0.000548)
+  Describe double m_gkyl_elec_mass_amu. Can take any reasonable double. Given in AMUs. (default: 0.000548)
 
 .. _A8:
 
 **A8**  
-  Describe double m_gkyl_ion_mass_amu (default: 2.014)
+  Describe double m_gkyl_ion_mass_amu. Can take doubles, default units are AMUs. (default: 2.014)
 
 .. _A9:
 
 **A9**  
-  Describe std::string m_gkyl_file_type (default: "binary")
+  Describe std::string m_gkyl_file_type. Can take an acceptable file type written as a string [Make a comprehensive list of acceptable types] (default: "binary")
 
 .. _A10:
 
