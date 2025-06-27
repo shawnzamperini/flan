@@ -24,7 +24,13 @@ namespace VarianceReduction
 		// in a low-count region, defined by whatever is passed in for
 		// var_red_counts.
 		if (imp_stats.get_counts()(tidx, xidx, yidx, zidx) <= 
-			var_red_counts[tidx]) return true;
+			var_red_counts[tidx]) 
+		{
+			std::cout << "tidx, var_red_counts = " << tidx << ", " 
+				<< var_red_counts[tidx] << '\n';
+			return true;
+		}
+		else return false;
 	}
 
 	void split_particle_main(Impurity::Impurity& imp, const int tidx, 
@@ -125,8 +131,8 @@ namespace VarianceReduction
 	}
 
 	void create_secondary(Impurity::Impurity& imp, 
-		std::vector<Impurity::Impurity>& imps, const double secondary_weight)
-		//const bool ioniz)
+		std::vector<Impurity::Impurity>& imps, const double secondary_weight,
+		const int charge_increase)
 	{
 		// The primary/parent Impurity's weight must be reduced by the
 		// amount that will be split off of it. If you accidentally call this
@@ -144,18 +150,12 @@ namespace VarianceReduction
 			return;
 		}
 
-		// Secondary particle will have different charge depending on if it
-		// represents a potential ionization or recombination.
-		//int secondary_charge {};
-		//if (ioniz) secondary_charge = imp.get_charge() + 1;
-		//else secondary_charge = imp.get_charge() - 1;
-
 		// Create secondary Impurity with new weight and charge.
 		Impurity::Impurity secondary_imp {imp.get_t(), imp.get_x(), 
 			imp.get_y(), imp.get_z(), imp.get_X(), imp.get_Y(), imp.get_Z(), 
 			imp.get_vX(), imp.get_vY(), imp.get_vZ(), secondary_weight, 
-		//	secondary_charge, imp.get_mass(), imp.get_atom_num()};
-			imp.get_charge(), imp.get_mass(), imp.get_atom_num()};
+			imp.get_charge() + charge_increase, imp.get_mass(), 
+			imp.get_atom_num()};
 
 		// Add to list of impurities to be followed.
 		imps.push_back(secondary_imp);

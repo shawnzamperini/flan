@@ -69,6 +69,6 @@ namespace VarianceReduction
 	*	higher (true) or lower (false)
 	*/
 	void create_secondary(Impurity::Impurity& imp, 
-		std::vector<Impurity::Impurity>& imps, const double secondary_weight);
-	//	const bool ioniz);
+		std::vector<Impurity::Impurity>& imps, const double secondary_weight,
+		const int charge_increase=0);
 }

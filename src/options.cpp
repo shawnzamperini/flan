@@ -175,14 +175,15 @@ namespace Options
 		{
 			// Only assign if valid option, leaving as default if not
 			if (check_input<std::string>("var_red", var_red, 
-				{"off", "on"}))
+				{"off", "iz_rec", "coll"}))
 			{
 				m_var_red = var_red;
 			}
 
 			// Assign control integers
 			if (var_red == "off") m_var_red_int = 0;
-			else if (var_red == "on") m_var_red_int = 1;
+			else if (var_red == "iz_rec") m_var_red_int = 1;
+			else if (var_red == "coll") m_var_red_int = 2;
 		}
 
 	// var_red_mode
@@ -392,6 +393,10 @@ namespace Options
 		{return m_geotype_int;}
 	const int Options::min_xbound_type_int() const
 		{return m_min_xbound_type_int;}
+
+	// Setter declarations for internal control variables
+	void Options::set_var_red_int(int var_red_int)
+		{m_var_red_int = var_red_int;}
 	
 	template <typename T>
 	bool Options::check_input(const std::string& var, const T& value, 

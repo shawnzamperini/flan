@@ -239,8 +239,9 @@ namespace Collisions
 		double imp_v {calc_imp_vel(imp)};
 
 		// If impurity is at rest there's nothing to be done so return. We'd
-		// get NaN's if we continued. 
-		if (imp_v < Constants::small) return;
+		// get NaN's if we continued. Assign the minimum time step value.
+		//if (imp_v < Constants::small) return;
+		if (imp_v < Constants::small) dt_coll = opts.imp_time_step_min();
 
 		// Load these into local variables since we pass them twice below.
 		const double te = bkg.get_te()(tidx, xidx, yidx, zidx);
@@ -287,7 +288,6 @@ namespace Collisions
 
 		// Calculate impurity velocity
 		double imp_v {calc_imp_vel(imp)};
-		//std::cout << "imp_v = " << imp_v << '\n';
 
 		// If impurity is at rest there's nothing to be done so return. We'd
 		// get NaN's if we continued. 

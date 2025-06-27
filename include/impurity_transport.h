@@ -240,7 +240,7 @@ namespace Impurity
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, 
-		const Options::Options& opts);
+		Options::Options& opts);
 
 	/**
 	* @brief Entry level function to impurity following routines
@@ -254,7 +254,7 @@ namespace Impurity
 	* the simulation.
 	*/
 	Statistics follow_impurities(Background::Background& bkg, 
-		const Options::Options& opts);
+		Options::Options& opts);
 }
 
 #endif

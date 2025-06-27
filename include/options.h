@@ -215,6 +215,9 @@ namespace Options
 		const int imp_iz_recomb_int() const;
 		const int geotype_int() const;
 		const int min_xbound_type_int() const;
+
+		// Setter declarations for internal control variables
+		void set_var_red_int(int var_red_int);
 	};
 
 }
