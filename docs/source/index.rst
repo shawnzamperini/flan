@@ -17,3 +17,5 @@ Contents
 
    Installation.rst
    beginnerGuide.rst
+   inputOptions.rst
+   publications.rst
