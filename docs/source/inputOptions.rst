@@ -168,60 +168,243 @@ Table G: Internal Control Variables
 Reference Targets for Variable Definitions
 ==========================================
 
-.. _A1: 
+.. _A1:
 
-  A1 : std::string m_gkyl_dir
-  Test here
+**A1**  
+  Describe std::string m_gkyl_dir
 
-.. _A2: 
-.. _A3: 
-.. _A4: 
-.. _A5: 
-.. _A6: 
-.. _A7: 
-.. _A8: 
-.. _A9: 
+.. _A2:
 
-.. _B1: 
-.. _B2: 
-.. _B3: 
+**A2**  
+  Describe std::string m_gkyl_casename
 
-.. _C1: 
-.. _C2: 
-.. _C3: 
+.. _A3:
 
-.. _D1: 
-.. _D2: 
-.. _D3: 
-.. _D4: 
-.. _D5: 
-.. _D6: 
-.. _D7: 
-.. _D8: 
-.. _D9: 
-.. _D10: 
-.. _D11: 
-.. _D12: 
-.. _D13: 
-.. _D14: 
-.. _D15: 
+**A3**  
+  Describe int m_gkyl_frame_start
 
-.. _E1: 
-.. _E2: 
-.. _E3: 
-.. _E4: 
-.. _E5: 
+.. _A4:
 
-.. _F1: 
-.. _F2: 
+**A4**  
+  Describe int m_gkyl_frame_end
 
-.. _G1: 
-.. _G2: 
-.. _G3: 
-.. _G4: 
-.. _G5: 
-.. _G6: 
-.. _G7: 
-.. _G8: 
-.. _G9: 
+.. _A5:
+
+**A5**  
+  Describe std::string m_gkyl_elec_name
+
+.. _A6:
+
+**A6**  
+  Describe std::string m_gkyl_ion_name
+
+.. _A7:
+
+**A7**  
+  Describe double m_gkyl_elec_mass_amu
+
+.. _A8:
+
+**A8**  
+  Describe double m_gkyl_ion_mass_amu
+
+.. _A9:
+
+**A9**  
+  Describe std::string m_gkyl_file_type
+
+
+.. _B1:
+
+**B1**  
+  Describe double m_lcfs_x
+
+.. _B2:
+
+**B2**  
+  Describe double m_imp_xbound_buffer
+
+.. _B3:
+
+**B3**  
+  Describe std::string m_min_xbound_type
+
+
+.. _C1:
+
+**C1**  
+  Describe int m_imp_atom_num
+
+.. _C2:
+
+**C2**  
+  Describe double m_imp_mass_amu
+
+.. _C3:
+
+**C3**  
+  Describe int m_imp_init_charge
+
+
+.. _D1:
+
+**D1**  
+  Describe int m_imp_num
+
+.. _D2:
+
+**D2**  
+  Describe double m_imp_xmin
+
+.. _D3:
+
+**D3**  
+  Describe double m_imp_xmax
+
+.. _D4:
+
+**D4**  
+  Describe std::string m_imp_ystart_opt
+
+.. _D5:
+
+**D5**  
+  Describe double m_imp_ystart_val
+
+.. _D6:
+
+**D6**  
+  Describe std::string m_imp_zstart_opt
+
+.. _D7:
+
+**D7**  
+  Describe double m_imp_zstart_val
+
+.. _D8:
+
+**D8**  
+  Describe std::string m_imp_collisions
+
+.. _D9:
+
+**D9**  
+  Describe std::string m_imp_time_step_opt
+
+.. _D10:
+
+**D10**  
+  Describe double m_imp_time_step
+
+.. _D11:
+
+**D11**  
+  Describe double m_imp_time_step_min
+
+.. _D12:
+
+**D12**  
+  Describe double m_imp_source_scale_fact
+
+.. _D13:
+
+**D13**  
+  Describe std::string m_imp_vel_stats
+
+.. _D14:
+
+**D14**  
+  Describe std::string m_imp_iz_recomb
+
+.. _D15:
+
+**D15**  
+  Describe int m_print_interval
+
+
+.. _E1:
+
+**E1**  
+  Describe std::string m_var_red
+
+.. _E2:
+
+**E2**  
+  Describe std::string m_var_red_mode
+
+.. _E3:
+
+**E3**  
+  Describe double m_var_red_freq
+
+.. _E4:
+
+**E4**  
+  Describe double m_var_red_min_weight
+
+.. _E5:
+
+**E5**  
+  Describe double m_var_red_med_mod
+
+
+.. _F1:
+
+**F1**  
+  Describe std::string m_openadas_root
+
+.. _F2:
+
+**F2**  
+  Describe int m_openadas_year
+
+
+.. _G1:
+
+**G1**  
+  Describe int m_imp_ystart_opt_int
+
+.. _G2:
+
+**G2**  
+  Describe int m_imp_zstart_opt_int
+
+.. _G3:
+
+**G3**  
+  Describe int m_imp_collisions_int
+
+.. _G4:
+
+**G4**  
+  Describe int m_var_red_int
+
+.. _G5:
+
+**G5**  
+  Describe int m_var_red_mode_int
+
+.. _G6:
+
+**G6**  
+  Describe int m_imp_time_step_opt_int
+
+.. _G7:
+
+**G7**  
+  Describe int m_imp_vel_stats_int
+
+.. _G8:
+
+**G8**  
+  Describe int m_imp_iz_recomb_int
+
+.. _G9:
+
+**G9**  
+  Describe int m_geotype_int
+
 .. _G10:
+
+**G10**  
+  Describe int m_min_xbound_type_int
