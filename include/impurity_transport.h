@@ -182,7 +182,9 @@ namespace Impurity
 	*/
 	void collision(Impurity& imp, const Background::Background& bkg, 
 		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx, const Options::Options& opts);
+		const int yidx, const int zidx, const Options::Options& opts, 
+		std::vector<Impurity>& imps, const std::vector<int>& var_red_counts, 
+		Statistics& imp_stats);
 
 	/**
 	* @brief Controlling function for following an impurity until a terminating
@@ -238,7 +240,7 @@ namespace Impurity
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, 
-		const Options::Options& opts);
+		Options::Options& opts);
 
 	/**
 	* @brief Entry level function to impurity following routines
@@ -252,7 +254,7 @@ namespace Impurity
 	* the simulation.
 	*/
 	Statistics follow_impurities(Background::Background& bkg, 
-		const Options::Options& opts);
+		Options::Options& opts);
 }
 
 #endif

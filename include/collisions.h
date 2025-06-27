@@ -21,6 +21,7 @@ namespace Collisions
 	*/
 	void collision_update(Impurity::Impurity& imp, 
 		const double te, const double ti, const double ne, 
-		double imp_time_step, const Options::Options& opts);
+		double imp_time_step, const Options::Options& opts,
+		const bool split_particle, std::vector<Impurity::Impurity>& imps);
 
 }

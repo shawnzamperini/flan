@@ -250,144 +250,30 @@ namespace Impurity
 		return std::make_tuple(fX, fY, fZ);
 	}
 
-	double get_var_time_step_trans(Impurity& imp, 
-		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx, const double fx, const double fy, const double fz,
-		const Options::Options& opts)
-	{
-		return opts.imp_time_step();
-		/*
-		// v0 = velocity before forces are applied
-		// v1 = v0 + dv = velocity after forces are applied
-		//
-		// We use the rule that a particle's step must be less than the
-		// minimum width of the cell (w), e.g.,
-		// (v0 + dv) * dt < w. We modify this condition to
-		// (|v0| + |dv|) * dt < w to avoid imaginary solutions. This in 
-		// fact adds an additional layer of conservatism since 
-		// |v0 + dv| < |v0| + |dv|, i.e., we are always assuming the
-		// "worst case scenario" in which the sign of dv is the same as 
-		// v0. This means sometimes we are restricting the time step using
-		// too large a velocity, which just means the time step will be
-		// smaller than necessary sometimes. This is okay.
-		// We add another layer of safety onto this by defining the step 
-		// size as a fraction of the cell width, thus,
-		//   (|v0| + |dv|) * dt = w / safety_frac    (1)
-		//   dv = dt * F / m  (from F = m * dv/dt)  (2)
-		// (Note: Using |v0| + |dv| above implies we also should use |F|)
-		// Plug (2) into (1) and you get a quadratic equation in dt:
-		//   dt^2 + (v0 * m / F)dt - m * w / (safety_frac * F) = 0
-		// Quadratic equation says:
-		//  dt = (-v0 * m +|- sqrt((v0 * m)^2 
-		//		+ 4 * m * w * F / safety_frac))) / (2 * F)
-		// If F > 0, we can have two solutions. Common sense says just 
-		// pick the one guarunteed to be positive (choose the + in +|-). 
-		// If F < 0, then we could get an imaginary solution and be in 
-		// trouble. 
-
-		// Fraction of cell width to limit step size to.
-		const double safety_frac {5.0};
-
-		// Width of cell in each dimension.
-		double xwidth {bkg.get_grid_x()[xidx+1] - bkg.get_grid_x()[xidx]};
-		double ywidth {bkg.get_grid_y()[yidx+1] - bkg.get_grid_y()[yidx]};
-		double zwidth {bkg.get_grid_z()[zidx+1] - bkg.get_grid_z()[zidx]};
-		double min_width {std::min({xwidth, ywidth, zwidth})};
-		
-		// Don't forget to sqrt it.
-		min_width = std::sqrt(min_width);
-
-		// Velocity and force magnitudes
-		double v {std::sqrt(imp.get_vX()*imp.get_vX() 
-			+ imp.get_vY()*imp.get_vY() + imp.get_vZ()*imp.get_vZ())};  
-		double f {std::sqrt(fx*fx + fy*fy + fz*fz)};
-
-		// The force can be zero if the particle has recombined to a
-		// neutral. This would cause a NaN down below, so we intercept
-		// here to calculate the variable time step.
-		if (std::abs(f) < Constants::small)
-		{
-			return min_width / v / safety_frac;
-		}
-
-		// The discriminant in the solution for dt
-		double disc {v*v * imp.get_mass()*imp.get_mass() 
-			+ 4.0 * f * imp.get_mass() * min_width / safety_frac};
-
-		// Check for imaginary solutions
-		if (disc < 0)
-		{
-			std::cerr << "Error! Discriminant in variable time step " 
-				<< "calculation is negative and causing an imaginary "
-				<< "solution. disc = " << disc << '\n';
-		}
-
-		// Two possible solutions. Return the one gauranteed to be 
-		// positive (+ disc vs. - disc)?
-		double dt {(-v * imp.get_mass() + std::sqrt(disc)) / (2.0 * f)};
-		if (std::isnan(dt) || std::isnan(disc) || std::isnan(f) 
-			|| std::isnan(v))
-		{
-			std::cerr << "Error! NaN encountereded in variable time " 
-				<< "step.\n" << "v, f, disc, dt = " << v << ", " << f
-				<< ", " << disc << ", " << dt << '\n' << "Setting to"
-				<< " imp_time_step_min\n";
-			std::cerr << "imp_q = " << imp.get_charge() << '\n';
-			std::exit(0);
-			dt = opts.imp_time_step_min();
-		}
-		return dt;
-		*/
-	}
-
 	double get_var_time_step(Impurity& imp, 
 		const Background::Background& bkg, const int tidx, 
 		const int xidx, const int yidx, const int zidx, const double fx, 
 		const double fy, const double fz, const Options::Options& opts)
 	{
-		// A temporary thing
-		//std::cerr << "Error! Variable time step is not working yet with new"
-		//	<< " geometry. Defaulting to input value.\n";
-		//return opts.imp_time_step();
-
-		// If impurity is at rest, just choose a very low number to kick
-		// things off.
-		double imp_v {std::sqrt(imp.get_vX()*imp.get_vX() 
-			+ imp.get_vY()*imp.get_vY() + imp.get_vZ()*imp.get_vZ())};
-		if (imp_v < Constants::small)
+		// Calculate time step for a reasonable collisions calculation
+		// (if necessary). Don't do this if the impurity is neutral, it
+		// won't work. Unfortunately this is calculating the momentum
+		// loss factor, tossing it, and then elsewhere we have to 
+		// calculate it again. This could use some restructuring to save
+		// some time but I'm favoring readibility at this point in time. 
+		if (imp.get_charge() > 0) 
 		{
-			return 1e-15;
+			double dt_coll {};
+			Collisions::set_var_time_step_coll(dt_coll, imp, bkg, tidx, 
+				xidx, yidx, zidx, opts);
+
+			// Don't let it pick a value less that the prescribed 
+			// minimum time step.
+			return std::max({opts.imp_time_step_min(), dt_coll});
 		}
-		else
-		{
-			// Calculate time step for reasonable transport calculation
-			//double dt_trans {get_var_time_step_trans(imp, bkg, xidx, yidx, 
-			//	zidx, fx, fy, fz, opts)};
 
-			// Unsure how to calculate this, so just assign to whatever is 
-			// input.
-			double dt_trans {opts.imp_time_step()};
-
-			// Calculate time step for a reasonable collisions calculation
-			// (if necessary). Don't do this if the impurity is neutral, it
-			// won't work. Unfortunately this is calculating the momentum
-			// loss factor, tossing it, and then elsewhere we have to 
-			// calculate it again. This could use some restructuring to save
-			// some time but I'm favoring readibility at this point in time. 
-			if (opts.imp_collisions_int() > 0 && imp.get_charge() > 0) 
-			{
-				double dt_coll {dt_trans};
-				Collisions::set_var_time_step_coll(dt_coll, imp, bkg, tidx, 
-					xidx, yidx, zidx, opts);
-
-				// Choose the smallest of the two
-				//std::cout << "dt_trans, dt_coll = " << dt_trans << ", " 
-				//	<< dt_coll << '\n';
-				return std::min({dt_trans, dt_coll});
-			}
-
-			return dt_trans;
-		}
+		// If neutral just return minimum value.
+		else return opts.imp_time_step_min();
 	}
 
 	bool step(Impurity& imp, const double fX, const double fY, const double fZ, 
@@ -402,16 +288,6 @@ namespace Impurity
 		{
 			return false;
 		}
-
-		// Change in velocity over time step (this is just F = m * dv/dt)
-		//double dvX {fX * imp_time_step / imp.get_mass()};
-		//double dvY {fY * imp_time_step / imp.get_mass()};
-		//double dvZ {fZ * imp_time_step / imp.get_mass()};
-
-		// Update particle velocity
-		//imp.set_vX(imp.get_vX() + dvX);
-		//imp.set_vY(imp.get_vY() + dvY);
-		//imp.set_vZ(imp.get_vZ() + dvZ);
 
 		// Use Boris algorithm to update particle velocity
 		Boris::update_velocity(imp, bkg, imp_time_step, tidx, xidx, yidx, 
@@ -448,19 +324,26 @@ namespace Impurity
 
         // Bound checking (move to separate function). 
 		// Absorbing at maximum x
-        //if (imp.get_x() < bkg.get_grid_x()[0] || 
-        //    imp.get_x() > bkg.get_grid_x().back()) return false;
 		if (imp.get_x() > bkg.get_grid_x().back()) return false;
 
-		// At minimum x move the particle to a random y,z cell. This is a
-		// rough approximation to entering the core and leaving it 
-		// somewhere else.
-		else if (imp.get_x() < bkg.get_grid_x()[0])
+		// Minimum x can also be absorbing (0) or mimic a core boundary (1)
+		if (opts.min_xbound_type_int() == 0)
 		{
-			imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
-				static_cast<double>(bkg.get_y_max())));
-			imp.set_z(Random::get(static_cast<double>(bkg.get_z_min()), 
-				static_cast<double>(bkg.get_z_max())));
+			if (imp.get_x() < bkg.get_grid_x()[0]) return false;
+		}
+
+		else if (opts.min_xbound_type_int() == 1)
+		{
+			// At minimum x move the particle to a random y,z cell. This is a
+			// rough approximation to entering the core and leaving it 
+			// somewhere else.
+			if (imp.get_x() < bkg.get_grid_x()[0])
+			{
+				imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
+					static_cast<double>(bkg.get_y_max())));
+				imp.set_z(Random::get(static_cast<double>(bkg.get_z_min()), 
+					static_cast<double>(bkg.get_z_max())));
+			}
 		}
 
         // Periodic y boundary
@@ -538,16 +421,29 @@ namespace Impurity
 
 	void collision(Impurity& imp, const Background::Background& bkg, 
 		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx, const Options::Options& opts)
+		const int yidx, const int zidx, const Options::Options& opts,
+		std::vector<Impurity>& imps, const std::vector<int>& var_red_counts, 
+		Statistics& imp_stats)
 	{
-		// Local plasma propoerties
+		// See if (inelastic) collision should create a split secondary
+		// particle or not. This is only checked if the variance reduction 
+		// scheme is based on inelastic collisions (var_red_int == 2). 
+		bool split_particle {false};
+		if (opts.var_red_int() == 2)
+		{
+			split_particle = VarianceReduction::check_split_particle(imp, tidx, 
+				xidx, yidx, zidx, opts, var_red_counts, imp_stats);
+		}
+
+		// Local plasma properties
 		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
 		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
 		double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
 
-		// Impurity modified within collision step
+		// Impurity modified within collision step, potentially add a secondary 
+		// split particle to imps
 		Collisions::collision_update(imp, local_te, local_ti, local_ne, 
-			imp_time_step, opts);
+			imp_time_step, opts, split_particle, imps);
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
@@ -617,21 +513,64 @@ namespace Impurity
 			auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
 				zidx);
 
-			// Variance reduction scheme. This may change the particle's 
-			// weight and create a secondary Impurity to be followed. It
-			// currently is based on ionization/recombination, hence that also
-			// needs to be on to work.
-			if (var_red_on && opts.imp_iz_recomb_int() > 0)
+			// Variance reduction based on ionization/recombination 
+			// (var_red_int == 1). This section may split the particle if it
+			// is deemed to be in a low count region according to its
+			// ionization or recombination probability.
+			if (var_red_on && opts.imp_iz_recomb_int() > 0 
+				&& opts.var_red_int() == 1)
 			{
+				/*
 				VarianceReduction::split_particle_main(imp, tidx, xidx, yidx, 
 					zidx, imp_stats, imps, opts.var_red_min_weight(), 
 					var_red_counts, bkg, oa_ioniz, oa_recomb, 
 					imp_time_step);
+				*/
+				
+				// Check if in a region where splitting should occur
+				bool split_particle {VarianceReduction::check_split_particle(
+					imp, tidx, xidx, yidx, zidx, opts, var_red_counts, 
+					imp_stats)};
+
+				// If yes...
+				if (split_particle)
+				{ 
+					// ... then calculate the ionization/recombination probs
+					auto [ioniz_prob, recomb_prob] = 
+						OpenADAS::calc_ioniz_recomb_probs(
+						imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
+						xidx, yidx, zidx);
+
+					// The split particle is called a "secondary" particle. We use the
+					// largest of the two possible outcomes and assign the secondary
+					// weight to the probability. If particle is neutral, we just use
+					// ionization, and if it's fully ionized use recombination. Care is
+					// taken that we don't accidentally decrease the primary Impurity
+					// weight below zero by requiring its weight is greater than the
+					// weight (probability) that will be subtracted from it.
+					if ((ioniz_prob > recomb_prob || imp.get_charge() == 0) &&
+						(imp.get_charge() < imp.get_atom_num()) &&
+						(imp.get_weight() > ioniz_prob) &&
+						ioniz_prob > 0.0)
+					{
+						// Secondary is one charge state higher
+						VarianceReduction::create_secondary(imp, imps, ioniz_prob, 1);
+					}
+					else if (imp.get_weight() > recomb_prob &&
+						imp.get_charge() > 0 && recomb_prob > 0.0)
+					{
+						// Secondary is one charge state lower
+						VarianceReduction::create_secondary(imp, imps, recomb_prob, -1);
+					}
+				}
+
 			}
 
-			// Calculate variable time step (if necessary). NOT TRUSTWORTHY
-			// YET AFTER UPGRADING PARTICLE FOLLOWING.
-			if (opts.imp_time_step_opt_int() == 1) imp_time_step = 
+			// Calculate variable time step, only relevant if collision model
+			// is on since it is based on making sure the collision does not
+			// change the particle velocity too much.
+			if (opts.imp_collisions_int() > 0 
+				&& opts.imp_time_step_opt_int() == 1) imp_time_step = 
 				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fX, 
 				fY, fZ, opts);
 
@@ -639,7 +578,7 @@ namespace Impurity
 			if (opts.imp_collisions_int() > 0)
 			{
 				collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx, 
-					opts);
+					opts, imps, var_red_counts, imp_stats);
 			}
 
 			// Debugging
@@ -720,15 +659,17 @@ namespace Impurity
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, 
-		const Options::Options& opts)
+		Options::Options& opts)
 	{
-		// Variance reduction requires ionization/recombination be on
-		//if (var_red_on && !imp_iz_recomb_on)
-		if (opts.var_red_int() > 0 && opts.imp_iz_recomb_int() == 0)
+		// Variance reduction based on ionization/recombination requires 
+		// ionization/recombination to be on (duh)
+		if (opts.var_red_int() == 1 && opts.imp_iz_recomb_int() == 0)
 		{
-			std::cout << "Warning! Variance reduction requires "
-				<< "imp_ioniz_recomb be set to 'yes'. Variance reduction will"
-				<< " not occur for this simulation.\n";
+			std::cout << "Warning! Variance reduction based on "
+				<< "ionization/recombination requires imp_ioniz_recomb be set"
+				<< "to 'on'. Variance reduction will be turned off.\n";
+			opts.set_var_red("off");
+			opts.set_var_red_int(0);
 		}
 
 		// Vector of counts at each frame, below which is considered a 
@@ -773,18 +714,21 @@ namespace Impurity
 			//reduction(+: tot_imp_count)
 		for (int i = 0; i < opts.imp_num(); ++i)
 		{
-
-			// Periodically determine what number of counts qualifies for 
-			// splitting a particle, if necessary. 
-			if (opts.var_red_int() > 0 && priv_count > 0)
+			// Variance reduction: median mode (var_red_mode_int == 0). Based 
+			// on seeing if the particle is in a "low count" region, which is 
+			// defined as areas with counts less than some fraction of the 
+			// median. This section periodically calculates what number of 
+			// counts qualifies as a low count region for each thread.
+			if (opts.var_red_int() > 0 && opts.var_red_mode_int() == 0 
+				&& priv_count > 0)
 			{
 				// This variable is just an integer saying "every X particles
 				// followed, update the variance reduction counts". It needs to
 				// be greater than zero.
-				int var_red_med_mod {static_cast<int>(
+				int var_red_freq_int {static_cast<int>(
 					static_cast<double>(opts.imp_num()) / omp_get_num_threads() 
 					* opts.var_red_freq())};
-				if (var_red_med_mod == 0) var_red_med_mod = 1;
+				if (var_red_freq_int == 0) var_red_freq_int = 1;
 
 				// Update variance reduction counts according to the variance
 				// reduction frequency (var_red_freq), which is a number 
@@ -792,22 +736,17 @@ namespace Impurity
 				// execute this if statement 10 times during the simulation.
 				// The modifier determines what fraction of the median is
 				// considered low-count. Lower values = more splitting.
-				if (priv_count % var_red_med_mod == 0 && priv_count > 0)
+				if (priv_count % var_red_freq_int == 0 && priv_count > 0)
 				{
 					var_red_counts = 
 						VarianceReduction::get_counts(imp_stats, 
-						var_red_med_mod);
+						opts.var_red_med_mod());
 
 					// We use this separate boolean (initially false) to
 					// control if variance reduction occurs so that the
 					// simulation can run through for a bit and learn
 					// what a low-count region qualifies as. 
 					var_red_control = true;
-
-					//for (auto c : var_red_counts)
-					//{
-					//	std::cout << "var_red_counts = " << c << '\n';
-					//}
 				}
 			}	
 
@@ -835,9 +774,7 @@ namespace Impurity
 				// Begin following Impurity
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
 					ioniz_warnings, recomb_warnings, imps,
-					var_red_counts, var_red_control, 
-					opts);
-				//std::cout << "imps.size() = " << imps.size() << '\n';
+					var_red_counts, var_red_control, opts);
 				#pragma omp critical
 				{
 					++tot_imp_count;
@@ -883,7 +820,7 @@ namespace Impurity
 	}
 
 	Statistics follow_impurities(Background::Background& bkg, 
-		const Options::Options& opts)
+		Options::Options& opts)
 	{
 		// Initialize particle statistics vectors, all contained within a
 		// Statistics object. Option to control if the three velocity arrays

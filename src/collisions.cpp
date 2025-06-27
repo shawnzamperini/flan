@@ -8,11 +8,12 @@
 #include <iostream>
 #include <iomanip>
 
+#include "background.h"
+#include "constants.h"
 #include "impurity.h"
 #include "options.h"
-#include "constants.h"
 #include "random.h"
-#include "background.h"
+#include "variance_reduction.h"
 
 namespace Collisions
 {
@@ -238,8 +239,9 @@ namespace Collisions
 		double imp_v {calc_imp_vel(imp)};
 
 		// If impurity is at rest there's nothing to be done so return. We'd
-		// get NaN's if we continued. 
-		if (imp_v < Constants::small) return;
+		// get NaN's if we continued. Assign the minimum time step value.
+		//if (imp_v < Constants::small) return;
+		if (imp_v < Constants::small) dt_coll = opts.imp_time_step_min();
 
 		// Load these into local variables since we pass them twice below.
 		const double te = bkg.get_te()(tidx, xidx, yidx, zidx);
@@ -277,7 +279,8 @@ namespace Collisions
 	}
 
 	void collision_update(Impurity::Impurity& imp, double te, double ti, 
-		double ne, double imp_time_step, const Options::Options& opts)
+		double ne, double imp_time_step, const Options::Options& opts,
+		const bool split_particle, std::vector<Impurity::Impurity>& imps)
 	{
 		// Not handling neutral collisions (this is an approximation I do not
 		// know if it is true or not, but it's common enough among codes). 
@@ -285,7 +288,6 @@ namespace Collisions
 
 		// Calculate impurity velocity
 		double imp_v {calc_imp_vel(imp)};
-		//std::cout << "imp_v = " << imp_v << '\n';
 
 		// If impurity is at rest there's nothing to be done so return. We'd
 		// get NaN's if we continued. 
@@ -331,11 +333,9 @@ namespace Collisions
 		double mom_loss_frac {(imp_v + imp_dv) / imp_v};
 		//std::cout << "mom_loss_frac = " << mom_loss_frac << '\n';
 	
-		// Just a temporary way to choose between inelastic (true) or elastic
-		// (false) collisions.
 		//std::cout << "Before: " << imp.get_vx() << ", " << imp.get_vy() 
 		//	<< ", " << imp.get_vz() << '\n';
-		if (false)
+		if (opts.imp_collisions_int() == 2)
 		{
 			// Elastic approach. Straightforward approach to apply this to the 
 			// impurity is to scale down each impurity velocity component 
@@ -350,7 +350,7 @@ namespace Collisions
 			imp.set_vY(imp.get_vY() * mom_loss_frac); 
 			imp.set_vZ(imp.get_vZ() * mom_loss_frac); 
 		}
-		else
+		else if (opts.imp_collisions_int() == 1)
 		{
 			// Inelastic approach. Consider a new coordinate system rotated by
 			// by some unknown angle such that the particle velocity is along
@@ -391,6 +391,20 @@ namespace Collisions
 
 			// Equal chance of being positive or negative angle.
 			if (Random::get(0, 1) == 1) defl_ang *= -1.0;
+
+			// If particle is to be split, then evenly split the particle's 
+			// weight with a secondary particle and have that particle rotated 
+			// with the opposite deflection angle. Evenly split because there's
+			// equal chance of either deflection angle.
+			if (split_particle)
+			{
+				VarianceReduction::create_secondary(imp, imps, 
+					imp.get_weight() / 2.0);
+
+				// Don't forget to rotate the secondary (back() returns
+				// a reference)
+				rotate_imp(imps.back(), -defl_ang);
+			}
 
 			//std::cout << "defl_ang = " << defl_ang << '\n';
 			rotate_imp(imp, defl_ang);

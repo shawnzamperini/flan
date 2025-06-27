@@ -1,12 +1,21 @@
 #include <vector>
 
+#include "background.h"
 #include "impurity.h"
 #include "impurity_stats.h"
 #include "openadas.h"
-#include "background.h"
+#include "options.h"
 
 namespace VarianceReduction
 {
+	/**
+	*
+	*/
+	bool check_split_particle(Impurity::Impurity& imp, const int tidx, 
+		const int xidx, const int yidx, const int zidx, 
+		const Options::Options& opts, const std::vector<int>& var_red_counts, 
+		Impurity::Statistics& imp_stats);
+
 	/**
 	* @brief Check if particle should be split or not to help improve 
 	*	statistics in low-count areas.
@@ -61,5 +70,5 @@ namespace VarianceReduction
 	*/
 	void create_secondary(Impurity::Impurity& imp, 
 		std::vector<Impurity::Impurity>& imps, const double secondary_weight,
-		const bool ioniz);
+		const int charge_increase=0);
 }

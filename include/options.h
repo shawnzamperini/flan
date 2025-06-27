@@ -46,8 +46,9 @@ namespace Options
 		std::string m_gkyl_file_type            {"binary"};
 
 		// Geometry options
-		std::string m_geotype                {"undefined"};
 		double m_lcfs_x                              {0.0};
+		double m_imp_xbound_buffer                   {0.0};
+		std::string m_min_xbound_type        {"absorbing"};
 
 		// Impurity chracteristics
 		int m_imp_atom_num                            {74};
@@ -63,18 +64,20 @@ namespace Options
 		std::string m_imp_zstart_opt      {"single_value"};
 		double m_imp_zstart_val                      {0.0};
 		std::string m_imp_collisions               {"off"};
-		std::string m_var_red                      {"off"};
-		double m_var_red_freq                        {0.1};
-		double m_var_red_min_weight                  {0.1};
-		double m_var_red_med_mod                     {1.0};
 		std::string m_imp_time_step_opt       {"variable"};
 		double m_imp_time_step                      {1e-7};
 		double m_imp_time_step_min                 {1e-12};
 		double m_imp_source_scale_fact               {1.0};
 		std::string m_imp_vel_stats                {"off"};
-		double m_imp_xbound_buffer                   {0.0};
 		std::string m_imp_iz_recomb                 {"on"};
 		int m_print_interval                          {10};
+
+		// Variance reduction options
+		std::string m_var_red                      {"off"};
+		std::string m_var_red_mode              {"median"};
+		double m_var_red_freq                        {0.1};
+		double m_var_red_min_weight                  {0.1};
+		double m_var_red_med_mod                     {1.0};
 
 		// OpenADAS options
 		std::string m_openadas_root          {"undefined"};
@@ -89,15 +92,31 @@ namespace Options
 		// Internal control variables for string options. The string options
 		// are just there to be user-friendly, but it is more efficient to
 		// use integers instead of comparing strings all the time. These are
-		// all set automatically within the corresponding settters.
+		// all set automatically within the corresponding setters.
 		int m_imp_ystart_opt_int {0};
 		int m_imp_zstart_opt_int {0};
 		int m_imp_collisions_int {0};
 		int m_var_red_int {0};
+		int m_var_red_mode_int {0};
 		int m_imp_time_step_opt_int {0};
 		int m_imp_vel_stats_int {0};
 		int m_imp_iz_recomb_int {0};
 		int m_geotype_int {0};
+		int m_min_xbound_type_int {0};
+
+		/**
+		* @brief Check input against a list of valid options
+		*
+		* @param var String containing variable name
+		* @param value Template parameter of variable value
+		* @param valid_values initializer_list of valid values, 
+		*        e.g., {"on", "off"}
+		*
+		* @return true if valid, false if not
+		*/
+		template <typename T>
+		bool check_input(const std::string& var, const T& value, 
+			std::initializer_list<T> valid_values);
 
 	public:
 
@@ -114,7 +133,7 @@ namespace Options
 		void set_gkyl_elec_mass_amu(double gkyl_elec_mass_amu);
 		void set_gkyl_ion_mass_amu(double gkyl_ion_mass_amu);
 		void set_gkyl_file_type(std::string gkyl_file_type);
-		void set_geotype(std::string gkyl_file_type);
+		void set_min_xbound_type(std::string min_xbound_type);
 		void set_lcfs_x(double lcfs_x);
 		void set_imp_atom_num(int imp_atom_num);
 		void set_imp_mass_amu(double imp_mass_amu);
@@ -128,6 +147,7 @@ namespace Options
 		void set_imp_zstart_val(double imp_zstart_val);
 		void set_imp_collisions(std::string imp_collisions);
 		void set_var_red(std::string var_red);
+		void set_var_red_mode(std::string var_red_mode);
 		void set_var_red_freq(double var_red_freq);
 		void set_var_red_min_weight(double var_red_min_weight);
 		void set_var_red_med_mod(double var_red_med_mod);
@@ -154,7 +174,7 @@ namespace Options
 		const double gkyl_elec_mass_amu() const;
 		const double gkyl_ion_mass_amu() const;
 		const std::string& gkyl_file_type() const;
-		const std::string& geotype() const;
+		const std::string& min_xbound_type() const;
 		const double lcfs_x() const;
 		const int imp_atom_num() const;
 		const double imp_mass_amu() const;
@@ -168,6 +188,7 @@ namespace Options
 		const double imp_zstart_val() const;
 		const std::string& imp_collisions() const;
 		const std::string& var_red() const;
+		const std::string& var_red_mode() const;
 		const double var_red_freq() const;
 		const double var_red_min_weight() const;
 		const double var_red_med_mod() const;
@@ -188,10 +209,15 @@ namespace Options
 		const int imp_zstart_opt_int() const;
 		const int imp_collisions_int() const;
 		const int var_red_int() const;
+		const int var_red_mode_int() const;
 		const int imp_time_step_opt_int() const;
 		const int imp_vel_stats_int() const;
 		const int imp_iz_recomb_int() const;
 		const int geotype_int() const;
+		const int min_xbound_type_int() const;
+
+		// Setter declarations for internal control variables
+		void set_var_red_int(int var_red_int);
 	};
 
 }
