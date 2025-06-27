@@ -26,8 +26,6 @@ namespace VarianceReduction
 		if (imp_stats.get_counts()(tidx, xidx, yidx, zidx) <= 
 			var_red_counts[tidx]) 
 		{
-			std::cout << "tidx, var_red_counts = " << tidx << ", " 
-				<< var_red_counts[tidx] << '\n';
 			return true;
 		}
 		else return false;

@@ -517,8 +517,6 @@ namespace Impurity
 			// (var_red_int == 1). This section may split the particle if it
 			// is deemed to be in a low count region according to its
 			// ionization or recombination probability.
-			std::cout << var_red_on << " " << opts.imp_iz_recomb_int()
-				<< " " << opts.var_red_int() << '\n';
 			if (var_red_on && opts.imp_iz_recomb_int() > 0 
 				&& opts.var_red_int() == 1)
 			{
@@ -716,12 +714,12 @@ namespace Impurity
 			//reduction(+: tot_imp_count)
 		for (int i = 0; i < opts.imp_num(); ++i)
 		{
-			// Variance reduction: median mode (var_red_mode_int == 1). Based 
+			// Variance reduction: median mode (var_red_mode_int == 0). Based 
 			// on seeing if the particle is in a "low count" region, which is 
 			// defined as areas with counts less than some fraction of the 
 			// median. This section periodically calculates what number of 
 			// counts qualifies as a low count region for each thread.
-			if (opts.var_red_int() > 0 && opts.var_red_mode_int() == 1 
+			if (opts.var_red_int() > 0 && opts.var_red_mode_int() == 0 
 				&& priv_count > 0)
 			{
 				// This variable is just an integer saying "every X particles
