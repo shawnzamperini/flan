@@ -152,32 +152,32 @@ Input Options Table
 .. _A10:
 
 **A10**  
-  Describe double m_lcfs_x (default: 0.0)
+  Describe double m_lcfs_x. Accepts a double (default: 0.0)
 
 .. _A11:
 
 **A11**  
-  Describe double m_imp_xbound_buffer (default: 0.0)
+  Describe double m_imp_xbound_buffer (default: 0.0) ################################################ Missing description
 
 .. _A12:
 
 **A12**  
-  Describe std::string m_min_xbound_type (default: "absorbing")
+  Describe std::string m_min_xbound_type. Accepts the string "core" or the string "absorbing" in all lower case. (default: "absorbing")
 
 .. _A13:
 
 **A13**  
-  Describe int m_imp_atom_num (default: 74)
+  Describe int m_imp_atom_num. Accepts integer Z numbers of impurities. Can't go above 118 as of June of 2025. (default: 74)
 
 .. _A14:
 
 **A14**  
-  Describe double m_imp_mass_amu (default: 183.84)
+  Describe double m_imp_mass_amu. Accepts doubles, defaults to tungsten molar mass. (default: 183.84)
 
 .. _A15:
 
 **A15**  
-  Describe int m_imp_init_charge (default: 1)
+  Describe int m_imp_init_charge.  Accepts integers [Is this for injected impurities or the most common charge value in the plasma?] (default: 1)
 
 .. _A16:
 
@@ -187,22 +187,22 @@ Input Options Table
 .. _A17:
 
 **A17**  
-  Describe double m_imp_xmin (default: 0.0)
+  Describe double m_imp_xmin. Accepts doubles [Not sure what this is] (default: 0.0)
 
 .. _A18:
 
 **A18**  
-  Describe double m_imp_xmax (default: 0.0)
+  Describe double m_imp_xmax. Accepts doubles [Not sure what this is] (default: 0.0)
 
 .. _A19:
 
 **A19**  
-  Describe std::string m_imp_ystart_opt (default: "single_value")
+  Describe std::string m_imp_ystart_opt. Accepts a string, either "single_value" or "range". (default: "single_value")
 
 .. _A20:
 
 **A20**  
-  Describe double m_imp_ystart_val (default: 0.0)
+  Describe double m_imp_ystart_val Accepts doubles [Not sure what this is](default: 0.0)
 
 .. _A21:
 
