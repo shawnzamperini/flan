@@ -8,11 +8,11 @@ fi
 export FLANROOT=$PWD
 
 # flansoft is where all the dependencies will live
-export FLANSOFT=/fusion/projects/codes/flan/flansoft
+export FLANSOFT=/fusion/projects/codes/flan/$USER/flansoft
 mkdir -p $FLANSOFT
 
 export MACHINE_NAME='linux'
 cd install-deps
 
-# Build all the goodies
-./mkdeps.sh CC=gcc CXX=g++ --prefix=$FLANSOFT --flanroot=$FLANROOT --build-zlib=yes --build-hdf5=yes --build-netcdf-c=yes --build-netcdf-cxx=yes --setup-conda-env=yes
+# Build all the goodies. Note omega prefers using mamba over conda
+./mkdeps.sh CC=gcc CXX=g++ --prefix=$FLANSOFT --flanroot=$FLANROOT --build-zlib=yes --build-hdf5=yes --build-netcdf-c=yes --build-netcdf-cxx=yes --setup-mamba-env=yes

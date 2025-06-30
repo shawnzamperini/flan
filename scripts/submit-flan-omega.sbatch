@@ -18,6 +18,6 @@ module load gcc/13.x
 # Be a good user: Move results to the results directory
 export RESULTSDIR="/fusion/projects/results/flan/zamperinis/test"
 mkdir $RESULTSDIR
-mv bkg* $RESULTSDIR
-mv *.nc $RESULTSDIR
+cp bkg* $RESULTSDIR
+cp *.nc $RESULTSDIR
 

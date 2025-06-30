@@ -19,6 +19,7 @@ BUILD_HDF5=
 BUILD_NETCDF_C=
 BUILD_NETCDF_CXX=
 SETUP_CONDA_ENV=
+SETUP_MAMBA_ENV=
 
 # By default make a new build-opts.sh file.
 NEW_BUILD_OPTS="yes"
@@ -63,6 +64,7 @@ and C++ compilers to use.
 --build-netcdf-c            Should we build netCDF?
 --build-netcdf-cxx          Should we build the netCDF C++ interface?
 --setup-conda-env           Should we setup the conda environment?
+--setup-mamba-env           Should we setup the mamba environment?
 --new-build-opts            Should we create a new build-opts.sh file?
 
 The behavior of the flags for library xxx is as follows:
@@ -172,6 +174,10 @@ do
       [ -n "$value" ] || die "Missing value in flag $key."
       SETUP_CONDA_ENV="$value"
       ;;
+   --setup-mamba-env)
+      [ -n "$value" ] || die "Missing value in flag $key."
+      SETUP_MAMBA_ENV="$value"
+      ;;
    *)
       die "Error: Unknown flag: $1"
       ;;
@@ -269,6 +275,14 @@ setup_conda_env() {
    fi
 }
 
+setup_mamba_env() {
+   if [ "$SETUP_MAMBA_ENV" = "yes" ]
+   then
+      echo "Setting up mamba environment"
+      ./setup-mamba-env.sh
+   fi
+}
+
 echo "Installations will be in $PREFIX"
 
 # On the chopping block
@@ -282,3 +296,4 @@ build_netcdf-cxx
 
 # Order not important for these
 setup_conda_env
+setup_mamba_env
