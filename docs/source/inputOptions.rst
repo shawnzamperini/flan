@@ -115,12 +115,12 @@ This page covers the names of various variables within the code, their definitio
 **m_gkyl_ion_name**  
   Describe std::string m_gkyl_ion_name (default: "ion")
 
-.. A1:
+.. _A1:
 
 **m_gkyl_elec_mass_amu**  
   Describe double m_gkyl_elec_mass_amu (default: 0.000548)
 
-.. A2:
+.. _A2:
 
 **m_gkyl_ion_mass_amu**  
   Describe double m_gkyl_ion_mass_amu (default: 2.014)
@@ -135,7 +135,7 @@ This page covers the names of various variables within the code, their definitio
 **m_lcfs_x**  
   Describe double m_lcfs_x (default: 0.0)
 
-.. A3:
+.. _A3:
 
 **m_imp_xbound_buffer**  
   Describe double m_imp_xbound_buffer (default: 0.0)
@@ -200,7 +200,7 @@ This page covers the names of various variables within the code, their definitio
 **m_imp_collisions**  
   Describe std::string m_imp_collisions (default: "off")
 
-.. A4:
+.. _A4:
 
 **m_imp_time_step_opt**  
   Describe std::string m_imp_time_step_opt (default: "variable")
@@ -210,12 +210,12 @@ This page covers the names of various variables within the code, their definitio
 **m_imp_time_step**  
   Describe double m_imp_time_step (default: 1e-07)
 
-.. A5:
+.. _A5:
 
 **_m_imp_time_step_min**  
   Describe double m_imp_time_step_min (default: 1e-12)
 
-.. A6:
+.. _A6:
 
 **m_imp_source_scale_fact**  
   Describe double m_imp_source_scale_fact (default: 1.0)
@@ -250,7 +250,7 @@ This page covers the names of various variables within the code, their definitio
 **m_var_red_freq**  
   Describe double m_var_red_freq (default: 0.1)
 
-.. A7:
+.. _A7:
 
 **m_var_red_min_weight**  
   Describe double m_var_red_min_weight (default: 0.1)
