@@ -5,326 +5,234 @@ Input options
 This page covers the names of various variables within the code, their definition/allowed values, and finally the default values that each variable takes on. 
 
 
-Input Options Table
-===============================
+Simulation Configuration Variables
+==================================
 
-+--------------------------+-----------------------------+
-| Tag                      |        Description          |
-+==========================+=============================+
-| :ref:`A1 <A1>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A2 <A2>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A3 <A3>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A4 <A4>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A5 <A5>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A6 <A6>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A7 <A7>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A8 <A8>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A9 <A9>`           |                             |
-+--------------------------+-----------------------------+
-| :ref:`A10 <A10>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A11 <A11>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A12 <A12>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A13 <A13>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A14 <A14>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A15 <A15>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A16 <A16>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A17 <A17>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A18 <A18>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A19 <A19>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A20 <A20>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A21 <A21>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A22 <A22>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A23 <A23>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A24 <A24>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A25 <A25>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A26 <A26>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A27 <A27>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A28 <A28>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A29 <A29>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A30 <A30>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A31 <A31>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A32 <A32>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A33 <A33>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A34 <A34>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A35 <A35>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A36 <A36>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A37 <A37>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A38 <A38>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A39 <A39>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A40 <A40>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A41 <A41>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A42 <A42>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A43 <A43>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A44 <A44>`         |                             |
-+--------------------------+-----------------------------+
-| :ref:`A45 <A45>`         |                             |
-+--------------------------+-----------------------------+
++----------------------------------------------------------+--------------------------------------------------------------+---------------------+
+| Variable                                                 | Description                                                  | Default Value       |
++==========================================================+==============================================================+=====================+
+| :ref:`m_gkyl_dir <m_gkyl_dir>`                           |                                                              | "undefined"         |
+| :ref:`m_gkyl_casename <m_gkyl_casename>`                 |                                                              | "undefined"         |
+| :ref:`m_gkyl_frame_start <m_gkyl_frame_start>`           |                                                              | 0                   |
+| :ref:`m_gkyl_frame_end <m_gkyl_frame_end>`               |                                                              | 1                   |
+| :ref:`m_gkyl_elec_name <m_gkyl_elec_name>`               |                                                              | "elc"               |
+| :ref:`m_gkyl_ion_name <m_gkyl_ion_name>`                 |                                                              | "ion"               |
+| :ref:`m_gkyl_elec_mass_amu <m_gkyl_elec_mass_amu>`       |                                                              | 0.000548            |
+| :ref:`m_gkyl_ion_mass_amu <m_gkyl_ion_mass_amu>`         |                                                              | 2.014               |
+| :ref:`m_gkyl_file_type <m_gkyl_file_type>`               |                                                              | "binary"            |
+| :ref:`m_lcfs_x <m_lcfs_x>`                               |                                                              | 0.0                 |
+| :ref:`m_imp_xbound_buffer <m_imp_xbound_buffer>`         |                                                              | 0.0                 |
+| :ref:`m_min_xbound_type <m_min_xbound_type>`             |                                                              | "absorbing"         |
+| :ref:`m_imp_atom_num <m_imp_atom_num>`                   |                                                              | 74                  |
+| :ref:`m_imp_mass_amu <m_imp_mass_amu>`                   |                                                              | 183.84              |
+| :ref:`m_imp_init_charge <m_imp_init_charge>`             |                                                              | 1                   |
+| :ref:`m_imp_num <m_imp_num>`                             |                                                              | 1                   |
+| :ref:`m_imp_xmin <m_imp_xmin>`                           |                                                              | 0.0                 |
+| :ref:`m_imp_xmax <m_imp_xmax>`                           |                                                              | 0.0                 |
+| :ref:`m_imp_ystart_opt <m_imp_ystart_opt>`               |                                                              | "single_value"      |
+| :ref:`m_imp_ystart_val <m_imp_ystart_val>`               |                                                              | 0.0                 |
+| :ref:`m_imp_zstart_opt <m_imp_zstart_opt>`               |                                                              | "single_value"      |
+| :ref:`m_imp_zstart_val <m_imp_zstart_val>`               |                                                              | 0.0                 |
+| :ref:`m_imp_collisions <m_imp_collisions>`               |                                                              | "off"               |
+| :ref:`m_imp_time_step_opt <m_imp_time_step_opt>`         |                                                              | "variable"          |
+| :ref:`m_imp_time_step <m_imp_time_step>`                 |                                                              | 1e-07               |
+| :ref:`m_imp_time_step_min <m_imp_time_step_min>`         |                                                              | 1e-12               |
+| :ref:`m_imp_source_scale_fact <m_imp_source_scale_fact>` |                                                              | 1.0                 |
+| :ref:`m_imp_vel_stats <m_imp_vel_stats>`                 |                                                              | "off"               |
+| :ref:`m_imp_iz_recomb <m_imp_iz_recomb>`                 |                                                              | "on"                |
+| :ref:`m_print_interval <m_print_interval>`               |                                                              | 10                  |
+| :ref:`m_var_red <m_var_red>`                             |                                                              | "off"               |
+| :ref:`m_var_red_mode <m_var_red_mode>`                   |                                                              | "median"            |
+| :ref:`m_var_red_freq <m_var_red_freq>`                   |                                                              | 0.1                 |
+| :ref:`m_var_red_min_weight <m_var_red_min_weight>`       |                                                              | 0.1                 |
+| :ref:`m_var_red_med_mod <m_var_red_med_mod>`             |                                                              | 1.0                 |
+| :ref:`m_openadas_root <m_openadas_root>`                 |                                                              | "undefined"         |
+| :ref:`m_openadas_year <m_openadas_year>`                 |                                                              | 50                  |
++----------------------------------------------------------+--------------------------------------------------------------+---------------------+
 
 
 
-.. _A1:
+.. _m_gkyl_dir:
 
-**A1**  
-  Describe std::string m_gkyl_dir. Can take any string. (default: "undefined")
+**m_gkyl_dir**  
+  Describe std::string m_gkyl_dir (default: "undefined")
 
-.. _A2:
+.. _m_gkyl_casename:
 
-**A2**  
-  Describe std::string m_gkyl_casename. Can take any string.  (default: "undefined")
+**m_gkyl_casename**  
+  Describe std::string m_gkyl_casename (default: "undefined")
 
-.. _A3:
+.. _m_gkyl_frame_start:
 
-**A3**  
-  Describe int m_gkyl_frame_start. Can take any integer less than the total number of frames (-1?) (default: 0)
+**m_gkyl_frame_start**  
+  Describe int m_gkyl_frame_start (default: 0)
 
-.. _A4:
+.. _m_gkyl_frame_end:
 
-**A4**  
-  Describe int m_gkyl_frame_end. Can take any integer greater than (or equal to?) the frame_start and less than (or equal to?) the total number of frames. (default: 1)
+**m_gkyl_frame_end**  
+  Describe int m_gkyl_frame_end (default: 1)
 
-.. _A5:
+.. _m_gkyl_elec_name:
 
-**A5**  
-  Describe std::string m_gkyl_elec_name. Can take any string.  (default: "elc")
+**m_gkyl_elec_name**  
+  Describe std::string m_gkyl_elec_name (default: "elc")
 
-.. _A6:
+.. _m_gkyl_ion_name:
 
-**A6**  
-  Describe std::string m_gkyl_ion_name. Can take any string.  (default: "ion")
+**m_gkyl_ion_name**  
+  Describe std::string m_gkyl_ion_name (default: "ion")
 
-.. _A7:
+.. _m_gkyl_elec_mass_amu:
 
-**A7**  
-  Describe double m_gkyl_elec_mass_amu. Can take any reasonable double. Given in AMUs. (default: 0.000548)
+**m_gkyl_elec_mass_amu**  
+  Describe double m_gkyl_elec_mass_amu (default: 0.000548)
 
-.. _A8:
+.. _m_gkyl_ion_mass_amu:
 
-**A8**  
-  Describe double m_gkyl_ion_mass_amu. Can take doubles, default units are AMUs. (default: 2.014)
+**m_gkyl_ion_mass_amu**  
+  Describe double m_gkyl_ion_mass_amu (default: 2.014)
 
-.. _A9:
+.. _m_gkyl_file_type:
 
-**A9**  
-  Describe std::string m_gkyl_file_type. Can take an acceptable file type written as a string [Make a comprehensive list of acceptable types] (default: "binary")
+**m_gkyl_file_type**  
+  Describe std::string m_gkyl_file_type (default: "binary")
 
-.. _A10:
+.. _m_lcfs_x:
 
-**A10**  
-  Describe double m_lcfs_x. Accepts a double (default: 0.0)
+**m_lcfs_x**  
+  Describe double m_lcfs_x (default: 0.0)
 
-.. _A11:
+.. _m_imp_xbound_buffer:
 
-**A11**  
-  Describe double m_imp_xbound_buffer (default: 0.0) ################################################ Missing description
+**m_imp_xbound_buffer**  
+  Describe double m_imp_xbound_buffer (default: 0.0)
 
-.. _A12:
+.. _m_min_xbound_type:
 
-**A12**  
-  Describe std::string m_min_xbound_type. Accepts the string "core" or the string "absorbing" in all lower case. (default: "absorbing")
+**m_min_xbound_type**  
+  Describe std::string m_min_xbound_type (default: "absorbing")
 
-.. _A13:
+.. _m_imp_atom_num:
 
-**A13**  
-  Describe int m_imp_atom_num. Accepts integer Z numbers of impurities. Can't go above 118 as of June of 2025. (default: 74)
+**m_imp_atom_num**  
+  Describe int m_imp_atom_num (default: 74)
 
-.. _A14:
+.. _m_imp_mass_amu:
 
-**A14**  
-  Describe double m_imp_mass_amu. Accepts doubles, defaults to tungsten molar mass. (default: 183.84)
+**m_imp_mass_amu**  
+  Describe double m_imp_mass_amu (default: 183.84)
 
-.. _A15:
+.. _m_imp_init_charge:
 
-**A15**  
-  Describe int m_imp_init_charge.  Accepts integers [Is this for injected impurities or the most common charge value in the plasma?] (default: 1)
+**m_imp_init_charge**  
+  Describe int m_imp_init_charge (default: 1)
 
-.. _A16:
+.. _m_imp_num:
 
-**A16**  
+**m_imp_num**  
   Describe int m_imp_num (default: 1)
 
-.. _A17:
+.. _m_imp_xmin:
 
-**A17**  
-  Describe double m_imp_xmin. Accepts doubles [Not sure what this is] (default: 0.0)
+**m_imp_xmin**  
+  Describe double m_imp_xmin (default: 0.0)
 
-.. _A18:
+.. _m_imp_xmax:
 
-**A18**  
-  Describe double m_imp_xmax. Accepts doubles [Not sure what this is] (default: 0.0)
+**m_imp_xmax**  
+  Describe double m_imp_xmax (default: 0.0)
 
-.. _A19:
+.. _m_imp_ystart_opt:
 
-**A19**  
-  Describe std::string m_imp_ystart_opt. Accepts a string, either "single_value" or "range". (default: "single_value")
+**m_imp_ystart_opt**  
+  Describe std::string m_imp_ystart_opt (default: "single_value")
 
-.. _A20:
+.. _m_imp_ystart_val:
 
-**A20**  
-  Describe double m_imp_ystart_val Accepts doubles [Not sure what this is](default: 0.0)
+**m_imp_ystart_val**  
+  Describe double m_imp_ystart_val (default: 0.0)
 
-.. _A21:
+.. _m_imp_zstart_opt:
 
-**A21**  
+**m_imp_zstart_opt**  
   Describe std::string m_imp_zstart_opt (default: "single_value")
 
-.. _A22:
+.. _m_imp_zstart_val:
 
-**A22**  
+**m_imp_zstart_val**  
   Describe double m_imp_zstart_val (default: 0.0)
 
-.. _A23:
+.. _m_imp_collisions:
 
-**A23**  
+**m_imp_collisions**  
   Describe std::string m_imp_collisions (default: "off")
 
-.. _A24:
+.. _m_imp_time_step_opt:
 
-**A24**  
+**m_imp_time_step_opt**  
   Describe std::string m_imp_time_step_opt (default: "variable")
 
-.. _A25:
+.. _m_imp_time_step:
 
-**A25**  
+**m_imp_time_step**  
   Describe double m_imp_time_step (default: 1e-07)
 
-.. _A26:
+.. _m_imp_time_step_min:
 
-**A26**  
+**m_imp_time_step_min**  
   Describe double m_imp_time_step_min (default: 1e-12)
 
-.. _A27:
+.. _m_imp_source_scale_fact:
 
-**A27**  
+**m_imp_source_scale_fact**  
   Describe double m_imp_source_scale_fact (default: 1.0)
 
-.. _A28:
+.. _m_imp_vel_stats:
 
-**A28**  
+**m_imp_vel_stats**  
   Describe std::string m_imp_vel_stats (default: "off")
 
-.. _A29:
+.. _m_imp_iz_recomb:
 
-**A29**  
+**m_imp_iz_recomb**  
   Describe std::string m_imp_iz_recomb (default: "on")
 
-.. _A30:
+.. _m_print_interval:
 
-**A30**  
+**m_print_interval**  
   Describe int m_print_interval (default: 10)
 
-.. _A31:
+.. _m_var_red:
 
-**A31**  
+**m_var_red**  
   Describe std::string m_var_red (default: "off")
 
-.. _A32:
+.. _m_var_red_mode:
 
-**A32**  
+**m_var_red_mode**  
   Describe std::string m_var_red_mode (default: "median")
 
-.. _A33:
+.. _m_var_red_freq:
 
-**A33**  
+**m_var_red_freq**  
   Describe double m_var_red_freq (default: 0.1)
 
-.. _A34:
+.. _m_var_red_min_weight:
 
-**A34**  
+**m_var_red_min_weight**  
   Describe double m_var_red_min_weight (default: 0.1)
 
-.. _A35:
+.. _m_var_red_med_mod:
 
-**A35**  
+**m_var_red_med_mod**  
   Describe double m_var_red_med_mod (default: 1.0)
 
-.. _A36:
+.. _m_openadas_root:
 
-**A36**  
+**m_openadas_root**  
   Describe std::string m_openadas_root (default: "undefined")
 
-.. _A37:
+.. _m_openadas_year:
 
-**A37**  
+**m_openadas_year**  
   Describe int m_openadas_year (default: 50)
-
-.. _A38:
-
-**A38**  
-  Describe int m_imp_ystart_opt_int (default: 0)
-
-.. _A39:
-
-**A39**  
-  Describe int m_imp_zstart_opt_int (default: 0)
-
-.. _A40:
-
-**A40**  
-  Describe int m_imp_collisions_int (default: 0)
-
-.. _A41:
-
-**A41**  
-  Describe int m_var_red_int (default: 0)
-
-.. _A42:
-
-**A42**  
-  Describe int m_var_red_mode_int (default: 0)
-
-.. _A43:
-
-**A43**  
-  Describe int m_imp_time_step_opt_int (default: 0)
-
-.. _A44:
-
-**A44**  
-  Describe int m_imp_vel_stats_int (default: 0)
-
-.. _A45:
-
-**A45**  
-  Describe int m_imp_iz_recomb_int (default: 0)
