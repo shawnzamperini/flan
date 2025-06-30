@@ -19,15 +19,15 @@ This page covers the names of various variables within the code, their definitio
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_gkyl_ion_name <m_gkyl_ion_name>`      |                                                              | "ion"               |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
-| :ref:`m_gkyl_elec_mass_amu <m_gkyl_elec_mass_amu>`  |                                                        | 0.000548            |
+| :ref:`m_gkyl_elec_mass_amu <a1>`              |                                                              | 0.000548            |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
-| :ref:`m_gkyl_ion_mass_amu <m_gkyl_ion_mass_amu>`    |                                                        | 2.014               |
+| :ref:`m_gkyl_ion_mass_amu <a2>`               |                                                              | 2.014               |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_gkyl_file_type <m_gkyl_file_type>`    |                                                              | "binary"            |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_lcfs_x <m_lcfs_x>`                    |                                                              | 0.0                 |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
-| :ref:`m_imp_xbound_buffer <m_imp_xbound_buffer>`    |                                                        | 0.0                 |
+| :ref:`m_imp_xbound_buffer <a3>`               |                                                              | 0.0                 |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_min_xbound_type <m_min_xbound_type>`  |                                                              | "absorbing"         |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
@@ -53,13 +53,13 @@ This page covers the names of various variables within the code, their definitio
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_imp_collisions <m_imp_collisions>`    |                                                              | "off"               |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
-| :ref:`m_imp_time_step_opt <m_imp_time_step_opt>`      |                                                      | "variable"          |
+| :ref:`m_imp_time_step_opt <a4>`               |                                                              | "variable"          |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_imp_time_step <m_imp_time_step>`      |                                                              | 1e-07               |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
-| :ref:`m_imp_time_step_min <m_imp_time_step_min>`      |                                                      | 1e-12               |
+| :ref:`m_imp_time_step_min <a5>`               |                                                              | 1e-12               |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
-| :ref:`m_imp_source_scale_fact <m_imp_source_scale_fact>`        |                                            | 1.0                 |
+| :ref:`m_imp_source_scale_fact <a6>`           |                                                              | 1.0                 |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_imp_vel_stats <m_imp_vel_stats>`      |                                                              | "off"               |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
@@ -73,7 +73,7 @@ This page covers the names of various variables within the code, their definitio
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_var_red_freq <m_var_red_freq>`        |                                                              | 0.1                 |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
-| :ref:`m_var_red_min_weight <m_var_red_min_weight>`        |                                                  | 0.1                 |
+| :ref:`m_var_red_min_weight <a7>`              |                                                              | 0.1                 |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | :ref:`m_var_red_med_mod <m_var_red_med_mod>`  |                                                              | 1.0                 |
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
@@ -115,12 +115,12 @@ This page covers the names of various variables within the code, their definitio
 **m_gkyl_ion_name**  
   Describe std::string m_gkyl_ion_name (default: "ion")
 
-.. _m_gkyl_elec_mass_amu:
+.. a1:
 
 **m_gkyl_elec_mass_amu**  
   Describe double m_gkyl_elec_mass_amu (default: 0.000548)
 
-.. _m_gkyl_ion_mass_amu:
+.. a2:
 
 **m_gkyl_ion_mass_amu**  
   Describe double m_gkyl_ion_mass_amu (default: 2.014)
@@ -135,7 +135,7 @@ This page covers the names of various variables within the code, their definitio
 **m_lcfs_x**  
   Describe double m_lcfs_x (default: 0.0)
 
-.. _m_imp_xbound_buffer:
+.. a3:
 
 **m_imp_xbound_buffer**  
   Describe double m_imp_xbound_buffer (default: 0.0)
@@ -200,7 +200,7 @@ This page covers the names of various variables within the code, their definitio
 **m_imp_collisions**  
   Describe std::string m_imp_collisions (default: "off")
 
-.. _m_imp_time_step_opt:
+.. a4:
 
 **m_imp_time_step_opt**  
   Describe std::string m_imp_time_step_opt (default: "variable")
@@ -210,12 +210,12 @@ This page covers the names of various variables within the code, their definitio
 **m_imp_time_step**  
   Describe double m_imp_time_step (default: 1e-07)
 
-.. _m_imp_time_step_min:
+.. a5:
 
-**m_imp_time_step_min**  
+**_m_imp_time_step_min**  
   Describe double m_imp_time_step_min (default: 1e-12)
 
-.. _m_imp_source_scale_fact:
+.. a6:
 
 **m_imp_source_scale_fact**  
   Describe double m_imp_source_scale_fact (default: 1.0)
@@ -250,7 +250,7 @@ This page covers the names of various variables within the code, their definitio
 **m_var_red_freq**  
   Describe double m_var_red_freq (default: 0.1)
 
-.. _m_var_red_min_weight:
+.. a7:
 
 **m_var_red_min_weight**  
   Describe double m_var_red_min_weight (default: 0.1)
