@@ -170,36 +170,36 @@ namespace Options
 			else if (imp_collisions == "elastic") m_imp_collisions_int = 2;
 		}
 
-	// var_red
-	void Options::set_var_red(std::string var_red) 
+	// var_red_split
+	void Options::set_var_red_split(std::string var_red_split) 
 		{
 			// Only assign if valid option, leaving as default if not
-			if (check_input<std::string>("var_red", var_red, 
+			if (check_input<std::string>("var_red_split", var_red_split, 
 				{"off", "iz_rec", "coll"}))
 			{
-				m_var_red = var_red;
+				m_var_red_split = var_red_split;
 			}
 
 			// Assign control integers
-			if (var_red == "off") m_var_red_int = 0;
-			else if (var_red == "iz_rec") m_var_red_int = 1;
-			else if (var_red == "coll") m_var_red_int = 2;
+			if (var_red_split == "off") m_var_red_split_int = 0;
+			else if (var_red_split == "iz_rec") m_var_red_split_int = 1;
+			else if (var_red_split == "coll") m_var_red_split_int = 2;
 		}
 
-	// var_red_mode
-	void Options::set_var_red_mode(std::string var_red_mode) 
+	// var_red_import
+	void Options::set_var_red_import(std::string var_red_import) 
 		{
 			// Only assign if valid option, leaving as default if not
-			if (check_input<std::string>("var_red_mode", var_red_mode, 
+			if (check_input<std::string>("var_red_import", var_red_import, 
 				{"median", "exp_time", "exp_dist"}))
 			{
-				m_var_red_mode = var_red_mode;
+				m_var_red_import = var_red_import;
 			}
 
 			// Assign control integers
-			if (var_red_mode == "median") m_var_red_mode_int = 0;
-			else if (var_red_mode == "exp_time") m_var_red_mode_int = 1;
-			else if (var_red_mode == "exp_dist") m_var_red_mode_int = 2;
+			if (var_red_import == "median") m_var_red_import_int = 0;
+			else if (var_red_import == "exp_time") m_var_red_import_int = 1;
+			else if (var_red_import == "exp_dist") m_var_red_import_int = 2;
 		}
 
 	// var_red_freq
@@ -339,10 +339,10 @@ namespace Options
 		{return m_imp_zstart_val;}
 	const std::string& Options::imp_collisions() const 
 		{return m_imp_collisions;}
-	const std::string& Options::var_red() const 
-		{return m_var_red;}
-	const std::string& Options::var_red_mode() const 
-		{return m_var_red_mode;}
+	const std::string& Options::var_red_split() const 
+		{return m_var_red_split;}
+	const std::string& Options::var_red_import() const 
+		{return m_var_red_import;}
 	const double Options::var_red_freq() const 
 		{return m_var_red_freq;}
 	const double Options::var_red_min_weight() const 
@@ -379,10 +379,10 @@ namespace Options
 		{return m_imp_zstart_opt_int;}
 	const int Options::imp_collisions_int() const
 		{return m_imp_collisions_int;}
-	const int Options::var_red_int() const
-		{return m_var_red_int;}
-	const int Options::var_red_mode_int() const
-		{return m_var_red_mode_int;}
+	const int Options::var_red_split_int() const
+		{return m_var_red_split_int;}
+	const int Options::var_red_import_int() const
+		{return m_var_red_import_int;}
 	const int Options::imp_time_step_opt_int() const
 		{return m_imp_time_step_opt_int;}
 	const int Options::imp_vel_stats_int() const
@@ -395,8 +395,8 @@ namespace Options
 		{return m_min_xbound_type_int;}
 
 	// Setter declarations for internal control variables
-	void Options::set_var_red_int(int var_red_int)
-		{m_var_red_int = var_red_int;}
+	void Options::set_var_red_split_int(int var_red_split_int)
+		{m_var_red_split_int = var_red_split_int;}
 	
 	template <typename T>
 	bool Options::check_input(const std::string& var, const T& value, 

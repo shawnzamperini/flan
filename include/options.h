@@ -73,8 +73,8 @@ namespace Options
 		int m_print_interval                          {10};
 
 		// Variance reduction options
-		std::string m_var_red                      {"off"};
-		std::string m_var_red_mode              {"median"};
+		std::string m_var_red_split                {"off"};
+		std::string m_var_red_import              {"median"};
 		double m_var_red_freq                        {0.1};
 		double m_var_red_min_weight                  {0.1};
 		double m_var_red_med_mod                     {1.0};
@@ -96,8 +96,8 @@ namespace Options
 		int m_imp_ystart_opt_int {0};
 		int m_imp_zstart_opt_int {0};
 		int m_imp_collisions_int {0};
-		int m_var_red_int {0};
-		int m_var_red_mode_int {0};
+		int m_var_red_split_int {0};
+		int m_var_red_import_int {0};
 		int m_imp_time_step_opt_int {0};
 		int m_imp_vel_stats_int {0};
 		int m_imp_iz_recomb_int {0};
@@ -146,8 +146,8 @@ namespace Options
 		void set_imp_zstart_opt(std::string imp_zstart_opt);
 		void set_imp_zstart_val(double imp_zstart_val);
 		void set_imp_collisions(std::string imp_collisions);
-		void set_var_red(std::string var_red);
-		void set_var_red_mode(std::string var_red_mode);
+		void set_var_red_split(std::string var_red);
+		void set_var_red_import(std::string var_red_import);
 		void set_var_red_freq(double var_red_freq);
 		void set_var_red_min_weight(double var_red_min_weight);
 		void set_var_red_med_mod(double var_red_med_mod);
@@ -187,8 +187,8 @@ namespace Options
 		const std::string& imp_zstart_opt() const;
 		const double imp_zstart_val() const;
 		const std::string& imp_collisions() const;
-		const std::string& var_red() const;
-		const std::string& var_red_mode() const;
+		const std::string& var_red_split() const;
+		const std::string& var_red_import() const;
 		const double var_red_freq() const;
 		const double var_red_min_weight() const;
 		const double var_red_med_mod() const;
@@ -208,8 +208,8 @@ namespace Options
 		const int imp_ystart_opt_int() const;
 		const int imp_zstart_opt_int() const;
 		const int imp_collisions_int() const;
-		const int var_red_int() const;
-		const int var_red_mode_int() const;
+		const int var_red_split_int() const;
+		const int var_red_import_int() const;
 		const int imp_time_step_opt_int() const;
 		const int imp_vel_stats_int() const;
 		const int imp_iz_recomb_int() const;
@@ -217,7 +217,7 @@ namespace Options
 		const int min_xbound_type_int() const;
 
 		// Setter declarations for internal control variables
-		void set_var_red_int(int var_red_int);
+		void set_var_red_split_int(int var_red_split_int);
 	};
 
 }

@@ -426,10 +426,10 @@ namespace Impurity
 		Statistics& imp_stats)
 	{
 		// See if (inelastic) collision should create a split secondary
-		// particle or not. This is only checked if the variance reduction 
-		// scheme is based on inelastic collisions (var_red_int == 2). 
+		// particle or not. This is only checked if the particle splitting 
+		// scheme is based on inelastic collisions (var_red_split_int == 2). 
 		bool split_particle {false};
-		if (opts.var_red_int() == 2)
+		if (opts.var_red_split_int() == 2)
 		{
 			split_particle = VarianceReduction::check_split_particle(imp, tidx, 
 				xidx, yidx, zidx, opts, var_red_counts, imp_stats);
@@ -513,13 +513,12 @@ namespace Impurity
 			auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
 				zidx);
 
-			// Block needs cleaning up.
-			// Variance reduction based on ionization/recombination 
-			// (var_red_int == 1). This section may split the particle if it
-			// is deemed to be in a low count region according to its
+			// Particle splitting based on ionization/recombination 
+			// (var_red_split_int == 1). This section may split the particle if
+			// it is deemed to be in a low count region according to its
 			// ionization or recombination probability.
 			if (var_red_on && opts.imp_iz_recomb_int() > 0 
-				&& opts.var_red_int() == 1)
+				&& opts.var_red_split_int() == 1)
 			{
 				/*
 				VarianceReduction::split_particle_main(imp, tidx, xidx, yidx, 
@@ -664,13 +663,13 @@ namespace Impurity
 	{
 		// Variance reduction based on ionization/recombination requires 
 		// ionization/recombination to be on (duh)
-		if (opts.var_red_int() == 1 && opts.imp_iz_recomb_int() == 0)
+		if (opts.var_red_split_int() == 1 && opts.imp_iz_recomb_int() == 0)
 		{
-			std::cout << "Warning! Variance reduction based on "
+			std::cout << "Warning! Particle splitting based on "
 				<< "ionization/recombination requires imp_ioniz_recomb be set"
-				<< "to 'on'. Variance reduction will be turned off.\n";
-			opts.set_var_red("off");
-			opts.set_var_red_int(0);
+				<< "to 'on'. Splitting will be turned off.\n";
+			opts.set_var_red_split("off");
+			opts.set_var_red_split_int(0);
 		}
 
 		// Vector of counts at each frame, below which is considered a 
@@ -715,12 +714,12 @@ namespace Impurity
 			//reduction(+: tot_imp_count)
 		for (int i = 0; i < opts.imp_num(); ++i)
 		{
-			// Variance reduction: median mode (var_red_mode_int == 0). Based 
+			// Variance reduction: median mode (var_red_import_int == 0). Based 
 			// on seeing if the particle is in a "low count" region, which is 
 			// defined as areas with counts less than some fraction of the 
 			// median. This section periodically calculates what number of 
 			// counts qualifies as a low count region for each thread.
-			if (opts.var_red_int() > 0 && opts.var_red_mode_int() == 0 
+			if (opts.var_red_split_int() > 0 && opts.var_red_import_int() == 0 
 				&& priv_count > 0)
 			{
 				// This variable is just an integer saying "every X particles

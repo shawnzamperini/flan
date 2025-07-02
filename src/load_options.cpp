@@ -197,16 +197,16 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 			
-			else if (key == "var_red") 
+			else if (key == "var_red_split") 
 			{
-				auto set_func = std::bind(&Options::set_var_red, &opts, 
+				auto set_func = std::bind(&Options::set_var_red_split, &opts, 
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
 
-			else if (key == "var_red_mode") 
+			else if (key == "var_red_import") 
 			{
-				auto set_func = std::bind(&Options::set_var_red_mode, &opts, 
+				auto set_func = std::bind(&Options::set_var_red_import, &opts, 
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
