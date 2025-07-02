@@ -513,6 +513,7 @@ namespace Impurity
 			auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
 				zidx);
 
+			// Block needs cleaning up.
 			// Variance reduction based on ionization/recombination 
 			// (var_red_int == 1). This section may split the particle if it
 			// is deemed to be in a low count region according to its

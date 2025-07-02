@@ -398,11 +398,14 @@ namespace Collisions
 			// equal chance of either deflection angle.
 			if (split_particle)
 			{
+				// Split particle is appended to end of imps to be followed
+				// later. 
 				VarianceReduction::create_secondary(imp, imps, 
 					imp.get_weight() / 2.0);
 
 				// Don't forget to rotate the secondary (back() returns
-				// a reference)
+				// a reference to the split particle that was just appended
+				// onto the end of imps in create_secondary)
 				rotate_imp(imps.back(), -defl_ang);
 			}
 
