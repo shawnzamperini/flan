@@ -12,6 +12,10 @@
 module purge
 module load gcc/13.x
 
+# Initialize mamba for compute node
+eval "$(mamba shell hook --shell bash)"
+mamba activate flan
+
 # Run Flan run
 ./test
 

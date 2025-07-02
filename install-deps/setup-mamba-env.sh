@@ -35,7 +35,7 @@ mamba activate flan
 pip install -e .
 
 # 5. Install additional dependencies needed by flan here
-mamba install conda-forge::netcdf4 ipython scipy tqdm -y
+mamba install -y conda-forge::netcdf4 ipython scipy tqdm
 
 # 6. Return back to the top flan directory and install the python scripts as
 # the flan package so they can be found by the main code (and future python
