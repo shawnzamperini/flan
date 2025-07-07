@@ -9,11 +9,35 @@
 namespace VarianceReduction
 {
 	/**
+	* @brief Checks if particle is in a high-importance region and needs
+	*   to be split.
 	*
+	* @return True if particle should be split, false if not.
 	*/
 	bool check_split_particle(Impurity::Impurity& imp, const int tidx, 
 		const int xidx, const int yidx, const int zidx, 
 		const Options::Options& opts, const std::vector<int>& var_red_counts, 
+		Impurity::Statistics& imp_stats);
+
+
+	/**
+	* @brief Potentially splits a particle based on ionization/recombination 
+	*        probability
+	*/
+	void split_iz_rec(Impurity::Impurity& imp, const int tidx, const int xidx,
+		const int yidx, const int zidx, const Options::Options& opts, 
+		const std::vector<int>& var_red_counts, const double imp_time_step,  
+		Impurity::Statistics& imp_stats, const Background::Background& bkg,
+		std::vector<Impurity::Impurity>& imps, 
+		const OpenADAS::OpenADAS& oa_ioniz, 
+		const OpenADAS::OpenADAS& oa_recomb);
+
+	/**
+	*
+	*/
+	bool russian_roulette(Impurity::Impurity& imp, 
+		const Options::Options& opts, const int tidx, const int xidx, 
+		const int yidx, const int zidx, const std::vector<int>& var_red_counts, 
 		Impurity::Statistics& imp_stats);
 
 	/**

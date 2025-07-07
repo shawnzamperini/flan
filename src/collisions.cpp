@@ -273,7 +273,7 @@ namespace Collisions
 		// reasonable limit on what the fraction can be and then calculate
 		// the time step from that. Solve the above equations for dt to get:
 		//   dt = (1 - f) / (nu_ze + nu_zi)
-		double mom_loss_frac_limit {0.90};
+		double mom_loss_frac_limit {0.95};
 		dt_coll = (1.0 - mom_loss_frac_limit) / (nu_ze + nu_zi);
 		return;
 	}
@@ -389,8 +389,9 @@ namespace Collisions
 			// you did it in Virginia or California, it's the same either way).
 			double defl_ang {std::acos(mom_loss_frac)};
 
-			// Equal chance of being positive or negative angle.
-			if (Random::get(0, 1) == 1) defl_ang *= -1.0;
+			// Equal chance of being positive or negative angle. No point in
+			// doing this since the particle is rotated around a random axis.
+			//if (Random::get(0, 1) == 1) defl_ang *= -1.0;
 
 			// If particle is to be split, then evenly split the particle's 
 			// weight with a secondary particle and have that particle rotated 
@@ -406,7 +407,7 @@ namespace Collisions
 				// Don't forget to rotate the secondary (back() returns
 				// a reference to the split particle that was just appended
 				// onto the end of imps in create_secondary)
-				rotate_imp(imps.back(), -defl_ang);
+				rotate_imp(imps.back(), defl_ang);
 			}
 
 			//std::cout << "defl_ang = " << defl_ang << '\n';

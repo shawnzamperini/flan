@@ -74,10 +74,12 @@ namespace Options
 
 		// Variance reduction options
 		std::string m_var_red_split                {"off"};
-		std::string m_var_red_import              {"median"};
+		std::string m_var_red_import            {"median"};
 		double m_var_red_freq                        {0.1};
 		double m_var_red_min_weight                  {0.1};
 		double m_var_red_med_mod                     {1.0};
+		std::string m_var_red_rusrol               {"off"};
+		double m_var_red_rusrol_prob				 {0.5};
 
 		// OpenADAS options
 		std::string m_openadas_root          {"undefined"};
@@ -93,16 +95,17 @@ namespace Options
 		// are just there to be user-friendly, but it is more efficient to
 		// use integers instead of comparing strings all the time. These are
 		// all set automatically within the corresponding setters.
-		int m_imp_ystart_opt_int {0};
-		int m_imp_zstart_opt_int {0};
-		int m_imp_collisions_int {0};
-		int m_var_red_split_int {0};
-		int m_var_red_import_int {0};
+		int m_imp_ystart_opt_int	{0};
+		int m_imp_zstart_opt_int	{0};
+		int m_imp_collisions_int	{0};
+		int m_var_red_split_int		{0};
+		int m_var_red_import_int	{0};
+		int m_var_red_rusrol_int	{0};
 		int m_imp_time_step_opt_int {0};
-		int m_imp_vel_stats_int {0};
-		int m_imp_iz_recomb_int {0};
-		int m_geotype_int {0};
-		int m_min_xbound_type_int {0};
+		int m_imp_vel_stats_int		{0};
+		int m_imp_iz_recomb_int		{0};
+		int m_geotype_int			{0};
+		int m_min_xbound_type_int	{0};
 
 		/**
 		* @brief Check input against a list of valid options
@@ -146,11 +149,13 @@ namespace Options
 		void set_imp_zstart_opt(std::string imp_zstart_opt);
 		void set_imp_zstart_val(double imp_zstart_val);
 		void set_imp_collisions(std::string imp_collisions);
-		void set_var_red_split(std::string var_red);
+		void set_var_red_split(std::string var_red_split);
 		void set_var_red_import(std::string var_red_import);
 		void set_var_red_freq(double var_red_freq);
 		void set_var_red_min_weight(double var_red_min_weight);
 		void set_var_red_med_mod(double var_red_med_mod);
+		void set_var_red_rusrol(std::string var_red_rusrol);
+		void set_var_red_rusrol_prob(double var_red_rusrol_prob);
 		void set_imp_time_step_opt(std::string imp_time_step_opt);
 		void set_imp_time_step(double imp_time_step);
 		void set_imp_time_step_min(double imp_time_step_min);
@@ -192,6 +197,8 @@ namespace Options
 		const double var_red_freq() const;
 		const double var_red_min_weight() const;
 		const double var_red_med_mod() const;
+		const std::string& var_red_rusrol() const;
+		const double var_red_rusrol_prob() const;
 		const std::string& imp_time_step_opt() const;
 		const double imp_time_step() const;
 		const double imp_time_step_min() const;
@@ -210,13 +217,14 @@ namespace Options
 		const int imp_collisions_int() const;
 		const int var_red_split_int() const;
 		const int var_red_import_int() const;
+		const int var_red_rusrol_int() const;
 		const int imp_time_step_opt_int() const;
 		const int imp_vel_stats_int() const;
 		const int imp_iz_recomb_int() const;
 		const int geotype_int() const;
 		const int min_xbound_type_int() const;
 
-		// Setter declarations for internal control variables
+		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);
 	};
 

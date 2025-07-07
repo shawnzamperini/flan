@@ -191,15 +191,15 @@ namespace Options
 		{
 			// Only assign if valid option, leaving as default if not
 			if (check_input<std::string>("var_red_import", var_red_import, 
-				{"median", "exp_time", "exp_dist"}))
+				{"median", "exp_dist", "exp_time"}))
 			{
 				m_var_red_import = var_red_import;
 			}
 
 			// Assign control integers
 			if (var_red_import == "median") m_var_red_import_int = 0;
-			else if (var_red_import == "exp_time") m_var_red_import_int = 1;
-			else if (var_red_import == "exp_dist") m_var_red_import_int = 2;
+			else if (var_red_import == "exp_dist") m_var_red_import_int = 1;
+			else if (var_red_import == "exp_time") m_var_red_import_int = 2;
 		}
 
 	// var_red_freq
@@ -214,6 +214,25 @@ namespace Options
 	void Options::set_var_red_med_mod(double var_red_med_mod) 
 		{m_var_red_med_mod = var_red_med_mod;}
 	
+	// var_red_rusrol
+	void Options::set_var_red_rusrol(std::string var_red_rusrol) 
+		{
+			// Only assign if valid option, leaving as default if not
+			if (check_input<std::string>("var_red_rusrol", var_red_rusrol, 
+				{"off", "on"}))
+			{
+				m_var_red_rusrol = var_red_rusrol;
+			}
+
+			// Assign control integers
+			if (var_red_rusrol == "off") m_var_red_rusrol_int = 0;
+			else if (var_red_rusrol == "on") m_var_red_rusrol_int = 1;
+		}
+
+	// var_red_rusrol_prob
+	void Options::set_var_red_rusrol_prob(double var_red_rusrol_prob) 
+		{m_var_red_rusrol_prob = var_red_rusrol_prob;}
+
 	// imp_time_step_opt
 	void Options::set_imp_time_step_opt(std::string imp_time_step_opt) 
 		{
@@ -349,6 +368,10 @@ namespace Options
 		{return m_var_red_min_weight;}
 	const double Options::var_red_med_mod() const 
 		{return m_var_red_med_mod;}
+	const std::string& Options::var_red_rusrol() const 
+		{return m_var_red_rusrol;}
+	const double Options::var_red_rusrol_prob() const 
+		{return m_var_red_rusrol_prob;}
 	const std::string& Options::imp_time_step_opt() const 
 		{return m_imp_time_step_opt;}
 	const double Options::imp_time_step() const 
@@ -383,6 +406,8 @@ namespace Options
 		{return m_var_red_split_int;}
 	const int Options::var_red_import_int() const
 		{return m_var_red_import_int;}
+	const int Options::var_red_rusrol_int() const
+		{return m_var_red_rusrol_int;}
 	const int Options::imp_time_step_opt_int() const
 		{return m_imp_time_step_opt_int;}
 	const int Options::imp_vel_stats_int() const

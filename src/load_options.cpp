@@ -233,6 +233,20 @@ namespace Options
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}
+
+			else if (key == "var_red_rusrol") 
+			{
+				auto set_func = std::bind(&Options::set_var_red_rusrol, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "var_red_rusrol_prob") 
+			{
+				auto set_func = std::bind(&Options::set_var_red_rusrol_prob, 
+					&opts, std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
 			
 			else if (key == "imp_time_step_opt") 
 			{

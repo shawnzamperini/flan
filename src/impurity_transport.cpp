@@ -513,57 +513,30 @@ namespace Impurity
 			auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
 				zidx);
 
-			// Particle splitting based on ionization/recombination 
-			// (var_red_split_int == 1). This section may split the particle if
-			// it is deemed to be in a low count region according to its
-			// ionization or recombination probability.
-			if (var_red_on && opts.imp_iz_recomb_int() > 0 
-				&& opts.var_red_split_int() == 1)
+			if (var_red_on)
 			{
-				/*
-				VarianceReduction::split_particle_main(imp, tidx, xidx, yidx, 
-					zidx, imp_stats, imps, opts.var_red_min_weight(), 
-					var_red_counts, bkg, oa_ioniz, oa_recomb, 
-					imp_time_step);
-				*/
-				
-				// Check if in a region where splitting should occur
-				bool split_particle {VarianceReduction::check_split_particle(
-					imp, tidx, xidx, yidx, zidx, opts, var_red_counts, 
-					imp_stats)};
-
-				// If yes...
-				if (split_particle)
-				{ 
-					// ... then calculate the ionization/recombination probs
-					auto [ioniz_prob, recomb_prob] = 
-						OpenADAS::calc_ioniz_recomb_probs(
-						imp, bkg, oa_ioniz, oa_recomb, imp_time_step, tidx, 
-						xidx, yidx, zidx);
-
-					// The split particle is called a "secondary" particle. We use the
-					// largest of the two possible outcomes and assign the secondary
-					// weight to the probability. If particle is neutral, we just use
-					// ionization, and if it's fully ionized use recombination. Care is
-					// taken that we don't accidentally decrease the primary Impurity
-					// weight below zero by requiring its weight is greater than the
-					// weight (probability) that will be subtracted from it.
-					if ((ioniz_prob > recomb_prob || imp.get_charge() == 0) &&
-						(imp.get_charge() < imp.get_atom_num()) &&
-						(imp.get_weight() > ioniz_prob) &&
-						ioniz_prob > 0.0)
-					{
-						// Secondary is one charge state higher
-						VarianceReduction::create_secondary(imp, imps, ioniz_prob, 1);
-					}
-					else if (imp.get_weight() > recomb_prob &&
-						imp.get_charge() > 0 && recomb_prob > 0.0)
-					{
-						// Secondary is one charge state lower
-						VarianceReduction::create_secondary(imp, imps, recomb_prob, -1);
-					}
+				// Particle splitting based on ionization/recombination 
+				// (var_red_split_int == 1). This may split the particle if
+				// it is deemed to be in a high importance (e.g., low count) 
+				// region according to its ionization or recombination 
+				// probability. The split particle is appended to imps to be 
+				// followed later.
+				if (opts.var_red_split_int() == 1 
+					&& opts.imp_iz_recomb_int() > 0)
+				{
+					VarianceReduction::split_iz_rec(imp, tidx, xidx, yidx, zidx, 
+						opts, var_red_counts, imp_time_step, imp_stats, bkg,
+						imps, oa_recomb, oa_ioniz);
 				}
 
+				// Russian roullete with particle. If particle is in a low
+				// importance region (e.g., high counts), then it is killed
+				// off with some probability p = var_red_rusrol_prob. If it
+				// is not killed off, then the weight increases by 1/p. 
+				if (opts.var_red_rusrol_int() > 0) continue_following =
+					VarianceReduction::russian_roulette(imp, opts, tidx, xidx, 
+					yidx, zidx, var_red_counts, imp_stats);
+				if (!continue_following) break;
 			}
 
 			// Calculate variable time step, only relevant if collision model
@@ -669,7 +642,16 @@ namespace Impurity
 				<< "ionization/recombination requires imp_ioniz_recomb be set"
 				<< "to 'on'. Splitting will be turned off.\n";
 			opts.set_var_red_split("off");
-			opts.set_var_red_split_int(0);
+		}
+
+		// Variable time step is based on collisions, so those must be on.
+		// If not, default to constant time step and alert user.
+		if (opts.imp_time_step_opt_int() == 1 
+			&& opts.imp_collisions_int() == 0)
+		{
+			std::cout << "Warning! Impurity time step set to variable, but "
+				<< "collisions are off. Changing to constant time step.\n";
+			opts.set_imp_time_step_opt("constant");
 		}
 
 		// Vector of counts at each frame, below which is considered a 
@@ -719,8 +701,8 @@ namespace Impurity
 			// defined as areas with counts less than some fraction of the 
 			// median. This section periodically calculates what number of 
 			// counts qualifies as a low count region for each thread.
-			if (opts.var_red_split_int() > 0 && opts.var_red_import_int() == 0 
-				&& priv_count > 0)
+			if ((opts.var_red_split_int() > 0 || opts.var_red_rusrol_int() > 0)
+				&& opts.var_red_import_int() == 0 && priv_count > 0)
 			{
 				// This variable is just an integer saying "every X particles
 				// followed, update the variance reduction counts". It needs to
