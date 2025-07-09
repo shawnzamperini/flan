@@ -65,8 +65,11 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_bY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_bZ {}; 
 		Vectors::Vector4D<BkgFPType> gkyl_eX {}; // Electric field components
-		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physcial space
+		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_eZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_uX {}; // Mean flow components in
+		Vectors::Vector4D<BkgFPType> gkyl_uY {}; // physical space
+		Vectors::Vector4D<BkgFPType> gkyl_uZ {};
 
 		// These are passed to every function call, so save some time/space by 
 		// zipping them up into a tuple and passing together.
@@ -652,7 +655,7 @@ namespace Gkyl
 		read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
 			opts);
 
-		// The unit vector is actually a bit finnickyo n the gkyl side of
+		// The unit vector is actually a bit finnicky on the gkyl side of
 		// things. It's not actually guaranteed to be 1.0 magnitude at the
 		// cell centers which I guess is where it's calculated. So right now we
 		// just hope the relative sizes of each component are mostly correct,
@@ -852,7 +855,8 @@ namespace Gkyl
 	}
 
 	void read_elec_field(grid_data_t& grid_data, 
-		Vectors::Vector4D<BkgFPType>& gkyl_eX, Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eZ)
 	{
 		// Ex	
@@ -873,8 +877,8 @@ namespace Gkyl
 		elec_field_ybound_fix(grid_data, tmp_dataZ);
 
 		// Move into arrays
-		gkyl_eY.move_into_data(tmp_dataY);
 		gkyl_eX.move_into_data(tmp_dataX);
+		gkyl_eY.move_into_data(tmp_dataY);
 		gkyl_eZ.move_into_data(tmp_dataZ);
 	}
 
@@ -965,5 +969,19 @@ namespace Gkyl
 				}
 			}
 		}
+	}
+
+	
+	template <typename T>
+	void read_mean_flow(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_uX, Vectors::Vector4D<T>& gkyl_uY, 
+		Vectors::Vector4D<T>& gkyl_uZ, const Options::Options& opts)
+	{
+		
+		// Call pgkyl to load data into gkyl_uX. This loads just the parallel
+		// to z flow. The ExB and gradB contributions are added elsewhere.
+		read_data_pgkyl(opts.gkyl_elec_name(), "mean_flow_X", grid_data,
+			gkyl_uX, opts);
+
 	}
 }

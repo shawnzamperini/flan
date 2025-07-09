@@ -243,6 +243,14 @@ namespace Gkyl
 	* the scipy library to easily calculate a gradient on an irregular grid.
 	*/
 	void write_XYZ(grid_data_t& grid_data, const Options::Options& opts);
+
+	/**
+	* @brief Read in mean flow components (X,Y,Z) into arrays.
+	*/
+	template <typename T>
+	void read_mean_flow(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_uX, Vectors::Vector4D<T>& gkyl_uY, 
+		Vectors::Vector4D<T>& gkyl_uZ, const Options::Options& opts);
 }
 
 #endif
