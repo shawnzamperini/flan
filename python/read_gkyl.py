@@ -8,135 +8,361 @@ import sys
 import numpy as np
 
 
-def read_binary(args, comp, value_scale=1.0, bimax=False):
+# Parameters that are time-independent
+time_independent_data = ["jacobian", "metric_coeff00", 
+    "metric_coeff01", "metric_coeff02", "metric_coeff11", "metric_coeff12", 
+    "metric_coeff22"]
+            
+def load_binary_wrapper(args):
     """
-    bimax (bool): Flag for if temperature and density are to be loaded from the
-    BiMaxwellian files. The Gkeyll output is still changing, so in theory this
-    would one day become unecessary, but until then we need to retain this
-    capability to mesh with older sims.
+    Wrapper for loading binary (.gkyl) data with postgkyl
+
+    Parameters
+    ----------
+    args : Whatever parser.parse_args() return
+        Contains all the arguments passed when calling read_gkyl.py
+
+    Returns
+    -------
+    times : list
+        List of all the times loaded
+
+    grid : array
+        3D (x,y,z) array of the grid coordinates
+
+    values : array
+        4D (t,x,y,z) array of the values loaded
+
     """
-    
-    # Go through one file at a time
+    time = None
+    grid = None
+    value = None
+
+    # Get the name of file containing our data (data_dname), what component
+    # in the file it's stored in (comp) and what it needs to be scaled by,
+    # if at all (value_scale).
+    data_dname, comp, value_scale = load_binary_params(args)
+
+    # Go through one frame at a time, appending data as we go
     times = []
-    grids = []
     values = []
     for frame in range(args.gkyl_frame_start, args.gkyl_frame_end + 1):
 
-        # Assemble path and load
-        if (args.gkyl_data_type == "density"):
-            if bimax:
-                data_dname = "BiMaxwellianMoments"
-            else:
-                data_dname = "M0"
-        elif (args.gkyl_data_type == "temperature"):
-            if bimax:
-                data_dname = "BiMaxwellianMoments"
-            else:
-                data_dname = "prim_moms"
-        elif (args.gkyl_data_type == "potential"):
-            data_dname = "field"
+        # Assemble path
+        path = load_binary_path(args, data_dname, frame)
 
-        # bcart is actually the components of the unit vector of the magentic 
-        # field in each X, Y, Z direction.
-        elif (args.gkyl_data_type in ["magnetic_unit_X", "magnetic_unit_Y", 
-            "magnetic_unit_Z"]):
-            data_dname = "bcart"
-        elif (args.gkyl_data_type == "jacobian"):
-            data_dname = "jacobgeo"
-        elif (args.gkyl_data_type == "magnetic_magnitude"):
-            data_dname = "bmag"
-        elif (args.gkyl_data_type in ["metric_coeff00", "metric_coeff01", 
-            "metric_coeff02", "metric_coeff11", "metric_coeff12", 
-            "metric_coeff22"]):
-            data_dname = "gij"
-        
-        # Some different ways each file name is constructed
-        if (args.gkyl_data_type in ["density", "temperature"]):
-            path = args.gkyl_dir + "/" + args.gkyl_case_name + "-" + \
-                args.gkyl_species + "_" + data_dname + "_" + str(frame) \
-                + ".gkyl"
-        elif (args.gkyl_data_type == "potential"):
-            path = args.gkyl_dir + "/" + args.gkyl_case_name + \
-                "-" + data_dname + "_" + str(frame) \
-                + ".gkyl"
-        elif (args.gkyl_data_type in ["magnetic_unit_X", "magnetic_unit_Y", 
-            "magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
-            "metric_coeff00", "metric_coeff01", "metric_coeff02", 
-            "metric_coeff11", "metric_coeff12", "metric_coeff22"]):
-            path = args.gkyl_dir + "/" + args.gkyl_case_name + \
-                "-" + data_dname \
-                + ".gkyl"
+        # If the user does not supply gkyl_moment_file_type, we can cycle
+        # through the options until one doesn't fail.
+        if (args.gkyl_moment_file_type is None and args.gkyl_data_type 
+            in ["density", "temperature"]):
+            for moment_file_type in ["m0m1m2", "maxwellian", "bimaxwellian"]:
+                try:
+                    
+                    # Manually set moment_file_type here
+                    args.gkyl_moment_file_type = moment_file_type
 
-            # It seems the bmag file does not include this info, so it needs to
-            # be passed in. This conditional statement allows this.
-            if(args.gkyl_basis_type != "serendipity" or not  args.gkyl_poly_order):
-                print("Error! Must pass in the interpolation basis type" + \
-                    " (gkyl_basis_type) and poly order (gkyl_poly_order)" + \
-                    " when saving the magnetic field data. Only " + \
-                    "serendipity is supported so far.")
-        
-        # Note: This accepts a comp argument but it is ignored for binary
-        # filetypes. Very tricky. It is passed in below during interpolate. 
-        data = pgkyl.data.GData(path)
+                    # Reload names and path and try again
+                    data_dname, comp, value_scale = load_binary_params(args)
+                    path = load_binary_path(args, data_dname, frame)
+                    time, grid, value = load_binary(path, args, comp, value_scale)
+                    break
+                except FileNotFoundError:
+                    pass
 
-        # Set the basis_type and poly_order if not included. It's really on
-        # the user to ensure this matches among files until this information
-        # is included in the bmag file.
-        if (data.ctx["basis_type"] is None):
-            data.ctx["basis_type"] = args.gkyl_basis_type
-        if (data.ctx["poly_order"] is None):
-            data.ctx["poly_order"] = args.gkyl_poly_order
+                #print("Error! Could not determine what type of file the " \
+                #    "moments are stored in!")
 
-        # Assign the values in data to the args. They should match. This allows
-        # them to be written out later since we're using args to carry
-        # everything around.
-        args.gkyl_basis_type = data.ctx["basis_type"]
-        args.gkyl_poly_order = data.ctx["poly_order"]
-
-        # Perform interpolation - add more options as I come across them
-        if (data.ctx["basis_type"] == "serendipity"):
-            interp_data = pgkyl.data.GInterpModal(data, data.ctx["poly_order"],
-                "ms")
+        # If moment_file_type provided or not density/temperature
         else:
-            print("Error! basis_type = {:} not supported yet."
-                .format(data.ctx["basis_type"]))
+            time, grid, value = load_binary(path, args, comp, value_scale)
 
-        # Add time to time-dependent data.
-        if (args.gkyl_data_type not in ["jacobian", "metric_coeff00", 
-            "metric_coeff01", "metric_coeff02", "metric_coeff11", 
-            "metric_coeff12", "metric_coeff22"]):
-            times.append(data.ctx["time"])
+        # When loading temperature and the data is stored as BiMaxwellian, 
+        # the data in value is actually T_par. An additional call is needed to 
+        # get perpendicular temperature. Then T = (Tpar + 2Tperp) / 3.
+        if (args.gkyl_data_type == "temperature" and 
+            args.gkyl_moment_file_type == "bimaxwellian"):
 
-        # Get grid and values. For each dimension, grid is one element larger
-        # than values because it is the edges of each grid. Later in Flan we
-        # can calculate cell centers, if needed. Note: We specify the component
-        # here in interpolate.
-        grid, value = interp_data.interpolate(comp)
-        #grids.append(grid)
+            time, grid, value_perp = load_binary(path, args, 3, value_scale)
+            value = (value + 2.0 * value_perp) / 3.0
 
-        # Option to multiply value by a scalar. This is useful when we need
-        # to convert from velocity to temperature. 
-        value *= value_scale
+        # Append. Don't need to do grid since it's the same every time. That
+        # means grid just gets overwritten each loop, but whaddya gonna do
+        # about it!
+        times.append(time)
         values.append(value)
 
-        # Ignore this comment below. We actually do want to do this so that the
-        # magnetic field conforms to the other data arrays. One day if we
-        # ever do electromagnetic simulations we won't need to change as much
-        # code. 
-        # If doing magnetic field, this is only to be done once since
-        # we otherwise would be repeating the same information each frame.
-        #if (args.gkyl_data_type == "magnetic_field"):
-        #    break
+        # Some parameters don't have value for each frame, like the geometry
+        # things, so we only need to do once and then we can break.
+        if (args.gkyl_data_type in time_independent_data): break
 
-    # Note: We intentionally just return grid and not grids since it is the
-    # same for each time slice. If this changes, we can revisit but keep it 
-    # simple for now.
     return times, grid, values
+
+def load_binary_params(args):
+    """
+    Get the parameters needed to correctly load data from binary (.gkyl) file.
+
+    Parameters
+    ----------
+    args : Whatever parser.parse_args() return
+        Contains all the arguments passed when calling read_gkyl.py
+
+    Returns
+    -------
+    data_dname : str
+        The str used in constructing the path to the needed .gkyl file
+
+    comp : int
+        The component to load from the Gkeyll file (often 0)
+
+    value_scale : float
+        Multiplicative scale factor to convert loaded data to different
+        units. Mainly used to convert the thermal velocity (vT^2) to eV for
+        temperature.
+    """
+
+    data_dname = "null"
+    comp = 0
+    value_scale = 1.0
+
+    # Density and temperature depend on how the moments were output from
+    # Gkeyll. In all these, the thermal velocity is stored so one needs to
+    # calculate the temperature (via the scale parameter). The options are:
+    #   - M0M1M2: M0 = density, prim_moms = (?, vT^2, ?)
+    #   - Maxwellian: (n, upar, vT^2)
+    #   - BiMaxwellian: (n, upar, vT^2_par, vT^2_perp)
+    # BiMaxwellian means we need to load twice, once for the parallel and
+    # another for the perpendicular temperatures, 
+    # then T = (Tpar + 2Tperp) / 3.
+    if (args.gkyl_data_type == "temperature"):
+        if (args.gkyl_moment_file_type == "m0m1m2"):
+            data_dname = "prim_moms"
+            comp = 1
+        elif (args.gkyl_moment_file_type == "maxwellian"):
+            data_dname = "MaxwellianMoments"
+            comp = 2
+
+        # Assigning to vT^2_par, will have additional load for vT^2_perp
+        # (comp = 3) below to avoid a whole complicated logic since this is 
+        # the only option that requires this.
+        elif (args.gkyl_moment_file_type == "bimaxwellian"):
+            data_dname = "BiMaxwellianMoments"
+            comp = 2
+
+        # Calculate mass of particle (kg) so we can convert to temperature
+        m = 1.661e-27 * args.gkyl_species_mass_amu
+        value_scale = m / 1.602e-19
+
+    elif (args.gkyl_data_type == "density"):
+        if (args.gkyl_moment_file_type == "m0m1m2"):
+           data_dname = "M0"
+        elif (args.gkyl_moment_file_type == "maxwellian"):
+            data_dname = "MaxwellianMoments"
+        elif (args.gkyl_moment_file_type == "bimaxwellian"):
+            data_dname = "BiMaxwellianMoments"
+        comp = 0
+        value_scale = 1.0
+
+    # Plasma potential
+    elif (args.gkyl_data_type == "potential"):
+        data_dname = "field"
+        comp = 0
+        value_scale = 1.0
+
+    # bcart is the components of the unit vector of the magentic 
+    # field in each X, Y, Z direction.
+    elif (args.gkyl_data_type in ["magnetic_unit_X", "magnetic_unit_Y", 
+        "magnetic_unit_Z"]):
+        data_dname = "bcart"
+
+        # Magnetic field components
+        if (args.gkyl_data_type == "magnetic_unit_X"):
+            comp = 0
+        elif (args.gkyl_data_type == "magnetic_unit_Y"):
+            comp = 1
+        elif (args.gkyl_data_type == "magnetic_unit_Z"):
+            comp = 2
+        value_scale = 1.0
+
+    # Jacobian
+    elif (args.gkyl_data_type == "jacobian"):
+        data_dname = "jacobgeo"
+        comp = 0
+        value_scale = 1.0
+
+    # Magentic field strength
+    elif (args.gkyl_data_type == "magnetic_magnitude"):
+        data_dname = "bmag"
+        comp = 0
+        value_scale = 1.0
+
+    # Metric coefficients
+    elif (args.gkyl_data_type in ["metric_coeff00", "metric_coeff01", 
+        "metric_coeff02", "metric_coeff11", "metric_coeff12", 
+        "metric_coeff22"]):
+        data_dname = "gij"
+
+        # Assign correct component
+        if args.gkyl_data_type == "metric_coeff00": comp = 0
+        elif args.gkyl_data_type == "metric_coeff01": comp = 1
+        elif args.gkyl_data_type == "metric_coeff02": comp = 2
+        elif args.gkyl_data_type == "metric_coeff11": comp = 3
+        elif args.gkyl_data_type == "metric_coeff12": comp = 4
+        elif args.gkyl_data_type == "metric_coeff22": comp = 5
+
+        value_scale = 1.0
+
+
+    return data_dname, comp, value_scale
+
+def load_binary_path(args, data_dname, frame):
+    """
+    Get full path to binary (.gkyl) file so it can be loaded
+
+    Parameters
+    ----------
+    args : Whatever parser.parse_args() returns
+        Contains all the arguments passed when calling read_gkyl.py
+
+    data_dname : str
+        The str used in constructing the path to the needed .gkyl file
+
+    frame : int
+        The frame number being loaded
+
+    Returns
+    -------
+    path : str
+        Full path to binary (.gkyl) file
+
+    """
+
+    # Some different ways each file name is constructed
+    if (args.gkyl_data_type in ["density", "temperature"]):
+        path = args.gkyl_dir + "/" + args.gkyl_case_name + "-" + \
+            args.gkyl_species + "_" + data_dname + "_" + str(frame) \
+            + ".gkyl"
+    elif (args.gkyl_data_type == "potential"):
+        path = args.gkyl_dir + "/" + args.gkyl_case_name + \
+            "-" + data_dname + "_" + str(frame) \
+            + ".gkyl"
+    elif (args.gkyl_data_type in ["magnetic_unit_X", "magnetic_unit_Y", 
+        "magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
+        "metric_coeff00", "metric_coeff01", "metric_coeff02", 
+        "metric_coeff11", "metric_coeff12", "metric_coeff22"]):
+        path = args.gkyl_dir + "/" + args.gkyl_case_name + \
+            "-" + data_dname \
+            + ".gkyl"
+
+        # It seems the bmag file does not include this info, so it needs to
+        # be passed in. This conditional statement allows this.
+        if(args.gkyl_basis_type != "serendipity" or not  args.gkyl_poly_order):
+            print("Error! Must pass in the interpolation basis type" + \
+                " (gkyl_basis_type) and poly order (gkyl_poly_order)" + \
+                " when saving the magnetic field data. Only " + \
+                "serendipity is supported so far.")
+
+    return path
+
+def load_binary(path, args, comp, value_scale=1.0):
+    """
+    Load data from a binary (.gkyl) file
+
+    Parameters
+    ----------
+    path : str
+        The full path to the .gkyl file
+
+    args : Whatever parser.parse_args() returns
+        Contains all the arguments passed when calling read_gkyl.py
+
+    comp : int
+        The component to load from the Gkeyll file (often 0)
+
+    value_scale : float
+        Multiplicative scale factor to convert loaded data to different
+        units. Mainly used to convert the thermal velocity (vT^2) to eV for
+        temperature.
+
+    Returns
+    -------
+    time : float
+        The time loaded
+
+    grid : array
+        3D (x,y,z) array of the grid coordinates
+
+    values : array
+        3D (x,y,z) array of the values loaded
+
+    """
+    # Note: This accepts a comp argument but it is ignored for binary
+    # filetypes. Very tricky. It is passed in below during interpolate. 
+    data = pgkyl.data.GData(path)
+
+    # Set the basis_type and poly_order if not included. It's really on
+    # the user to ensure this matches among files until this information
+    # is included in the bmag file.
+    if (data.ctx["basis_type"] is None):
+        data.ctx["basis_type"] = args.gkyl_basis_type
+    if (data.ctx["poly_order"] is None):
+        data.ctx["poly_order"] = args.gkyl_poly_order
+
+    # Assign the values in data to the args. They should match. This allows
+    # them to be written out later since we're using args to carry
+    # everything around.
+    args.gkyl_basis_type = data.ctx["basis_type"]
+    args.gkyl_poly_order = data.ctx["poly_order"]
+
+    # Perform interpolation - I think serendipity will be the only option
+    if (data.ctx["basis_type"] == "serendipity"):
+        interp_data = pgkyl.data.GInterpModal(data, data.ctx["poly_order"],
+            "ms")
+    else:
+        print("Error! basis_type = {:} not supported yet."
+            .format(data.ctx["basis_type"]))
+
+    # Only time-dependent data has time in it
+    if (args.gkyl_data_type not in ["jacobian", "metric_coeff00", 
+        "metric_coeff01", "metric_coeff02", "metric_coeff11", 
+        "metric_coeff12", "metric_coeff22"]):
+        time = data.ctx["time"]
+    else:
+        time = []
+
+    # Get grid and values. For each dimension, grid is one element larger
+    # than values because it is the edges of each grid. Later in Flan we
+    # can calculate cell centers, if needed. Note: We specify the component
+    # here in interpolate.
+    grid, value = interp_data.interpolate(comp)
+
+    # Option to multiply value by a scalar. This is useful when we need
+    # to convert from velocity to temperature. 
+    value *= value_scale
+
+    return time, grid, value
 
 def save_csv(args, times, grid, values):
     """
-    This functions creates three csv files for each array: times, grid, and 
-    the values at each time.
+    Creates three csv files for each array: times, grid, and the values at 
+    each time. Parameters that do not depend on time skip the time step.
+
+    Parameters
+    ----------
+    args : Whatever parser.parse_args() return
+        Contains all the arguments passed when calling read_gkyl.py
+
+    times : list
+        List of all the times loaded
+
+    grid : array
+        3D (x,y,z) array of the grid coordinates
+
+    values : array
+        4D (t,x,y,z) array of the values loaded
+
+    Returns
+    -------
+    N/A
     """
     
     # Use this as just a standard filename, no need to make it unique
@@ -145,10 +371,7 @@ def save_csv(args, times, grid, values):
     # Add an informative header just for clarity's sake. The magnetic field
     # is just one array (electrostatic approximation for now), so there
     # are no times to write.
-    if (args.gkyl_data_type not in ["magnetic_unit_X", "magnetic_unit_Y", 
-        "magnetic_unit_Z", "magnetic_magnitude", "jacobian", "metric_coeff00", 
-            "metric_coeff01", "metric_coeff02", "metric_coeff11", 
-            "metric_coeff12", "metric_coeff22"]):
+    if (args.gkyl_data_type not in time_independent_data):
         header = (
                  "# The times of each Gkeyll frame. The first line is an\n"
                  "# integer telling how many values follow.\n"
@@ -218,8 +441,9 @@ def save_csv(args, times, grid, values):
 
 def main():
     """
-    Can optionally call this with standard arguments, they'll override anything
-    passed in with the command line.
+    Command line utility to load data from Gkeyll using postgkyl and save the
+    data in .csv files to be read in by Flan. Effectively the coupling between
+    Gkeyll output and Flan input is here.
     """
 
     # Valid options for gkyl_data_type
@@ -254,6 +478,9 @@ def main():
     parser.add_argument("--gkyl_basis_type", type=str, help="DG basis type", 
         choices=["serendipity"])
     parser.add_argument("--gkyl_poly_order", type=int, help="DG poly order")
+    parser.add_argument("--gkyl_moment_file_type", type=str, 
+        help="type of moment files containing density and temperature",
+        choices=["m0m1m2", "maxwellian", "bimaxwellian"])
 
     # Parse arguments
     args = parser.parse_args()
@@ -261,97 +488,11 @@ def main():
     # Load binary file, specifying which components in the binary file has
     # the data we're after.
     if (args.gkyl_file_type == "binary"):
-
-        # Load data that does not need to multiplied by anything and exists
-        # in comp=0.
-        if (args.gkyl_data_type in ["density", "potential", "jacobian", 
-            "magnetic_magnitude"]):
-            value_scale = 1.0
-            comp = 0
-
-        # Load temperature. This actually loads the velocity, which we convert
-        # to temperature via T = value * m / q
-        elif (args.gkyl_data_type == "temperature"):
-
-            # Want to trigger a warning if the species mass was zero (probably
-            # means it was accidentally not passed in). 
-            if (args.gkyl_species_mass_amu == 0.0):
-                print("Error! gkyl_species_mass_amu = 0.0. Did you forget" + \
-                " to pass in this argument?")
-
-            # Calculate mass of particle (kg) so we can convert to temperature
-            m = 1.661e-27 * args.gkyl_species_mass_amu
-            value_scale = m / 1.602e-19
-            comp = 1
-
-        # Magnetic field components
-        elif (args.gkyl_data_type == "magnetic_unit_X"):
-            value_scale = 1.0
-            comp = 0
-        elif (args.gkyl_data_type == "magnetic_unit_Y"):
-            value_scale = 1.0
-            comp = 1
-        elif (args.gkyl_data_type == "magnetic_unit_Z"):
-            value_scale = 1.0
-            comp = 2
-
-        # Metric coefficients. These make up a 3x3 array, so technically there 
-        # are 9 different ones to load, but the matrix is symmetric so only
-        # 6 are needed.
-        elif (args.gkyl_data_type in ["metric_coeff00", "metric_coeff01", 
-            "metric_coeff02", "metric_coeff11", "metric_coeff12", 
-            "metric_coeff22"]):
-
-            # No scaling needed
-            value_scale = 1.0
-
-            # Assign each specific component
-            if args.gkyl_data_type == "metric_coeff00": comp = 0
-            if args.gkyl_data_type == "metric_coeff01": comp = 1
-            if args.gkyl_data_type == "metric_coeff02": comp = 2
-            if args.gkyl_data_type == "metric_coeff11": comp = 3
-            if args.gkyl_data_type == "metric_coeff12": comp = 4
-            if args.gkyl_data_type == "metric_coeff22": comp = 5
-
-        else:
-            print("Error! Unrecognized gkyl_data_type: {}".format(args.gkyl_data_type))
-            
-
-        # When using BiMaxwellian files, the temperature needs an extra step.
-        # this is because we have Tpar and Tperp. We want just the isotropic
-        # temperature, which we can approximate as T = (Tpar + 2Tperp) / 3.
-        # This is just the arithemetic mean. So we load both, and then estimate
-        # it.
-        if (args.gkyl_data_type == "temperature"):
-            try:
-                times, grid, values = read_binary(args, comp, value_scale)
-
-            # Attempt looking for BiMaxwellian files then
-            except FileNotFoundError:
-
-                # Tpar/m = 2, Tperp/m = 3
-                times, grid, values_par = read_binary(args, 2, value_scale, True)
-                times, grid, values_perp = read_binary(args, 3, value_scale, True)
-                values = (np.array(values_par) + 2 * np.array(values_perp)) / 3
-
-        # Density could be stored in prim_moments or BiMaxwellian, try both.
-        elif (args.gkyl_data_type == "density"):
-            try: 
-                times, grid, values = read_binary(args, comp, value_scale)
-            except FileNotFoundError:
-
-                # Is in comp = 0
-                times, grid, values = read_binary(args, 0, value_scale, True)
-
-        # Everything else has its own file
-        else:
-            times, grid, values = read_binary(args, comp, value_scale)
-
+        times, grid, values = load_binary_wrapper(args)
     else:
         print("Error! Only binary Gkyell files (.gkyl) are currently supported.")
 
     # Save to csv file with numpy.
-    #print("Saving .csv files...")
     save_csv(args, times, grid, values)
 
 
