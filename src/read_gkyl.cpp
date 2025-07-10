@@ -60,16 +60,21 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_ne {};
 		Vectors::Vector4D<BkgFPType> gkyl_te {};
 		Vectors::Vector4D<BkgFPType> gkyl_ti {};
+		Vectors::Vector4D<BkgFPType> gkyl_viperp_sq {};  // Perpendicular ion velocity
 		Vectors::Vector4D<BkgFPType> gkyl_vp {};
 		Vectors::Vector4D<BkgFPType> gkyl_bX {}; // Magnetic field components
 		Vectors::Vector4D<BkgFPType> gkyl_bY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_bZ {}; 
+		Vectors::Vector4D<BkgFPType> gkyl_gradbX {}; // Magnetic field gradient
+		Vectors::Vector4D<BkgFPType> gkyl_gradbY {}; // components in physical
+		Vectors::Vector4D<BkgFPType> gkyl_gradbZ {}; // space
 		Vectors::Vector4D<BkgFPType> gkyl_eX {}; // Electric field components
 		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_eZ {};
-		Vectors::Vector4D<BkgFPType> gkyl_uX {}; // Mean flow components in
-		Vectors::Vector4D<BkgFPType> gkyl_uY {}; // physical space
-		Vectors::Vector4D<BkgFPType> gkyl_uZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_uiz {}; // Parallel (to z) ion flow
+		Vectors::Vector4D<BkgFPType> gkyl_uiX {}; // Parallel (to z) ion flow
+		Vectors::Vector4D<BkgFPType> gkyl_uiY {}; // in physical space
+		Vectors::Vector4D<BkgFPType> gkyl_uiZ {};
 
 		// These are passed to every function call, so save some time/space by 
 		// zipping them up into a tuple and passing together.
@@ -98,6 +103,10 @@ namespace Gkyl
 		read_elec_temperature(grid_data, gkyl_te, opts);
 		std::cout << "  - Ion temperature\n";
 		read_ion_temperature(grid_data, gkyl_ti, opts);
+		std::cout << "  - Ion parallel flow\n";
+		read_par_flow(grid_data, gkyl_uiz, opts);
+		std::cout << "  - Ion perpendicular thermal velocity\n";
+		read_ion_vperp_sq(grid_data, gkyl_viperp_sq, opts);
 		std::cout << "  - Plasma potential\n";
 		read_potential(grid_data, gkyl_vp, opts);
 		std::cout << "  - Magnetic field\n";
@@ -113,12 +122,6 @@ namespace Gkyl
 		// irregular grids (i.e., for the electric field). 
 		write_XYZ(grid_data, opts);
 
-		// Calculate the 3 electric field components from the potential then 
-		// read each electric field component
-		std::cout << "  - Electric field\n";
-		calc_elec_field();
-		read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
-
 		// Read in Jacobian
 		std::cout << "  - Jacobian\n";
 		read_jacobian(grid_data, gkyl_J, opts);
@@ -131,6 +134,23 @@ namespace Gkyl
 		read_gij(grid_data, gkyl_gij_11, opts, "11");
 		read_gij(grid_data, gkyl_gij_12, opts, "12");
 		read_gij(grid_data, gkyl_gij_22, opts, "22");
+
+		// At this point calculate gradients (E, gradB)
+		calc_gradients();
+
+		// Read in electric field
+		std::cout << "  - Electric field\n";
+		read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
+
+		// Read in magnetic field gradient. Note these are just needed to
+		// calculate the gradB drift of the plasma flow, it is not needed
+		// beyond that and thus doesn not go into bkg below.
+		std::cout << "  - Magnetic field gradient\n";
+		read_gradb(grid_data, gkyl_gradbX, gkyl_gradbY, gkyl_gradbZ);
+
+
+		// Calculate the background flows in each Cartesian direction
+		//calc_flow(grid_data, gkyl_uix, opts);
 
 		// With all our arrays assembled, encapsulate them into a Background
 		// class object with move semantics then return.
@@ -734,7 +754,7 @@ namespace Gkyl
 		}
 	}
 	
-	void calc_elec_field()
+	void calc_gradients()
 	{
 		// See if a file already exists and load it. If not, calculate it.
 		// Let the user know one has been loaded, just in case they want Flan
@@ -742,11 +762,17 @@ namespace Gkyl
 		std::string eX_fname {"bkg_from_pgkyl_elec_field_X.csv"};
 		std::string eY_fname {"bkg_from_pgkyl_elec_field_Y.csv"};
 		std::string eZ_fname {"bkg_from_pgkyl_elec_field_Z.csv"};
+		std::string gradbX_fname {"bkg_from_pgkyl_gradb_X.csv"};
+		std::string gradbY_fname {"bkg_from_pgkyl_gradb_Y.csv"};
+		std::string gradbZ_fname {"bkg_from_pgkyl_gradb_Z.csv"};
 		if ((std::filesystem::exists(eX_fname) && 
 			std::filesystem::exists(eY_fname) &&
-			std::filesystem::exists(eZ_fname)))
+			std::filesystem::exists(eZ_fname) &&
+			std::filesystem::exists(gradbX_fname) &&
+			std::filesystem::exists(gradbY_fname) &&
+			std::filesystem::exists(gradbZ_fname)))
 		{
-			std::cout << "Previous file located\n";
+			std::cout << "Previous files located\n";
 		}
 		else
 		{
@@ -854,37 +880,33 @@ namespace Gkyl
 		}
 	}
 
-	void read_elec_field(grid_data_t& grid_data, 
-		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
-		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
-		Vectors::Vector4D<BkgFPType>& gkyl_eZ)
+	void read_gradient_data(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& dataX, 
+		Vectors::Vector4D<BkgFPType>& dataY, 
+		Vectors::Vector4D<BkgFPType>& dataZ,
+		Vectors::Vector4D<BkgFPType>& gkyl_dataX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dataY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dataZ)
 	{
-		// Ex	
-		Vectors::Vector4D<BkgFPType> tmp_dataX
-			{load_values<BkgFPType>("elec_field_X")};
-
-		// Ey
-		Vectors::Vector4D<BkgFPType> tmp_dataY
-			{load_values<BkgFPType>("elec_field_Y")};
-
-		// Ez
-		Vectors::Vector4D<BkgFPType> tmp_dataZ
-			{load_values<BkgFPType>("elec_field_Z")};
 
 		// Apply fix to y boundaries where the gradient generally messes up
-		elec_field_ybound_fix(grid_data, tmp_dataX);
-		elec_field_ybound_fix(grid_data, tmp_dataY);
-		elec_field_ybound_fix(grid_data, tmp_dataZ);
+		gradient_ybound_fix(grid_data, dataX);
+		gradient_ybound_fix(grid_data, dataY);
+		gradient_ybound_fix(grid_data, dataZ);
 
 		// Move into arrays
-		gkyl_eX.move_into_data(tmp_dataX);
-		gkyl_eY.move_into_data(tmp_dataY);
-		gkyl_eZ.move_into_data(tmp_dataZ);
+		gkyl_dataX.move_into_data(dataX);
+		gkyl_dataY.move_into_data(dataY);
+		gkyl_dataZ.move_into_data(dataZ);
 	}
 
-	void elec_field_ybound_fix(grid_data_t& grid_data, 
+	void gradient_ybound_fix(grid_data_t& grid_data, 
 		Vectors::Vector4D<BkgFPType>& ecomp)
 	{
+		// The following comment is for the electric field, but the same
+		// logic applies to any other gradient-calculated data (e.g., the
+		// magnetic field gradient).
+		//
 		// We apply a fix here. The y boundaries are treated as periodic (in
 		// Gkeyll this need not always be true!). At the edge of the boundaries
 		// the gradient calculation for the electric field can get messed up
@@ -921,6 +943,63 @@ namespace Gkyl
 		}
 		}
 	}
+
+	void read_elec_field(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eZ)
+	{
+		// Ex	
+		Vectors::Vector4D<BkgFPType> tmp_dataX
+			{load_values<BkgFPType>("elec_field_X")};
+
+		// Ey
+		Vectors::Vector4D<BkgFPType> tmp_dataY
+			{load_values<BkgFPType>("elec_field_Y")};
+
+		// Ez
+		Vectors::Vector4D<BkgFPType> tmp_dataZ
+			{load_values<BkgFPType>("elec_field_Z")};
+
+		// Call general fuction to handle calculated-gradient data.
+		read_gradient_data(grid_data, tmp_dataX, tmp_dataY, tmp_dataZ, 
+			gkyl_eX, gkyl_eY, gkyl_eZ);
+
+		// Apply fix to y boundaries where the gradient generally messes up
+		/*
+		elec_field_ybound_fix(grid_data, tmp_dataX);
+		elec_field_ybound_fix(grid_data, tmp_dataY);
+		elec_field_ybound_fix(grid_data, tmp_dataZ);
+
+		// Move into arrays
+		gkyl_eX.move_into_data(tmp_dataX);
+		gkyl_eY.move_into_data(tmp_dataY);
+		gkyl_eZ.move_into_data(tmp_dataZ);
+		*/
+	}
+
+	void read_gradb(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbZ)
+	{
+		// gradB_X
+		Vectors::Vector4D<BkgFPType> tmp_dataX
+			{load_values<BkgFPType>("gradb_X")};
+
+		// gradB_Y
+		Vectors::Vector4D<BkgFPType> tmp_dataY
+			{load_values<BkgFPType>("gradb_Y")};
+
+		// gradB_Z
+		Vectors::Vector4D<BkgFPType> tmp_dataZ
+			{load_values<BkgFPType>("gradb_Z")};
+
+		// Call general fuction to handle calculated-gradient data.
+		read_gradient_data(grid_data, tmp_dataX, tmp_dataY, tmp_dataZ, 
+			gkyl_gradbX, gkyl_gradbY, gkyl_gradbZ);
+	}
+
 
 	void write_XYZ(grid_data_t& grid_data, const Options::Options& opts)
 	{
@@ -973,15 +1052,102 @@ namespace Gkyl
 
 	
 	template <typename T>
-	void read_mean_flow(grid_data_t& grid_data, 
-		Vectors::Vector4D<T>& gkyl_uX, Vectors::Vector4D<T>& gkyl_uY, 
-		Vectors::Vector4D<T>& gkyl_uZ, const Options::Options& opts)
+	void read_par_flow(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_uiz, const Options::Options& opts)
 	{
-		
-		// Call pgkyl to load data into gkyl_uX. This loads just the parallel
-		// to z flow. The ExB and gradB contributions are added elsewhere.
-		read_data_pgkyl(opts.gkyl_elec_name(), "mean_flow_X", grid_data,
-			gkyl_uX, opts);
+		// Call pgkyl to load data into gkyl_uz. This loads just the parallel
+		// to z flow. The cross-field flows are drifts and added elsewhere.
+		read_data_pgkyl(opts.gkyl_ion_name(), "par_flow", grid_data,
+			gkyl_uiz, opts);
+	}
 
+	template <typename T>
+	void read_ion_vperp_sq(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_viperp_sq, const Options::Options& opts)
+	{
+		// Call pgkyl to load data into gkyl_viperp2. This requires
+		// BiMaxwellian moments and thus will fail if they are not there.
+		read_data_pgkyl(opts.gkyl_ion_name(), "vperp_sq", grid_data,
+			gkyl_viperp_sq, opts);
+	}
+
+	// Ugly ass function header
+	void calc_bkg_flow(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uiz, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uZ,
+		Vectors::Vector4D<BkgFPType>& gkyl_bX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_bY,
+		Vectors::Vector4D<BkgFPType>& gkyl_bZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbY,
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_viperp_sq, 
+		const Options::Options& opts)
+	{
+		// Resize the uX, uY, uZ vectors
+		gkyl_uX.resize(gkyl_uiz.get_dim1(), gkyl_uiz.get_dim2(), 
+			gkyl_uiz.get_dim3(), gkyl_uiz.get_dim4());
+		gkyl_uY.resize(gkyl_uiz.get_dim1(), gkyl_uiz.get_dim2(), 
+			gkyl_uiz.get_dim3(), gkyl_uiz.get_dim4());
+		gkyl_uZ.resize(gkyl_uiz.get_dim1(), gkyl_uiz.get_dim2(), 
+			gkyl_uiz.get_dim3(), gkyl_uiz.get_dim4());
+
+		// We are calculating uX = (parallel flow projection) + 
+		// (ExB drift) + (gradB drift) = uz * bX + ExB_X + gradB_X
+		for (int i {}; i < std::ssize(std::get<0>(grid_data)); ++i)  // t
+		{
+		for (int j {}; j < std::ssize(std::get<1>(grid_data)); ++j)  // x
+		{
+		for (int k {}; k < std::ssize(std::get<2>(grid_data)); ++k)  // y
+		{
+		for (int l {}; l < std::ssize(std::get<3>(grid_data)); ++l)  // z
+		{
+			// Some variables for cleaner code
+			double bX {gkyl_bX(i,j,k,l)};
+			double bY {gkyl_bY(i,j,k,l)};
+			double bZ {gkyl_bZ(i,j,k,l)};
+			double gradbX {gkyl_gradbX(i,j,k,l)};
+			double gradbY {gkyl_gradbY(i,j,k,l)};
+			double gradbZ {gkyl_gradbZ(i,j,k,l)};
+			double eX {gkyl_eX(i,j,k,l)};
+			double eY {gkyl_eY(i,j,k,l)};
+			double eZ {gkyl_eZ(i,j,k,l)};
+			double viperp_sq {gkyl_viperp_sq(i,j,k,l)};
+
+			// Magnitude of magnetic field, used a couple times here
+			double bmag_sq {bX * bX + bY * bY + bZ * bZ};
+			double bmag {std::sqrt(bmag_sq)};
+
+			// Projection of uz onto Cartesian magnetic field components
+			gkyl_uX(i,j,k,l) = gkyl_uiz(i,j,k,l) * bX / bmag;
+			gkyl_uY(i,j,k,l) = gkyl_uiz(i,j,k,l) * bY / bmag;
+			gkyl_uZ(i,j,k,l) = gkyl_uiz(i,j,k,l) * bZ / bmag;
+
+			// ExB drift component
+			gkyl_uX(i,j,k,l) = gkyl_uX(i,j,k,l) + (eY * bZ - eZ * bY) / bmag_sq;
+			gkyl_uY(i,j,k,l) = gkyl_uY(i,j,k,l) + (eZ * bX - eX * bZ) / bmag_sq;
+			gkyl_uZ(i,j,k,l) = gkyl_uZ(i,j,k,l) + (eX * bY - eY * bX) / bmag_sq;
+
+			// gradB drift component. Group terms out front into coefficient.
+			// Assume deuterium plasma (q = 1 C)
+			double ion_charge {-Constants::charge_e};
+			double coef {opts.gkyl_ion_mass_amu() * Constants::amu_to_kg 
+				* viperp_sq / (2.0 * ion_charge * bmag_sq * bmag)};
+			gkyl_uX(i,j,k,l) = gkyl_uX(i,j,k,l) + coef * (bY * gradbZ 
+				- bZ * gradbY);
+			gkyl_uY(i,j,k,l) = gkyl_uY(i,j,k,l) + coef * (bZ * gradbX 
+				- bX * gradbZ);
+			gkyl_uZ(i,j,k,l) = gkyl_uZ(i,j,k,l) + coef * (bX * gradbY 
+				- bY * gradbX);
+
+		}
+		}
+		}
+		}
 	}
 }

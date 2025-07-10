@@ -54,7 +54,7 @@ def load_binary_wrapper(args):
         # If the user does not supply gkyl_moment_file_type, we can cycle
         # through the options until one doesn't fail.
         if (args.gkyl_moment_file_type is None and args.gkyl_data_type 
-            in ["density", "temperature"]):
+            in ["density", "temperature", "par_flow"]):
             for moment_file_type in ["m0m1m2", "maxwellian", "bimaxwellian"]:
                 try:
                     
@@ -124,9 +124,10 @@ def load_binary_params(args):
     comp = 0
     value_scale = 1.0
 
-    # Density and temperature depend on how the moments were output from
-    # Gkeyll. In all these, the thermal velocity is stored so one needs to
-    # calculate the temperature (via the scale parameter). The options are:
+    # Density, temperature and parallel flow depend on how the moments were 
+    # output from Gkeyll. In all these, the thermal velocity is stored so one 
+    # needs to calculate the temperature (via the scale parameter). The options 
+    # are:
     #   - M0M1M2: M0 = density, prim_moms = (?, vT^2, ?)
     #   - Maxwellian: (n, upar, vT^2)
     #   - BiMaxwellian: (n, upar, vT^2_par, vT^2_perp)
@@ -160,6 +161,25 @@ def load_binary_params(args):
         elif (args.gkyl_moment_file_type == "bimaxwellian"):
             data_dname = "BiMaxwellianMoments"
         comp = 0
+        value_scale = 1.0
+
+    # Perpendicular thermal velocity squared
+    elif (args.gkyl_data_type == "vperp_sq"):
+        if (args.gkyl_moment_file_type == "bimaxwellian"):
+            data_dname = "BiMaxwellianMoments"
+            comp = 3
+            value_scale = 1.0
+        else:
+            print("Error! vperp_sq is only available with BiMaxwellian files")
+
+    elif (args.gkyl_data_type == "par_flow"):
+        if (args.gkyl_moment_file_type == "m0m1m2"):
+           data_dname = "Upar"
+        elif (args.gkyl_moment_file_type == "maxwellian"):
+            data_dname = "MaxwellianMoments"
+        elif (args.gkyl_moment_file_type == "bimaxwellian"):
+            data_dname = "BiMaxwellianMoments"
+        comp = 1
         value_scale = 1.0
 
     # Plasma potential
@@ -237,7 +257,8 @@ def load_binary_path(args, data_dname, frame):
     """
 
     # Some different ways each file name is constructed
-    if (args.gkyl_data_type in ["density", "temperature"]):
+    if (args.gkyl_data_type in ["density", "temperature", "par_flow", 
+        "vperp_sq"]):
         path = args.gkyl_dir + "/" + args.gkyl_case_name + "-" + \
             args.gkyl_species + "_" + data_dname + "_" + str(frame) \
             + ".gkyl"
@@ -450,7 +471,7 @@ def main():
     gkyl_data_type_opts = ["density", "temperature", "potential", "magnetic_unit_X", 
         "magnetic_unit_Y", "magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
         "metric_coeff00", "metric_coeff01", "metric_coeff02", "metric_coeff11",
-        "metric_coeff12", "metric_coeff22"]
+        "metric_coeff12", "metric_coeff22", "par_flow", "vperp_sq"]
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(

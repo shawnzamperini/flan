@@ -410,6 +410,18 @@ namespace Vectors
 		// Return
 		return vec;	
 	}
+
+	template <typename T>
+	void Vector4D<T>::resize(const int dim1, const int dim2, const int dim3,
+        const int dim4)
+	{
+		// When we resize, we need to make sure to update the dimension sizes
+		m_data.resize(dim1 * dim2 * dim3 * dim4);
+		m_dim1 = dim1;
+		m_dim2 = dim2;
+		m_dim3 = dim3;
+		m_dim4 = dim4;
+	}
 }
 
 // This is a pecularity of splitting a class declarations and definitions 
