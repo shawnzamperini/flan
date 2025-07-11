@@ -294,6 +294,17 @@ namespace SaveResults
 		desc = "electric field (Z)";
 		save_vector_4d(nc_file, bkg.get_eZ(), "elec_Z", 
 			dim1, dim2, dim3, dim4, desc, "(V/m)");
+
+		// Background (ion) flow
+		desc = "background flow (X)";
+		save_vector_4d(nc_file, bkg.get_uX(), "ion_flow_X", 
+			dim1, dim2, dim3, dim4, desc, "(m/s)");
+		desc = "background flow (Y)";
+		save_vector_4d(nc_file, bkg.get_uY(), "ion_flow_Y", 
+			dim1, dim2, dim3, dim4, desc, "(m/s)");
+		desc = "background flow (Z)";
+		save_vector_4d(nc_file, bkg.get_uZ(), "ion_flow_Z", 
+			dim1, dim2, dim3, dim4, desc, "(m/s)");
 			
 		// Magnetic field
 		desc = "magnetic field (X)";

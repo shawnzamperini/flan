@@ -51,30 +51,8 @@ def load_binary_wrapper(args):
         # Assemble path
         path = load_binary_path(args, data_dname, frame)
 
-        # If the user does not supply gkyl_moment_file_type, we can cycle
-        # through the options until one doesn't fail.
-        if (args.gkyl_moment_file_type is None and args.gkyl_data_type 
-            in ["density", "temperature", "par_flow"]):
-            for moment_file_type in ["m0m1m2", "maxwellian", "bimaxwellian"]:
-                try:
-                    
-                    # Manually set moment_file_type here
-                    args.gkyl_moment_file_type = moment_file_type
-
-                    # Reload names and path and try again
-                    data_dname, comp, value_scale = load_binary_params(args)
-                    path = load_binary_path(args, data_dname, frame)
-                    time, grid, value = load_binary(path, args, comp, value_scale)
-                    break
-                except FileNotFoundError:
-                    pass
-
-                #print("Error! Could not determine what type of file the " \
-                #    "moments are stored in!")
-
-        # If moment_file_type provided or not density/temperature
-        else:
-            time, grid, value = load_binary(path, args, comp, value_scale)
+        # Load data from .gkyl file
+        time, grid, value = load_binary(path, args, comp, value_scale)
 
         # When loading temperature and the data is stored as BiMaxwellian, 
         # the data in value is actually T_par. An additional call is needed to 
@@ -163,7 +141,9 @@ def load_binary_params(args):
         comp = 0
         value_scale = 1.0
 
-    # Perpendicular thermal velocity squared
+    # Perpendicular thermal velocity squared. This only exists in the 
+    # BiMaxwellian moment files, so we must issue an error if this option
+    # was not selected.
     elif (args.gkyl_data_type == "vperp_sq"):
         if (args.gkyl_moment_file_type == "bimaxwellian"):
             data_dname = "BiMaxwellianMoments"

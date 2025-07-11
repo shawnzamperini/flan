@@ -39,6 +39,9 @@ namespace Background
 		Vectors::Vector4D<BkgFPType> m_eX {};
 		Vectors::Vector4D<BkgFPType> m_eY {};
 		Vectors::Vector4D<BkgFPType> m_eZ {};
+		Vectors::Vector4D<BkgFPType> m_uX {};
+		Vectors::Vector4D<BkgFPType> m_uY {};
+		Vectors::Vector4D<BkgFPType> m_uZ {};
 		Vectors::Vector3D<BkgFPType> m_X {};
 		Vectors::Vector3D<BkgFPType> m_Y {};
 		Vectors::Vector3D<BkgFPType> m_Z {};
@@ -77,6 +80,9 @@ namespace Background
 		const Vectors::Vector4D<BkgFPType>& get_eX() const;
 		const Vectors::Vector4D<BkgFPType>& get_eY() const;
 		const Vectors::Vector4D<BkgFPType>& get_eZ() const;
+		const Vectors::Vector4D<BkgFPType>& get_uX() const;
+		const Vectors::Vector4D<BkgFPType>& get_uY() const;
+		const Vectors::Vector4D<BkgFPType>& get_uZ() const;
 		const Vectors::Vector3D<BkgFPType>& get_X() const;
 		const Vectors::Vector3D<BkgFPType>& get_Y() const;
 		const Vectors::Vector3D<BkgFPType>& get_Z() const;
@@ -153,6 +159,9 @@ namespace Background
 		void move_into_eX(Vectors::Vector4D<BkgFPType>& eX); 
 		void move_into_eY(Vectors::Vector4D<BkgFPType>& eY);
 		void move_into_eZ(Vectors::Vector4D<BkgFPType>& eZ);
+		void move_into_uX(Vectors::Vector4D<BkgFPType>& uX); 
+		void move_into_uY(Vectors::Vector4D<BkgFPType>& uY);
+		void move_into_uZ(Vectors::Vector4D<BkgFPType>& uZ);
 		void move_into_X(Vectors::Vector3D<BkgFPType>& X);
 		void move_into_Y(Vectors::Vector3D<BkgFPType>& Y);
 		void move_into_Z(Vectors::Vector3D<BkgFPType>& Z);

@@ -32,6 +32,9 @@ namespace Background
 	const Vectors::Vector4D<BkgFPType>& Background::get_eX() const {return m_eX;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_eY() const {return m_eY;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_eZ() const {return m_eZ;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_uX() const {return m_uX;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_uY() const {return m_uY;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_uZ() const {return m_uZ;}
 	const Vectors::Vector3D<BkgFPType>& Background::get_X() const {return m_X;}
 	const Vectors::Vector3D<BkgFPType>& Background::get_Y() const {return m_Y;}
 	const Vectors::Vector3D<BkgFPType>& Background::get_Z() const {return m_Z;}
@@ -207,6 +210,21 @@ namespace Background
 	{
 		set_dims(eZ, "eZ");
 		m_eZ.move_into_data(eZ);
+	}
+	void Background::move_into_uX(Vectors::Vector4D<BkgFPType>& uX) 
+	{
+		set_dims(uX, "uX");
+		m_uX.move_into_data(uX);
+	}
+	void Background::move_into_uY(Vectors::Vector4D<BkgFPType>& uY) 
+	{
+		set_dims(uY, "uY");
+		m_uY.move_into_data(uY);
+	}
+	void Background::move_into_uZ(Vectors::Vector4D<BkgFPType>& uZ) 
+	{
+		set_dims(uZ, "uZ");
+		m_uZ.move_into_data(uZ);
 	}
 	void Background::move_into_X(Vectors::Vector3D<BkgFPType>& X) 
 	{

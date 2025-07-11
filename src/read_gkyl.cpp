@@ -71,10 +71,10 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_eX {}; // Electric field components
 		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_eZ {};
-		Vectors::Vector4D<BkgFPType> gkyl_uiz {}; // Parallel (to z) ion flow
-		Vectors::Vector4D<BkgFPType> gkyl_uiX {}; // Parallel (to z) ion flow
-		Vectors::Vector4D<BkgFPType> gkyl_uiY {}; // in physical space
-		Vectors::Vector4D<BkgFPType> gkyl_uiZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_uz {}; // Parallel (to z) ion flow
+		Vectors::Vector4D<BkgFPType> gkyl_uX {}; // Flow components
+		Vectors::Vector4D<BkgFPType> gkyl_uY {}; // in physical space
+		Vectors::Vector4D<BkgFPType> gkyl_uZ {};
 
 		// These are passed to every function call, so save some time/space by 
 		// zipping them up into a tuple and passing together.
@@ -103,10 +103,6 @@ namespace Gkyl
 		read_elec_temperature(grid_data, gkyl_te, opts);
 		std::cout << "  - Ion temperature\n";
 		read_ion_temperature(grid_data, gkyl_ti, opts);
-		std::cout << "  - Ion parallel flow\n";
-		read_par_flow(grid_data, gkyl_uiz, opts);
-		std::cout << "  - Ion perpendicular thermal velocity\n";
-		read_ion_vperp_sq(grid_data, gkyl_viperp_sq, opts);
 		std::cout << "  - Plasma potential\n";
 		read_potential(grid_data, gkyl_vp, opts);
 		std::cout << "  - Magnetic field\n";
@@ -142,15 +138,31 @@ namespace Gkyl
 		std::cout << "  - Electric field\n";
 		read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
 
-		// Read in magnetic field gradient. Note these are just needed to
-		// calculate the gradB drift of the plasma flow, it is not needed
-		// beyond that and thus doesn not go into bkg below.
-		std::cout << "  - Magnetic field gradient\n";
-		read_gradb(grid_data, gkyl_gradbX, gkyl_gradbY, gkyl_gradbZ);
+		// These arrays are only needed if the gkyl moments are BiMaxwellian
+		// (that is, it has vperp and vpar). We use vperp and gradB in the
+		// background flow calculation, which are used in the collision
+		// model. If you don't need collisions, then the other moment file
+		// types are fine and this section is safely skipped.
+		if (opts.gkyl_moment_type() == "bimaxwellian")
+		{
+			std::cout << "  - Ion parallel flow\n";
+			read_par_flow(grid_data, gkyl_uz, opts);
 
+			std::cout << "  - Ion perpendicular thermal velocity\n";
+			read_ion_vperp_sq(grid_data, gkyl_viperp_sq, opts);
 
-		// Calculate the background flows in each Cartesian direction
-		//calc_flow(grid_data, gkyl_uix, opts);
+			// Read in magnetic field gradient. Note these are just needed to
+			// calculate the gradB drift of the plasma flow, it is not needed
+			// beyond that and thus doesn not go into bkg below.
+			std::cout << "  - Magnetic field gradient\n";
+			read_gradb(grid_data, gkyl_gradbX, gkyl_gradbY, gkyl_gradbZ);
+
+			// Calculate the background flows in each Cartesian direction
+			calc_bkg_flow(grid_data, gkyl_uz, gkyl_uX, 
+				gkyl_uY, gkyl_uZ, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_eX, 
+				gkyl_eY, gkyl_eZ, gkyl_gradbX, gkyl_gradbY, gkyl_gradbZ, 
+				gkyl_viperp_sq, opts);
+		}
 
 		// With all our arrays assembled, encapsulate them into a Background
 		// class object with move semantics then return.
@@ -174,6 +186,9 @@ namespace Gkyl
 		bkg.move_into_eX(gkyl_eX);
 		bkg.move_into_eY(gkyl_eY);
 		bkg.move_into_eZ(gkyl_eZ);
+		bkg.move_into_uX(gkyl_uX);
+		bkg.move_into_uY(gkyl_uY);
+		bkg.move_into_uZ(gkyl_uZ);
 		bkg.move_into_X(gkyl_X);
 		bkg.move_into_Y(gkyl_Y);
 		bkg.move_into_Z(gkyl_Z);
@@ -514,7 +529,7 @@ namespace Gkyl
 
 		if (std::filesystem::exists(filename) && !force_load)
 		{
-			std::cout << "Previous file located\n";
+			//std::cout << "Previous file located\n";
 			if (data_type == "density" || data_type == "temperature")
 			{
 				Vectors::Vector4D<T> tmp_data {
@@ -542,7 +557,8 @@ namespace Gkyl
 			<< " --gkyl_frame_end=" << opts.gkyl_frame_end()
 			<< " --gkyl_species=" << species
 			<< " --gkyl_species_mass_amu=" << species_mass_amu
-			<< " --gkyl_data_type=" << data_type;
+			<< " --gkyl_data_type=" << data_type
+			<< " --gkyl_moment_file_type=" << opts.gkyl_moment_type();
 
 		// The bmag files don't include the needed DG interpolation data,
 		// so we need to pass those in manually. To avoid user-error, we
@@ -772,7 +788,7 @@ namespace Gkyl
 			std::filesystem::exists(gradbY_fname) &&
 			std::filesystem::exists(gradbZ_fname)))
 		{
-			std::cout << "Previous files located\n";
+			//std::cout << "Previous file located\n";
 		}
 		else
 		{
@@ -1053,12 +1069,12 @@ namespace Gkyl
 	
 	template <typename T>
 	void read_par_flow(grid_data_t& grid_data, 
-		Vectors::Vector4D<T>& gkyl_uiz, const Options::Options& opts)
+		Vectors::Vector4D<T>& gkyl_uz, const Options::Options& opts)
 	{
 		// Call pgkyl to load data into gkyl_uz. This loads just the parallel
 		// to z flow. The cross-field flows are drifts and added elsewhere.
 		read_data_pgkyl(opts.gkyl_ion_name(), "par_flow", grid_data,
-			gkyl_uiz, opts);
+			gkyl_uz, opts);
 	}
 
 	template <typename T>
@@ -1073,7 +1089,7 @@ namespace Gkyl
 
 	// Ugly ass function header
 	void calc_bkg_flow(grid_data_t& grid_data, 
-		Vectors::Vector4D<BkgFPType>& gkyl_uiz, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uz, 
 		Vectors::Vector4D<BkgFPType>& gkyl_uX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_uY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_uZ,
@@ -1090,12 +1106,12 @@ namespace Gkyl
 		const Options::Options& opts)
 	{
 		// Resize the uX, uY, uZ vectors
-		gkyl_uX.resize(gkyl_uiz.get_dim1(), gkyl_uiz.get_dim2(), 
-			gkyl_uiz.get_dim3(), gkyl_uiz.get_dim4());
-		gkyl_uY.resize(gkyl_uiz.get_dim1(), gkyl_uiz.get_dim2(), 
-			gkyl_uiz.get_dim3(), gkyl_uiz.get_dim4());
-		gkyl_uZ.resize(gkyl_uiz.get_dim1(), gkyl_uiz.get_dim2(), 
-			gkyl_uiz.get_dim3(), gkyl_uiz.get_dim4());
+		gkyl_uX.resize(gkyl_uz.get_dim1(), gkyl_uz.get_dim2(), 
+			gkyl_uz.get_dim3(), gkyl_uz.get_dim4());
+		gkyl_uY.resize(gkyl_uz.get_dim1(), gkyl_uz.get_dim2(), 
+			gkyl_uz.get_dim3(), gkyl_uz.get_dim4());
+		gkyl_uZ.resize(gkyl_uz.get_dim1(), gkyl_uz.get_dim2(), 
+			gkyl_uz.get_dim3(), gkyl_uz.get_dim4());
 
 		// We are calculating uX = (parallel flow projection) + 
 		// (ExB drift) + (gradB drift) = uz * bX + ExB_X + gradB_X
@@ -1124,9 +1140,9 @@ namespace Gkyl
 			double bmag {std::sqrt(bmag_sq)};
 
 			// Projection of uz onto Cartesian magnetic field components
-			gkyl_uX(i,j,k,l) = gkyl_uiz(i,j,k,l) * bX / bmag;
-			gkyl_uY(i,j,k,l) = gkyl_uiz(i,j,k,l) * bY / bmag;
-			gkyl_uZ(i,j,k,l) = gkyl_uiz(i,j,k,l) * bZ / bmag;
+			gkyl_uX(i,j,k,l) = gkyl_uz(i,j,k,l) * bX / bmag;
+			gkyl_uY(i,j,k,l) = gkyl_uz(i,j,k,l) * bY / bmag;
+			gkyl_uZ(i,j,k,l) = gkyl_uz(i,j,k,l) * bZ / bmag;
 
 			// ExB drift component
 			gkyl_uX(i,j,k,l) = gkyl_uX(i,j,k,l) + (eY * bZ - eZ * bY) / bmag_sq;
