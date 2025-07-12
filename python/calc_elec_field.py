@@ -5,7 +5,13 @@
 import numpy as np
 from scipy.spatial import cKDTree
 from tqdm import tqdm
+from multiprocessing import Pool, Value
+import argparse
 
+
+
+# Global counter to keep track of progress across processes
+counter = None
 
 def load_XYZ():
 	"""
@@ -60,7 +66,8 @@ def load_bkg_file(fname):
 	return bkg_data
 
 
-def calc_gradients_3d(XYZ, pot, bmag):
+#def calc_gradients_3d(XYZ, pot, bmag):
+def calc_gradients_3d(XYZ_pot_bmag_ntimes):
 	"""
 	Calculate potential and magnetic field gradients
 
@@ -80,6 +87,11 @@ def calc_gradients_3d(XYZ, pot, bmag):
 	eX, eY, eZ, gradB_X, gradB_Y, gradB_Z : 4D numpy arrays of the gradients
 		Returns in this order as tuple
 	"""
+	# Want to use the global counter that is setup in shared memory
+	global counter
+
+	# Unpack arguments
+	XYZ, pot, bmag, ntimes = XYZ_pot_bmag_ntimes
 
 	# No t dimension, hence the [1:] here. Also append 3 to preserve coordinate
 	# groupings.
@@ -138,8 +150,9 @@ def calc_gradients_3d(XYZ, pot, bmag):
 
 	# Go through one frame at a time
 	# To-do: Parallelize this loop, probably with numba
-	print("Calculating potential and magnetic field gradients for each frame...")
-	for t in tqdm(range(pot.shape[0])):
+	#print("Calculating potential and magnetic field gradients for each frame...")
+	#for t in tqdm(range(pot.shape[0])):
+	for t in range(pot.shape[0]):
 		for i in range(pot.shape[1]):
 			for j in range(pot.shape[2]):
 				for k in range(pot.shape[3]):
@@ -156,9 +169,15 @@ def calc_gradients_3d(XYZ, pot, bmag):
 					gradB_Y[t,i,j,k] = grad[1]
 					gradB_Z[t,i,j,k] = grad[2]
 
+		# Update shared counter, print progress update
+		with counter.get_lock():
+			counter.value += 1
+			perc = int(counter.value / ntimes * 100)
+			print("Frames: {}/{} ({:d}%)".format(counter.value, ntimes, perc), 
+				end="\r", flush=True)
+
 	# Return each component of electric field
 	return elec_X, elec_Y, elec_Z, gradB_X, gradB_Y, gradB_Z
-
 
 def write_field(field_XYZ, fname_base):
 	"""
@@ -187,7 +206,15 @@ def write_field(field_XYZ, fname_base):
 			for j in range(0, len(field_XYZ[i])):
 				np.savetxt(f, field_XYZ[i][j].flatten())
 
-def main():
+def init_counter(shared_counter):
+	"""
+	Function to be called at the beginning of each process to access
+	shared_counter, which exists in shared memory.
+	"""
+	global counter
+	counter = shared_counter
+
+def main(num_processes=1):
 	"""
 	Controlling function for calculating electric field and magnetic field 
 	gradients
@@ -209,8 +236,70 @@ def main():
 			len(pot[0].flatten())))
 		return None
 
-	# Calculate electric field and gradB components
-	grads = calc_gradients_3d(XYZ, pot, bmag)
+	# Define chunk_size and break up into chunks (of frames) of that size. 
+	# If num_processes > number of frames, then just reassign num_processes
+	# to the number of frames.
+	if (num_processes > pot.shape[0]): num_processes = pot.shape[0]
+	chunk_size = pot.shape[0] // num_processes
+
+	# Remainder if num_processes does not evenly divide the number of frames.
+	remainder = pot.shape[0] % num_processes
+
+	# Assemble chunks
+	pot_chunks = []
+	bmag_chunks = []
+	for i in range(num_processes):
+		start = i * chunk_size
+		end = start + chunk_size
+
+		# Last chunk absorbs remainder
+		if i == num_processes -1:
+			end += remainder
+
+		pot_chunks.append(pot[start:end])
+		bmag_chunks.append(bmag[start:end])
+
+	#pot_chunks = [pot[i:i + chunk_size] for i in	
+	#	range(0, pot.shape[0], chunk_size)]
+	#bmag_chunks = [bmag[i:i + chunk_size] for i in	
+	#	range(0, bmag.shape[0], chunk_size)]
+	
+	# If num_processes does not evenly go into the number of times, then we
+	# need to assign the leftover frame to the last chunk.
+
+	# Zip together into args to be passed below
+	XYZs = [XYZ] * num_processes
+	ntimes = [pot.shape[0]] * num_processes
+	args = list(zip(XYZs, pot_chunks, bmag_chunks, ntimes))
+
+	# Create process pool and get each process a chunk of frames
+	shared_counter = Value("i", 0)
+	#print("Calculating gradients...")
+	with Pool(processes=num_processes, initializer=init_counter, 
+		initargs=(shared_counter,)) as pool:
+
+		# Calculate electric field and gradB components
+		results = pool.imap(calc_gradients_3d, args)
+
+		# Put each gradient result into separate lists
+		eX_list, eY_list, eZ_list, gbX_list, gbY_list, gbZ_list  \
+			= zip(*results)
+
+	# Clean up terminal from progress printing
+	print(" " * 50, end="\r")
+	
+	# Concatenate along time axis
+	eX = np.concatenate(eX_list, axis=0)
+	eY = np.concatenate(eY_list, axis=0)
+	eZ = np.concatenate(eZ_list, axis=0)
+	gbX = np.concatenate(gbX_list, axis=0)
+	gbY = np.concatenate(gbY_list, axis=0)
+	gbZ = np.concatenate(gbZ_list, axis=0)
+
+	# Package up together in same format as if not multithreaded
+	grads = (eX, eY, eZ, gbX, gbY, gbZ)
+			
+	# Separate out to be written
 	elec_field_XYZ = grads[0:3]
 	gradB_XYZ = grads[3:]
 
@@ -219,5 +308,16 @@ def main():
 	write_field(gradB_XYZ, "bkg_from_pgkyl_gradb")
 
 if __name__ == "__main__":
-	main()
+
+	# Command line argument to access number of processes to spawn
+	desc = "Calculate electric field and magentic field gradient."
+	parser = argparse.ArgumentParser(description=desc)
+	parser.add_argument("-n", "--num-processes", type=int, default=1,
+		help="number of processes to run with")
+	
+	# Parse, defaults to one process if nothing provided
+	args = parser.parse_args()
+
+	# Run
+	main(args.num_processes)
 

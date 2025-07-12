@@ -10,6 +10,7 @@
 #include <functional>  // For std::multiplies
 #include <iostream>
 #include <numeric>     // For std::accumulate
+#include <omp.h>
 #include <string>
 #include <sstream>
 #include <type_traits> // For std::is_same
@@ -132,6 +133,7 @@ namespace Gkyl
 		read_gij(grid_data, gkyl_gij_22, opts, "22");
 
 		// At this point calculate gradients (E, gradB)
+		std::cout << "Calculating gradient fields...\n";
 		calc_gradients();
 
 		// Read in electric field
@@ -796,9 +798,20 @@ namespace Gkyl
 			// full path to python script.
 			std::string calc_elec_field_py {get_calc_elec_field_py()};
 
+			// Number of processes used is tied to OpenMP. We are not actually
+			// using OpenMP here, we just need to see how many thread are 
+			// available to us so we can pass it to the python script below.
+			int num_processes {};
+			#pragma omp parallel
+			{
+				if (omp_get_thread_num() == 0) num_processes 
+					= omp_get_num_threads();
+			}
+
 			// The convert to a command
 			std::stringstream calc_elec_field_cmd_ss {};
-			calc_elec_field_cmd_ss << "python " << calc_elec_field_py; 
+			calc_elec_field_cmd_ss << "python " << calc_elec_field_py
+				<< " --num-processes " << num_processes; 
 			std::string tmp_str {calc_elec_field_cmd_ss.str()};
 			const char* calc_elec_field_cmd {tmp_str.c_str()};
 				
