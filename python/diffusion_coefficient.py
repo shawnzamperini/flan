@@ -1,11 +1,21 @@
 import numpy as np
+import flan_plots
+fp=flan_plots.FlanPlots(self.nc)
 
-# Doesn't totally work as intended yet. This is calculating entire averages over a frame - not taking into account radial differences
-def const_x_avg_velocity(frame_number: int, x_coordinate: float):
-    imp_vX_array = fp.load_data_frame("imp_vX", frame_number)
-    imp_vX_values = imp_vX_array[:, :, 8].flatten()
-    imp_vX_avg = [val for val in imp_vX_values if val != 0]
-    velAv = np.mean(imp_vX_avg)
-    return velAv
+# Takes a frame, radial index, and physical quantity. Calculates the average of the physical quantity in a given frame at that radial index. 
+def phAvg(int radialIndex, int frame, string physicalQuantity) -> float:
+    a, b, c = fp.plot_frame_xy(physicalQuantity, frame=frame, z0=0.01, norm_type="log", min=1e-5, max=1e-1)
+    
+    total = 0.0
+    for i in range(96):  # i from 0 to 95
+        if(c[i][radialIndex != 0) 
+            total += c[i][radialIndex]
+    
+    phAvg = total / 96.0
+    return phAvg
+
+
+
+
 
 
