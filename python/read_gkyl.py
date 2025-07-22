@@ -413,7 +413,8 @@ def save_csv(args, times, grid, values):
     
     # Data like density and temperature could be ion or electron (or some other
     # species), so we need to add that extra qualifier.
-    if args.gkyl_data_type in ["density", "temperature"]:
+    if args.gkyl_data_type in ["density", "temperature", "par_flow", 
+        "vperp_sq"]:
         fname = fname_base + args.gkyl_species + "_" + \
             args.gkyl_data_type + ".csv"
     else:

@@ -2,9 +2,11 @@
 * @file utilities.cpp
 * @brief Contains generic utilities used in Flan
 */
+#include <array>
 #include <string>
 #include <vector>
 #include <sstream>
+#include <stdexcept>
 #include <iostream>
 
 #include "utilities.h"
@@ -56,4 +58,5 @@ namespace Utilities
 		// Interpolate along y using the results from above and return
 		return z_x0 + (y - y0) / (y1 - y0) * (z_x1 - z_x0);
 	}
+
 }

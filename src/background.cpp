@@ -29,6 +29,9 @@ namespace Background
 	const Vectors::Vector4D<BkgFPType>& Background::get_bX() const {return m_bX;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_bY() const {return m_bY;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_bZ() const {return m_bZ;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_gradbX() const {return m_gradbX;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_gradbY() const {return m_gradbY;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_gradbZ() const {return m_gradbZ;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_eX() const {return m_eX;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_eY() const {return m_eY;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_eZ() const {return m_eZ;}
@@ -195,6 +198,21 @@ namespace Background
 	{
 		set_dims(bZ, "bZ");
 		m_bZ.move_into_data(bZ);
+	}
+	void Background::move_into_gradbX(Vectors::Vector4D<BkgFPType>& gradbX) 
+	{
+		set_dims(gradbX, "gradbX");
+		m_gradbX.move_into_data(gradbX);
+	}
+	void Background::move_into_gradbY(Vectors::Vector4D<BkgFPType>& gradbY) 
+	{
+		set_dims(gradbY, "gradbY");
+		m_gradbY.move_into_data(gradbY);
+	}
+	void Background::move_into_gradbZ(Vectors::Vector4D<BkgFPType>& gradbZ) 
+	{
+		set_dims(gradbZ, "gradbZ");
+		m_gradbZ.move_into_data(gradbZ);
 	}
 	void Background::move_into_eX(Vectors::Vector4D<BkgFPType>& eX) 
 	{

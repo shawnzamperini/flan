@@ -50,6 +50,41 @@ namespace Utilities
 	double bilinear_interpolate(const double x0, const double y0,
 		const double z0, const double x1, const double y1, const double z1,
 		const double x, const double y);
+
+	/**
+	* @brief Return value at x in set of (xarr, yarr) values using linear
+	* interpolation. Written by AI.
+	* @param xarr Array of x values
+	* @param yarr Array of y values
+	* @param x Value to get y value at
+	*
+	* @return Returns linearly interpolated value at f(x)
+	*/
+	template <typename T, std::size_t N>
+	T linear_interpolate(const std::array<T, N>& xarr, 
+		const std::array<T, N>& yarr, T x) 
+		{
+
+		// Check that arrays are of same size
+		if (xarr.size() != yarr.size()) {
+			throw std::invalid_argument("xarr and yarr must be of same size");
+		}
+
+		// Loop to find the interval
+		for (std::size_t i = 0; i < N - 1; ++i) {
+			if ((x >= xarr[i] && x <= xarr[i + 1]) 
+				|| (x <= xarr[i] && x >= xarr[i + 1])) {
+
+				// Linear interpolation
+				T t = (x - xarr[i]) / (xarr[i + 1] - xarr[i]);
+				return yarr[i] + t * (yarr[i + 1] - yarr[i]);
+			}
+		}
+
+		std::ostringstream err {};
+		err << "x value is outside the interpolation range: " << x;
+		throw std::out_of_range(err.str());
+	}
 }
 
 #endif

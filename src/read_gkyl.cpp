@@ -197,6 +197,11 @@ namespace Gkyl
 		bkg.move_into_grid_X(gkyl_grid_X);
 		bkg.move_into_grid_Y(gkyl_grid_Y);
 		bkg.move_into_grid_Z(gkyl_grid_Z);
+		
+		// Only needed for debuggin purposes, delete if not debugging
+		bkg.move_into_gradbX(gkyl_gradbX);
+		bkg.move_into_gradbY(gkyl_gradbY);
+		bkg.move_into_gradbZ(gkyl_gradbZ);
 
 		// Special case. gkyl_J is a 4D vector so we didn't have to write a
 		// whole new function just for a 3D vector - less maintainable code. 
@@ -614,7 +619,8 @@ namespace Gkyl
 		// the tmp rvalue and then pass it in, where the data is then
 		// moved from tmp into gkyl_data. 
 		//std::cout << "Loading " << data_type << "...\n";
-		if (data_type == "density" || data_type == "temperature")
+		if (data_type == "density" || data_type == "temperature" 
+			|| data_type == "par_flow" || data_type == "vperp_sq")
 		{
 			// Some data is for specific species, which is going to be saved
 			// as [species]_[data_type].

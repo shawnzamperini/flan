@@ -287,6 +287,7 @@ def main(num_processes=1):
 
 	# Clean up terminal from progress printing
 	print(" " * 50, end="\r")
+	print("Frames: {}/{} (100%)".format(ntimes, ntimes))
 	
 	# Concatenate along time axis
 	eX = np.concatenate(eX_list, axis=0)

@@ -317,6 +317,17 @@ namespace SaveResults
 		save_vector_4d(nc_file, bkg.get_bZ(), "bmag_Z", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 
+		// Magnetic field
+		desc = "magnetic field gradient (X)";
+		save_vector_4d(nc_file, bkg.get_gradbX(), "gradb_X", 
+			dim1, dim2, dim3, dim4, desc, "(T)");
+		desc = "magnetic field gradient (Y)";
+		save_vector_4d(nc_file, bkg.get_gradbY(), "gradb_Y", 
+			dim1, dim2, dim3, dim4, desc, "(T)");
+		desc = "magnetic field gradient (Z)";
+		save_vector_4d(nc_file, bkg.get_gradbZ(), "gradb_Z", 
+			dim1, dim2, dim3, dim4, desc, "(T)");
+
 		// Impurity counts
 		desc = "impurity counts";
 		save_vector_4d(nc_file, imp_stats.get_counts(), "imp_counts", 

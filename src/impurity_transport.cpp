@@ -442,8 +442,11 @@ namespace Impurity
 
 		// Impurity modified within collision step, potentially add a secondary 
 		// split particle to imps
-		Collisions::collision_update(imp, local_te, local_ti, local_ne, 
-			imp_time_step, opts, split_particle, imps);
+		//Collisions::collision_update(imp, local_te, local_ti, local_ne, 
+		//	imp_time_step, opts, split_particle, imps);
+
+		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, false, 
+			imp_time_step);
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
