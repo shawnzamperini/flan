@@ -73,6 +73,16 @@ namespace Options
 		}
 	}
 
+	// gkyl_file_type
+	void Options::set_gkyl_moment_type(std::string gkyl_moment_type) 
+	{
+		if (check_input<std::string>("gkyl_moment_type", gkyl_moment_type,
+			{"bimaxwellian", "maxwellian", "m0m1m2"}))
+		{
+			m_gkyl_moment_type = gkyl_moment_type;
+		}
+	}
+
 	// min_xbound_type
 	void Options::set_min_xbound_type(std::string min_xbound_type) 
 	{
@@ -159,15 +169,14 @@ namespace Options
 		{
 			// Only assign if valid option, leaving as default if not
 			if (check_input<std::string>("imp_collision", imp_collisions, 
-				{"off", "inelastic", "elastic"}))
+				{"off", "nanbu"}))
 			{
 				m_imp_collisions = imp_collisions;
 			}
 
 			// Assign control integers
 			if (imp_collisions == "off") m_imp_collisions_int = 0;
-			else if (imp_collisions == "inelastic") m_imp_collisions_int = 1;
-			else if (imp_collisions == "elastic") m_imp_collisions_int = 2;
+			else if (imp_collisions == "nanbu") m_imp_collisions_int = 1;
 		}
 
 	// var_red_split
@@ -332,6 +341,8 @@ namespace Options
 		{return m_gkyl_ion_mass_amu;}
 	const std::string& Options::gkyl_file_type() const 
 		{return m_gkyl_file_type;}
+	const std::string& Options::gkyl_moment_type() const 
+		{return m_gkyl_moment_type;}
 	const std::string& Options::min_xbound_type() const 
 		{return m_min_xbound_type;}
 	const double Options::lcfs_x() const 

@@ -327,6 +327,9 @@ namespace Vectors
 		* needed but doesn't hurt to include.
 		*/
 		std::vector<std::vector<std::vector<std::vector<T>>>> as_4d() const;
+
+        void resize(const int dim1, const int dim2, const int dim3,
+            const int dim4);
 	};
 }
 

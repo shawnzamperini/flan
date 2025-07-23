@@ -64,8 +64,6 @@ namespace OpenADAS
 		else if (imp_atom_num == 26) imp_name = "fe";
 		else if (imp_atom_num == 42) imp_name = "mo";
 		else if (imp_atom_num == 74) imp_name = "w";
-		
-
 		else
 		{
 			std::cerr << "Error! imp_atom_num = " << imp_atom_num << " is not"

@@ -201,9 +201,10 @@ namespace Gkyl
 
 	/**
 	* @brief Calculate the electric field components as the gradient of the 
-	* potential. This function actually calls the python script calc_elec.py.
+	* potential, and the magnetic field gradient. This function actually calls 
+	* the python script calc_elec.py.
 	*/
-	void calc_elec_field();
+	void calc_gradients();
 
 	/**
 	* @brief Calculate cell X,Y,Z coordinates for center of cells
@@ -216,6 +217,29 @@ namespace Gkyl
 	*/
 	void calc_cell_XYZ_edges(grid_data_t& grid_data, 
 		const Options::Options& opts);
+
+	/**
+	* @brief Read in gradient data calculated by the python script
+	*/
+	void read_gradient_data(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& dataX, 
+		Vectors::Vector4D<BkgFPType>& dataY, 
+		Vectors::Vector4D<BkgFPType>& dataZ,
+		Vectors::Vector4D<BkgFPType>& gkyl_dataX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dataY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dataZ);
+
+	/**
+	* @brief Apply a fix to the y boundaries of gradient-calculated data where
+	* the gradient generally messes up due to not as many points around.
+	*
+	* This is generally a hack, since it is not clear what to do in this 
+	* situation. Ideally, the gradient calculation would handle this, but I
+	* havent been able to figure it out.
+	*/
+	void gradient_ybound_fix(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& ecomp);
+
 	/**
 	* @brief Read in electric field components (X,Y,Z) into arrays
 	*/
@@ -225,15 +249,12 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_eZ);
 
 	/**
-	* @brief Apply a fix to the y boundaries of the electric field where the
-	* gradient generally messes up due to not as many points around.
-	*
-	* This is generally a hack, since it is not clear what to do in this 
-	* situation. Ideally, the gradient calculation would handle this, but I
-	* havent been able to figure it out.
+	* @brief Read in magnetic field gradient components (X,Y,Z) into arrays
 	*/
-	void elec_field_ybound_fix(grid_data_t& grid_data, 
-		Vectors::Vector4D<BkgFPType>& ecomp);
+	void read_gradb(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbZ);
 
 	/**
 	* @brief Write out Cartesian (X,Y,Z) coordinates of cell centers
@@ -245,12 +266,39 @@ namespace Gkyl
 	void write_XYZ(grid_data_t& grid_data, const Options::Options& opts);
 
 	/**
-	* @brief Read in mean flow components (X,Y,Z) into arrays.
+	* @brief Read in mean parallel-to-z flow.
 	*/
 	template <typename T>
-	void read_mean_flow(grid_data_t& grid_data, 
-		Vectors::Vector4D<T>& gkyl_uX, Vectors::Vector4D<T>& gkyl_uY, 
-		Vectors::Vector4D<T>& gkyl_uZ, const Options::Options& opts);
+	void read_par_flow(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_uiz, const Options::Options& opts);
+	
+	/**
+	* @brief Read in ion thermal perpendicular velocity squared
+	*/
+	template <typename T>
+	void read_ion_vperp_sq(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_viperp_sq, const Options::Options& opts);
+
+	/**
+	* @brief Calculate the background plasma flow. Consists of projection of
+	* parallel-to-z flow, ExB drift and gradB drift.
+	*/
+	void calc_bkg_flow(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uiz, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_uZ,
+		Vectors::Vector4D<BkgFPType>& gkyl_bX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_bY,
+		Vectors::Vector4D<BkgFPType>& gkyl_bZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbY,
+		Vectors::Vector4D<BkgFPType>& gkyl_gradbZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_viperp_sq, 
+		const Options::Options& opts);
 }
 
 #endif

@@ -134,15 +134,6 @@ namespace Impurity
 		const int yidx, const int zidx);
 	
 	/**
-	* @brief Calculate the variable timestep based on the size of the cell
-	* and the collision timescale.
-	*/
-	double get_var_time_step(Impurity& imp, 
-		const Background::Background& bkg, const int tidx, 
-		const int xidx, const int yidx, const int zidx, const double fX, 
-		const double fY, const double fZ, const Options::Options& opts);
-		
-	/**
 	* @brief Move particle based on its current velocity and the time step
 	*
 	* @param imp Impurity object that is updated within function

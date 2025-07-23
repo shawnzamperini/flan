@@ -112,6 +112,13 @@ namespace Options
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
+
+			else if (key == "gkyl_moment_type") 
+			{
+				auto set_func = std::bind(&Options::set_gkyl_moment_type, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
 			
 			else if (key == "lcfs_x") 
 			{
@@ -385,6 +392,24 @@ namespace Options
 		else
 		{
 			std::cerr << var_name << " not set.\n";
+		}
+	}
+
+	// Check that various options are valid with each other
+	void crosscheck_options(Options& opts)
+	{
+		// Particle splitting based on ionization/recombination requires
+		// ioniz_recomb to be true
+
+		// Variable time step is based on collisions, so requires it to be on
+
+		// Nanbu collisions require BiMaxwellian moments from Gkeyll
+		if (opts.imp_collisions() == "nanbu" 
+			&& opts.gkyl_moment_type() != "bimaxwellian")
+		{
+			std::cout << "Warning! Nanbu collisions requires BiMaxwellianMoment"
+				<< " files from Gkeyll. Collisions are being turned OFF.\n";
+			opts.set_imp_collisions("off");
 		}
 	}
 

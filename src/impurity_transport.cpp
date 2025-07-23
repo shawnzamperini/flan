@@ -250,32 +250,6 @@ namespace Impurity
 		return std::make_tuple(fX, fY, fZ);
 	}
 
-	double get_var_time_step(Impurity& imp, 
-		const Background::Background& bkg, const int tidx, 
-		const int xidx, const int yidx, const int zidx, const double fx, 
-		const double fy, const double fz, const Options::Options& opts)
-	{
-		// Calculate time step for a reasonable collisions calculation
-		// (if necessary). Don't do this if the impurity is neutral, it
-		// won't work. Unfortunately this is calculating the momentum
-		// loss factor, tossing it, and then elsewhere we have to 
-		// calculate it again. This could use some restructuring to save
-		// some time but I'm favoring readibility at this point in time. 
-		if (imp.get_charge() > 0) 
-		{
-			double dt_coll {};
-			Collisions::set_var_time_step_coll(dt_coll, imp, bkg, tidx, 
-				xidx, yidx, zidx, opts);
-
-			// Don't let it pick a value less that the prescribed 
-			// minimum time step.
-			return std::max({opts.imp_time_step_min(), dt_coll});
-		}
-
-		// If neutral just return minimum value.
-		else return opts.imp_time_step_min();
-	}
-
 	bool step(Impurity& imp, const double fX, const double fY, const double fZ, 
 		const double imp_time_step, const Background::Background& bkg,
 		const Options::Options& opts, const int tidx, int& xidx, int& yidx, 
@@ -425,25 +399,31 @@ namespace Impurity
 		std::vector<Impurity>& imps, const std::vector<int>& var_red_counts, 
 		Statistics& imp_stats)
 	{
+		// Comment needs updating
 		// See if (inelastic) collision should create a split secondary
 		// particle or not. This is only checked if the particle splitting 
 		// scheme is based on inelastic collisions (var_red_split_int == 2). 
+		/*
 		bool split_particle {false};
 		if (opts.var_red_split_int() == 2)
 		{
 			split_particle = VarianceReduction::check_split_particle(imp, tidx, 
 				xidx, yidx, zidx, opts, var_red_counts, imp_stats);
 		}
+		*/
 
 		// Local plasma properties
-		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
-		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
-		double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
+		//double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
+		//double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
+		//double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
 
-		// Impurity modified within collision step, potentially add a secondary 
-		// split particle to imps
-		Collisions::collision_update(imp, local_te, local_ti, local_ne, 
-			imp_time_step, opts, split_particle, imps);
+		// Update impurity velocity based on Nanbu collision model. Impurity
+		// is modified within function. First call is for ions (the false) and
+		// second call is for electrons (the true).
+		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, false, 
+			imp_time_step);
+		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
+			imp_time_step);
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
@@ -538,14 +518,6 @@ namespace Impurity
 					yidx, zidx, var_red_counts, imp_stats);
 				if (!continue_following) break;
 			}
-
-			// Calculate variable time step, only relevant if collision model
-			// is on since it is based on making sure the collision does not
-			// change the particle velocity too much.
-			if (opts.imp_collisions_int() > 0 
-				&& opts.imp_time_step_opt_int() == 1) imp_time_step = 
-				get_var_time_step(imp, bkg, tidx, xidx, yidx, zidx, fX, 
-				fY, fZ, opts);
 
 			// Check for a collision
 			if (opts.imp_collisions_int() > 0)

@@ -46,12 +46,10 @@ if(UNIX AND NOT APPLE) # This applies to Linux platforms
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
 endif()
 
-
 # Add a shared library
 add_library(flan SHARED ${SOURCES})
 
 # Compilation flags
-#target_compile_options(flan PRIVATE -Wall -O3 -fopenmp -g)
 target_compile_options(flan PRIVATE -Wall -O3 -fopenmp)
 
 # Specify the libraries to link against. I am not fully certain why we need
@@ -63,11 +61,6 @@ set_target_properties(flan PROPERTIES
     BUILD_WITH_INSTALL_RPATH TRUE
     INSTALL_RPATH "${FLANSOFT}/netcdf-c/lib;${FLANSOFT}/netcdf-cxx4/lib;${FLANSOFT}/netcdf-cxx4/lib64"
 )
-
-# Install in lib and include
-#install(TARGETS flan
-#	LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/lib
-#   PUBLIC_HEADER DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Install the library itself
 install(TARGETS flan
