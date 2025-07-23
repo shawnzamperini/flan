@@ -169,15 +169,14 @@ namespace Options
 		{
 			// Only assign if valid option, leaving as default if not
 			if (check_input<std::string>("imp_collision", imp_collisions, 
-				{"off", "inelastic", "elastic"}))
+				{"off", "nanbu"}))
 			{
 				m_imp_collisions = imp_collisions;
 			}
 
 			// Assign control integers
 			if (imp_collisions == "off") m_imp_collisions_int = 0;
-			else if (imp_collisions == "inelastic") m_imp_collisions_int = 1;
-			else if (imp_collisions == "elastic") m_imp_collisions_int = 2;
+			else if (imp_collisions == "nanbu") m_imp_collisions_int = 1;
 		}
 
 	// var_red_split
