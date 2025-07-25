@@ -513,6 +513,41 @@ namespace Gkyl
 		return centers;
 	}
 
+	// Function to replace any values below the indicated value with the 
+	// that value. Useful for things like replacing negative temperatures
+	// with a reasonable minimum.
+	template <typename T>
+	void set_vec_floor(Vectors::Vector4D<T>& vec, const double floor_val)
+	{
+		// Variable to keep track of number of replaced values
+		int num_replaced {};
+
+		// Loop through every value, replacing with floor_val if below it
+		#pragma omp parallel for reduction(+:num_replaced)
+		for (int i = 0; i < vec.get_dim1(); i++)
+		{
+		for (int j = 0; j < vec.get_dim2(); j++)
+		{
+		for (int k = 0; k < vec.get_dim3(); k++)
+		{
+		for (int l = 0; l < vec.get_dim4(); l++)
+		{
+			// If value is less than floor value, replace with floor value.
+			if (vec(i,j,k,l) < floor_val)
+			{
+				vec(i,j,k,l) = floor_val;
+				num_replaced++;
+			}
+		}
+		}
+		}
+		}
+
+		// Notify user of how many values were replaced
+		if (num_replaced > 0) std::cout << "  " << num_replaced 
+			<< " values were below and replaced by " << floor_val << '\n';
+	}
+
 	// Function to read in Gkeyll data using a python interface to postgkyl
 	// via read_gkyl.py. 
 	template <typename T>
@@ -644,6 +679,7 @@ namespace Gkyl
 		// load all the grid data.
 		read_data_pgkyl(opts.gkyl_elec_name(), "density", grid_data, gkyl_ne, 
 			opts, 0, true);
+		set_vec_floor(gkyl_ne, 1e15);
 	}
 
 	template <typename T>
@@ -654,6 +690,7 @@ namespace Gkyl
 		// mass so it can calculate temperature correctly.
 		read_data_pgkyl(opts.gkyl_elec_name(), "temperature", grid_data,
 			gkyl_te, opts, opts.gkyl_elec_mass_amu());
+		set_vec_floor(gkyl_te, 0.1);
 	}
 
 	template <typename T>
@@ -664,6 +701,7 @@ namespace Gkyl
 		// mass so it can calculate temperature correctly.
 		read_data_pgkyl(opts.gkyl_ion_name(), "temperature", grid_data, 
 			gkyl_ti, opts, opts.gkyl_ion_mass_amu());
+		set_vec_floor(gkyl_ti, 0.1);
 	}
 
 	template <typename T>
