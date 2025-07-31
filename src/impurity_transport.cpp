@@ -22,6 +22,7 @@
 #include "openadas.h"
 #include "options.h"
 #include "random.h"
+#include "timer.h"
 #include "variance_reduction.h"
 #include "vectors.h"
 
@@ -432,7 +433,7 @@ namespace Impurity
 		int& recomb_warnings, std::vector<Impurity>& imps,
 		const std::vector<int> var_red_counts, 
 		const bool var_red_on, 
-		const Options::Options& opts)
+		const Options::Options& opts, Timer::Timer& timer)
 	{
 		// Timestep of impurity transport simulation. It can be a constant
 		// value (set here), or set on the fly based on a reasonable criteria.
@@ -522,8 +523,10 @@ namespace Impurity
 			// Check for a collision
 			if (opts.imp_collisions_int() > 0)
 			{
+				timer.start_coll_timer();
 				collision(imp, bkg, imp_time_step, tidx, xidx, yidx, zidx, 
 					opts, imps, var_red_counts, imp_stats);
+				timer.end_coll_timer();
 			}
 
 			// Debugging
@@ -604,7 +607,7 @@ namespace Impurity
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, 
-		Options::Options& opts)
+		Options::Options& opts, Timer::Timer& timer)
 	{
 		// Variance reduction based on ionization/recombination requires 
 		// ionization/recombination to be on (duh)
@@ -637,6 +640,12 @@ namespace Impurity
 			omp_out = omp_out + omp_in) \
 			initializer(omp_priv(omp_orig))
 
+		// Likewise declare a reduction operator for combining Timer results
+		// of just those processes that exist within parallelized code
+		#pragma omp declare reduction(+: Timer::Timer: \
+			omp_out = omp_out + omp_in) \
+			initializer(omp_priv(omp_orig))
+
 		// Startup message. Create parallel region to see how many threads it
 		// will generate in the following loop.
 		std::cout << "Starting particle following...\n";
@@ -664,8 +673,7 @@ namespace Impurity
 			firstprivate(priv_count, var_red_counts) \
 			firstprivate(var_red_control) \
 			shared(bkg, oa_ioniz, oa_recomb) \
-			reduction(+: imp_stats, ioniz_warnings, recomb_warnings) \
-			//reduction(+: tot_imp_count)
+			reduction(+: imp_stats, ioniz_warnings, recomb_warnings, timer)
 		for (int i = 0; i < opts.imp_num(); ++i)
 		{
 			// Variance reduction: median mode (var_red_import_int == 0). Based 
@@ -728,7 +736,7 @@ namespace Impurity
 				// Begin following Impurity
 				follow_impurity(imp, bkg, imp_stats, oa_ioniz, oa_recomb,
 					ioniz_warnings, recomb_warnings, imps,
-					var_red_counts, var_red_control, opts);
+					var_red_counts, var_red_control, opts, timer);
 				#pragma omp critical
 				{
 					++tot_imp_count;
@@ -774,7 +782,7 @@ namespace Impurity
 	}
 
 	Statistics follow_impurities(Background::Background& bkg, 
-		Options::Options& opts)
+		Options::Options& opts, Timer::Timer& timer)
 	{
 		// Initialize particle statistics vectors, all contained within a
 		// Statistics object. Option to control if the three velocity arrays
@@ -790,7 +798,7 @@ namespace Impurity
 			opts.openadas_year(), opts.imp_atom_num(), "acd"};
 
 		// Execute main particle following loop.
-		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts);
+		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);
 	
 		// Convert the statistics into meaningful quantities. We are scaling
 		// the density by the scale factor.

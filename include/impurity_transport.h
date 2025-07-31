@@ -14,6 +14,7 @@
 #include "impurity_stats.h"
 #include "openadas.h"
 #include "options.h"
+#include "timer.h"
 
 
 namespace Impurity
@@ -201,7 +202,7 @@ namespace Impurity
 		int& recomb_warnings, std::vector<Impurity>& imps,
 		const std::vector<int> var_red_counts, 
 		const bool var_red_on, 
-		const Options::Options& opts);
+		const Options::Options& opts, Timer::Timer& timer);
 	/**
 	* @brief Print out warnings if ionization/recombination probabilities were
 	* greater than 1.0 at some point.
@@ -231,7 +232,7 @@ namespace Impurity
 	void main_loop(const Background::Background& bkg, Statistics& imp_stats,
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, 
-		Options::Options& opts);
+		Options::Options& opts, Timer::Timer& timer);
 
 	/**
 	* @brief Entry level function to impurity following routines
@@ -245,7 +246,7 @@ namespace Impurity
 	* the simulation.
 	*/
 	Statistics follow_impurities(Background::Background& bkg, 
-		Options::Options& opts);
+		Options::Options& opts, Timer::Timer& timer);
 }
 
 #endif
