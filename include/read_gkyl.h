@@ -168,7 +168,8 @@ namespace Gkyl
 	template <typename T>
 	void read_magnetic_field(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY, 
-		Vectors::Vector4D<T>& gkyl_bZ, const Options::Options& opts);
+		Vectors::Vector4D<T>& gkyl_bZ, Vectors::Vector4D<T>& gkyl_bR,
+		const Options::Options& opts);
 
 	/**
 	* @brief Read Jacobian into gkyl_J.

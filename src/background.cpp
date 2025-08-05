@@ -29,6 +29,7 @@ namespace Background
 	const Vectors::Vector4D<BkgFPType>& Background::get_bX() const {return m_bX;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_bY() const {return m_bY;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_bZ() const {return m_bZ;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_bR() const {return m_bR;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_gradbX() const {return m_gradbX;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_gradbY() const {return m_gradbY;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_gradbZ() const {return m_gradbZ;}
@@ -198,6 +199,11 @@ namespace Background
 	{
 		set_dims(bZ, "bZ");
 		m_bZ.move_into_data(bZ);
+	}
+	void Background::move_into_bR(Vectors::Vector4D<BkgFPType>& bR) 
+	{
+		set_dims(bR, "bR");
+		m_bR.move_into_data(bR);
 	}
 	void Background::move_into_gradbX(Vectors::Vector4D<BkgFPType>& gradbX) 
 	{

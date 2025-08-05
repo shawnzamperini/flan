@@ -66,6 +66,7 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_bX {}; // Magnetic field components
 		Vectors::Vector4D<BkgFPType> gkyl_bY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_bZ {}; 
+		Vectors::Vector4D<BkgFPType> gkyl_bR {}; 
 		Vectors::Vector4D<BkgFPType> gkyl_gradbX {}; // Magnetic field gradient
 		Vectors::Vector4D<BkgFPType> gkyl_gradbY {}; // components in physical
 		Vectors::Vector4D<BkgFPType> gkyl_gradbZ {}; // space
@@ -107,7 +108,8 @@ namespace Gkyl
 		std::cout << "  - Plasma potential\n";
 		read_potential(grid_data, gkyl_vp, opts);
 		std::cout << "  - Magnetic field\n";
-		read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, opts);
+		read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
+			opts);
 
 		// Calculate the Cartesian (X,Y,Z) coordinate of each cell center
 		std::cout << "  - X,Y,Z coordinates\n";
@@ -185,6 +187,7 @@ namespace Gkyl
 		bkg.move_into_bX(gkyl_bX);
 		bkg.move_into_bY(gkyl_bY);
 		bkg.move_into_bZ(gkyl_bZ);
+		bkg.move_into_bR(gkyl_bR); // Just for debugging, not actually used
 		bkg.move_into_eX(gkyl_eX);
 		bkg.move_into_eY(gkyl_eY);
 		bkg.move_into_eZ(gkyl_eZ);
@@ -719,7 +722,8 @@ namespace Gkyl
 	template <typename T>
 	void read_magnetic_field(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY,
-		Vectors::Vector4D<T>& gkyl_bZ, const Options::Options& opts)
+		Vectors::Vector4D<T>& gkyl_bZ, Vectors::Vector4D<T>& gkyl_bR,
+		const Options::Options& opts)
 	{
 		using namespace std::string_literals;
 
@@ -731,6 +735,11 @@ namespace Gkyl
 		read_data_pgkyl("null"s, "magnetic_unit_X", grid_data, gkyl_bX, opts);
 		read_data_pgkyl("null"s, "magnetic_unit_Y", grid_data, gkyl_bY, opts);
 		read_data_pgkyl("null"s, "magnetic_unit_Z", grid_data, gkyl_bZ, opts);
+		
+		// Resize space for R component of magnetic field
+		read_data_pgkyl("null"s, "magnetic_unit_X", grid_data, gkyl_bR, opts);
+		//gkyl_bR = Vectors::Vector4D<T>(gkyl_bX.get_dim1(), gkyl_bX.get_dim2(),
+		//	gkyl_bX.get_dim3(), gkyl_bX.get_dim4());
 
 		// Load the magnetic field magnitude at each location
 		Vectors::Vector4D<BkgFPType> gkyl_bmag {}; 
@@ -754,9 +763,9 @@ namespace Gkyl
 			// gentle. If the unit vector is just straight up wrong, then this
 			// throws off the entire simulation. Need to asks a Gkeyll
 			// developer if it's going to be correct or not.
-			double unit_mag {gkyl_bX(i,j,k,l) * gkyl_bX(i,j,k,l)
+			double unit_mag {std::sqrt(gkyl_bX(i,j,k,l) * gkyl_bX(i,j,k,l)
 				+ gkyl_bY(i,j,k,l) * gkyl_bY(i,j,k,l)
-				+ gkyl_bZ(i,j,k,l) * gkyl_bZ(i,j,k,l)};
+				+ gkyl_bZ(i,j,k,l) * gkyl_bZ(i,j,k,l))};
 			
 			// Renormalize each component, and multiply by the magnetic
 			// field magnitude for each component.
@@ -766,6 +775,10 @@ namespace Gkyl
 				/ unit_mag;
 			gkyl_bZ(i,j,k,l) = gkyl_bZ(i,j,k,l) * gkyl_bmag(i,j,k,l) 
 				/ unit_mag;
+
+			// R component of magnetic field
+			gkyl_bR(i,j,k,l) = std::sqrt(gkyl_bX(i,j,k,l) * gkyl_bX(i,j,k,l)
+				+ gkyl_bY(i,j,k,l) * gkyl_bY(i,j,k,l));
 		}
 		}
 		}

@@ -316,6 +316,9 @@ namespace SaveResults
 		desc = "magnetic field (Z)";
 		save_vector_4d(nc_file, bkg.get_bZ(), "bmag_Z", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
+		desc = "magnetic field (R)";
+		save_vector_4d(nc_file, bkg.get_bR(), "bmag_R", 
+			dim1, dim2, dim3, dim4, desc, "(T)");
 
 		// Magnetic field
 		desc = "magnetic field gradient (X)";

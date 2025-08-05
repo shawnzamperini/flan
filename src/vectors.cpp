@@ -302,6 +302,31 @@ namespace Vectors
 		}
 	}
 
+	template <typename T>
+	Vector4D<T> Vector4D<T>::operator*(const Vector4D& other) const
+	{
+		// Safety check to make sure the two Vector4D's are the same 
+		// shape.
+		bool same_shape {check_same_shape(other)};
+
+		if (same_shape)
+		{
+			// Use the standard library transform function to apply the
+			// multiply function and store into a new vector (ret_data). 
+			std::vector<T> ret_data (m_data.size());
+			std::transform(m_data.begin(), m_data.end(), 
+				other.m_data.begin(), ret_data.begin(), std::multiplies<T>());
+			return {ret_data, m_dim1, m_dim2, m_dim3, m_dim4};	
+		}
+		else
+		{
+			std::cerr << "Error! The two Vector4D's are not the " 
+				<< "same size."
+				<< " See previous error message for details.\n";
+			return {};
+		}
+	}
+
 	// Overloaded. This is the rvalue reference one.
 	template <typename T>
 	void Vector4D<T>::move_into_data(Vector4D<T>&& vec)

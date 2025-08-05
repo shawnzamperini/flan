@@ -298,6 +298,12 @@ namespace Vectors
 		* @return Returns a new Vector4D that is the two summed together
 		*/
 		Vector4D operator+(const Vector4D& other) const;
+
+		/**
+		* @brief Multiplication operator to mulitply two vectors together.
+		* @return Returns a new Vector4D that is the two multiplied
+		*/
+		Vector4D operator*(const Vector4D& other) const;
 			
 		/**
 		* @brief Move the passed in vector to data. 

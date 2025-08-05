@@ -36,6 +36,7 @@ namespace Background
 		Vectors::Vector4D<BkgFPType> m_bX {};
 		Vectors::Vector4D<BkgFPType> m_bY {};
 		Vectors::Vector4D<BkgFPType> m_bZ {};
+		Vectors::Vector4D<BkgFPType> m_bR {};
 		Vectors::Vector4D<BkgFPType> m_gradbX {};
 		Vectors::Vector4D<BkgFPType> m_gradbY {};
 		Vectors::Vector4D<BkgFPType> m_gradbZ {};
@@ -80,6 +81,7 @@ namespace Background
 		const Vectors::Vector4D<BkgFPType>& get_bX() const;
 		const Vectors::Vector4D<BkgFPType>& get_bY() const;
 		const Vectors::Vector4D<BkgFPType>& get_bZ() const;
+		const Vectors::Vector4D<BkgFPType>& get_bR() const;
 		const Vectors::Vector4D<BkgFPType>& get_gradbX() const;
 		const Vectors::Vector4D<BkgFPType>& get_gradbY() const;
 		const Vectors::Vector4D<BkgFPType>& get_gradbZ() const;
@@ -162,6 +164,7 @@ namespace Background
 		void move_into_bX(Vectors::Vector4D<BkgFPType>& bX);
 		void move_into_bY(Vectors::Vector4D<BkgFPType>& bY);
 		void move_into_bZ(Vectors::Vector4D<BkgFPType>& bZ);
+		void move_into_bR(Vectors::Vector4D<BkgFPType>& bR);
 		void move_into_gradbX(Vectors::Vector4D<BkgFPType>& gradbX);
 		void move_into_gradbY(Vectors::Vector4D<BkgFPType>& gradbY);
 		void move_into_gradbZ(Vectors::Vector4D<BkgFPType>& gradbZ);

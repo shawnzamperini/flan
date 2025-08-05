@@ -56,7 +56,7 @@ class FlanPlots:
 		# Valid options that can be loaded.
 		valid_opts = ["electron_dens", "electron_temp", "ion_temp", 
 			"plasma_pot", "elec_X", "elec_Y", "elec_Z", "bmag_X", "bmag_Y", 
-			"bmag_Z", "imp_counts", "imp_density", "imp_vX", "imp_vY", 
+			"bmag_Z", "bmag_R", "imp_counts", "imp_density", "imp_vX", "imp_vY", 
 			"imp_vZ", "imp_gyrorad", "ion_flow_X", "ion_flow_Y", "ion_flow_Z",
 			"gradb_X", "gradb_Y", "gradb_Z"]
 
@@ -71,7 +71,12 @@ class FlanPlots:
 			raise ValueError(msg)
 			return None
 
-		return self.nc[data_name][frame].data
+		# Derived values based on combining any valid options
+		if data_name == "bmag_R":
+			return np.sqrt(np.square(self.nc["bmag_X"][frame].data) 
+				+ np.square(self.nc["bmag_Y"][frame].data))
+		else:
+			return self.nc[data_name][frame].data
 
 	def closest_index(self, arr, val):
 		"""
