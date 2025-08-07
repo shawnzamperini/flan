@@ -89,12 +89,16 @@ namespace Collisions
 		double ln_alpha {std::log(debye_length / expect_b0)};
 		if (std::isnan(ln_alpha))
 		{
-			std::cerr << "Error! ln_alpha = nan\n";
-			std::cerr << "  Te = " << Te << '\n';
-			std::cerr << "  ne = " << ne << '\n';
-			std::cerr << "  debye_length = " << debye_length << '\n';
-			std::cerr << "  expect_b0 = " << expect_b0 << '\n';
-			std::cerr << "  ln_alpha = " << ln_alpha << '\n';
+			#pragma omp critical
+			{
+				std::cerr << "Error! ln_alpha = nan\n";
+				std::cerr << "  Te = " << Te << '\n';
+				std::cerr << "  ne = " << ne << '\n';
+				std::cerr << "  charge = " << imp.get_charge() << '\n';
+				std::cerr << "  debye_length = " << debye_length << '\n';
+				std::cerr << "  expect_b0 = " << expect_b0 << '\n';
+				std::cerr << "  ln_alpha = " << ln_alpha << '\n';
+			}
 		}
 
 		// Calculate s (Eq. 19). Assume ni=ne and singly charge background
@@ -107,21 +111,25 @@ namespace Collisions
 		// since you never know.
 		if (std::isnan(s))
 		{
-			std::cerr << "Error! s = nan\n";
-			std::cerr << "  T = " << T << '\n';
-			std::cerr << "  Te = " << Te << '\n';
-			std::cerr << "  bkg_vX = " << bkg_vX << '\n';
-			std::cerr << "  bkg_vY = " << bkg_vY << '\n';
-			std::cerr << "  bkg_vZ = " << bkg_vZ << '\n';
-			std::cerr << "  imp_vX = " << imp.get_vX() << '\n';
-			std::cerr << "  imp_vY = " << imp.get_vY() << '\n';
-			std::cerr << "  imp_vZ = " << imp.get_vZ() << '\n';
-			std::cerr << "  g = " << g << '\n';
-			std::cerr << "  expect_g_sq = " << expect_g_sq << '\n';
-			std::cerr << "  ne = " << ne << '\n';
-			std::cerr << "  debye_length = " << debye_length << '\n';
-			std::cerr << "  expect_b0 = " << expect_b0 << '\n';
-			std::cerr << "  ln_alpha = " << ln_alpha << '\n';
+			#pragma omp critical
+			{
+				std::cerr << "Error! s = nan\n";
+				std::cerr << "  T = " << T << '\n';
+				std::cerr << "  Te = " << Te << '\n';
+				std::cerr << "  bkg_vX = " << bkg_vX << '\n';
+				std::cerr << "  bkg_vY = " << bkg_vY << '\n';
+				std::cerr << "  bkg_vZ = " << bkg_vZ << '\n';
+				std::cerr << "  imp_vX = " << imp.get_vX() << '\n';
+				std::cerr << "  imp_vY = " << imp.get_vY() << '\n';
+				std::cerr << "  imp_vZ = " << imp.get_vZ() << '\n';
+				std::cerr << "  g = " << g << '\n';
+				std::cerr << "  expect_g_sq = " << expect_g_sq << '\n';
+				std::cerr << "  ne = " << ne << '\n';
+				std::cerr << "  charge = " << imp.get_charge() << '\n';
+				std::cerr << "  debye_length = " << debye_length << '\n';
+				std::cerr << "  expect_b0 = " << expect_b0 << '\n';
+				std::cerr << "  ln_alpha = " << ln_alpha << '\n';
+			}
 		}
 
 		return std::make_tuple(s, gX, gY, gZ);
@@ -216,6 +224,11 @@ namespace Collisions
 		// Derivation and steps taken from:
 		// Nanbu, K. Theory of cumulative small-angle collisions in plasmas. 
 		// Phys. Rev. E 55, 4642–4652 (1997).
+
+		// A neutral will not experience a Coloumb collision (in fact, will
+		// cause a divide by zero later on in this algorithm), so do nothing
+		// in that case.
+		if (imp.get_charge() == 0) return;
 
 		// Will always need electron temperature/density
 		double Te {bkg.get_te()(tidx, xidx, yidx, zidx)};
