@@ -63,6 +63,9 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_ti {};
 		Vectors::Vector4D<BkgFPType> gkyl_viperp_sq {};  // Perpendicular ion velocity
 		Vectors::Vector4D<BkgFPType> gkyl_vp {};
+		Vectors::Vector4D<BkgFPType> gkyl_b_x {}; // Covariant components of
+		Vectors::Vector4D<BkgFPType> gkyl_b_y {}; // magnetic field
+		Vectors::Vector4D<BkgFPType> gkyl_b_z {}; 
 		Vectors::Vector4D<BkgFPType> gkyl_bX {}; // Magnetic field components
 		Vectors::Vector4D<BkgFPType> gkyl_bY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_bZ {}; 
@@ -77,6 +80,15 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_uX {}; // Flow components
 		Vectors::Vector4D<BkgFPType> gkyl_uY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_uZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_dxdX {};
+		Vectors::Vector4D<BkgFPType> gkyl_dxdY {};
+		Vectors::Vector4D<BkgFPType> gkyl_dxdZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_dydX {};
+		Vectors::Vector4D<BkgFPType> gkyl_dydY {};
+		Vectors::Vector4D<BkgFPType> gkyl_dydZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_dzdX {};
+		Vectors::Vector4D<BkgFPType> gkyl_dzdY {};
+		Vectors::Vector4D<BkgFPType> gkyl_dzdZ {};
 
 		// These are passed to every function call, so save some time/space by 
 		// zipping them up into a tuple and passing together.
@@ -107,9 +119,7 @@ namespace Gkyl
 		read_ion_temperature(grid_data, gkyl_ti, opts);
 		std::cout << "  - Plasma potential\n";
 		read_potential(grid_data, gkyl_vp, opts);
-		std::cout << "  - Magnetic field\n";
-		read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
-			opts);
+		//std::cout << "  - Magnetic field\n";
 
 		// Calculate the Cartesian (X,Y,Z) coordinate of each cell center
 		std::cout << "  - X,Y,Z coordinates\n";
@@ -133,6 +143,33 @@ namespace Gkyl
 		read_gij(grid_data, gkyl_gij_11, opts, "11");
 		read_gij(grid_data, gkyl_gij_12, opts, "12");
 		read_gij(grid_data, gkyl_gij_22, opts, "22");
+
+		// Read in dual basis vectors
+		std::cout << "  - Dual basis vectors\n";
+		read_dual_basis(grid_data, gkyl_dxdX, opts, "xX");
+		read_dual_basis(grid_data, gkyl_dxdY, opts, "xY");
+		read_dual_basis(grid_data, gkyl_dxdZ, opts, "xZ");
+		read_dual_basis(grid_data, gkyl_dydX, opts, "yX");
+		read_dual_basis(grid_data, gkyl_dydY, opts, "yY");
+		read_dual_basis(grid_data, gkyl_dydZ, opts, "yZ");
+		read_dual_basis(grid_data, gkyl_dzdX, opts, "zX");
+		read_dual_basis(grid_data, gkyl_dzdY, opts, "zY");
+		read_dual_basis(grid_data, gkyl_dzdZ, opts, "zZ");
+
+		// Read in covariant components of the magnetic field unit vector 
+		std::cout << "  - Covariant magnetic field unit vectors\n";
+		read_covariant_b(grid_data, gkyl_b_x, gkyl_b_y, gkyl_b_z, opts);
+		
+		// Calculate Cartesian components of the magnetic field
+		std::cout << "  - Magnetic field\n";
+		calc_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR, 
+			gkyl_b_x, gkyl_b_y, gkyl_b_z, gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ,
+			gkyl_dydX, gkyl_dydY, gkyl_dydZ, gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, 
+			gkyl_X, gkyl_Y, gkyl_Z, opts);
+
+		// Old-style magnetic field
+		//read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
+		//	opts);
 
 		// At this point calculate gradients (E, gradB)
 		std::cout << "Calculating gradient fields...\n";
@@ -226,6 +263,14 @@ namespace Gkyl
 		bkg.move_into_gij_12(gkyl_gij_12_3D);
 		Vectors::Vector3D gkyl_gij_22_3D {gkyl_gij_22.slice_dim1(0)};
 		bkg.move_into_gij_22(gkyl_gij_22_3D);
+
+		// Likewise for covariant components of magnetic field
+		Vectors::Vector3D gkyl_b_x_3D {gkyl_b_x.slice_dim1(0)};
+		bkg.move_into_b_x(gkyl_b_x_3D);
+		Vectors::Vector3D gkyl_b_y_3D {gkyl_b_y.slice_dim1(0)};
+		bkg.move_into_b_y(gkyl_b_y_3D);
+		Vectors::Vector3D gkyl_b_z_3D {gkyl_b_z.slice_dim1(0)};
+		bkg.move_into_b_z(gkyl_b_z_3D);
 
 		// Okay to return by value since C++11 uses move semantics here.
 		return bkg;
@@ -620,7 +665,19 @@ namespace Gkyl
 			data_type == "metric_coeff02" ||
 			data_type == "metric_coeff11" ||
 			data_type == "metric_coeff12" ||
-			data_type == "metric_coeff22")
+			data_type == "metric_coeff22" ||
+			data_type == "dual_comp_xX" ||
+			data_type == "dual_comp_xY" ||
+			data_type == "dual_comp_xZ" ||
+			data_type == "dual_comp_yX" ||
+			data_type == "dual_comp_yY" ||
+			data_type == "dual_comp_yZ" ||
+			data_type == "dual_comp_zX" ||
+			data_type == "dual_comp_zY" ||
+			data_type == "dual_comp_zZ" ||
+			data_type == "covariant_mag_x" ||
+			data_type == "covariant_mag_y" ||
+			data_type == "covariant_mag_z")
 		{
 			std::vector<std::string> interp_settings = load_interp_settings();
 			read_gkyl_cmd_ss << " --gkyl_basis_type=" << interp_settings[0]
@@ -720,6 +777,18 @@ namespace Gkyl
 	}
 
 	template <typename T>
+	void read_covariant_b(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_b_x, Vectors::Vector4D<T>& gkyl_b_y,
+		Vectors::Vector4D<T>& gkyl_b_z, const Options::Options& opts)
+	{
+		using namespace std::string_literals;
+
+		read_data_pgkyl("null"s, "covariant_mag_x", grid_data, gkyl_b_x, opts);
+		read_data_pgkyl("null"s, "covariant_mag_y", grid_data, gkyl_b_y, opts);
+		read_data_pgkyl("null"s, "covariant_mag_z", grid_data, gkyl_b_z, opts);
+	}
+
+	template <typename T>
 	void read_magnetic_field(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY,
 		Vectors::Vector4D<T>& gkyl_bZ, Vectors::Vector4D<T>& gkyl_bR,
@@ -751,7 +820,8 @@ namespace Gkyl
 		// cell centers which I guess is where it's calculated. So right now we
 		// just hope the relative sizes of each component are mostly correct,
 		// renormalize to 1.0 unit vector magnitude before multiplying by bmag.
-		for (int i {}; i < std::ssize(std::get<0>(grid_data)); ++i)  // t
+		#pragma omp parallel for
+		for (int i = 0; i < std::ssize(std::get<0>(grid_data)); ++i)  // t
 		{
 		for (int j {}; j < std::ssize(std::get<1>(grid_data)); ++j)  // x
 		{
@@ -786,6 +856,75 @@ namespace Gkyl
 	}
 
 	template <typename T>
+	void calc_magnetic_field(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY, 
+		Vectors::Vector4D<T>& gkyl_bZ, Vectors::Vector4D<T>& gkyl_bR,
+		Vectors::Vector4D<T>& gkyl_b_x, Vectors::Vector4D<T>& gkyl_b_y, 
+		Vectors::Vector4D<T>& gkyl_b_z, Vectors::Vector4D<T>& gkyl_dxdX, 
+		Vectors::Vector4D<T>& gkyl_dxdY, Vectors::Vector4D<T>& gkyl_dxdZ, 
+		Vectors::Vector4D<T>& gkyl_dydX, Vectors::Vector4D<T>& gkyl_dydY, 
+		Vectors::Vector4D<T>& gkyl_dydZ, Vectors::Vector4D<T>& gkyl_dzdX, 
+		Vectors::Vector4D<T>& gkyl_dzdY, Vectors::Vector4D<T>& gkyl_dzdZ, 
+		const Vectors::Vector3D<T>& gkyl_X, const Vectors::Vector3D<T>& gkyl_Y, 
+		const Vectors::Vector3D<T>& gkyl_Z, const Options::Options& opts)
+	{
+
+		// Load the magnetic field magnitude
+		//using namespace std::string_literals;
+		//Vectors::Vector4D<BkgFPType> gkyl_bmag {}; 
+		//read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
+		//	opts);
+
+		// Effectively resize the B vectors that we passed in by reassigning
+		// them with zero-filled arrays
+		gkyl_bX = Vectors::Vector4D<BkgFPType>(gkyl_bmag.get_dim1(), 
+			gkyl_bmag.get_dim2(), gkyl_bmag.get_dim3(), gkyl_bmag.get_dim4());
+		gkyl_bY = Vectors::Vector4D<BkgFPType>(gkyl_bmag.get_dim1(), 
+			gkyl_bmag.get_dim2(), gkyl_bmag.get_dim3(), gkyl_bmag.get_dim4());
+		gkyl_bZ = Vectors::Vector4D<BkgFPType>(gkyl_bmag.get_dim1(), 
+			gkyl_bmag.get_dim2(), gkyl_bmag.get_dim3(), gkyl_bmag.get_dim4());
+		gkyl_bR = Vectors::Vector4D<BkgFPType>(gkyl_bmag.get_dim1(), 
+			gkyl_bmag.get_dim2(), gkyl_bmag.get_dim3(), gkyl_bmag.get_dim4());
+
+		// Note we are baking in the assumption that the grid does not change, 
+		// but the magnetic field magnitude is still free to change. 
+		#pragma omp parallel for
+		for (int i = 0; i < gkyl_bmag.get_dim1(); ++i)  // t
+		{
+		for (int j {}; j < gkyl_bmag.get_dim2(); ++j)  // x
+		{
+		for (int k {}; k < gkyl_bmag.get_dim3(); ++k)  // y
+		{
+		for (int l {}; l < gkyl_bmag.get_dim4(); ++l)  // z
+		{	
+			// Calculate Cartesian components of magnetic field. It appears the
+			// the magnitude is already into these components, so we do not
+			// need to multiply by bmag.
+			// BX
+			gkyl_bX(i,j,k,l) = (gkyl_b_x(0,j,k,l) * gkyl_dxdX(0,j,k,l)
+				+ gkyl_b_y(0,j,k,l) * gkyl_dydX(0,j,k,l)
+				+ gkyl_b_z(0,j,k,l) * gkyl_dzdX(0,j,k,l));
+
+			// BY
+			gkyl_bY(i,j,k,l) = (gkyl_b_x(0,j,k,l) * gkyl_dxdY(0,j,k,l)
+				+ gkyl_b_y(0,j,k,l) * gkyl_dydY(0,j,k,l)
+				+ gkyl_b_z(0,j,k,l) * gkyl_dzdY(0,j,k,l));
+
+			// BZ
+			gkyl_bZ(i,j,k,l) = (gkyl_b_x(0,j,k,l) * gkyl_dxdZ(0,j,k,l)
+				+ gkyl_b_y(0,j,k,l) * gkyl_dydZ(0,j,k,l)
+				+ gkyl_b_z(0,j,k,l) * gkyl_dzdZ(0,j,k,l));
+
+			// BR
+			gkyl_bR(i,j,k,l) = std::sqrt(gkyl_bX(i,j,k,l) * gkyl_bX(i,j,k,l)
+				+ gkyl_bY(i,j,k,l) * gkyl_bY(i,j,k,l));
+		}
+		}
+		}
+		}
+	}
+
+	template <typename T>
 	void read_jacobian(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_J, const Options::Options& opts)
 	{
@@ -810,6 +949,21 @@ namespace Gkyl
 		metric_coeff_str += idx;
 
 		read_data_pgkyl("null"s, metric_coeff_str, grid_data, gkyl_gij, opts);
+	}
+
+	template <typename T>
+	void read_dual_basis(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_dzdx, const Options::Options& opts,
+		const std::string& idx)
+	{
+		using namespace std::string_literals;
+
+		// Assign the correct string for the vector needed. idx is one of
+		// dxdX, dxdY, dxdZ, dydX, dydY, dydZ, dzdX, dzdY, dzdZ
+		std::string dual_basis_str {"dual_comp_"};
+		dual_basis_str += idx;
+
+		read_data_pgkyl("null"s, dual_basis_str, grid_data, gkyl_dzdx, opts);
 	}
 
 	std::string get_calc_elec_field_py()
@@ -900,7 +1054,8 @@ namespace Gkyl
 		std::get<9>(grid_data).resize(dim1, dim2, dim3); // gkyl_Z
 
 		// Loop through every x, y, z value to calculate each X, Y, Z
-		for (int i {}; i < dim1; ++i)
+		#pragma omp parallel for
+		for (int i = 0; i < dim1; ++i)
 		{
 			for (int j {}; j < dim2; ++j)
 			{
@@ -944,7 +1099,8 @@ namespace Gkyl
 		std::get<12>(grid_data).resize(dim1, dim2, dim3); // gkyl_grid_Z
 
 		// Loop through every x, y, z value to calculate each X, Y, Z
-		for (int i {}; i < dim1; ++i)
+		#pragma omp parallel for
+		for (int i = 0; i < dim1; ++i)
 		{
 			//std::cout << i+1 << "/" << dim1 << '\n';
 			for (int j {}; j < dim2; ++j)
@@ -1014,7 +1170,8 @@ namespace Gkyl
 		// reassigning the values at iy=0,5 with the weighted averages since
 		// it is not clear what else we can do in this situation.
 		int leny {static_cast<int>(std::ssize(std::get<2>(grid_data)))};
-		for (int i {}; i < std::ssize(std::get<0>(grid_data)); i++)  // t
+		#pragma omp parallel for
+		for (int i = 0; i < std::ssize(std::get<0>(grid_data)); i++)  // t
 		for (int j {}; j < std::ssize(std::get<1>(grid_data)); j++)  // x
 		for (int l {}; l < std::ssize(std::get<3>(grid_data)); l++)  // z
 		{
@@ -1185,7 +1342,8 @@ namespace Gkyl
 
 		// We are calculating uX = (parallel flow projection) + 
 		// (ExB drift) + (gradB drift) = uz * bX + ExB_X + gradB_X
-		for (int i {}; i < std::ssize(std::get<0>(grid_data)); ++i)  // t
+		#pragma omp parallel for
+		for (int i = 0; i < std::ssize(std::get<0>(grid_data)); ++i)  // t
 		{
 		for (int j {}; j < std::ssize(std::get<1>(grid_data)); ++j)  // x
 		{
@@ -1230,7 +1388,6 @@ namespace Gkyl
 				- bX * gradbZ);
 			gkyl_uZ(i,j,k,l) = gkyl_uZ(i,j,k,l) + coef * (bX * gradbY 
 				- bY * gradbX);
-
 		}
 		}
 		}

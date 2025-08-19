@@ -54,11 +54,12 @@ class FlanPlots:
 		"""
 		
 		# Valid options that can be loaded.
+		"""
 		valid_opts = ["electron_dens", "electron_temp", "ion_temp", 
 			"plasma_pot", "elec_X", "elec_Y", "elec_Z", "bmag_X", "bmag_Y", 
 			"bmag_Z", "bmag_R", "imp_counts", "imp_density", "imp_vX", "imp_vY", 
 			"imp_vZ", "imp_gyrorad", "ion_flow_X", "ion_flow_Y", "ion_flow_Z",
-			"gradb_X", "gradb_Y", "gradb_Z"]
+			"gradb_X", "gradb_Y", "gradb_Z", "b_x", "b_y", "b_z", "jacobian"]
 
 		# Throw an error if a valid option wasn't chosen.
 		if (data_name not in valid_opts):
@@ -70,11 +71,14 @@ class FlanPlots:
 				msg += " {}\n".format(opt)
 			raise ValueError(msg)
 			return None
+		"""
 
-		# Derived values based on combining any valid options
-		if data_name == "bmag_R":
-			return np.sqrt(np.square(self.nc["bmag_X"][frame].data) 
-				+ np.square(self.nc["bmag_Y"][frame].data))
+		# 3D vectors don't have a time index
+		if data_name in ["b_x", "b_y", "b_z", "jacobian", "gij_00", "gij_01",
+			"gij_02", "gij_11", "gij_12", "gij_22"]:
+			return self.nc[data_name][:].data
+
+		# 4D vector, index frame
 		else:
 			return self.nc[data_name][frame].data
 

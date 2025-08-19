@@ -250,6 +250,10 @@ namespace Vectors
 		// Self-assignment check
 		if (this != &other)
 		{	
+			m_dim1 = other.m_dim1;
+			m_dim2 = other.m_dim2;
+			m_dim3 = other.m_dim3;
+			m_dim4 = other.m_dim4;
 			m_data = std::move(other.m_data);
 		}
 		return *this;

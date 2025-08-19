@@ -19,8 +19,9 @@ namespace Gkyl
 {
 	// Alias for tuple to hold all the grid data to be passed around
 	using grid_data_t = std::tuple<std::vector<BkgFPType>&, 
-		std::vector<BkgFPType>&, std::vector<BkgFPType>&, std::vector<BkgFPType>&, 
-		std::vector<BkgFPType>&, std::vector<BkgFPType>&, std::vector<BkgFPType>&,
+		std::vector<BkgFPType>&, std::vector<BkgFPType>&, 
+		std::vector<BkgFPType>&, std::vector<BkgFPType>&, 
+		std::vector<BkgFPType>&, std::vector<BkgFPType>&,
 		Vectors::Vector3D<BkgFPType>&, Vectors::Vector3D<BkgFPType>&,
 		Vectors::Vector3D<BkgFPType>&, Vectors::Vector3D<BkgFPType>&, 
 		Vectors::Vector3D<BkgFPType>&, Vectors::Vector3D<BkgFPType>&>;
@@ -65,8 +66,8 @@ namespace Gkyl
 	*
 	* @return Returns a tuple of 3 vectors containing the grid edges - (x,y,z)
 	*/
-	std::tuple<std::vector<BkgFPType>, std::vector<BkgFPType>, std::vector<BkgFPType>> 
-		load_grid();
+	std::tuple<std::vector<BkgFPType>, std::vector<BkgFPType>, 
+		std::vector<BkgFPType>> load_grid();
 
 	/**
 	* @brief Read in data values using pgkyl, returning as a Vector4D.
@@ -163,6 +164,14 @@ namespace Gkyl
 		Vectors::Vector4D<T>& gkyl_vp, const Options::Options& opts);
 
 	/**
+	* @brief Read covariant components of magnetic field
+	*/
+	template <typename T>
+	void read_covariant_b(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_b_x, Vectors::Vector4D<T>& gkyl_b_y,
+		Vectors::Vector4D<T>& gkyl_b_z, const Options::Options& opts);
+
+	/**
 	* @brief Read magnetic field into gkyl_bX, gkyl_bY and gkyl_bZ.
 	*/
 	template <typename T>
@@ -170,6 +179,23 @@ namespace Gkyl
 		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY, 
 		Vectors::Vector4D<T>& gkyl_bZ, Vectors::Vector4D<T>& gkyl_bR,
 		const Options::Options& opts);
+
+	/**
+	* @brief Calculate magentic field components from the dual vector
+	* and covariant components.
+	*/
+	template <typename T>
+	void calc_magnetic_field(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY, 
+		Vectors::Vector4D<T>& gkyl_bZ, Vectors::Vector4D<T>& gkyl_bR,
+		Vectors::Vector4D<T>& gkyl_b_x, Vectors::Vector4D<T>& gkyl_b_y, 
+		Vectors::Vector4D<T>& gkyl_b_z, Vectors::Vector4D<T>& gkyl_dxdX, 
+		Vectors::Vector4D<T>& gkyl_dxdY, Vectors::Vector4D<T>& gkyl_dxdZ, 
+		Vectors::Vector4D<T>& gkyl_dydX, Vectors::Vector4D<T>& gkyl_dydY, 
+		Vectors::Vector4D<T>& gkyl_dydZ, Vectors::Vector4D<T>& gkyl_dzdX, 
+		Vectors::Vector4D<T>& gkyl_dzdY, Vectors::Vector4D<T>& gkyl_dzdZ, 
+		const Vectors::Vector3D<T>& gkyl_X, const Vectors::Vector3D<T>& gkyl_Y, 
+		const Vectors::Vector3D<T>& gkyl_Z, const Options::Options& opts);
 
 	/**
 	* @brief Read Jacobian into gkyl_J.
@@ -184,6 +210,14 @@ namespace Gkyl
 	template <typename T>
 	void read_gij(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_gij, const Options::Options& opts,
+		const std::string& idx);
+
+	/*
+	* @brief Read dual basis vector component into gkyl_dzdx.
+	*/
+	template <typename T>
+	void read_dual_basis(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_dzdx, const Options::Options& opts,
 		const std::string& idx);
 
 	/**

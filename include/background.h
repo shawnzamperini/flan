@@ -36,7 +36,6 @@ namespace Background
 		Vectors::Vector4D<BkgFPType> m_bX {};
 		Vectors::Vector4D<BkgFPType> m_bY {};
 		Vectors::Vector4D<BkgFPType> m_bZ {};
-		Vectors::Vector4D<BkgFPType> m_bR {};
 		Vectors::Vector4D<BkgFPType> m_gradbX {};
 		Vectors::Vector4D<BkgFPType> m_gradbY {};
 		Vectors::Vector4D<BkgFPType> m_gradbZ {};
@@ -59,6 +58,13 @@ namespace Background
 		Vectors::Vector3D<BkgFPType> m_gij_11 {};
 		Vectors::Vector3D<BkgFPType> m_gij_12 {};
 		Vectors::Vector3D<BkgFPType> m_gij_22 {};
+
+		// The following are just for debugging
+		Vectors::Vector4D<BkgFPType> m_bR {};
+		Vectors::Vector3D<BkgFPType> m_b_x {};
+		Vectors::Vector3D<BkgFPType> m_b_y {};
+		Vectors::Vector3D<BkgFPType> m_b_z {};
+
 		int m_dim1 {};
 		int m_dim2 {};
 		int m_dim3 {};
@@ -104,6 +110,9 @@ namespace Background
 		const Vectors::Vector3D<BkgFPType>& get_gij_11() const;
 		const Vectors::Vector3D<BkgFPType>& get_gij_12() const;
 		const Vectors::Vector3D<BkgFPType>& get_gij_22() const;
+		const Vectors::Vector3D<BkgFPType>& get_b_x() const;
+		const Vectors::Vector3D<BkgFPType>& get_b_y() const;
+		const Vectors::Vector3D<BkgFPType>& get_b_z() const;
 		int get_dim1() const;
 		int get_dim2() const;
 		int get_dim3() const;
@@ -187,6 +196,9 @@ namespace Background
 		void move_into_gij_11(Vectors::Vector3D<BkgFPType>& gij_11);
 		void move_into_gij_12(Vectors::Vector3D<BkgFPType>& gij_12);
 		void move_into_gij_22(Vectors::Vector3D<BkgFPType>& gij_22);
+		void move_into_b_x(Vectors::Vector3D<BkgFPType>& b_x);
+		void move_into_b_y(Vectors::Vector3D<BkgFPType>& b_y);
+		void move_into_b_z(Vectors::Vector3D<BkgFPType>& b_z);
 	};
 }
 

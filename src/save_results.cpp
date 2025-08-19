@@ -367,8 +367,39 @@ namespace SaveResults
 
         // Jacobian
 		desc = "Jacobian";
-		save_vector_3d(nc_file, bkg.get_J(), "jacobian", grid_dim2, 
-			grid_dim3, grid_dim4, desc, "()");
+		save_vector_3d(nc_file, bkg.get_J(), "jacobian", dim2, 
+			dim3, dim4, desc, "()");
+
+		// Metric coefficients
+		desc = "metric coefficient (00)";
+		save_vector_3d(nc_file, bkg.get_gij_00(), "gij_00", dim2, 
+			dim3, dim4, desc, "(?)");
+		desc = "metric coefficient (01)";
+		save_vector_3d(nc_file, bkg.get_gij_01(), "gij_01", dim2, 
+			dim3, dim4, desc, "(?)");
+		desc = "metric coefficient (02)";
+		save_vector_3d(nc_file, bkg.get_gij_02(), "gij_02", dim2, 
+			dim3, dim4, desc, "(?)");
+		desc = "metric coefficient (11)";
+		save_vector_3d(nc_file, bkg.get_gij_11(), "gij_11", dim2, 
+			dim3, dim4, desc, "(?)");
+		desc = "metric coefficient (12)";
+		save_vector_3d(nc_file, bkg.get_gij_12(), "gij_12", dim2, 
+			dim3, dim4, desc, "(?)");
+		desc = "metric coefficient (22)";
+		save_vector_3d(nc_file, bkg.get_gij_22(), "gij_22", dim2, 
+			dim3, dim4, desc, "(?)");
+
+		// Duals of the magnetic field
+		desc = "dual basis magnetic vector (x)";
+		save_vector_3d(nc_file, bkg.get_b_x(), "b_x", dim2, 
+			dim3, dim4, desc, "(?)");
+		desc = "dual basis magnetic vector (y)";
+		save_vector_3d(nc_file, bkg.get_b_y(), "b_y", dim2, 
+			dim3, dim4, desc, "(?)");
+		desc = "dual basis magnetic vector (z)";
+		save_vector_3d(nc_file, bkg.get_b_z(), "b_z", dim2, 
+			dim3, dim4, desc, "(?)");
 	}
 
 }

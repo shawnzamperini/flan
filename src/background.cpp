@@ -64,6 +64,16 @@ namespace Background
 	const Vectors::Vector3D<BkgFPType>& Background::get_gij_22() const {
         return m_gij_22;
     }
+	const Vectors::Vector3D<BkgFPType>& Background::get_b_x() const {
+        return m_b_x;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_b_y() const {
+        return m_b_y;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_b_z() const {
+        return m_b_z;
+    }
+
 	int Background::get_dim1() const {return m_dim1;}
 	int Background::get_dim2() const {return m_dim2;}
 	int Background::get_dim3() const {return m_dim3;}
@@ -327,6 +337,18 @@ namespace Background
 		// Need a Vector3D version of set_dims
 		//set_dims(gij_22, "gij_22");
 		m_gij_22.move_into_data(gij_22);
+	}
+	void Background::move_into_b_x(Vectors::Vector3D<BkgFPType>& b_x) 
+	{
+		m_b_x.move_into_data(b_x);
+	}
+	void Background::move_into_b_y(Vectors::Vector3D<BkgFPType>& b_y) 
+	{
+		m_b_y.move_into_data(b_y);
+	}
+	void Background::move_into_b_z(Vectors::Vector3D<BkgFPType>& b_z) 
+	{
+		m_b_z.move_into_data(b_z);
 	}
 }
 
