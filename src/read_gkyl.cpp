@@ -45,7 +45,7 @@ namespace Gkyl
 		std::vector<BkgFPType> gkyl_grid_x {};  // Grid edges
 		std::vector<BkgFPType> gkyl_grid_y {};
 		std::vector<BkgFPType> gkyl_grid_z {};
-		Vectors::Vector3D<BkgFPType> gkyl_X {}; // Cell centers in physical space
+		Vectors::Vector3D<BkgFPType> gkyl_X {}; // Cell centers in phys space
 		Vectors::Vector3D<BkgFPType> gkyl_Y {};
 		Vectors::Vector3D<BkgFPType> gkyl_Z {};
 		Vectors::Vector3D<BkgFPType> gkyl_grid_X {}; // Grid edges in physical 
@@ -61,7 +61,7 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_ne {};
 		Vectors::Vector4D<BkgFPType> gkyl_te {};
 		Vectors::Vector4D<BkgFPType> gkyl_ti {};
-		Vectors::Vector4D<BkgFPType> gkyl_viperp_sq {};  // Perpendicular ion velocity
+		Vectors::Vector4D<BkgFPType> gkyl_viperp_sq {};  // Perp ion velocity
 		Vectors::Vector4D<BkgFPType> gkyl_vp {};
 		Vectors::Vector4D<BkgFPType> gkyl_b_x {}; // Covariant components of
 		Vectors::Vector4D<BkgFPType> gkyl_b_y {}; // magnetic field
@@ -549,6 +549,42 @@ namespace Gkyl
 		return interp_settings;
 	}
 
+	// Write array to .csv file (C++ implementation of write_csv in 
+	// read_gkyl.py)
+	template <typename T>
+	void write_values(const Vectors::Vector4D<T>& vec4d, 
+		const std::string& data_type)
+	{
+		// Filename is treated as a constant.
+		std::string filename {"bkg_from_pgkyl_" + data_type + ".csv"};
+		std::ofstream fstream {filename};
+		
+		// Write out the header info (it needs to match that in write_csv in
+		// read_gkyl.py).
+		fstream << "# The values for the specified type of data requested" 
+			<< " from\n";
+		fstream << "# Gkeyll. The first row are integers: the number of" 
+			<< " frames,\n";
+		fstream << "# and then the shape of each array (x, y, z dimensions)"
+			<< ".\n";
+		fstream << "# Then each array for each frame is printed out flattened"
+			<< "\n";
+		fstream << "# using C-style indexing.\n";
+
+		// The 4 dimensions are expected next
+		fstream << vec4d.get_dim1() << " " << vec4d.get_dim2() << " " << 
+			vec4d.get_dim3() << " " << 	vec4d.get_dim4() << '\n';
+
+		// Write out one value at at time. This assumes C-style flattening,
+		// which is built into all parts of the code.
+		for (const auto& val : vec4d.get_data()) {
+			fstream << val << '\n';
+		}
+
+		// Close file
+		fstream.close();
+	}
+
 	// Calculate cell centers for the given grid points.
 	std::vector<BkgFPType> cell_centers(std::vector<BkgFPType>& grid)
 	{
@@ -869,55 +905,60 @@ namespace Gkyl
 		const Vectors::Vector3D<T>& gkyl_Z, const Options::Options& opts)
 	{
 
-		// Load the magnetic field magnitude
-		//using namespace std::string_literals;
-		//Vectors::Vector4D<BkgFPType> gkyl_bmag {}; 
-		//read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
-		//	opts);
+		// Load the magnetic field magnitude. Only used internally to scale
+		// the Cartesian unit vector components we calculate
+		using namespace std::string_literals;
+		Vectors::Vector4D<BkgFPType> gkyl_bmag {}; 
+		read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
+			opts);
 
-		// Effectively resize the B vectors that we passed in by reassigning
-		// them with zero-filled arrays
-		gkyl_bX = Vectors::Vector4D<BkgFPType>(gkyl_bmag.get_dim1(), 
-			gkyl_bmag.get_dim2(), gkyl_bmag.get_dim3(), gkyl_bmag.get_dim4());
-		gkyl_bY = Vectors::Vector4D<BkgFPType>(gkyl_bmag.get_dim1(), 
-			gkyl_bmag.get_dim2(), gkyl_bmag.get_dim3(), gkyl_bmag.get_dim4());
-		gkyl_bZ = Vectors::Vector4D<BkgFPType>(gkyl_bmag.get_dim1(), 
-			gkyl_bmag.get_dim2(), gkyl_bmag.get_dim3(), gkyl_bmag.get_dim4());
-		gkyl_bR = Vectors::Vector4D<BkgFPType>(gkyl_bmag.get_dim1(), 
-			gkyl_bmag.get_dim2(), gkyl_bmag.get_dim3(), gkyl_bmag.get_dim4());
+		// Create zero-filled Vector4Ds for each magnetic field component
+		int tdim {static_cast<int>(std::get<0>(grid_data).size())};
+		int xdim {static_cast<int>(std::get<1>(grid_data).size())};
+		int ydim {static_cast<int>(std::get<2>(grid_data).size())};
+		int zdim {static_cast<int>(std::get<3>(grid_data).size())};
+		gkyl_bX = Vectors::Vector4D<BkgFPType>(tdim, xdim, ydim, zdim);
+		gkyl_bY = Vectors::Vector4D<BkgFPType>(tdim, xdim, ydim, zdim);
+		gkyl_bZ = Vectors::Vector4D<BkgFPType>(tdim, xdim, ydim, zdim);
+		gkyl_bR = Vectors::Vector4D<BkgFPType>(tdim, xdim, ydim, zdim);
 
 		// Note we are baking in the assumption that the grid does not change, 
 		// but the magnetic field magnitude is still free to change. 
 		#pragma omp parallel for
-		for (int i = 0; i < gkyl_bmag.get_dim1(); ++i)  // t
+		for (int i = 0; i < tdim; ++i)  // t
 		{
-		for (int j {}; j < gkyl_bmag.get_dim2(); ++j)  // x
+		for (int j {}; j < xdim; ++j)  // x
 		{
-		for (int k {}; k < gkyl_bmag.get_dim3(); ++k)  // y
+		for (int k {}; k < ydim; ++k)  // y
 		{
-		for (int l {}; l < gkyl_bmag.get_dim4(); ++l)  // z
+		for (int l {}; l < zdim; ++l)  // z
 		{	
-			// Calculate Cartesian components of magnetic field. It appears the
-			// the magnitude is already into these components, so we do not
-			// need to multiply by bmag.
+			// Magnitude
+			const double bmag {gkyl_bmag(i,j,k,l)};
+
+			// Calculate Cartesian components of magnetic field. We do this
+			// by calculating the unit vector component from the duals and
+			// covariant components, then scale by the magnitude for the 
+			// actual component.
 			// BX
 			gkyl_bX(i,j,k,l) = (gkyl_b_x(0,j,k,l) * gkyl_dxdX(0,j,k,l)
 				+ gkyl_b_y(0,j,k,l) * gkyl_dydX(0,j,k,l)
-				+ gkyl_b_z(0,j,k,l) * gkyl_dzdX(0,j,k,l));
+				+ gkyl_b_z(0,j,k,l) * gkyl_dzdX(0,j,k,l)) * bmag;
 
 			// BY
 			gkyl_bY(i,j,k,l) = (gkyl_b_x(0,j,k,l) * gkyl_dxdY(0,j,k,l)
 				+ gkyl_b_y(0,j,k,l) * gkyl_dydY(0,j,k,l)
-				+ gkyl_b_z(0,j,k,l) * gkyl_dzdY(0,j,k,l));
+				+ gkyl_b_z(0,j,k,l) * gkyl_dzdY(0,j,k,l)) * bmag;
 
 			// BZ
 			gkyl_bZ(i,j,k,l) = (gkyl_b_x(0,j,k,l) * gkyl_dxdZ(0,j,k,l)
 				+ gkyl_b_y(0,j,k,l) * gkyl_dydZ(0,j,k,l)
-				+ gkyl_b_z(0,j,k,l) * gkyl_dzdZ(0,j,k,l));
+				+ gkyl_b_z(0,j,k,l) * gkyl_dzdZ(0,j,k,l)) * bmag;
 
 			// BR
 			gkyl_bR(i,j,k,l) = std::sqrt(gkyl_bX(i,j,k,l) * gkyl_bX(i,j,k,l)
 				+ gkyl_bY(i,j,k,l) * gkyl_bY(i,j,k,l));
+
 		}
 		}
 		}
@@ -1320,9 +1361,9 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_uX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_uY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_uZ,
-		Vectors::Vector4D<BkgFPType>& gkyl_bX, 
-		Vectors::Vector4D<BkgFPType>& gkyl_bY,
-		Vectors::Vector4D<BkgFPType>& gkyl_bZ, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_bX, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_bY,
+		const Vectors::Vector4D<BkgFPType>& gkyl_bZ, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 

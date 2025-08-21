@@ -29,14 +29,77 @@
 
 namespace Impurity
 {
-	double get_birth_t(const Background::Background& bkg)
+	// Function to decide starting t,x,y,z based on input options
+	double get_birth_val(const Background::Background& bkg, 
+		const int start_opt_int, const double start_val, const double range_min, 
+		const double range_max, const BkgFPType bkg_min, 
+		const BkgFPType bkg_max)
 	{
-		// The random get uses doubles, so need to make sure we are passing
-		// double if float is used for BkgFPType
-		return Random::get(static_cast<double>(bkg.get_t_min()), 
-			static_cast<double>(bkg.get_t_max()));
+		// Start at specific point
+		double return_start_val {};
+		if (start_opt_int == 0)
+		{
+			 return_start_val = start_val;
+		}
+
+		// Start between a user-specified range 
+		else if (start_opt_int == 1)
+		{
+			return_start_val = Random::get(range_min, range_max);
+		}
+
+		// Start between the full range of the simulation volume 
+		else if (start_opt_int == 2)
+		{
+			return_start_val = Random::get(static_cast<double>(bkg_min), 
+				static_cast<double>(bkg_max));
+		}
+		
+		return return_start_val;
 	}
 
+	// Starting t
+	double get_birth_t(const Background::Background& bkg, 
+		const Options::Options& opts)
+	{
+		return get_birth_val(bkg, opts.imp_tstart_opt_int(), 
+			opts.imp_tstart_val(), opts.imp_trange_min(), opts.imp_trange_max(),
+			bkg.get_t_min(), bkg.get_t_max());
+
+		// The random get uses doubles, so need to make sure we are passing
+		// double if float is used for BkgFPType
+		//return Random::get(static_cast<double>(bkg.get_t_min()), 
+		//	static_cast<double>(bkg.get_t_max()));
+	}
+
+	// Starting x
+	double get_birth_x(const Background::Background& bkg, 
+		const Options::Options& opts)
+	{
+		return get_birth_val(bkg, opts.imp_xstart_opt_int(), 
+			opts.imp_xstart_val(), opts.imp_xrange_min(), opts.imp_xrange_max(),
+			bkg.get_x_min(), bkg.get_x_max());
+	}
+
+	// Starting y
+	double get_birth_y(const Background::Background& bkg, 
+		const Options::Options& opts)
+	{
+		return get_birth_val(bkg, opts.imp_ystart_opt_int(), 
+			opts.imp_ystart_val(), opts.imp_yrange_min(), opts.imp_yrange_max(),
+			bkg.get_y_min(), bkg.get_y_max());
+	}
+
+	// Starting z
+	double get_birth_z(const Background::Background& bkg, 
+		const Options::Options& opts)
+	{
+		return get_birth_val(bkg, opts.imp_zstart_opt_int(), 
+			opts.imp_zstart_val(), opts.imp_zrange_min(), opts.imp_zrange_max(),
+			bkg.get_z_min(), bkg.get_z_max());
+	}
+
+/*
 	double get_birth_x(const Background::Background& bkg,
 		const Options::Options& opts)
 	{	
@@ -65,23 +128,19 @@ namespace Impurity
 			 start_y = opts.imp_ystart_val();
 		}
 
-		// Start between a range (here defaults to the full y-width of the 
-		// simulation volume).
+		// Start between a user-specified range 
 		else if (opts.imp_ystart_opt_int() == 1)
+		{
+			start_y = Random::get(opts.imp_yrange_min(), opts.imp_yrange_max());
+		}
+
+		// Start between the full range of the simulation volume 
+		else if (opts.imp_ystart_opt_int() == 2)
 		{
 			start_y = Random::get(static_cast<double>(bkg.get_y_min()), 
 				static_cast<double>(bkg.get_y_max()));
 		}
 		
-		// We need to start the impurity at a grid node, otherwise the 
-		// code may autolocate it somewhere further away. This is actually
-		// super subtle yet extremely important and can have surprisingly
-		// huge and confusing implication if you neglect it. I lost years off 
-		// my life figuring this out.
-		//int yidx {get_nearest_cell_index(bkg.get_grid_y(), 
-		//	static_cast<BkgFPType>(start_y))};
-		//return static_cast<double>(bkg.get_grid_y()[yidx]);
-
 		return start_y;
 	}
 
@@ -113,7 +172,7 @@ namespace Impurity
 
 		return start_z;
 	}
-
+*/
 	int get_birth_charge(const Options::Options& opts)
 	{
 		return opts.imp_init_charge();
@@ -123,7 +182,7 @@ namespace Impurity
 		const Options::Options& opts)
 	{
 		// Starting t,x,y,z for the impurity
-		double t_imp = get_birth_t(bkg);
+		double t_imp = get_birth_t(bkg, opts);
 		double x_imp = get_birth_x(bkg, opts);
 		double y_imp = get_birth_y(bkg, opts);
 		double z_imp = get_birth_z(bkg, opts);

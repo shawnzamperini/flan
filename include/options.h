@@ -58,12 +58,22 @@ namespace Options
 
 		// Impurity transport options
 		int m_imp_num                                  {1};
-		double m_imp_xmin                            {0.0};
-		double m_imp_xmax                            {0.0};
+		std::string m_imp_tstart_opt      {"single_value"};
+		double m_imp_tstart_val                      {0.0};
+		double m_imp_trange_min                      {0.0};
+		double m_imp_trange_max                      {0.0};
+		std::string m_imp_xstart_opt      {"single_value"};
+		double m_imp_xstart_val                      {0.0};
+		double m_imp_xrange_min                      {0.0};
+		double m_imp_xrange_max                      {0.0};
 		std::string m_imp_ystart_opt      {"single_value"};
 		double m_imp_ystart_val                      {0.0};
+		double m_imp_yrange_min                      {0.0};
+		double m_imp_yrange_max                      {0.0};
 		std::string m_imp_zstart_opt      {"single_value"};
 		double m_imp_zstart_val                      {0.0};
+		double m_imp_zrange_min                      {0.0};
+		double m_imp_zrange_max                      {0.0};
 		std::string m_imp_collisions               {"off"};
 		std::string m_imp_time_step_opt       {"variable"};
 		double m_imp_time_step                      {1e-7};
@@ -96,6 +106,8 @@ namespace Options
 		// are just there to be user-friendly, but it is more efficient to
 		// use integers instead of comparing strings all the time. These are
 		// all set automatically within the corresponding setters.
+		int m_imp_tstart_opt_int	{0};
+		int m_imp_xstart_opt_int	{0};
 		int m_imp_ystart_opt_int	{0};
 		int m_imp_zstart_opt_int	{0};
 		int m_imp_collisions_int	{0};
@@ -144,12 +156,22 @@ namespace Options
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
 		void set_imp_num(int imp_num);
-		void set_imp_xmin(double imp_xmin);
-		void set_imp_xmax(double imp_xmax);
+		void set_imp_tstart_opt(std::string imp_tstart_opt);
+		void set_imp_tstart_val(double imp_tstart_val);
+		void set_imp_trange_min(double imp_trange_min);
+		void set_imp_trange_max(double imp_trange_max);
+		void set_imp_xstart_opt(std::string imp_xstart_opt);
+		void set_imp_xstart_val(double imp_xstart_val);
+		void set_imp_xrange_min(double imp_xrange_min);
+		void set_imp_xrange_max(double imp_xrange_max);
 		void set_imp_ystart_opt(std::string imp_ystart_opt);
 		void set_imp_ystart_val(double imp_ystart_val);
+		void set_imp_yrange_min(double imp_yrange_min);
+		void set_imp_yrange_max(double imp_yrange_max);
 		void set_imp_zstart_opt(std::string imp_zstart_opt);
 		void set_imp_zstart_val(double imp_zstart_val);
+		void set_imp_zrange_min(double imp_zrange_min);
+		void set_imp_zrange_max(double imp_zrange_max);
 		void set_imp_collisions(std::string imp_collisions);
 		void set_var_red_split(std::string var_red_split);
 		void set_var_red_import(std::string var_red_import);
@@ -188,12 +210,22 @@ namespace Options
 		const double imp_mass_amu() const;
 		const int imp_init_charge() const;
 		const int imp_num() const;
-		const double imp_xmin() const;
-		const double imp_xmax() const;
+		const std::string& imp_tstart_opt() const;
+		const double imp_tstart_val() const;
+		const double imp_trange_min() const;
+		const double imp_trange_max() const;
+		const std::string& imp_xstart_opt() const;
+		const double imp_xstart_val() const;
+		const double imp_xrange_min() const;
+		const double imp_xrange_max() const;
 		const std::string& imp_ystart_opt() const;
 		const double imp_ystart_val() const;
+		const double imp_yrange_min() const;
+		const double imp_yrange_max() const;
 		const std::string& imp_zstart_opt() const;
 		const double imp_zstart_val() const;
+		const double imp_zrange_min() const;
+		const double imp_zrange_max() const;
 		const std::string& imp_collisions() const;
 		const std::string& var_red_split() const;
 		const std::string& var_red_import() const;
@@ -215,6 +247,8 @@ namespace Options
 		const Mapc2p_ptr mapc2p() const;
 
 		// Accessor declarations for internal control variables
+		const int imp_tstart_opt_int() const;
+		const int imp_xstart_opt_int() const;
 		const int imp_ystart_opt_int() const;
 		const int imp_zstart_opt_int() const;
 		const int imp_collisions_int() const;

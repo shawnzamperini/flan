@@ -161,17 +161,59 @@ namespace Options
 					std::placeholders::_1);
 				assign_option<int>(set_func, var, key);
 			}
-			
-			else if (key == "imp_xmin") 
+
+			else if (key == "imp_tstart_opt") 
 			{
-				auto set_func = std::bind(&Options::set_imp_xmin, &opts, 
+				auto set_func = std::bind(&Options::set_imp_tstart_opt, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "imp_tstart_val") 
+			{
+				auto set_func = std::bind(&Options::set_imp_tstart_val, &opts, 
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}
 			
-			else if (key == "imp_xmax") 
+			else if (key == "imp_trange_min") 
 			{
-				auto set_func = std::bind(&Options::set_imp_xmax, &opts, 
+				auto set_func = std::bind(&Options::set_imp_trange_min, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+			
+			else if (key == "imp_trange_max") 
+			{
+				auto set_func = std::bind(&Options::set_imp_trange_max, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_xstart_opt") 
+			{
+				auto set_func = std::bind(&Options::set_imp_xstart_opt, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "imp_xstart_val") 
+			{
+				auto set_func = std::bind(&Options::set_imp_xstart_val, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+			
+			else if (key == "imp_xrange_min") 
+			{
+				auto set_func = std::bind(&Options::set_imp_xrange_min, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+			
+			else if (key == "imp_xrange_max") 
+			{
+				auto set_func = std::bind(&Options::set_imp_xrange_max, &opts, 
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}
@@ -189,6 +231,20 @@ namespace Options
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}
+
+			else if (key == "imp_yrange_min") 
+			{
+				auto set_func = std::bind(&Options::set_imp_yrange_min, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+			
+			else if (key == "imp_yrange_max") 
+			{
+				auto set_func = std::bind(&Options::set_imp_yrange_max, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
 			
 			else if (key == "imp_zstart_opt") 
 			{
@@ -200,6 +256,20 @@ namespace Options
 			else if (key == "imp_zstart_val") 
 			{
 				auto set_func = std::bind(&Options::set_imp_zstart_val, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_zrange_min") 
+			{
+				auto set_func = std::bind(&Options::set_imp_zrange_min, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+			
+			else if (key == "imp_zrange_max") 
+			{
+				auto set_func = std::bind(&Options::set_imp_zrange_max, &opts, 
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}

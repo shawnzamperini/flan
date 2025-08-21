@@ -10,6 +10,7 @@
 #include <vector> 
 
 #include "background.h"
+#include "flan_types.h"
 #include "impurity.h"
 #include "impurity_stats.h"
 #include "openadas.h"
@@ -19,6 +20,15 @@
 
 namespace Impurity
 {
+	
+	/**
+	* @brief Function to decide starting t,x,y,z based on input options
+	*/
+	double get_birth_val(const Background::Background& bkg, 
+		const int start_opt_int, const double start_val, const double range_min, 
+		const double range_max, const BkgFPType bkg_min, 
+		const BkgFPType bkg_max);
+
 	/**
 	* @brief Get starting time to pass into an Impurity object.
 	*
@@ -28,7 +38,8 @@ namespace Impurity
 	*
 	* @param bkg Reference to the loaded Background object
 	*/
-	double get_birth_t(const Background::Background& bkg);
+	double get_birth_t(const Background::Background& bkg, 
+		const Options::Options& opts);
 
 	/**
 	* @brief Get starting x location to pass into an Impurity object

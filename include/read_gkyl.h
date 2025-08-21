@@ -91,6 +91,13 @@ namespace Gkyl
 	std::vector<std::string> load_interp_settings();
 
 	/**
+	* @brief Write a Vector4D to a .csv file in the same format as read_gkyl.py
+	*/
+	template <typename T>
+	void write_values(const Vectors::Vector4D<T>& vec4d, 
+		const std::string& data_type);
+
+	/**
 	* @brief Calculate cell centers for the given grid points.
 	*
 	* Calculate the cell centers for the given grid points. This returns a
@@ -323,9 +330,9 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_uX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_uY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_uZ,
-		Vectors::Vector4D<BkgFPType>& gkyl_bX, 
-		Vectors::Vector4D<BkgFPType>& gkyl_bY,
-		Vectors::Vector4D<BkgFPType>& gkyl_bZ, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_bX, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_bY,
+		const Vectors::Vector4D<BkgFPType>& gkyl_bZ, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 

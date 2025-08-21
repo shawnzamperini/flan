@@ -118,20 +118,68 @@ namespace Options
 	void Options::set_imp_num(int imp_num) 
 		{m_imp_num = imp_num;}
 	
-	// imp_xmin
-	void Options::set_imp_xmin(double imp_xmin) 
-		{m_imp_xmin = imp_xmin;}
+	// imp_tstart_opt
+	void Options::set_imp_tstart_opt(std::string imp_tstart_opt) 
+		{
+			// Only assign if valid option, leaving as default if not
+			if (check_input<std::string>("imp_tstart_opt", imp_tstart_opt, 
+				{"single_value", "range", "full_range"}))
+			{
+				m_imp_tstart_opt = imp_tstart_opt;
+			}
+
+			// Assign control integers
+			if (imp_tstart_opt == "single_value") m_imp_tstart_opt_int = 0;
+			else if (imp_tstart_opt == "range") m_imp_tstart_opt_int = 1;
+			else if (imp_tstart_opt == "full_range") m_imp_tstart_opt_int = 2;
+		}
+
+	// imp_tstart_val
+	void Options::set_imp_tstart_val(double imp_tstart_val) 
+		{m_imp_tstart_val = imp_tstart_val;}
+		
+	// imp_trange_min
+	void Options::set_imp_trange_min(double imp_trange_min) 
+		{m_imp_trange_min = imp_trange_min;}
 	
-	// imp_xmax
-	void Options::set_imp_xmax(double imp_xmax) 
-		{m_imp_xmax = imp_xmax;}
+	// imp_trange_max
+	void Options::set_imp_trange_max(double imp_trange_max) 
+		{m_imp_trange_max = imp_trange_max;}
+
+	// imp_xstart_opt
+	void Options::set_imp_xstart_opt(std::string imp_xstart_opt) 
+		{
+			// Only assign if valid option, leaving as default if not
+			if (check_input<std::string>("imp_xstart_opt", imp_xstart_opt, 
+				{"single_value", "range", "full_range"}))
+			{
+				m_imp_xstart_opt = imp_xstart_opt;
+			}
+
+			// Assign control integers
+			if (imp_xstart_opt == "single_value") m_imp_xstart_opt_int = 0;
+			else if (imp_xstart_opt == "range") m_imp_xstart_opt_int = 1;
+			else if (imp_xstart_opt == "full_range") m_imp_xstart_opt_int = 2;
+		}
+
+	// imp_xstart_val
+	void Options::set_imp_xstart_val(double imp_xstart_val) 
+		{m_imp_xstart_val = imp_xstart_val;}
+		
+	// imp_xrange_min
+	void Options::set_imp_xrange_min(double imp_xrange_min) 
+		{m_imp_xrange_min = imp_xrange_min;}
+	
+	// imp_xrange_max
+	void Options::set_imp_xrange_max(double imp_xrange_max) 
+		{m_imp_xrange_max = imp_xrange_max;}
 	
 	// imp_ystart_opt
 	void Options::set_imp_ystart_opt(std::string imp_ystart_opt) 
 		{
 			// Only assign if valid option, leaving as default if not
 			if (check_input<std::string>("imp_ystart_opt", imp_ystart_opt, 
-				{"single_value", "range"}))
+				{"single_value", "range", "full_range"}))
 			{
 				m_imp_ystart_opt = imp_ystart_opt;
 			}
@@ -139,11 +187,20 @@ namespace Options
 			// Assign control integers
 			if (imp_ystart_opt == "single_value") m_imp_ystart_opt_int = 0;
 			else if (imp_ystart_opt == "range") m_imp_ystart_opt_int = 1;
+			else if (imp_ystart_opt == "full_range") m_imp_ystart_opt_int = 2;
 		}
 	
 	// imp_ystart_val
 	void Options::set_imp_ystart_val(double imp_ystart_val) 
 		{m_imp_ystart_val = imp_ystart_val;}
+
+	// imp_yrange_min
+	void Options::set_imp_yrange_min(double imp_yrange_min) 
+		{m_imp_yrange_min = imp_yrange_min;}
+	
+	// imp_yrange_max
+	void Options::set_imp_yrange_max(double imp_yrange_max) 
+		{m_imp_yrange_max = imp_yrange_max;}
 	
 	// imp_zstart_opt
 	void Options::set_imp_zstart_opt(std::string imp_zstart_opt) 
@@ -158,11 +215,20 @@ namespace Options
 			// Assign control integers
 			if (imp_zstart_opt == "single_value") m_imp_zstart_opt_int = 0;
 			else if (imp_zstart_opt == "range") m_imp_zstart_opt_int = 1;
+			else if (imp_zstart_opt == "full_range") m_imp_zstart_opt_int = 2;
 		}
 	
 	// imp_zstart_val
 	void Options::set_imp_zstart_val(double imp_zstart_val) 
 		{m_imp_zstart_val = imp_zstart_val;}
+
+	// imp_zrange_min
+	void Options::set_imp_zrange_min(double imp_zrange_min) 
+		{m_imp_zrange_min = imp_zrange_min;}
+	
+	// imp_zrange_max
+	void Options::set_imp_zrange_max(double imp_zrange_max) 
+		{m_imp_zrange_max = imp_zrange_max;}
 	
 	// imp_collisions
 	void Options::set_imp_collisions(std::string imp_collisions) 
@@ -355,18 +421,38 @@ namespace Options
 		{return m_imp_init_charge;}
 	const int Options::imp_num() const
 		{return m_imp_num;}
-	const double Options::imp_xmin() const 
-		{return m_imp_xmin;}
-	const double Options::imp_xmax() const 
-		{return m_imp_xmax;}
+	const std::string& Options::imp_tstart_opt() const 
+		{return m_imp_tstart_opt;}
+	const double Options::imp_tstart_val() const 
+		{return m_imp_tstart_val;}
+	const double Options::imp_trange_min() const 
+		{return m_imp_trange_min;}
+	const double Options::imp_trange_max() const 
+		{return m_imp_trange_max;}
+	const std::string& Options::imp_xstart_opt() const 
+		{return m_imp_xstart_opt;}
+	const double Options::imp_xstart_val() const 
+		{return m_imp_xstart_val;}
+	const double Options::imp_xrange_min() const 
+		{return m_imp_xrange_min;}
+	const double Options::imp_xrange_max() const 
+		{return m_imp_xrange_max;}
 	const std::string& Options::imp_ystart_opt() const 
 		{return m_imp_ystart_opt;}
 	const double Options::imp_ystart_val() const 
 		{return m_imp_ystart_val;}
+	const double Options::imp_yrange_min() const 
+		{return m_imp_yrange_min;}
+	const double Options::imp_yrange_max() const 
+		{return m_imp_yrange_max;}
 	const std::string& Options::imp_zstart_opt() const 
 		{return m_imp_zstart_opt;}
 	const double Options::imp_zstart_val() const 
 		{return m_imp_zstart_val;}
+	const double Options::imp_zrange_min() const 
+		{return m_imp_zrange_min;}
+	const double Options::imp_zrange_max() const 
+		{return m_imp_zrange_max;}
 	const std::string& Options::imp_collisions() const 
 		{return m_imp_collisions;}
 	const std::string& Options::var_red_split() const 
@@ -407,6 +493,10 @@ namespace Options
 		{return m_mapc2p;}
 	
 	// Accessors for internal control variables
+	const int Options::imp_tstart_opt_int() const
+		{return m_imp_tstart_opt_int;}
+	const int Options::imp_xstart_opt_int() const
+		{return m_imp_xstart_opt_int;}
 	const int Options::imp_ystart_opt_int() const
 		{return m_imp_ystart_opt_int;}
 	const int Options::imp_zstart_opt_int() const
