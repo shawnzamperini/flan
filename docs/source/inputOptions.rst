@@ -218,257 +218,255 @@ Last Update: 8/22/25 (commit XXX)
      - OpenADAS year
      - 50
 
-.. _case_name:
+
 
 case_name
 ---------
 
-.. _gkyl_dir:
 
 gkyl_dir
 --------
 
-.. _gkyl_casename:
+
 
 gkyl_casename
 -------------
 
-.. _gkyl_frame_start:
+
 
 gkyl_frame_start
 ----------------
 
-.. _gkyl_frame_end:
+
 
 gkyl_frame_end
 --------------
 
-.. _gkyl_elec_name:
+
 
 gkyl_elec_name
 --------------
 
-.. _gkyl_ion_name:
+
 
 gkyl_ion_name
 -------------
 
-.. _gkyl_elec_mass_amu:
+
 
 gkyl_elec_mass_amu
 ------------------
 
-.. _gkyl_ion_mass_amu:
+
 
 gkyl_ion_mass_amu
 -----------------
 
-.. _gkyl_file_type:
+
 
 gkyl_file_type
 --------------
 
-.. _gkyl_moment_type:
 
 gkyl_moment_type
 ----------------
 
-.. _lcfs_x:
+
 
 lcfs_x
 ------
 
-.. _imp_xbound_buffer:
+
 
 imp_xbound_buffer
 -----------------
 
-.. _min_xbound_type:
+
 
 min_xbound_type
 ---------------
 
-.. _imp_atom_num:
+
 
 imp_atom_num
 ------------
 
-.. _imp_mass_amu:
+
 
 imp_mass_amu
 ------------
 
-.. _imp_init_charge:
+
 
 imp_init_charge
 ---------------
 
-.. _imp_num:
+
 
 imp_num
 -------
 
-.. _imp_tstart_opt:
+
 
 imp_tstart_opt
 --------------
 
-.. _imp_tstart_val:
+
 
 imp_tstart_val
 --------------
 
-.. _imp_trange_min:
+
 
 imp_trange_min
 --------------
 
-.. _imp_trange_max:
+
 
 imp_trange_max
 --------------
 
-.. _imp_xstart_opt:
+
 
 imp_xstart_opt
 --------------
 
-.. _imp_xstart_val:
+
 
 imp_xstart_val
 --------------
 
-.. _imp_xrange_min:
+
 
 imp_xrange_min
 --------------
 
-.. _imp_xrange_max:
+
 
 imp_xrange_max
 --------------
 
-.. _imp_ystart_opt:
+
 
 imp_ystart_opt
 --------------
 
-.. _imp_ystart_val:
+
 
 imp_ystart_val
 --------------
 
-.. _imp_yrange_min:
+
 
 imp_yrange_min
 --------------
 
-.. _imp_yrange_max:
+
 
 imp_yrange_max
 --------------
 
-.. _imp_zstart_opt:
+
 
 imp_zstart_opt
 --------------
 
-.. _imp_zstart_val:
+
 
 imp_zstart_val
 --------------
 
-.. _imp_zrange_min:
+
 
 imp_zrange_min
 --------------
 
-.. _imp_zrange_max:
+
 
 imp_zrange_max
 --------------
 
-.. _imp_collisions:
+
 
 imp_collisions
 --------------
 
-.. _imp_time_step_opt:
+
 
 imp_time_step_opt
 -----------------
 
-.. _imp_time_step:
+
 
 imp_time_step
 -------------
 
-.. _imp_time_step_min:
+
 
 imp_time_step_min
 -----------------
 
-.. _imp_source_scale_fact:
+
 
 imp_source_scale_fact
 ---------------------
 
-.. _imp_vel_stats:
+
 
 imp_vel_stats
 -------------
 
-.. _imp_iz_recomb:
+
 
 imp_iz_recomb
 -------------
 
-.. _print_interval:
+
 
 print_interval
 --------------
 
-.. _var_red_split:
+
 
 var_red_split
 -------------
 
-.. _var_red_import:
+
 
 var_red_import
 --------------
 
-.. _var_red_freq:
+
 
 var_red_freq
 ------------
 
-.. _var_red_min_weight:
+
 
 var_red_min_weight
 ------------------
 
-.. _var_red_med_mod:
+
 
 var_red_med_mod
 ---------------
 
-.. _var_red_rusrol:
+
 
 var_red_rusrol
 --------------
 
-.. _var_red_rusrol_prob:
+
 
 var_red_rusrol_prob
 -------------------
 
-.. _openadas_root:
+
 
 openadas_root
 -------------
 
-.. _openadas_year:
+
 
 openadas_year
 -------------
