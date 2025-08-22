@@ -6,16 +6,17 @@ This page contains all the input options available to the user, their definition
 
 Last Update: 8/22/25 (commit XXX)
 
-.. list-table::Input Options
+.. list-table:: Input Options
   :header-rows: 1
   :widths: 25 50 25
 
   * - Variable
     - Description
     - Default Value
-  * - :ref: `gkyl_casename` <gkyl_casename>
+  * - :ref:`gkyl_casename` <gkyl_casename>
     - The name of the Gkeyll simulation
     - "undefined"
+
 
 +-----------------------------------------------+--------------------------------------------------------------+---------------------+
 | Variable                                      | Description                                                  | Default Value       |
