@@ -257,10 +257,6 @@ namespace Impurity
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)
 	{
-		// Should be able to use the Jacobian to calculate the volume of
-		// each cell...
-		//std::cerr << "density calculation not correct! not calculating.\n";
-
 		// Need to loop through the entire Vector4D. Unconventional 
 		// indentation here just to keep it clean.
 		for (int i {}; i < m_dim1; ++i)

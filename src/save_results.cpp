@@ -186,8 +186,7 @@ namespace SaveResults
 		// to overwrite the file if it exists.
 		// NcFile's scope is private to whatever block it is defined in,
 		// so we cannot pass it around functions (at least not like a normal
-		// variable). This is why we create a unique_ptr to get around these
-		// scope limitations. The implementation details are such that it 
+		// variable). The implementation details are such that it 
 		// automatically closes once it goes out of scope.
 		std::string nc_filename {opts.case_name() + ".nc"};
 

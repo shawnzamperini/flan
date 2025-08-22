@@ -58,11 +58,23 @@ namespace OpenADAS
 
 		// Select element name from atomic number.
 		std::string imp_name {};
-		if (imp_atom_num == 5) imp_name = "b";
+		if (imp_atom_num == 2) imp_name = "he";
+		else if (imp_atom_num == 3) imp_name = "li";
+		else if (imp_atom_num == 4) imp_name = "be";
+		else if (imp_atom_num == 5) imp_name = "b";
 		else if (imp_atom_num == 6) imp_name = "c";
+		else if (imp_atom_num == 7) imp_name = "n";
+		else if (imp_atom_num == 8) imp_name = "o";
+		else if (imp_atom_num == 9) imp_name = "f";
+		else if (imp_atom_num == 10) imp_name = "ne";
+		else if (imp_atom_num == 13) imp_name = "al";
 		else if (imp_atom_num == 14) imp_name = "si";
+		else if (imp_atom_num == 17) imp_name = "cl";
+		else if (imp_atom_num == 18) imp_name = "ar";
 		else if (imp_atom_num == 26) imp_name = "fe";
+		else if (imp_atom_num == 36) imp_name = "kr";
 		else if (imp_atom_num == 42) imp_name = "mo";
+		else if (imp_atom_num == 54) imp_name = "xe";
 		else if (imp_atom_num == 74) imp_name = "w";
 		else
 		{
