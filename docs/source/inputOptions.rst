@@ -107,7 +107,7 @@ Last Update: 8/22/25 (commit XXX)
      - "single_value"
 
    * - :ref:`imp_xstart_val <imp_xstart_val>`
-     - X start value when :ref:`imp_xstart_opt <imp_xstart_opt>` = "single_value"
+     - x start value when :ref:`imp_xstart_opt <imp_xstart_opt>` = "single_value"
      - 0.0
 
    * - :ref:`imp_xrange_min <imp_xrange_min>`
@@ -135,32 +135,32 @@ Last Update: 8/22/25 (commit XXX)
      - 0.0
 
    * - :ref:`imp_zstart_opt <imp_zstart_opt>`
-     - Z start option
+     - z start option
      - "single_value"
 
    * - :ref:`imp_zstart_val <imp_zstart_val>`
-     - Z start value when :ref:`imp_zstart_opt <imp_zstart_opt>` = "single_value"
+     - z start value when :ref:`imp_zstart_opt <imp_zstart_opt>` = "single_value"
      - 0.0
 
    * - :ref:`imp_zrange_min <imp_zrange_min>`
-     - Z range minimum when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range"
+     - z range minimum when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range"
      - 0.0
 
    * - :ref:`imp_zrange_max <imp_zrange_max>`
-     - Z range maximum when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range"
+     - z range maximum when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range"
      - 0.0
 
    * - :ref:`imp_collisions <imp_collisions>`
-     - Impurity collisions toggle
-     - "off"
+     - Impurity collisions with background toggle
+     - "on"
 
    * - :ref:`imp_time_step_opt <imp_time_step_opt>`
      - Time step option
-     - "variable"
+     - "constant"
 
    * - :ref:`imp_time_step <imp_time_step>`
      - Time step value
-     - 1e-7
+     - 1e-8
 
    * - :ref:`imp_time_step_min <imp_time_step_min>`
      - Minimum time step
@@ -183,31 +183,31 @@ Last Update: 8/22/25 (commit XXX)
      - 10
 
    * - :ref:`var_red_split <var_red_split>`
-     - Variance reduction split toggle
+     - Variance reduction split particles toggle
      - "off"
 
    * - :ref:`var_red_import <var_red_import>`
-     - Import method
+     - Importance method for variance reduction
      - "median"
 
    * - :ref:`var_red_freq <var_red_freq>`
-     - Frequency threshold
+     - Frequency at which variance reduction is recalculated
      - 0.1
 
    * - :ref:`var_red_min_weight <var_red_min_weight>`
-     - Minimum weight
+     - Minimum allowed weight in variance reduction scheme
      - 0.1
 
    * - :ref:`var_red_med_mod <var_red_med_mod>`
-     - Median modifier
+     - Modifier to consider a fraction of median below which variance reduction occurs
      - 1.0
 
    * - :ref:`var_red_rusrol <var_red_rusrol>`
-     - Russian roulette toggle
+     - Variance reduction Russian roulette toggle
      - "off"
 
    * - :ref:`var_red_rusrol_prob <var_red_rusrol_prob>`
-     - Russian roulette probability
+     - Russian roulette probability in low-statistic regions
      - 0.5
 
    * - :ref:`openadas_root <openadas_root>`
@@ -223,95 +223,109 @@ Last Update: 8/22/25 (commit XXX)
 case_name
 ---------
 
+This is only used when naming the NetCDf file. Useful when doing parameter scans, since it allows the user to reuse the same background files for different iterations of the same simulation.
 
 gkyl_dir
 --------
 
-
+Must be the full path to the directory containing the Gkeyll background files, e.g., "/home/zamp/gkyldir/my_gkyl_sim".
 
 gkyl_casename
 -------------
 
-
+Name of the Gkeyll simulation contained within :ref:`gkyl_dir <gkyl_dir>`. All files must share the same case name.
 
 gkyl_frame_start
 ----------------
 
-
+Gkeyll frame at which the Flan simulation starts from.
 
 gkyl_frame_end
 --------------
 
-
+Gkeyll frame at which the Flan simulation ends at (inclusive).
 
 gkyl_elec_name
 --------------
 
-
+Name of the electron species in the Gkeyll simulation, e.g., "elc".
 
 gkyl_ion_name
 -------------
 
-
+Name of the ion species in the Gkeyll simulation, e.g., "ion".
 
 gkyl_elec_mass_amu
 ------------------
 
-
+Mass of electron in Gkeyll simulation in atomic mass units, e.g., 0.000548.
 
 gkyl_ion_mass_amu
 -----------------
 
-
+Mass of ion in Gkeyll simulation in atomic mass units, e.g., 2.014.
 
 gkyl_file_type
 --------------
 
+(Slated for removal)
+The format the Gkeyll files are saved in. Currently, only "binary" (.gkyl) is supported and there is no expectation to extend support beyond this. This is the format output by gkylzero.
 
 gkyl_moment_type
 ----------------
 
-
+(Slated for removal)
+The type of moments output by Gkeyll. Right now, only "bimaxwellian" is really supported. You can run with "maxwellian", but the collision model will be incomplete.
 
 lcfs_x
 ------
 
+The x coordinate that corresponds to the last closed flux surface, when applicable. This has implications on the boundary conditions, since boundary conditions in the core are treated differently from those in the SOL. When using a geometry that is only in the SOL, leave as 0.0 (or more technically, something below the minimum x bound). Conversely, if a simulation only takes place in the core, set this to a value above the maximum x bound. This assumes the x coordinate is the radial coordinate, which is traditional but not necessarily required in Gkeyll.
 
+Note: This introduces potential pitfalls for the user if they are not aware of this option. Could be likely be improved.
 
 imp_xbound_buffer
 -----------------
 
-
+(Slated for removal)
+This is mostly an experimental option. It is possible that the Gkeyll plasma behaves strangely at the x bounds due to artificial boundary conditions. If this input option is a value greater than zero, then Flan will trigger the x boundary conditions when the impurity is within that much distance of either x boundary. This is a bit of a hack option, and hasn't really been necessary so it will probably be removed.
 
 min_xbound_type
 ---------------
 
+Type of boundary condition to impose at the minimum x boundary. 
 
+  - "absorbing": Particle following is ended when encountering minimum x boundary.
+  - "core": Particle is teleported to a random y,z cell along the minimum x boundary. This mimics a particle entering the not-simulated core region and coming out at some other location instantaneously. This is fine for steady-state simulations, but for time-varying simulations (e.g., simulating a pellet injection) one should consider that in the real world some amount of time will pass before the particle is ejected from the not-simulated core region.
 
 imp_atom_num
 ------------
 
-
+Atomic number of impurity.
 
 imp_mass_amu
 ------------
 
-
+Atomic mass of the impurity.
 
 imp_init_charge
 ---------------
 
-
+Initial charge of the impurity.
 
 imp_num
 -------
 
-
+Number of primary impurities to follow. If a variance reduction scheme is on, then secondary impurities could be generated and thus the number of followed particles could be significantly larger than the value entered here. 
 
 imp_tstart_opt
 --------------
 
+Option for where the particle starts in time. t=0 corresponds to the start of the Flan simulation (NOT the start of the Gkeyll simulation).
 
+  - "single_value": Particle starts at a specific time designated by :ref:`imp_tstart_opt <imp_tstart_opt>`. Typical for time-varying simulations.
+  - "range": Particle is uniformily distributed between :ref:`imp_trange_min <imp_trange_min>` and :ref:`imp_trange_max <imp_trange_max>`. Typical for time-varying simulations.
+  - "full_range": Particle is uniformily distributed between the full time range of the simulation. Typical for steady-state simulations.
 
 imp_tstart_val
 --------------
