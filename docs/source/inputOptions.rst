@@ -10,6 +10,10 @@ Last Update: 8/22/25 (commit XXX)
    :header-rows: 1
    :widths: 30 50 20
 
+   * - Variable
+     - Description
+     - Default
+
    * - :ref:`case_name <case_name>`
      - Name of the simulation
      - "undefined"
