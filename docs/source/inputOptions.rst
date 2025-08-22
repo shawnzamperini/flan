@@ -218,188 +218,257 @@ Last Update: 8/22/25 (commit XXX)
      - OpenADAS year
      - 50
 
+.. _case_name:
+
+case_name
+---------
 
 .. _gkyl_dir:
 
-**gkyl_dir**  
-  Describe std::string gkyl_dir (default: "undefined")
+gkyl_dir
+--------
 
 .. _gkyl_casename:
 
-**gkyl_casename**  
-  Describe std::string gkyl_casename (default: "undefined")
+gkyl_casename
+-------------
 
 .. _gkyl_frame_start:
 
-**gkyl_frame_start**  
-  Describe int gkyl_frame_start (default: 0)
+gkyl_frame_start
+----------------
 
 .. _gkyl_frame_end:
 
-**gkyl_frame_end**  
-  Describe int gkyl_frame_end (default: 1)
+gkyl_frame_end
+--------------
 
 .. _gkyl_elec_name:
 
-**gkyl_elec_name**  
-  Describe std::string gkyl_elec_name (default: "elc")
+gkyl_elec_name
+--------------
 
 .. _gkyl_ion_name:
 
-**gkyl_ion_name**  
-  Describe std::string gkyl_ion_name (default: "ion")
+gkyl_ion_name
+-------------
 
-.. _A1:
+.. _gkyl_elec_mass_amu:
 
-**gkyl_elec_mass_amu**  
-  Describe double gkyl_elec_mass_amu (default: 0.000548)
+gkyl_elec_mass_amu
+------------------
 
-.. _A2:
+.. _gkyl_ion_mass_amu:
 
-**gkyl_ion_mass_amu**  
-  Describe double gkyl_ion_mass_amu (default: 2.014)
+gkyl_ion_mass_amu
+-----------------
 
 .. _gkyl_file_type:
 
-**gkyl_file_type**  
-  Describe std::string gkyl_file_type (default: "binary")
+gkyl_file_type
+--------------
+
+.. _gkyl_moment_type:
+
+gkyl_moment_type
+----------------
 
 .. _lcfs_x:
 
-**lcfs_x**  
-  Describe double lcfs_x (default: 0.0)
+lcfs_x
+------
 
-.. _A3:
+.. _imp_xbound_buffer:
 
-**imp_xbound_buffer**  
-  Describe double imp_xbound_buffer (default: 0.0)
+imp_xbound_buffer
+-----------------
 
 .. _min_xbound_type:
 
-**min_xbound_type**  
-  Describe std::string min_xbound_type (default: "absorbing")
+min_xbound_type
+---------------
 
-.. _imp_atonum:
+.. _imp_atom_num:
 
-**imp_atonum**  
-  Describe int imp_atonum (default: 74)
+imp_atom_num
+------------
 
 .. _imp_mass_amu:
 
-**imp_mass_amu**  
-  Describe double imp_mass_amu (default: 183.84)
+imp_mass_amu
+------------
 
 .. _imp_init_charge:
 
-**imp_init_charge**  
-  Describe int imp_init_charge (default: 1)
+imp_init_charge
+---------------
 
 .. _imp_num:
 
-**imp_num**  
-  Describe int imp_num (default: 1)
+imp_num
+-------
 
-.. _imp_xmin:
+.. _imp_tstart_opt:
 
-**imp_xmin**  
-  Describe double imp_xmin (default: 0.0)
+imp_tstart_opt
+--------------
 
-.. _imp_xmax:
+.. _imp_tstart_val:
 
-**imp_xmax**  
-  Describe double imp_xmax (default: 0.0)
+imp_tstart_val
+--------------
+
+.. _imp_trange_min:
+
+imp_trange_min
+--------------
+
+.. _imp_trange_max:
+
+imp_trange_max
+--------------
+
+.. _imp_xstart_opt:
+
+imp_xstart_opt
+--------------
+
+.. _imp_xstart_val:
+
+imp_xstart_val
+--------------
+
+.. _imp_xrange_min:
+
+imp_xrange_min
+--------------
+
+.. _imp_xrange_max:
+
+imp_xrange_max
+--------------
 
 .. _imp_ystart_opt:
 
-**imp_ystart_opt**  
-  Describe std::string imp_ystart_opt (default: "single_value")
+imp_ystart_opt
+--------------
 
 .. _imp_ystart_val:
 
-**imp_ystart_val**  
-  Describe double imp_ystart_val (default: 0.0)
+imp_ystart_val
+--------------
+
+.. _imp_yrange_min:
+
+imp_yrange_min
+--------------
+
+.. _imp_yrange_max:
+
+imp_yrange_max
+--------------
 
 .. _imp_zstart_opt:
 
-**imp_zstart_opt**  
-  Describe std::string imp_zstart_opt (default: "single_value")
+imp_zstart_opt
+--------------
 
 .. _imp_zstart_val:
 
-**imp_zstart_val**  
-  Describe double imp_zstart_val (default: 0.0)
+imp_zstart_val
+--------------
+
+.. _imp_zrange_min:
+
+imp_zrange_min
+--------------
+
+.. _imp_zrange_max:
+
+imp_zrange_max
+--------------
 
 .. _imp_collisions:
 
-**imp_collisions**  
-  Describe std::string imp_collisions (default: "off")
+imp_collisions
+--------------
 
-.. _A4:
+.. _imp_time_step_opt:
 
-**imp_time_step_opt**  
-  Describe std::string imp_time_step_opt (default: "variable")
+imp_time_step_opt
+-----------------
 
 .. _imp_time_step:
 
-**imp_time_step**  
-  Describe double imp_time_step (default: 1e-07)
+imp_time_step
+-------------
 
-.. _A5:
+.. _imp_time_step_min:
 
-**_imp_time_step_min**  
-  Describe double imp_time_step_min (default: 1e-12)
+imp_time_step_min
+-----------------
 
-.. _A6:
+.. _imp_source_scale_fact:
 
-**imp_source_scale_fact**  
-  Describe double imp_source_scale_fact (default: 1.0)
+imp_source_scale_fact
+---------------------
 
 .. _imp_vel_stats:
 
-**imp_vel_stats**  
-  Describe std::string imp_vel_stats (default: "off")
+imp_vel_stats
+-------------
 
 .. _imp_iz_recomb:
 
-**imp_iz_recomb**  
-  Describe std::string imp_iz_recomb (default: "on")
+imp_iz_recomb
+-------------
 
 .. _print_interval:
 
-**print_interval**  
-  Describe int print_interval (default: 10)
+print_interval
+--------------
 
-.. _var_red:
+.. _var_red_split:
 
-**var_red**  
-  Describe std::string var_red (default: "off")
+var_red_split
+-------------
 
-.. _var_red_mode:
+.. _var_red_import:
 
-**var_red_mode**  
-  Describe std::string var_red_mode (default: "median")
+var_red_import
+--------------
 
 .. _var_red_freq:
 
-**var_red_freq**  
-  Describe double var_red_freq (default: 0.1)
+var_red_freq
+------------
 
-.. _A7:
+.. _var_red_min_weight:
 
-**var_red_min_weight**  
-  Describe double var_red_min_weight (default: 0.1)
+var_red_min_weight
+------------------
 
 .. _var_red_med_mod:
 
-**var_red_med_mod**  
-  Describe double var_red_med_mod (default: 1.0)
+var_red_med_mod
+---------------
+
+.. _var_red_rusrol:
+
+var_red_rusrol
+--------------
+
+.. _var_red_rusrol_prob:
+
+var_red_rusrol_prob
+-------------------
 
 .. _openadas_root:
 
-**openadas_root**  
-  Describe std::string openadas_root (default: "undefined")
+openadas_root
+-------------
 
 .. _openadas_year:
 
-**openadas_year**  
-  Describe int openadas_year (default: 50)
+openadas_year
+-------------
