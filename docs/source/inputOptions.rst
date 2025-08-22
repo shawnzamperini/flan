@@ -172,7 +172,7 @@ Last Update: 8/22/25 (commit XXX)
 
    * - :ref:`imp_vel_stats <imp_vel_stats>`
      - Velocity statistics toggle
-     - "off"
+     - "on"
 
    * - :ref:`imp_iz_recomb <imp_iz_recomb>`
      - Ionization/recombination toggle
@@ -295,8 +295,8 @@ min_xbound_type
 
 Type of boundary condition to impose at the minimum x boundary. 
 
-  - "absorbing": Particle following is ended when encountering minimum x boundary.
-  - "core": Particle is teleported to a random y,z cell along the minimum x boundary. This mimics a particle entering the not-simulated core region and coming out at some other location instantaneously. This is fine for steady-state simulations, but for time-varying simulations (e.g., simulating a pellet injection) one should consider that in the real world some amount of time will pass before the particle is ejected from the not-simulated core region.
+  - **"absorbing"**: Particle following is ended when encountering minimum x boundary.
+  - **"core"**: Particle is teleported to a random y,z cell along the minimum x boundary. This mimics a particle entering the not-simulated core region and coming out at some other location instantaneously. This is fine for steady-state simulations, but for time-varying simulations (e.g., simulating a pellet injection) one should consider that in the real world some amount of time will pass before the particle is ejected from the not-simulated core region.
 
 imp_atom_num
 ------------
@@ -323,114 +323,137 @@ imp_tstart_opt
 
 Option for where the particle starts in time. t=0 corresponds to the start of the Flan simulation (NOT the start of the Gkeyll simulation).
 
-  - "single_value": Particle starts at a specific time designated by :ref:`imp_tstart_opt <imp_tstart_opt>`. Typical for time-varying simulations.
-  - "range": Particle is uniformily distributed between :ref:`imp_trange_min <imp_trange_min>` and :ref:`imp_trange_max <imp_trange_max>`. Typical for time-varying simulations.
-  - "full_range": Particle is uniformily distributed between the full time range of the simulation. Typical for steady-state simulations.
+  - **"single_value"**: Particle starts at a specific time designated by :ref:`imp_tstart_opt <imp_tstart_opt>`. Typical for time-varying simulations.
+  - **"range"**: Particle is uniformily distributed between :ref:`imp_trange_min <imp_trange_min>` and :ref:`imp_trange_max <imp_trange_max>`. Typical for time-varying simulations.
+  - **"full_range"**: Particle is uniformily distributed between the full time range of the simulation. Typical for steady-state simulations.
 
 imp_tstart_val
 --------------
 
-
+Starting time value in seconds when :ref:`imp_tstart_opt <imp_tstart_opt>` = "single_value".
 
 imp_trange_min
 --------------
 
-
+Minimum time value in seconds when :ref:`imp_tstart_opt <imp_tstart_opt>` = "range".
 
 imp_trange_max
 --------------
 
-
+Maximum time value in seconds when :ref:`imp_tstart_opt <imp_tstart_opt>` = "range".
 
 imp_xstart_opt
 --------------
 
+Option for what x the particle starts.
 
+  - **"single_value"**: Particle starts at a specific x designated by :ref:`imp_xstart_opt <imp_xstart_opt>`.
+  - **"range"**: Particle is uniformily distributed between :ref:`imp_xrange_min <imp_xrange_min>` and :ref:`imp_xrange_max <imp_xrange_max>`.
+  - **"full_range"**: Particle is uniformily distributed between the full x range of the simulation.
 
 imp_xstart_val
 --------------
 
-
+Starting x value when :ref:`imp_xstart_opt <imp_xstart_opt>` = "single_value".
 
 imp_xrange_min
 --------------
 
-
+Minimum x value when :ref:`imp_xstart_opt <imp_xstart_opt>` = "range".
 
 imp_xrange_max
 --------------
 
-
+Maximum x value when :ref:`imp_xstart_opt <imp_xstart_opt>` = "range".
 
 imp_ystart_opt
 --------------
 
+Option for what y the particle starts.
 
+  - **"single_value"**: Particle starts at a specific y designated by :ref:`imp_ystart_opt <imp_ystart_opt>`.
+  - **"range"**: Particle is uniformily distributed between :ref:`imp_yrange_min <imp_yrange_min>` and :ref:`imp_yrange_max <imp_yrange_max>`.
+  - **"full_range"**: Particle is uniformily distributed between the full y range of the simulation.
 
 imp_ystart_val
 --------------
 
-
+Starting y value when :ref:`imp_ystart_opt <imp_ystart_opt>` = "single_value".
 
 imp_yrange_min
 --------------
 
-
+Minimum y value when :ref:`imp_ystart_opt <imp_ystart_opt>` = "range".
 
 imp_yrange_max
 --------------
 
-
+Maximum y value when :ref:`imp_ystart_opt <imp_ystart_opt>` = "range".
 
 imp_zstart_opt
 --------------
 
+Option for what z the particle starts.
 
+  - **"single_value"**: Particle starts at a specific z designated by :ref:`imp_zstart_opt <imp_zstart_opt>`.
+  - **"range"**: Particle is uniformily distributed between :ref:`imp_zrange_min <imp_zrange_min>` and :ref:`imp_zrange_max <imp_zrange_max>`.
+  - **"full_range"**: Particle is uniformily distributed between the full z range of the simulation.
 
 imp_zstart_val
 --------------
 
-
+Starting z value when :ref:`imp_zstart_opt <imp_zstart_opt>` = "single_value".
 
 imp_zrange_min
 --------------
 
-
+Minimum z value when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range".
 
 imp_zrange_max
 --------------
 
-
+Maximum z value when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range".
 
 imp_collisions
 --------------
 
+Toggle for if collisions with the background plasma should be included. The collision model is an implementation of the Nanbu collision model for cumulative small angle collisions. It is a very general collision model that should be applicable to all regions of the plasma. The only approximation within the model is assuming that the impurity ions are in thermal equlibrium with the ions but *only when calculating the Coloumb logarithm*, which is likely has a negligible impact. 
 
+Nanbu, K. Theory of cumulative small-angle collisions in plasmas. Phys. Rev. E 55, 4642–4652 (1997).
+
+  - **"off"**: Collision model turned off.
+  - **"on"**: Collision model turned on.
 
 imp_time_step_opt
 -----------------
 
-
+(Slated for removal) Leave as "constant". 
 
 imp_time_step
 -------------
 
-
+Time step for the simulation in seconds. The time spent following impurities is inversely proportional to the time step. The correct time step depends on the simulation, but it is unlikely one would need to go below :math:`10^{-10}` seconds.
 
 imp_time_step_min
 -----------------
 
-
+(Slated for removal) Leave as :math:`10^{-12}` seconds.
 
 imp_source_scale_fact
 ---------------------
 
+The meaning of this variable depends on what type of situation the simulation represents, but it is used to convert the Monte Carlo weight density in each cell to actual density in (:math:`m^{-3}`). Internally, every density value is just multiplied by this value. One could equally run a simulation with this set to 1.0 and multiply the impurity density by this value in post-processing if they wanted to.
 
+  - Steady-state simulations: This value represents a particle source rate in units of particles/s. Generally used when :ref:`imp_tstart_opt <imp_tstart_opt>` = "full_range".
+  - Time-dependent: This value represents the total number of particles in the real world. For example, if the source represents the instantaneous source from a pellet, one would calculate the number of atoms in the pellet and set this option equal to that. Generally used when :ref:`imp_tstart_opt <imp_tstart_opt>` = "single_value" or "range".
 
 imp_vel_stats
 -------------
 
+Toggle to include the average Cartesian impurity velocity components in each cell. This exists just because each component is a 4D array that can take up substantial memory and isn't always needed. If you aren't memory-bound, you can just set this to "on" and forget about it.
 
+  - **"off"**: Do not track average Cartesian velocity components. 
+  = **"on"**: The average Cartesian velocity components are tracked and saved in the NetCDF file as imp_vX, imp_vY and imp_vZ. 
 
 imp_iz_recomb
 -------------
@@ -480,7 +503,7 @@ var_red_rusrol_prob
 openadas_root
 -------------
 
-
+Full path to the directory containing ADAS data. In this directory should be subdirectories of the acd and scd files. E.g., if ``:ref`openadas_year <openadas_year>``` = 89, then the directories ``acd89`` and ``scd89`` should exist within openadas_root. 
 
 openadas_year
 -------------
