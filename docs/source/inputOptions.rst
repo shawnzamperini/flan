@@ -453,7 +453,7 @@ imp_vel_stats
 Toggle to include the average Cartesian impurity velocity components in each cell. This exists just because each component is a 4D array that can take up substantial memory and isn't always needed. If you aren't memory-bound, you can just set this to "on" and forget about it.
 
   - **"off"**: Do not track average Cartesian velocity components. 
-  = **"on"**: The average Cartesian velocity components are tracked and saved in the NetCDF file as imp_vX, imp_vY and imp_vZ. 
+  - **"on"**: The average Cartesian velocity components are tracked and saved in the NetCDF file as imp_vX, imp_vY and imp_vZ. 
 
 imp_iz_recomb
 -------------
