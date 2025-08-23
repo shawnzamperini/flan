@@ -460,7 +460,7 @@ imp_iz_recomb
 
 Toggle to turn on/off impurity ionization and recombination (for whatever reason, if you want to do that you can). Ionization/recombination probabilities are calculated within the code by loading the corresponding rate coefficients at a given ne, Te and converting it to a probability of ionizing/recombining via :math:`prob = rate_coef * ne * imp_time_step`. If :ref:`imp_time_step <imp_time_step>` is too large, probabilities above 1.0 could occur and the results should be treated with caution (a warning will be output if this happens). The solution is to just use a smaller time step. 
 
-  - "**"off"**: Particles remain at their initial charge state determined by :ref:`imp_init_charge <imp_init_charge>`.
+  - **"off"**: Particles remain at their initial charge state determined by :ref:`imp_init_charge <imp_init_charge>`.
   - **"on"**: Particles are free to ionize and recombine according to probabilities calculated from ADAS.
 
 print_interval
