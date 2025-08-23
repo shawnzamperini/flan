@@ -458,7 +458,10 @@ Toggle to include the average Cartesian impurity velocity components in each cel
 imp_iz_recomb
 -------------
 
+Toggle to turn on/off impurity ionization and recombination (for whatever reason, if you want to do that you can). Ionization/recombination probabilities are calculated within the code by loading the corresponding rate coefficients at a given ne, Te and converting it to a probability of ionizing/recombining via :math:`prob = rate_coef * ne * imp_time_step`. If :ref:`imp_time_step <imp_time_step>` is too large, probabilities above 1.0 could occur and the results should be treated with caution (a warning will be output if this happens). The solution is to just use a smaller time step. 
 
+  - "**"off"**: Particles remain at their initial charge state determined by :ref:`imp_init_charge <imp_init_charge>`.
+  - **"on"**: Particles are free to ionize and recombine according to probabilities calculated from ADAS.
 
 print_interval
 --------------
@@ -503,7 +506,9 @@ var_red_rusrol_prob
 openadas_root
 -------------
 
-Full path to the directory containing ADAS data. In this directory should be subdirectories of the acd and scd files. E.g., if ``:ref`openadas_year <openadas_year>``` = 89, then the directories ``acd89`` and ``scd89`` should exist within openadas_root. 
+Full path to the directory containing ADAS data. In this directory should be subdirectories of the acd and scd files. E.g., if :ref`openadas_year <openadas_year>` = 89, then the directories ``acd89`` and ``scd89`` should exist within openadas_root. 
 
 openadas_year
 -------------
+
+The year of the ADAS data. Specifically, the scd and acd data from the ADF11 data type. The files should be saved in the standard naming convention. E.g., if simulating tungsten and using ADAS data from year 50, then the files ``[openadas_root]/acd50/acd50_w.dat`` and ``[openadas_root]scd50/scd50_w.dat`` should exist.
