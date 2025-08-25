@@ -482,7 +482,7 @@ var_red_import
 
 This option determines what counts as a high-importance" region. Right now only median is implemented. It only matters when :ref:`var_red_split <var_red_split>` or :ref:`var_red_rusrol <var_red_rusrol>` is in use.
 
-  - **"median"**: High-importance region is anywhere with counts less than :ref:`var_red_med_mod <var_red_med_mode>` * (median counts). Median counts is just the median number of counts across every cell in the simulation volume for each frame.
+  - **"median"**: High-importance region is anywhere with counts less than :ref:`var_red_med_mod <var_red_med_mod>` * (median counts). Median counts is just the median number of counts across every cell in the simulation volume for each frame.
   - **"exp_dist"**: (Not implemented yet) 
   - **"exp_time"**: (Not implemented yet)
 
