@@ -466,42 +466,55 @@ Toggle to turn on/off impurity ionization and recombination (for whatever reason
 print_interval
 --------------
 
-
+A number telling Flan how often to print how many impurities have been followed. 10 would be every 10%, 100 would be every 1%, etc.
 
 var_red_split
 -------------
 
+Turn on the particle splitting variance reduction scheme. If a particle is deemed in a "high importance" (low-count) region, the particle is split into two. The weight of the split particles are assigned proportional to the probability of ionizing or recombing, whichever is greater. For example, say a particle's intial weight is 0.4, and it's probability of ionizing is 0.25 and recombining is 0.1. If it is in a high-importance region, the original particle's weight will be reduced by 0.4*0.25=0.1 and "given" to the split particle, which will also be one charge state higher (because ionizing had a greater probability). The end result is a 0.3 weight particle and a 0.1 weight particle with one higher charge state. This process repeats until the starting particle weight is below :ref:`var_red_min_weight <var_red_min_weight>`.
 
+  - **"off"**: Variance reduction is turned off.
+  - **"iz_rec"**: Described above. :ref:`imp_iz_recomb <imp_iz_recomb>` must be turned on for this to work (an error will be issued if not). 
+  - **"coll"**: (Not implemented yet)
 
 var_red_import
 --------------
 
+This option determines what counts as a high-importance" region. Right now only median is implemented. It only matters when :ref:`var_red_split <var_red_split>` or :ref:`var_red_rusrol <var_red_rusrol>` is in use.
 
+  - **"median"**: High-importance region is anywhere with counts less than :ref:`var_red_med_mod <var_red_med_mode>` * (median counts). Median counts is just the median number of counts across every cell in the simulation volume for each frame.
+  - **"exp_dist"**: (Not implemented yet) 
+  - **"exp_time"**: (Not implemented yet)
 
 var_red_freq
 ------------
 
-
+The frequency at which to update the high-importance regions. What this means is how often you want Flan to recalculate the criteria in :ref:`var_red_import <var_red_import>`. For instance, 10 recalculates it every 10% of particles, 100 would do it every 1% of particles, etc.
 
 var_red_min_weight
 ------------------
 
-
+Minimum allowed weight of a particle below which variance reduction is not performed. This is needed, otherwise the particle would continue to be split forever.
 
 var_red_med_mod
 ---------------
 
-
+Scalar that the median number of counts for each frame is multiplied by to determine the threshold for what is considered a high-importance (low count) region.
 
 var_red_rusrol
 --------------
 
+Switch to turn on Russian roulette variance reduction. Russian roulette variance reduction encourages a simulation to spend more computational time in high-importance regions by "killing" off particles in low importance regions. If a particle is in a low-importance region, it will have a probability of :ref:`var_red_rusrol_prob <var_red_rusrol_prob>` of being killed. If it survives, then its weight is increased by weight / :ref:`var_red_rusrol_prob <var_red_rusrol_prob>`. This is a rather traditional Monte Carlo scheme, and the implementation in Flan is rather straightforward. 
 
+The criteria for a high-importance region is determined with :ref:`var_red_import <var_red_import>`.
+
+  - **"off"**: Russian roulette is turned off.
+  - **"on"**: Russian roulette is turned on.
 
 var_red_rusrol_prob
 -------------------
 
-
+Probability used in Russian roulette scheme when :ref:`var_red_rusrol <var_red_rusrol>` is "on". 
 
 openadas_root
 -------------
