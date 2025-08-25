@@ -504,7 +504,7 @@ Scalar that the median number of counts for each frame is multiplied by to deter
 var_red_rusrol
 --------------
 
-Switch to turn on Russian roulette variance reduction. Russian roulette variance reduction encourages a simulation to spend more computational time in high-importance regions by "killing" off particles in low importance regions. If a particle is in a low-importance region, it will have a probability of :ref:`var_red_rusrol_prob <var_red_rusrol_prob>` of being killed. If it survives, then its weight is increased by weight / :ref:`var_red_rusrol_prob <var_red_rusrol_prob>`. This is a rather traditional Monte Carlo scheme, and the implementation in Flan is rather straightforward. 
+Switch to turn on Russian roulette variance reduction. Russian roulette variance reduction encourages a simulation to spend more computational time in high-importance regions by "killing" off particles in low importance regions. If a particle is in a low-importance region, it will have a probability of :ref:`var_red_rusrol_prob <var_red_rusrol_prob>` of being killed. If it survives, then its weight is increased by weight / :ref:`var_red_rusrol_prob <var_red_rusrol_prob>`. This is a traditional Monte Carlo scheme, and the implementation in Flan is rather straightforward. 
 
 The criteria for a high-importance region is determined with :ref:`var_red_import <var_red_import>`.
 
@@ -519,9 +519,9 @@ Probability used in Russian roulette scheme when :ref:`var_red_rusrol <var_red_r
 openadas_root
 -------------
 
-Full path to the directory containing ADAS data. In this directory should be subdirectories of the acd and scd files. E.g., if :ref`openadas_year <openadas_year>` = 89, then the directories ``acd89`` and ``scd89`` should exist within openadas_root. 
+Full path to the directory containing ADAS data. In this directory should be subdirectories of the acd and scd files. E.g., if :ref:`openadas_year <openadas_year>` = 89, then the directories ``acd89`` and ``scd89`` should exist within openadas_root. 
 
 openadas_year
 -------------
 
-The year of the ADAS data. Specifically, the scd and acd data from the ADF11 data type. The files should be saved in the standard naming convention. E.g., if simulating tungsten and using ADAS data from year 50, then the files ``[openadas_root]/acd50/acd50_w.dat`` and ``[openadas_root]scd50/scd50_w.dat`` should exist.
+The year of the ADAS data. Specifically, the scd and acd data from the ADF11 data type. The files should be saved in the standard naming convention. E.g., if simulating tungsten and using ADAS data from year 50, then the files ``[openadas_root]/acd50/acd50_w.dat`` and ``[openadas_root]/scd50/scd50_w.dat`` should exist.
