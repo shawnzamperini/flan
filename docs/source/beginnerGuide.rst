@@ -1,6 +1,21 @@
 =========================================================================================
 Beginner's Guide
 =========================================================================================
+
+Flan is a trace impurity transport code that is run on top of a pre-computed plasma background. As of now, that is provided by the gyrokinetic solver within Gkeyll. It is certainly beyond the scope of this guide to detail how to use Gkeyll, so instead we will walk through the steps used to obtain a generic Gkeyll simulation representative of the DIII-D far-SOL assuming you already have a working Gkeyll installation. 
+
+If one is familiar with trace impurity transport codes like DIVIMP or ERO2.0, then one can think of the relationship between Gkeyll and Flan as similar to that between, say, SOLPS-ITER and ERO2.0. SOLPS-ITER is used to generate a (2D) background that is then used in ERO2.0 to follow a trace impurity like tungsten. Same idea, except Gkeyll provides the background plasma to Flan. Flan is more tightly coupled to Gkeyll though, in that it uses the same computational grid as Gkeyll. This facilitates coupling, and enables rather efficient simulations due to simplifications in translating between physical space and the computational field aligned space of Gkeyll with the metric coefficients (this is an implementation detail, do not worry too much about it at this point). 
+
+Generating a Plasma Background with Gkeyll
+------------------------------------------
+
+This sectin provides an Gkeyll input file that generates a turbulent representation of a generic DIII-D far-SOL, #167196. The simulation has been benchmarked against experimental reciprocating Langmuir probe ne and Te data. See Zamperini, S. A., et al. Nucl. Fusion 64, 074002 (2024) for more details (this was actually for a prototype of Flan, but the background is more or less the same as what is supplied below).
+
+
+Simulating Tungsten Transport with Flan
+---------------------------------------
+
+
 It is useful to create a directory to contain all your :literal:`flan` cases, it can be anywhere (don't put it in the repository directory, bad practice). For this section we will assume it is called :literal:`flandir`. Within :literal:`flandir`, you can use the following script to setup a simulation directory named :literal:`test`:
 
 .. code-block:: bash
