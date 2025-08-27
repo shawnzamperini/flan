@@ -9,7 +9,12 @@ If one is familiar with trace impurity transport codes like DIVIMP or ERO2.0, th
 Generating a Plasma Background with Gkeyll
 ------------------------------------------
 
-This sectin provides an Gkeyll input file that generates a turbulent representation of a generic DIII-D far-SOL, #167196. The simulation has been benchmarked against experimental reciprocating Langmuir probe ne and Te data. See Zamperini, S. A., et al. Nucl. Fusion 64, 074002 (2024) for more details (this was actually for a prototype of Flan, but the background is more or less the same as what is supplied below).
+This section provides an Gkeyll input file that generates a turbulent representation of a generic DIII-D far-SOL, #167196. The simulation has been benchmarked against experimental reciprocating Langmuir probe ne and Te data. See Zamperini, S. A., et al. Nucl. Fusion 64, 074002 (2024) for more details (this was actually for a prototype of Flan, but the background is more or less the same as what is supplied below).
+
+Gkeyll Input File
+~~~~~~~~~~~~~~~~~
+
+The below code is a Gkeyll input file for this guide. This was compiled and ran on the Perlmutter supercomputer at NERSC for about 2.5 days using 8 GPUs. The Gkeyll commit used for this simulation was :literal:`eb9c458f27f0`.
 
 .. code-block:: c
 
@@ -921,18 +926,67 @@ This sectin provides an Gkeyll input file that generates a turbulent representat
      return 0;
    }
 
+Unless you are running Flan on the same machine as Gkeyll, you will want to copy over a number of files to the machine Flan will be run on. These files include (X indicates all of the numbered files):
+
+* d3d-167196-v9-field_X.gkyl
+   * The plasma potential, used for calculating Electric field components
+* d3d-167196-v9-elc_BiMaxwellianMoments_X.gkyl
+   * The electron moments (density and perpendicular/parallel temperatures and flows)
+* d3d-167196-v9-ion_BiMaxwellianMoments_X.gkyl
+   * The deuterium moments (density and perpendicular/parallel temperatures and flows)
+* d3d-167196-v9-bcart.gkyl
+   * Cartesian components of magentic field (not actually used anymore in Flan)
+* d3d-167196-v9-b_i.gkyl
+   * Covariant components of magnetic field vector
+* d3d-167196-v9-bmag.gkyl
+   * Magnetic field magnitude
+* d3d-167196-v9-jacobgeo.gkyl
+   * Jacobian for coordinate transformation between computational field-aligned coordinated are Cartesian coordinates
+* d3d-167196-v9-gij.gkyl
+   * Metric coefficients
+* d3d-167196-v9-dzdx.gkyl
+   * Dual-basis vectors
+* d3d-167196-v9.c
+   * Not needed, but good practice to include input file with things for reference
+
+Note you do NOT need the distribution function files (d3d-167196-v9-elc_X.gkyl) files. Nothing bad will happen if you copy those over, but they can take up an enormous amount of space.
+
+Store these files all in the same directory, for this guide we will call this directory :literal:`/home/zamp/gkyldir/d3d-167196-v9` just for the sake of calling it something.
 
 Simulating Tungsten Transport with Flan
 ---------------------------------------
 
+Now that we have run Gkeyll and copied over the required files, we are ready to run Flan. If you have not already, see Flan installation instructions before continuing.
 
-It is useful to create a directory to contain all your :literal:`flan` cases, it can be anywhere (don't put it in the repository directory, bad practice). For this section we will assume it is called :literal:`flandir`. Within :literal:`flandir`, you can use the following script to setup a simulation directory named :literal:`test`:
+First, make sure you have the :literal:`(flan)` conda environment active. This is installed automatically as part of the installation process, and you will know it is active if you see :literal:`(flan)` at the start of your terminal. If you don't, activate it with :literal:`conda activate flan`. **You must have the :literal:`(flan)` environment active to run Flan** because it contains paths to some python scripts that serve as the interface between Flan and the Gkeyll postprocessor :literal:`postgkyl`. 
+
+It is useful to create a directory to contain all your Flan cases, it can be anywhere (don't put it in the repository directory, bad practice). For this section we will assume it is called :literal:`/home/zamp/flandir`. Within :literal:`flandir`, you must use the following script to setup a simulation directory named :literal:`diiid-farsol-w-v1` (the Flan repository is assumed to be located at :literal:`/home/zamp/github/flan`):
 
 .. code-block:: bash
 
-   (flan) $ /path/to/flan/scripts/flan_setup.sh test
+   (flan) $ cd /home/zamp/flandir
+   (flan) $ /home/zamp/github/flan/scripts/flan_setup.sh diiid-farsol-w-v1
 
-This will create a directory called :literal:`test` and place the needed files in it. The input file is :literal:`test.cpp`. If you open this up, you will notice a function :literal:`mapc2p`, a function called :literal:`create_inputs` and :literal:`main`. For now, all you need to look at is :literal:`create_inputs`. This is where all the input options are entered. You will notice some input options are provided to get you started. It is good to be familiar with the Gkeyll simulation you are running :literal:`flan` with so that you can tell it where the impurities start. A possible bare-minimum set of input options could look like this:
+This will create a directory called :literal:`diiid-farsol-w-v1` and place the needed files in it. The input file is :literal:`diiid-farsol-w-v1.cpp`. If you open this up, you will notice a function :literal:`mapc2p`, a function called :literal:`create_inputs` and :literal:`main`. At this point we will describe the high-level overview of how you, the user, interact with and run Flan.
+
+The input file, :literal:`diiid-farsol-w-v1.cpp`, is actually a C++ source file. When you run make in the run directory, the Makefile that is there links compiles your input file and links it to the Flan shared library located, in this example, at :literal:`/home/zamp/github/flan/lib/libflan.so`. It then creates an executable appropriately named :literal:`diiid-farsol-w-v1` in your directory. You then run this executable according to the rules of the machine you are on (e.g., straight from the terminal or with a slurm bash script). 
+
+If you look at the bottom of the input file, you will notice:
+
+.. code-block:: c++
+
+   int main()
+   {
+   	// Run Flan
+   	Inputs inpts {create_inputs()};
+   	flan(inpts);
+   }
+
+This creates an :literal:`Inputs` object out of your input options and then passes it into the top-level run command for Flan. The executable you create will start here, just like any normal C++ program. In a sense, the input file is part of Flan since it all gets compiled together. The reason for this, over a normal text-based input file, is not immediately apparent from this example. The one-liner is that it enables extreme flexiblity with regards to coupling to Gkeyll from a developer perspective, a code which itself is under active development and continues to undergo major upgrades/modifications. This type of input file allows Flan to remain nimble in that regard.
+
+
+
+This is where all the input options are entered. You will notice some input options are provided to get you started. It is good to be familiar with the Gkeyll simulation you are running :literal:`flan` with so that you can tell it where the impurities start. A possible bare-minimum set of input options could look like this:
 
 .. code-block:: bash
 
