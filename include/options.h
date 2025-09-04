@@ -74,12 +74,12 @@ namespace Options
 		double m_imp_zstart_val                      {0.0};
 		double m_imp_zrange_min                      {0.0};
 		double m_imp_zrange_max                      {0.0};
-		std::string m_imp_collisions               {"off"};
-		std::string m_imp_time_step_opt       {"variable"};
-		double m_imp_time_step                      {1e-7};
+		std::string m_imp_collisions                {"on"};
+		std::string m_imp_time_step_opt       {"constant"};
+		double m_imp_time_step                      {1e-8};
 		double m_imp_time_step_min                 {1e-12};
 		double m_imp_source_scale_fact               {1.0};
-		std::string m_imp_vel_stats                {"off"};
+		std::string m_imp_vel_stats                 {"on"};
 		std::string m_imp_iz_recomb                 {"on"};
 		int m_print_interval                          {10};
 

@@ -41,36 +41,20 @@ class FlanPlots:
 	
 	def load_data_frame(self, data_name, frame):
 		"""
-		Helper function to load a 3D set of data from the 4D data given by
-		data_name at a given frame.
+		Helper function to load data_name at a given frame (if applicable, 3D
+		data is returned ignoring frame).
 
 		Inputs:
-		 - data_name (str) : Variable name of 4D data from netCDF file. 
-		 - frame (int)     : The time frame to plot data for.
+		 - data_name (str) : Variable name of data from netCDF file. 
+		 - frame (int)     : The time frame to plot data for. Ignored for 3D 
+		                       data.
 		
-		Outputs:
+		Outputs: 
+		  - A 3D numpy array of x,y,z dimensions.
 
 		Example Usage:
-		"""
-		
-		# Valid options that can be loaded.
-		"""
-		valid_opts = ["electron_dens", "electron_temp", "ion_temp", 
-			"plasma_pot", "elec_X", "elec_Y", "elec_Z", "bmag_X", "bmag_Y", 
-			"bmag_Z", "bmag_R", "imp_counts", "imp_density", "imp_vX", "imp_vY", 
-			"imp_vZ", "imp_gyrorad", "ion_flow_X", "ion_flow_Y", "ion_flow_Z",
-			"gradb_X", "gradb_Y", "gradb_Z", "b_x", "b_y", "b_z", "jacobian"]
-
-		# Throw an error if a valid option wasn't chosen.
-		if (data_name not in valid_opts):
-
-			# Assemble error message with the valid options.
-			msg = "{} is not a valid option for ".format(data_name) + \
-				"data_name. Valid options are:\n"
-			for opt in valid_opts:
-				msg += " {}\n".format(opt)
-			raise ValueError(msg)
-			return None
+			# Load impurity density at frame 10
+			nz = fp.load_data_frame("imp_dens", 10)
 		"""
 
 		# 3D vectors don't have a time index
@@ -519,3 +503,27 @@ class FlanPlots:
 			#anim.save(save_path + ".mp4", writer=writer) 
 
 		plt.show()
+
+	def calc_exb_drift(self):
+		"""
+		Calculate and return the X,Y,Z components of the ExB drift
+		"""
+		pass
+	
+	def calc_gradb_drift(self):
+		"""
+
+		"""
+		pass
+	
+	def calc_polarization_drift(self):
+		"""
+
+		"""
+		pass
+	
+	def calc_curve_drift(self):
+		"""
+
+		"""
+		pass
