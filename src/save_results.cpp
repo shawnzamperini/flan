@@ -273,108 +273,108 @@ namespace SaveResults
 
 		// Electron density
 		desc = "electron density";
-		save_vector_4d(nc_file, bkg.get_ne(), "electron_dens", 
+		save_vector_4d(nc_file, bkg.get_ne(), "ne", 
 			dim1, dim2, dim3, dim4, desc, "(m-3)");
 
 		// Electron temperature
 		desc = "electron temperature";
-		save_vector_4d(nc_file, bkg.get_te(), "electron_temp", 
+		save_vector_4d(nc_file, bkg.get_te(), "Te", 
 			dim1, dim2, dim3, dim4, desc, "(eV)");
 
 		// Ion temperature
 		desc = "ion temperature";
-		save_vector_4d(nc_file, bkg.get_ti(), "ion_temp", 
+		save_vector_4d(nc_file, bkg.get_ti(), "Ti", 
 			dim1, dim2, dim3, dim4, desc, "(eV)");
 
 		// Plasma potential
 		desc = "plasma potential";
-		save_vector_4d(nc_file, bkg.get_vp(), "plasma_pot", 
+		save_vector_4d(nc_file, bkg.get_vp(), "Vp", 
 			dim1, dim2, dim3, dim4, desc, "(V)");
 
 		// Electric field
 		desc = "electric field (X)";
-		save_vector_4d(nc_file, bkg.get_eX(), "elec_X", 
+		save_vector_4d(nc_file, bkg.get_eX(), "E_X", 
 			dim1, dim2, dim3, dim4, desc, "(V/m)");
 		desc = "electric field (Y)";
-		save_vector_4d(nc_file, bkg.get_eY(), "elec_Y", 
+		save_vector_4d(nc_file, bkg.get_eY(), "E_Y", 
 			dim1, dim2, dim3, dim4, desc, "(V/m)");
 		desc = "electric field (Z)";
-		save_vector_4d(nc_file, bkg.get_eZ(), "elec_Z", 
+		save_vector_4d(nc_file, bkg.get_eZ(), "E_Z", 
 			dim1, dim2, dim3, dim4, desc, "(V/m)");
 
 		// Background (ion) flow
 		desc = "background flow (X)";
-		save_vector_4d(nc_file, bkg.get_uX(), "ion_flow_X", 
+		save_vector_4d(nc_file, bkg.get_uX(), "Ui_X", 
 			dim1, dim2, dim3, dim4, desc, "(m/s)");
 		desc = "background flow (Y)";
-		save_vector_4d(nc_file, bkg.get_uY(), "ion_flow_Y", 
+		save_vector_4d(nc_file, bkg.get_uY(), "Ui_Y", 
 			dim1, dim2, dim3, dim4, desc, "(m/s)");
 		desc = "background flow (Z)";
-		save_vector_4d(nc_file, bkg.get_uZ(), "ion_flow_Z", 
+		save_vector_4d(nc_file, bkg.get_uZ(), "Ui_Z", 
 			dim1, dim2, dim3, dim4, desc, "(m/s)");
 			
 		// Magnetic field
 		desc = "magnetic field (X)";
-		save_vector_4d(nc_file, bkg.get_bX(), "bmag_X", 
+		save_vector_4d(nc_file, bkg.get_bX(), "B_X", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 		desc = "magnetic field (Y)";
-		save_vector_4d(nc_file, bkg.get_bY(), "bmag_Y", 
+		save_vector_4d(nc_file, bkg.get_bY(), "B_Y", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 		desc = "magnetic field (Z)";
-		save_vector_4d(nc_file, bkg.get_bZ(), "bmag_Z", 
+		save_vector_4d(nc_file, bkg.get_bZ(), "B_Z", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 		desc = "magnetic field (R)";
-		save_vector_4d(nc_file, bkg.get_bR(), "bmag_R", 
+		save_vector_4d(nc_file, bkg.get_bR(), "B_R", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 
 		// Magnetic field
 		desc = "magnetic field gradient (X)";
-		save_vector_4d(nc_file, bkg.get_gradbX(), "gradb_X", 
+		save_vector_4d(nc_file, bkg.get_gradbX(), "gradB_X", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 		desc = "magnetic field gradient (Y)";
-		save_vector_4d(nc_file, bkg.get_gradbY(), "gradb_Y", 
+		save_vector_4d(nc_file, bkg.get_gradbY(), "gradB_Y", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 		desc = "magnetic field gradient (Z)";
-		save_vector_4d(nc_file, bkg.get_gradbZ(), "gradb_Z", 
+		save_vector_4d(nc_file, bkg.get_gradbZ(), "gradB_Z", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 
 		// Impurity counts
 		desc = "impurity counts";
-		save_vector_4d(nc_file, imp_stats.get_counts(), "imp_counts", 
+		save_vector_4d(nc_file, imp_stats.get_counts(), "Nz", 
 			dim1, dim2, dim3, dim4, desc, "");
 
 		// Impurity density
 		desc = "impurity density";
-		save_vector_4d(nc_file, imp_stats.get_density(), "imp_density", 
+		save_vector_4d(nc_file, imp_stats.get_density(), "nz", 
 			dim1, dim2, dim3, dim4, desc, "(m-3)");
 	
 		if (imp_stats.get_vel_stats())
 		{
 			// Impurity average X velocity in physical space
-			desc = "impurity X velocity";
-			save_vector_4d(nc_file, imp_stats.get_vX(), "imp_vX", 
+			desc = "average impurity X velocity";
+			save_vector_4d(nc_file, imp_stats.get_vX(), "v_X", 
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 
 			// Impurity average Y velocity in physical space
-			desc = "impurity Y velocity";
-			save_vector_4d(nc_file, imp_stats.get_vY(), "imp_vY", 
+			desc = "average impurity Y velocity";
+			save_vector_4d(nc_file, imp_stats.get_vY(), "v_Y", 
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 
 			// Impurity average Z velocity in physical space
-			desc = "impurity Z velocity";
-			save_vector_4d(nc_file, imp_stats.get_vZ(), "imp_vZ", 
+			desc = "average impurity Z velocity";
+			save_vector_4d(nc_file, imp_stats.get_vZ(), "v_Z", 
 				dim1, dim2, dim3, dim4, desc, "(m/s)");
 		}
 		
 		// Gyroradius - commenting out since it may not be useful, but
         // maybe one day it will be
 		//desc = "average impurity gyroradius";
-		//save_vector_4d(nc_file, imp_stats.get_gyrorad(), "imp_gyrorad", 
+		//save_vector_4d(nc_file, imp_stats.get_gyrorad(), "rhoz", 
 		//	dim1, dim2, dim3, dim4, desc, "(m)");
 
         // Jacobian
 		desc = "Jacobian";
-		save_vector_3d(nc_file, bkg.get_J(), "jacobian", dim2, 
+		save_vector_3d(nc_file, bkg.get_J(), "J", dim2, 
 			dim3, dim4, desc, "()");
 
 		// Metric coefficients
