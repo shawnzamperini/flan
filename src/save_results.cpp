@@ -29,6 +29,50 @@ namespace SaveResults
 	
 	}
 
+	// Create a NetCDF variable of the chosen type
+	template <typename T>
+	netCDF::NcVar create_var(const netCDF::NcFile& nc_file,
+		const std::string& var_name, const netCDF::NcDim& dim)
+	{
+			// Create variable with netCDF type based on which template is 
+			// being used.
+			netCDF::NcVar var {};
+			if constexpr (std::is_same_v<T, double>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncDouble, dim);
+			}
+			else if constexpr (std::is_same_v<T, float>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncFloat, dim);
+			}
+			else if constexpr (std::is_same_v<T, int>)
+			{
+				var = nc_file.addVar(var_name, netCDF::ncInt, dim);
+			}
+
+			return var;
+	}
+
+	// Save a scalar into nc_file.
+	template <typename T>
+	void save_scalar(const netCDF::NcFile& nc_file, const T value, 
+		const std::string& var_name, const netCDF::NcDim& dim, 
+		const std::string& description, const std::string& units)
+	{
+			// Create netCDF variable holding the templated type
+			netCDF::NcVar var {create_var<T>(nc_file, var_name, dim)};
+
+			// Put value into it (a pointer is expected here as part of the
+			// netCDF API). 
+			var.putVar(&value);
+
+			// Add description
+			var.putAtt("description", description);
+
+			// Add units
+			var.putAtt("units", units);
+	}
+
 	// Save a 1D vector into nc_file. dim must be matched by the programmer.
 	template <typename T>
 	void save_vector_1d(const netCDF::NcFile& nc_file, std::vector<T> vec, 
@@ -201,11 +245,8 @@ namespace SaveResults
 		// Case name
 		//nc_file.putAtt("case_name", case_name);
 
-		// Details about the simulation (system, time run, time spent, etc.)
-		// To-do
-
-		// Save all input options used for this case
-		// To-do
+		// Scalars just have length 1 dimension
+		netCDF::NcDim dim_scalar = nc_file.addDim("scalar", 1);
 
 		// Dimensions for the arrays containing data at the cell centers. 
 		// First dimension is time, then x, y, z.
@@ -219,6 +260,22 @@ namespace SaveResults
 		netCDF::NcDim grid_dim2 {nc_file.addDim("grid x", bkg.get_dim2() + 1)};
 		netCDF::NcDim grid_dim3 {nc_file.addDim("grid y", bkg.get_dim3() + 1)};
 		netCDF::NcDim grid_dim4 {nc_file.addDim("grid z", bkg.get_dim4() + 1)};
+
+		// Details about the simulation (system, time run, time spent, etc.)
+		// To-do
+
+		// Save all input options used for this case
+		// To-do
+
+		// Impurity mass
+		desc = "impurity mass";
+		save_scalar(nc_file, opts.imp_mass_amu(), "mz", dim_scalar, desc, 
+			"(amu)");
+
+		// Impurity atomic number
+		desc = "impurity atomic number";
+		save_scalar(nc_file, opts.imp_atom_num(), "Zz", dim_scalar, desc, 
+			"()");
 
 		// Time
 		desc = "time for each frame";
@@ -348,7 +405,7 @@ namespace SaveResults
 		save_vector_4d(nc_file, imp_stats.get_density(), "nz", 
 			dim1, dim2, dim3, dim4, desc, "(m-3)");
 	
-		if (imp_stats.get_vel_stats())
+		if (opts.imp_vel_stats_int() == 1)
 		{
 			// Impurity average X velocity in physical space
 			desc = "average impurity X velocity";
@@ -371,6 +428,11 @@ namespace SaveResults
 		//desc = "average impurity gyroradius";
 		//save_vector_4d(nc_file, imp_stats.get_gyrorad(), "rhoz", 
 		//	dim1, dim2, dim3, dim4, desc, "(m)");
+
+		// Impurity charge
+		desc = "average impurity charge";
+		save_vector_4d(nc_file, imp_stats.get_charge(), "Zz", 
+			dim1, dim2, dim3, dim4, desc, "()");
 
         // Jacobian
 		desc = "Jacobian";

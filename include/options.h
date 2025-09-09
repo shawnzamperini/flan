@@ -74,7 +74,7 @@ namespace Options
 		double m_imp_zstart_val                      {0.0};
 		double m_imp_zrange_min                      {0.0};
 		double m_imp_zrange_max                      {0.0};
-		std::string m_imp_collisions                {"on"};
+		std::string m_imp_collisions             {"nanbu"};
 		std::string m_imp_time_step_opt       {"constant"};
 		double m_imp_time_step                      {1e-8};
 		double m_imp_time_step_min                 {1e-12};
@@ -106,19 +106,20 @@ namespace Options
 		// are just there to be user-friendly, but it is more efficient to
 		// use integers instead of comparing strings all the time. These are
 		// all set automatically within the corresponding setters.
-		int m_imp_tstart_opt_int	{0};
-		int m_imp_xstart_opt_int	{0};
-		int m_imp_ystart_opt_int	{0};
-		int m_imp_zstart_opt_int	{0};
-		int m_imp_collisions_int	{0};
-		int m_var_red_split_int		{0};
-		int m_var_red_import_int	{0};
-		int m_var_red_rusrol_int	{0};
-		int m_imp_time_step_opt_int {0};
-		int m_imp_vel_stats_int		{0};
-		int m_imp_iz_recomb_int		{0};
-		int m_geotype_int			{0};
-		int m_min_xbound_type_int	{0};
+		// IMPORTANT: All control integers should be initialized below as -1,
+		// which the code recognizes as "not assigned yet". This allows
+		int m_imp_tstart_opt_int	{-1};
+		int m_imp_xstart_opt_int	{-1};
+		int m_imp_ystart_opt_int	{-1};
+		int m_imp_zstart_opt_int	{-1};
+		int m_imp_collisions_int	{-1};
+		int m_var_red_split_int		{-1};
+		int m_var_red_import_int	{-1};
+		int m_var_red_rusrol_int	{-1};
+		int m_imp_time_step_opt_int {-1};
+		int m_imp_vel_stats_int		{-1};
+		int m_imp_iz_recomb_int		{-1};
+		int m_min_xbound_type_int	{-1};
 
 		/**
 		* @brief Check input against a list of valid options
@@ -136,7 +137,11 @@ namespace Options
 
 	public:
 
+		// Constructor
 		Options();
+
+		// Initialize internal control integers (called during contructor)
+		void initialize_control_ints();
 
 		// Setter declarations
 		void set_case_name(std::string case_name);
@@ -246,6 +251,11 @@ namespace Options
 		const int openadas_year() const;
 		const Mapc2p_ptr mapc2p() const;
 
+		// Wrapper function for retrieving control integers that ensures they
+		// have been correctly set.
+		const int get_control_int(const std::string& var_name, 
+			const int control_int) const;
+
 		// Accessor declarations for internal control variables
 		const int imp_tstart_opt_int() const;
 		const int imp_xstart_opt_int() const;
@@ -258,7 +268,6 @@ namespace Options
 		const int imp_time_step_opt_int() const;
 		const int imp_vel_stats_int() const;
 		const int imp_iz_recomb_int() const;
-		const int geotype_int() const;
 		const int min_xbound_type_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.

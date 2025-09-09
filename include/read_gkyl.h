@@ -174,7 +174,7 @@ namespace Gkyl
 	* @brief Read covariant components of magnetic field
 	*/
 	template <typename T>
-	void read_covariant_b(grid_data_t& grid_data, 
+	void read_covariant_comp_b(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_b_x, Vectors::Vector4D<T>& gkyl_b_y,
 		Vectors::Vector4D<T>& gkyl_b_z, const Options::Options& opts);
 
@@ -220,10 +220,10 @@ namespace Gkyl
 		const std::string& idx);
 
 	/*
-	* @brief Read dual basis vector component into gkyl_dzdx.
+	* @brief Read covariant components into gkyl_dzdx.
 	*/
 	template <typename T>
-	void read_dual_basis(grid_data_t& grid_data, 
+	void read_tangent_basis(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_dzdx, const Options::Options& opts,
 		const std::string& idx);
 

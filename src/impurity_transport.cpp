@@ -439,6 +439,10 @@ namespace Impurity
 
 		// Add value of gyroradius to running sum at this location
 		//imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
+
+		// Add charge to the running sum for this location
+		imp_stats.add_charge(tidx, xidx, yidx, zidx, 
+			static_cast<BkgFPType>(imp.get_charge()));
 	}
 
 	void find_containing_cell(Impurity& imp, 
@@ -870,7 +874,9 @@ namespace Impurity
 			std::cout << "  Velocity...\n";
 			imp_stats.calc_vels();
 		}
-		imp_stats.calc_gyrorad();
+		//imp_stats.calc_gyrorad();
+		std::cout << "  Charge...\n";
+		imp_stats.calc_charge();
 		
 		return imp_stats;
 

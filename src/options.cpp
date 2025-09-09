@@ -23,8 +23,42 @@ namespace Options
 
 	// Constructors
 	Options::Options()
-	{}
+	{
+		// Set internal control integers based on (at this point, default)
+		// options. They'll get changed later if the option changes.
+		initialize_control_ints();
+	}
 	
+	// Initialize the control integers, which are generally used to avoid
+	// having to compare against strings in the code for speed. 
+	void Options::initialize_control_ints()
+	{
+		// We are setting each value to the value it is already at, why?
+		// Because the logic for assigning the respective control integers
+		// lives within each set_ function. This is not the best, since if
+		// one were to add an additional control integer for a new option and
+		// then forgot to call the corresponding set_ function within this
+		// function, then they may introduce a silent bug! This can be silent
+		// because if the user does not have that option in their input file,
+		// the default string value will be used but there is no guarantee that
+		// the default control integer will be the correct value! Luckily,
+		// this bug is avoided by accessing the control integers via
+		// get_control_int, which will tell you if a control integer hasn't
+		// been correctly initalized (by not including it here).
+		set_imp_tstart_opt(m_imp_tstart_opt);
+		set_imp_xstart_opt(m_imp_xstart_opt);
+		set_imp_ystart_opt(m_imp_ystart_opt);
+		set_imp_zstart_opt(m_imp_zstart_opt);
+		set_imp_collisions(m_imp_collisions);
+		set_var_red_split(m_var_red_split);
+		set_var_red_import(m_var_red_import);
+		set_var_red_rusrol(m_var_red_rusrol);
+		set_imp_time_step_opt(m_imp_time_step_opt);
+		set_imp_vel_stats(m_imp_vel_stats);
+		set_imp_iz_recomb(m_imp_iz_recomb);
+		set_min_xbound_type(m_min_xbound_type);
+	}
+
 	// Setter definitions. They're all the same, so just throwing together
 	// as a mass of code. Can organize if necessary, but it would probably
 	// just take up three times as much space.
@@ -207,7 +241,7 @@ namespace Options
 		{
 			// Only assign if valid option, leaving as default if not
 			if (check_input<std::string>("imp_zstart_opt", imp_zstart_opt, 
-				{"single_value", "range"}))
+				{"single_value", "range", "full_range"}))
 			{
 				m_imp_zstart_opt = imp_zstart_opt;
 			}
@@ -492,33 +526,48 @@ namespace Options
 	const Mapc2p_ptr Options::mapc2p() const 
 		{return m_mapc2p;}
 	
+	// Wrapper for returning control integer value that ensures they were
+	// set to the respective option (i.e., not -1).
+	const int Options::get_control_int(const std::string& var_name, 
+		const int control_int) const
+	{
+		if (control_int < 0)
+		{
+			// If you encounter this error, then it probably means the control
+			// integer was not being set at the beginning within 
+			// initialize_control_ints. Easy mistake to make.
+			std::cerr << "Error! Control integer for " << var_name 
+				<< " was never set! This is a programming error, contact a "
+				<< "developer.\n";
+		}
+		return control_int;
+	}
+
 	// Accessors for internal control variables
 	const int Options::imp_tstart_opt_int() const
-		{return m_imp_tstart_opt_int;}
+		{return get_control_int("imp_tstart_opt", m_imp_tstart_opt_int);}
 	const int Options::imp_xstart_opt_int() const
-		{return m_imp_xstart_opt_int;}
+		{return get_control_int("imp_xstart_opt", m_imp_xstart_opt_int);}
 	const int Options::imp_ystart_opt_int() const
-		{return m_imp_ystart_opt_int;}
+		{return get_control_int("imp_ystart_opt", m_imp_ystart_opt_int);}
 	const int Options::imp_zstart_opt_int() const
-		{return m_imp_zstart_opt_int;}
+		{return get_control_int("imp_zstart_opt", m_imp_zstart_opt_int);}
 	const int Options::imp_collisions_int() const
-		{return m_imp_collisions_int;}
+		{return get_control_int("imp_collisions", m_imp_collisions_int);}
 	const int Options::var_red_split_int() const
-		{return m_var_red_split_int;}
+		{return get_control_int("var_red_split", m_var_red_split_int);}
 	const int Options::var_red_import_int() const
-		{return m_var_red_import_int;}
+		{return get_control_int("var_red_import", m_var_red_import_int);}
 	const int Options::var_red_rusrol_int() const
-		{return m_var_red_rusrol_int;}
+		{return get_control_int("var_red_rusrol", m_var_red_rusrol_int);}
 	const int Options::imp_time_step_opt_int() const
-		{return m_imp_time_step_opt_int;}
+		{return get_control_int("imp_time_step_opt", m_imp_time_step_opt_int);}
 	const int Options::imp_vel_stats_int() const
-		{return m_imp_vel_stats_int;}
+		{return get_control_int("imp_vel_stats", m_imp_vel_stats_int);}
 	const int Options::imp_iz_recomb_int() const
-		{return m_imp_iz_recomb_int;}
-	const int Options::geotype_int() const
-		{return m_geotype_int;}
+		{return get_control_int("imp_iz_recomb", m_imp_iz_recomb_int);}
 	const int Options::min_xbound_type_int() const
-		{return m_min_xbound_type_int;}
+		{return get_control_int("min_xbound_type", m_min_xbound_type_int);}
 
 	// Setter declarations for internal control variables
 	void Options::set_var_red_split_int(int var_red_split_int)

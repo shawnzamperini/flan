@@ -144,21 +144,21 @@ namespace Gkyl
 		read_gij(grid_data, gkyl_gij_12, opts, "12");
 		read_gij(grid_data, gkyl_gij_22, opts, "22");
 
-		// Read in dual basis vectors
-		std::cout << "  - Dual basis vectors\n";
-		read_dual_basis(grid_data, gkyl_dxdX, opts, "xX");
-		read_dual_basis(grid_data, gkyl_dxdY, opts, "xY");
-		read_dual_basis(grid_data, gkyl_dxdZ, opts, "xZ");
-		read_dual_basis(grid_data, gkyl_dydX, opts, "yX");
-		read_dual_basis(grid_data, gkyl_dydY, opts, "yY");
-		read_dual_basis(grid_data, gkyl_dydZ, opts, "yZ");
-		read_dual_basis(grid_data, gkyl_dzdX, opts, "zX");
-		read_dual_basis(grid_data, gkyl_dzdY, opts, "zY");
-		read_dual_basis(grid_data, gkyl_dzdZ, opts, "zZ");
+		// Read in tangent basis vector (dz/dX) of coordinate system
+		std::cout << "  - Tangent basis vector\n";
+		read_tangent_basis(grid_data, gkyl_dxdX, opts, "xX");
+		read_tangent_basis(grid_data, gkyl_dxdY, opts, "xY");
+		read_tangent_basis(grid_data, gkyl_dxdZ, opts, "xZ");
+		read_tangent_basis(grid_data, gkyl_dydX, opts, "yX");
+		read_tangent_basis(grid_data, gkyl_dydY, opts, "yY");
+		read_tangent_basis(grid_data, gkyl_dydZ, opts, "yZ");
+		read_tangent_basis(grid_data, gkyl_dzdX, opts, "zX");
+		read_tangent_basis(grid_data, gkyl_dzdY, opts, "zY");
+		read_tangent_basis(grid_data, gkyl_dzdZ, opts, "zZ");
 
-		// Read in covariant components of the magnetic field unit vector 
-		std::cout << "  - Covariant magnetic field unit vectors\n";
-		read_covariant_b(grid_data, gkyl_b_x, gkyl_b_y, gkyl_b_z, opts);
+		// Read in covariant components of coordinate system 
+		std::cout << "  - Covariant components\n";
+		read_covariant_comp_b(grid_data, gkyl_b_x, gkyl_b_y, gkyl_b_z, opts);
 		
 		// Calculate Cartesian components of the magnetic field
 		std::cout << "  - Magnetic field\n";
@@ -702,18 +702,18 @@ namespace Gkyl
 			data_type == "metric_coeff11" ||
 			data_type == "metric_coeff12" ||
 			data_type == "metric_coeff22" ||
-			data_type == "dual_comp_xX" ||
-			data_type == "dual_comp_xY" ||
-			data_type == "dual_comp_xZ" ||
-			data_type == "dual_comp_yX" ||
-			data_type == "dual_comp_yY" ||
-			data_type == "dual_comp_yZ" ||
-			data_type == "dual_comp_zX" ||
-			data_type == "dual_comp_zY" ||
-			data_type == "dual_comp_zZ" ||
-			data_type == "covariant_mag_x" ||
-			data_type == "covariant_mag_y" ||
-			data_type == "covariant_mag_z")
+			data_type == "tangent_basis_xX" ||
+			data_type == "tangent_basis_xY" ||
+			data_type == "tangent_basis_xZ" ||
+			data_type == "tangent_basis_yX" ||
+			data_type == "tangent_basis_yY" ||
+			data_type == "tangent_basis_yZ" ||
+			data_type == "tangent_basis_zX" ||
+			data_type == "tangent_basis_zY" ||
+			data_type == "tangent_basis_zZ" ||
+			data_type == "covariant_comp_b_x" ||
+			data_type == "covariant_comp_b_y" ||
+			data_type == "covariant_comp_b_z")
 		{
 			std::vector<std::string> interp_settings = load_interp_settings();
 			read_gkyl_cmd_ss << " --gkyl_basis_type=" << interp_settings[0]
@@ -813,15 +813,18 @@ namespace Gkyl
 	}
 
 	template <typename T>
-	void read_covariant_b(grid_data_t& grid_data, 
+	void read_covariant_comp_b(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_b_x, Vectors::Vector4D<T>& gkyl_b_y,
 		Vectors::Vector4D<T>& gkyl_b_z, const Options::Options& opts)
 	{
 		using namespace std::string_literals;
 
-		read_data_pgkyl("null"s, "covariant_mag_x", grid_data, gkyl_b_x, opts);
-		read_data_pgkyl("null"s, "covariant_mag_y", grid_data, gkyl_b_y, opts);
-		read_data_pgkyl("null"s, "covariant_mag_z", grid_data, gkyl_b_z, opts);
+		read_data_pgkyl("null"s, "covariant_comp_b_x", grid_data, gkyl_b_x, 
+			opts);
+		read_data_pgkyl("null"s, "covariant_comp_b_y", grid_data, gkyl_b_y, 
+			opts);
+		read_data_pgkyl("null"s, "covariant_comp_b_z", grid_data, gkyl_b_z, 
+			opts);
 	}
 
 	template <typename T>
@@ -933,13 +936,15 @@ namespace Gkyl
 		{
 		for (int l {}; l < zdim; ++l)  // z
 		{	
-			// Magnitude
-			const double bmag {gkyl_bmag(i,j,k,l)};
+			// Magnitude. I am still unsure if the magnetic field needs to be
+			// multiplied by bmag or not! At some point it seemed like the
+			// right thing to do, but now it seems like it isn't.
+			//const double bmag {gkyl_bmag(i,j,k,l)};
+			constexpr double bmag {1.0};
 
 			// Calculate Cartesian components of magnetic field. We do this
-			// by calculating the unit vector component from the duals and
-			// covariant components, then scale by the magnitude for the 
-			// actual component.
+			// by calculating the dot product between the tangent basis
+			// vector (dz/dX) and the magnetic field covariant components (b_i).
 			// BX
 			gkyl_bX(i,j,k,l) = (gkyl_b_x(0,j,k,l) * gkyl_dxdX(0,j,k,l)
 				+ gkyl_b_y(0,j,k,l) * gkyl_dydX(0,j,k,l)
@@ -993,7 +998,7 @@ namespace Gkyl
 	}
 
 	template <typename T>
-	void read_dual_basis(grid_data_t& grid_data, 
+	void read_tangent_basis(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_dzdx, const Options::Options& opts,
 		const std::string& idx)
 	{
@@ -1001,10 +1006,11 @@ namespace Gkyl
 
 		// Assign the correct string for the vector needed. idx is one of
 		// dxdX, dxdY, dxdZ, dydX, dydY, dydZ, dzdX, dzdY, dzdZ
-		std::string dual_basis_str {"dual_comp_"};
-		dual_basis_str += idx;
+		std::string tangent_basis_str {"tangent_basis_"};
+		tangent_basis_str += idx;
 
-		read_data_pgkyl("null"s, dual_basis_str, grid_data, gkyl_dzdx, opts);
+		read_data_pgkyl("null"s, tangent_basis_str, grid_data, 
+			gkyl_dzdx, opts);
 	}
 
 	std::string get_calc_elec_field_py()

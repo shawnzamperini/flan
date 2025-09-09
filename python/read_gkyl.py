@@ -11,9 +11,10 @@ import numpy as np
 # Parameters that are time-independent
 time_independent_data = ["jacobian", "metric_coeff00", 
 	"metric_coeff01", "metric_coeff02", "metric_coeff11", "metric_coeff12", 
-	"metric_coeff22", "dual_comp_xX", "dual_comp_xY", 
-	"dual_comp_xZ", "dual_comp_yX", "dual_comp_yY", "dual_comp_yZ", 
-	"dual_comp_zX", "dual_comp_zY", "dual_comp_zZ"]
+	"metric_coeff22", "tangent_basis_xX", "tangent_basis_xY", 
+	"tangent_basis_xZ", "tangent_basis_yX", "tangent_basis_yY", 
+	"tangent_basis_yZ", "tangent_basis_zX", "tangent_basis_zY", 
+	"tangent_basis_zZ"]
 			
 def load_binary_wrapper(args):
 	"""
@@ -187,16 +188,16 @@ def load_binary_params(args):
 
 	# bi is the components of the unit vector of the covariant magentic 
 	# field in each x, y, z direction.
-	elif (args.gkyl_data_type in ["covariant_mag_x", "covariant_mag_y", 
-		"covariant_mag_z"]):
+	elif (args.gkyl_data_type in ["covariant_comp_b_x", "covariant_comp_b_y", 
+		"covariant_comp_b_z"]):
 		data_dname = "b_i"
 
 		# Magnetic field components
-		if (args.gkyl_data_type == "covariant_mag_x"):
+		if (args.gkyl_data_type == "covariant_comp_b_x"):
 			comp = 0
-		elif (args.gkyl_data_type == "covariant_mag_y"):
+		elif (args.gkyl_data_type == "covariant_comp_b_y"):
 			comp = 1
-		elif (args.gkyl_data_type == "covariant_mag_z"):
+		elif (args.gkyl_data_type == "covariant_comp_b_z"):
 			comp = 2
 		value_scale = 1.0
 
@@ -228,21 +229,22 @@ def load_binary_params(args):
 
 		value_scale = 1.0
 	
-	# Dual vector components, (xX = dx/dX, ...)
-	elif (args.gkyl_data_type in ["dual_comp_xX", "dual_comp_xY", 
-		"dual_comp_xZ", "dual_comp_yX", "dual_comp_yY", "dual_comp_yZ", 
-		"dual_comp_zX", "dual_comp_zY", "dual_comp_zZ"]):
+	# Tangent basis vector components, (xX = dx/dX, ...)
+	elif (args.gkyl_data_type in ["tangent_basis_xX", "tangent_basis_xY", 
+		"tangent_basis_xZ", "tangent_basis_yX", "tangent_basis_yY", 
+		"tangent_basis_yZ", "tangent_basis_zX", "tangent_basis_zY", 
+		"tangent_basis_zZ"]):
 		data_dname = "dzdx"
 		
-		if args.gkyl_data_type == "dual_comp_xX": comp = 0
-		elif args.gkyl_data_type == "dual_comp_xY": comp = 1
-		elif args.gkyl_data_type == "dual_comp_xZ": comp = 2
-		elif args.gkyl_data_type == "dual_comp_yX": comp = 3
-		elif args.gkyl_data_type == "dual_comp_yY": comp = 4
-		elif args.gkyl_data_type == "dual_comp_yZ": comp = 5
-		elif args.gkyl_data_type == "dual_comp_zX": comp = 6
-		elif args.gkyl_data_type == "dual_comp_zY": comp = 7
-		elif args.gkyl_data_type == "dual_comp_zZ": comp = 8
+		if args.gkyl_data_type == "tangent_basis_xX": comp = 0
+		elif args.gkyl_data_type == "tangent_basis_xY": comp = 1
+		elif args.gkyl_data_type == "tangent_basis_xZ": comp = 2
+		elif args.gkyl_data_type == "tangent_basis_yX": comp = 3
+		elif args.gkyl_data_type == "tangent_basis_yY": comp = 4
+		elif args.gkyl_data_type == "tangent_basis_yZ": comp = 5
+		elif args.gkyl_data_type == "tangent_basis_zX": comp = 6
+		elif args.gkyl_data_type == "tangent_basis_zY": comp = 7
+		elif args.gkyl_data_type == "tangent_basis_zZ": comp = 8
 
 		value_scale = 1.0
 
@@ -284,10 +286,10 @@ def load_binary_path(args, data_dname, frame):
 		"magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
 		"metric_coeff00", "metric_coeff01", "metric_coeff02", 
 		"metric_coeff11", "metric_coeff12", "metric_coeff22",
-		"dual_comp_xX", "dual_comp_xY", "dual_comp_xZ", 
-		"dual_comp_yX", "dual_comp_yY", "dual_comp_yZ", 
-		"dual_comp_zX", "dual_comp_zY", "dual_comp_zZ",
-		"covariant_mag_x", "covariant_mag_y", "covariant_mag_z"]):
+		"tangent_basis_xX", "tangent_basis_xY", "tangent_basis_xZ", 
+		"tangent_basis_yX", "tangent_basis_yY", "tangent_basis_yZ", 
+		"tangent_basis_zX", "tangent_basis_zY", "tangent_basis_zZ",
+		"covariant_comp_b_x", "covariant_comp_b_y", "covariant_comp_b_z"]):
 		path = args.gkyl_dir + "/" + args.gkyl_case_name + \
 			"-" + data_dname \
 			+ ".gkyl"
@@ -363,9 +365,10 @@ def load_binary(path, args, comp, value_scale=1.0):
 	# Only time-dependent data has time in it
 	if (args.gkyl_data_type not in ["jacobian", "metric_coeff00", 
 		"metric_coeff01", "metric_coeff02", "metric_coeff11", 
-		"metric_coeff12", "metric_coeff22", "dual_comp_xX", "dual_comp_xY", 
-		"dual_comp_xZ", "dual_comp_yX", "dual_comp_yY", "dual_comp_yZ", 
-		"dual_comp_zX", "dual_comp_zY", "dual_comp_zZ"]):
+		"metric_coeff12", "metric_coeff22", "tangent_basis_xX", 
+		"tangent_basis_xY", "tangent_basis_xZ", "tangent_basis_yX", 
+		"tangent_basis_yY", "tangent_basis_yZ", "tangent_basis_zX", 
+		"tangent_basis_zY", "tangent_basis_zZ"]):
 		time = data.ctx["time"]
 	else:
 		time = []
@@ -493,10 +496,10 @@ def main():
 		"magnetic_unit_Y", "magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
 		"metric_coeff00", "metric_coeff01", "metric_coeff02", "metric_coeff11",
 		"metric_coeff12", "metric_coeff22", "par_flow", "vperp_sq",
-		"dual_comp_xX", "dual_comp_xY", "dual_comp_xZ", 
-		"dual_comp_yX", "dual_comp_yY", "dual_comp_yZ", 
-		"dual_comp_zX", "dual_comp_zY", "dual_comp_zZ",
-		"covariant_mag_x", "covariant_mag_y", "covariant_mag_z"]
+		"tangent_basis_xX", "tangent_basis_xY", "tangent_basis_xZ", 
+		"tangent_basis_yX", "tangent_basis_yY", "tangent_basis_yZ", 
+		"tangent_basis_zX", "tangent_basis_zY", "tangent_basis_zZ",
+		"covariant_comp_b_x", "covariant_comp_b_y", "covariant_comp_b_z"]
 
 	# Parse command line arguments
 	parser = argparse.ArgumentParser(

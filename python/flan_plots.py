@@ -8,6 +8,8 @@ from matplotlib.animation import PillowWriter
 
 # Some global variables
 g_fontsize = 14
+amu_to_kg = 1.66e-27
+elec = -1.602e-19
 
 # Turn off interactive mode. This is to avoid plotting each individual plot
 # when we are generating an animation.
@@ -507,23 +509,179 @@ class FlanPlots:
 	def calc_exb_drift(self):
 		"""
 		Calculate and return the X,Y,Z components of the ExB drift
+
+		Outputs: Returns a tuple of the X,Y,Z ExB drift components
 		"""
-		pass
+		
+		# Pull out some arrays
+		EX = self.nc["E_X"][:]
+		EY = self.nc["E_Y"][:]
+		EZ = self.nc["E_Z"][:]
+		BX = self.nc["B_X"][:]
+		BY = self.nc["B_Y"][:]
+		BZ = self.nc["B_Z"][:]
+		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
+
+		# Perpendicular component of the electric field
+		scalar_proj = (EX * BX + EY * BY + EZ * BZ)
+		EparX = scalar_proj * BX / Bsq
+		EparY = scalar_proj * BY / Bsq
+		EparZ = scalar_proj * BZ / Bsq
+		EperpX = EX - EparX
+		EperpY = EY - EparY
+		EperpZ = EZ - EparZ
+
+		# Calculate each component and return 
+		v_exb_X = (EperpY * BZ - EperpZ * BY) / Bsq
+		v_exb_Y = -(EperpX * BZ - EperpZ * BX) / Bsq
+		v_exb_Z = (EperpX * BY - EperpY * BX) / Bsq
+		return v_exb_X, v_exb_Y, v_exb_Z
 	
-	def calc_gradb_drift(self):
+	def calc_gradb_drift(self, charge):
+		"""
+		Calculate and return the X,Y,Z components of the grad-B drift
+
+		Inputs
+			- charge: Charge of the impurity
+
+		Outputs: Returns a tuple of the X,Y,Z grad-B drift components
+		"""
+		
+		# Pull out some arrays
+		vX = self.nc["v_X"][:]
+		vY = self.nc["v_Y"][:]
+		vZ = self.nc["v_Z"][:]
+		BX = self.nc["B_X"][:]
+		BY = self.nc["B_Y"][:]
+		BZ = self.nc["B_Z"][:]
+		gradBX = self.nc["gradB_X"][:]
+		gradBY = self.nc["gradB_Y"][:]
+		gradBZ = self.nc["gradB_Z"][:]
+		mz_kg = self.nc["mz"][:] * amu_to_kg
+
+		# Magnetic field magnitude squared
+		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
+
+		# Perpendicular to B velocity. Can obtain the perpendicular components
+		# by subtracting the parallel projection of the impurity velocity from 
+		# the total velocity vector.
+		scalar_proj = (vX * BX + vY * BY + vZ * BZ)
+		vparX = scalar_proj * BX / Bsq
+		vparY = scalar_proj * BY / Bsq
+		vparZ = scalar_proj * BZ / Bsq
+		vperpX = vX - vparX
+		vperpY = vY - vparY
+		vperpZ = vZ - vparZ
+		vperp_sq = np.square(vperpX) + np.square(vperpY) + np.square(vperpZ)
+
+		# Cyclotron frequency
+		omega_c = np.abs(charge * elec) * np.sqrt(Bsq) / mz_kg
+
+		# Grad-B drift components for a *positively* charged particle. There
+		# is a -/+ sign in front, where the + applies to positive charge. 
+		# See Freidberg Eq. 8.105.
+		v_gradB_X = vperp_sq / (2 * omega_c * Bsq) * (BY * gradBZ - BZ * gradBY)
+		v_gradB_Y = -vperp_sq / (2 * omega_c * Bsq) * (BX * gradBZ - BZ * gradBX)
+		v_gradB_Z = vperp_sq / (2 * omega_c * Bsq) * (BX * gradBY - BY * gradBX)
+		return v_gradB_X, v_gradB_Y, v_gradB_Z
+	
+	def calc_polarization_drift(self, charge):
+		"""
+		Calculate and return the X,Y,Z components of the polarization drift
+
+		Inputs
+			- charge: Charge of the impurity
+
+		Outputs: Returns a tuple of the X,Y,Z polarization drift components
 		"""
 
-		"""
-		pass
-	
-	def calc_polarization_drift(self):
-		"""
+		# Pull out some arrays
+		vX = self.nc["v_X"][:]
+		vY = self.nc["v_Y"][:]
+		vZ = self.nc["v_Z"][:]
+		BX = self.nc["B_X"][:]
+		BY = self.nc["B_Y"][:]
+		BZ = self.nc["B_Z"][:]
+		mz_kg = self.nc["mz"][:] * amu_to_kg
+		t = self.nc["time"][:]
 
-		"""
-		pass
-	
-	def calc_curve_drift(self):
-		"""
+		# Magnetic field magnitude squared
+		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
 
+		# Magnetic field unit vector
+		bX = BX / Bsq
+		bY = BY / Bsq
+		bZ = BZ / Bsq
+		
+		# Cyclotron frequency
+		omega_c = np.abs(charge * elec) * np.sqrt(Bsq) / mz_kg
+
+		# The polarization drift includes the acceleration, which is not 
+		# actually stored but we can estimate it easily with the change in
+		# average velocity over each time frame.
+		aX = np.zeros(vX.shape)
+		aY = np.zeros(vY.shape)
+		aZ = np.zeros(vZ.shape)
+		for i in range(1, len(t)):
+			dt = t[i] - t[i-1]
+			aX[i] = (vX[i] - vX[i-1]) / dt
+			aY[i] = (vY[i] - vY[i-1]) / dt
+			aZ[i] = (vZ[i] - vZ[i-1]) / dt
+
+		# Polarization drift components for a *positively* charged particle.
+		# There is a -/+ sign in front, where the + applies to positive charge. 
+		# See Freidberg Eq. 8.105.
+		v_pol_X = (bY * aZ - bZ * aY) / omega_c
+		v_pol_Y = -(bX * aZ - bZ * aX) / omega_c
+		v_pol_Z = (bX * aY - bY * aX) / omega_c
+		return v_pol_X, v_pol_Y, v_pol_Z
+	
+	def calc_curvature_drift(self, charge):
 		"""
-		pass
+		Calculate and return the X,Y,Z components of the curvature drift
+
+		Inputs
+			- charge: Charge of the impurity
+
+		Outputs: Returns a tuple of the X,Y,Z curvature drift components
+		"""
+		
+		# Pull out some arrays
+		vX = self.nc["v_X"][:]
+		vY = self.nc["v_Y"][:]
+		vZ = self.nc["v_Z"][:]
+		BX = self.nc["B_X"][:]
+		BY = self.nc["B_Y"][:]
+		BZ = self.nc["B_Z"][:]
+		mz_kg = self.nc["mz"][:] * amu_to_kg
+
+		# Magnetic field magnitude squared
+		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
+		B = np.sqrt(Bsq)
+
+		# Cyclotron frequency
+		omega_c = np.abs(charge * elec) * np.sqrt(Bsq) / mz_kg
+
+		# Parallel to B velocity components
+		vparX = (vX * BX + vY * BY + vZ * BZ) * BX / Bsq
+		vparY = (vX * BX + vY * BY + vZ * BZ) * BY / Bsq
+		vparZ = (vX * BX + vY * BY + vZ * BZ) * BZ / Bsq
+		vpar_sq = np.square(vparX) + np.square(vparY) + np.square(vparZ)
+
+		# Curvature vector. This is normally defined in terms of the magnetic
+		# field, but we have the X, Y coordinates so can just use that here.
+		X = self.nc["X"][:]
+		Y = self.nc["Y"][:]
+		R_sq = np.square(X) + np.square(Y)
+
+		# Calculate each component of curvature drift and return
+		v_curv_X = np.zeros(vX.shape)
+		v_curv_Y = np.zeros(vY.shape)
+		v_curv_Z = np.zeros(vZ.shape)
+		for i in range(vX.shape[0]):
+			v_curv_X[i] = (Y * BZ[i]) * vpar_sq[i] / (omega_c[i] * R_sq * B[i])
+			v_curv_Y[i] = -(X * BZ[i]) * vpar_sq[i] / (omega_c[i] 
+				* R_sq[i] * B[i])
+			v_curv_Z[i] = (X * BY[i] - Y * BX[i]) * vpar_sq[i] / (omega_c[i] 
+				* R_sq * B[i])
+		return v_curv_X, v_curv_Y, v_curv_Z

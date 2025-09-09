@@ -32,6 +32,7 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType> m_vY {};
 		Vectors::Vector4D<BkgFPType> m_vZ {};
 		Vectors::Vector4D<BkgFPType> m_gyrorad {};
+		Vectors::Vector4D<BkgFPType> m_charge {};
 		bool m_vel_stats {};
 
 	public:
@@ -48,6 +49,7 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType>& get_vY();
 		Vectors::Vector4D<BkgFPType>& get_vZ();
 		Vectors::Vector4D<BkgFPType>& get_gyrorad();
+		Vectors::Vector4D<BkgFPType>& get_charge();
 		bool get_vel_stats();
 
 		// Overload of + to add counts and weights together, returned as a 
@@ -74,6 +76,10 @@ namespace Impurity
 			const int yidx, const int zidx, const Impurity& imp, 
 			const Background::Background& bkg);
 
+		// Function to increase charge
+		void add_charge(const int tidx, const int xidx, const int yidx, 
+			const int zidx, const BkgFPType value);
+
 		// Calculate the impurity density using the data stored in counts and 
 		// weights.
 		void calc_density(const Background::Background& bkg, 
@@ -84,6 +90,9 @@ namespace Impurity
 
 		// Calculate the average gyroradius. 
 		void calc_gyrorad();
+
+		// Calculate the average charge. 
+		void calc_charge();
 	};
 
 }

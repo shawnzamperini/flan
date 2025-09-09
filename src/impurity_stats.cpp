@@ -48,6 +48,7 @@ namespace Impurity
 		//, m_vy (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 		//, m_vz (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 		, m_gyrorad (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
+		, m_charge (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 		, m_vel_stats {vel_stats}
 	{
 		// Issue: This code seems to not be correct, not sure how yet...
@@ -133,6 +134,16 @@ namespace Impurity
 	Vectors::Vector4D<BkgFPType>& Statistics::get_gyrorad() {return m_gyrorad;}
 
 	/**
+	* @brief Accessor for charge data
+	* @return Vector4D<BkgFPType>
+	* @sa calc_charge()
+	*
+	* calc_charge() is used to turn the aggregated data into average
+	* charge values at each location.
+	*/
+	Vectors::Vector4D<BkgFPType>& Statistics::get_charge() {return m_charge;}
+
+	/**
 	* @brief Accessor for if velocity stats are being tracked
 	* @return Returns boolean true if velocity stats are being tracked, false
 	* if not.
@@ -153,6 +164,7 @@ namespace Impurity
 		ret_stats.m_counts = m_counts + other.m_counts;
 		ret_stats.m_weights = m_weights + other.m_weights;
 		ret_stats.m_gyrorad = m_gyrorad + other.m_gyrorad;
+		ret_stats.m_charge = m_charge + other.m_charge;
 
 		// Only do this is we're tracking velocity stats
 		if (m_vel_stats)
@@ -198,7 +210,8 @@ namespace Impurity
 	*
 	*/
 	void Statistics::add_vels(const int tidx, const int xidx, const int yidx,
-		const int zidx, const BkgFPType vX, const BkgFPType vY, const BkgFPType vZ)
+		const int zidx, const BkgFPType vX, const BkgFPType vY, 
+		const BkgFPType vZ)
 	{
 		// Add velocities to the running total at each cell location
 		m_vX(tidx, xidx, yidx, zidx) += vX;
@@ -237,6 +250,20 @@ namespace Impurity
 			m_gyrorad(tidx, xidx, yidx, zidx) += gyrorad;
 		}
 		*/
+	}
+
+	/**
+	* @brief Increment charge at the specified indices
+	* @param tidx Time index
+	* @param xidx x index
+	* @param yidx y index
+	* @param zidx z index
+	* @param value Charge to add to the cell
+	*/
+	void Statistics::add_charge(const int tidx, const int xidx, 
+		const int yidx, const int zidx, const BkgFPType value)
+	{
+		m_charge(tidx, xidx, yidx, zidx) += value;
 	}
 
 	/**
@@ -354,6 +381,36 @@ namespace Impurity
 			else
 			{
 				m_gyrorad(i,j,k,l) = 0.0;
+			}
+		}
+		}
+		}	
+		}
+	}
+
+	/**
+	* @brief Calculate the average charge at each cell location
+	*/
+	void Statistics::calc_charge()
+	{
+		// Average charge is just the running sum divided by the number of
+		// counts in the cell.
+		for (int i {}; i < m_dim1; ++i)
+		{
+		for (int j {}; j < m_dim2; ++j)
+		{
+		for (int k {}; k < m_dim3; ++k)
+		{
+		for (int l {}; l < m_dim4; ++l)
+		{
+			int counts {m_counts(i,j,k,l)};
+			if (counts > 0)
+			{
+				m_charge(i,j,k,l) /= counts;
+			}
+			else
+			{
+				m_charge(i,j,k,l) = 0.0;
 			}
 		}
 		}
