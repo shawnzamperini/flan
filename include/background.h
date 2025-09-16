@@ -59,11 +59,14 @@ namespace Background
 		Vectors::Vector3D<BkgFPType> m_gij_12 {};
 		Vectors::Vector3D<BkgFPType> m_gij_22 {};
 
-		// The following are just for debugging
+		// The following are just for debugging and post analysis
 		Vectors::Vector4D<BkgFPType> m_bR {};
 		Vectors::Vector3D<BkgFPType> m_b_x {};
 		Vectors::Vector3D<BkgFPType> m_b_y {};
 		Vectors::Vector3D<BkgFPType> m_b_z {};
+		Vectors::Vector4D<BkgFPType> m_gradeX {};
+		Vectors::Vector4D<BkgFPType> m_gradeY {};
+		Vectors::Vector4D<BkgFPType> m_gradeZ {};
 
 		int m_dim1 {};
 		int m_dim2 {};
@@ -94,6 +97,9 @@ namespace Background
 		const Vectors::Vector4D<BkgFPType>& get_eX() const;
 		const Vectors::Vector4D<BkgFPType>& get_eY() const;
 		const Vectors::Vector4D<BkgFPType>& get_eZ() const;
+		const Vectors::Vector4D<BkgFPType>& get_gradeX() const;
+		const Vectors::Vector4D<BkgFPType>& get_gradeY() const;
+		const Vectors::Vector4D<BkgFPType>& get_gradeZ() const;
 		const Vectors::Vector4D<BkgFPType>& get_uX() const;
 		const Vectors::Vector4D<BkgFPType>& get_uY() const;
 		const Vectors::Vector4D<BkgFPType>& get_uZ() const;
@@ -180,6 +186,9 @@ namespace Background
 		void move_into_eX(Vectors::Vector4D<BkgFPType>& eX); 
 		void move_into_eY(Vectors::Vector4D<BkgFPType>& eY);
 		void move_into_eZ(Vectors::Vector4D<BkgFPType>& eZ);
+		void move_into_gradeX(Vectors::Vector4D<BkgFPType>& gradeX); 
+		void move_into_gradeY(Vectors::Vector4D<BkgFPType>& gradeY);
+		void move_into_gradeZ(Vectors::Vector4D<BkgFPType>& gradeZ);
 		void move_into_uX(Vectors::Vector4D<BkgFPType>& uX); 
 		void move_into_uY(Vectors::Vector4D<BkgFPType>& uY);
 		void move_into_uZ(Vectors::Vector4D<BkgFPType>& uZ);

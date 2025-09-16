@@ -117,6 +117,21 @@ namespace Options
 		}
 	}
 
+	// calc_grad_elec
+	void Options::set_calc_grad_elec(std::string calc_grad_elec) 
+		{
+			// Only assign if valid option, leaving as default if not
+			if (check_input<std::string>("calc_grad_elec", calc_grad_elec, 
+				{"off", "on"}))
+			{
+				m_calc_grad_elec = calc_grad_elec;
+			}
+
+			// Assign control integers
+			if (calc_grad_elec == "off") m_calc_grad_elec_int = 0;
+			else if (calc_grad_elec == "on") m_calc_grad_elec_int = 1;
+		}
+
 	// min_xbound_type
 	void Options::set_min_xbound_type(std::string min_xbound_type) 
 	{
@@ -568,6 +583,8 @@ namespace Options
 		{return get_control_int("imp_iz_recomb", m_imp_iz_recomb_int);}
 	const int Options::min_xbound_type_int() const
 		{return get_control_int("min_xbound_type", m_min_xbound_type_int);}
+	const int Options::calc_grad_elec_int() const
+		{return get_control_int("calc_grad_elec", m_calc_grad_elec_int);}
 
 	// Setter declarations for internal control variables
 	void Options::set_var_red_split_int(int var_red_split_int)

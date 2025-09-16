@@ -395,6 +395,20 @@ namespace SaveResults
 		save_vector_4d(nc_file, bkg.get_gradbZ(), "gradB_Z", 
 			dim1, dim2, dim3, dim4, desc, "(T)");
 
+		// Electric field gradient
+		if (opts.calc_grad_elec_int() == 1)
+		{
+			desc = "electric field gradient (X)";
+			save_vector_4d(nc_file, bkg.get_gradeX(), "gradE_X", 
+				dim1, dim2, dim3, dim4, desc, "(V/m2)");
+			desc = "electric field gradient (Y)";
+			save_vector_4d(nc_file, bkg.get_gradeY(), "gradE_Y", 
+				dim1, dim2, dim3, dim4, desc, "(V/m2)");
+			desc = "electric field gradient (Z)";
+			save_vector_4d(nc_file, bkg.get_gradeZ(), "gradE_Z", 
+				dim1, dim2, dim3, dim4, desc, "(V/m2)");
+		}
+
 		// Impurity counts
 		desc = "impurity counts";
 		save_vector_4d(nc_file, imp_stats.get_counts(), "Nz", 
@@ -431,7 +445,7 @@ namespace SaveResults
 
 		// Impurity charge
 		desc = "average impurity charge";
-		save_vector_4d(nc_file, imp_stats.get_charge(), "Zz", 
+		save_vector_4d(nc_file, imp_stats.get_charge(), "qz", 
 			dim1, dim2, dim3, dim4, desc, "()");
 
         // Jacobian

@@ -246,7 +246,7 @@ namespace Gkyl
 	* potential, and the magnetic field gradient. This function actually calls 
 	* the python script calc_elec.py.
 	*/
-	void calc_gradients();
+	void calc_gradients(const Options::Options& opts);
 
 	/**
 	* @brief Calculate cell X,Y,Z coordinates for center of cells
@@ -289,6 +289,14 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eZ);
+
+	/**
+	* @brief Read in electric field gradient components (X,Y,Z) into arrays
+	*/
+	void read_grad_elec_field(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradeX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradeY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradeZ);
 
 	/**
 	* @brief Read in magnetic field gradient components (X,Y,Z) into arrays

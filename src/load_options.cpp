@@ -120,6 +120,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "calc_grad_elec") 
+			{
+				auto set_func = std::bind(&Options::set_calc_grad_elec, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "min_xbound_type") 
 			{
 				auto set_func = std::bind(&Options::set_min_xbound_type, &opts, 
