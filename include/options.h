@@ -45,6 +45,7 @@ namespace Options
 		double m_gkyl_ion_mass_amu                 {2.014};
 		std::string m_gkyl_file_type            {"binary"};
 		std::string m_gkyl_moment_type    {"bimaxwellian"};
+		std::string m_calc_grad_elec               {"off"};
 
 		// Geometry options
 		double m_lcfs_x                              {0.0};
@@ -120,6 +121,7 @@ namespace Options
 		int m_imp_vel_stats_int		{-1};
 		int m_imp_iz_recomb_int		{-1};
 		int m_min_xbound_type_int	{-1};
+		int m_calc_grad_elec_int	{-1};
 
 		/**
 		* @brief Check input against a list of valid options
@@ -155,6 +157,7 @@ namespace Options
 		void set_gkyl_ion_mass_amu(double gkyl_ion_mass_amu);
 		void set_gkyl_file_type(std::string gkyl_file_type);
 		void set_gkyl_moment_type(std::string gkyl_moment_type);
+		void set_calc_grad_elec(std::string calc_grad_elec);
 		void set_min_xbound_type(std::string min_xbound_type);
 		void set_lcfs_x(double lcfs_x);
 		void set_imp_atom_num(int imp_atom_num);
@@ -209,6 +212,7 @@ namespace Options
 		const double gkyl_ion_mass_amu() const;
 		const std::string& gkyl_file_type() const;
 		const std::string& gkyl_moment_type() const;
+		const std::string& calc_grad_elec() const;
 		const std::string& min_xbound_type() const;
 		const double lcfs_x() const;
 		const int imp_atom_num() const;
@@ -269,6 +273,7 @@ namespace Options
 		const int imp_vel_stats_int() const;
 		const int imp_iz_recomb_int() const;
 		const int min_xbound_type_int() const;
+		const int calc_grad_elec_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);

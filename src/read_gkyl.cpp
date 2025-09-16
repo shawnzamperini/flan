@@ -75,6 +75,9 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_gradbZ {}; // space
 		Vectors::Vector4D<BkgFPType> gkyl_eX {}; // Electric field components
 		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physical space
+		Vectors::Vector4D<BkgFPType> gkyl_gradeX {}; // Electric field components
+		Vectors::Vector4D<BkgFPType> gkyl_gradeY {}; // in physical space
+		Vectors::Vector4D<BkgFPType> gkyl_gradeZ {};
 		Vectors::Vector4D<BkgFPType> gkyl_eZ {};
 		Vectors::Vector4D<BkgFPType> gkyl_gradeX {}; // Electric field gradient components
 		Vectors::Vector4D<BkgFPType> gkyl_gradeY {}; // in physical space
@@ -176,11 +179,19 @@ namespace Gkyl
 
 		// At this point calculate gradients (E, gradB)
 		std::cout << "Calculating gradient fields...\n";
-		calc_gradients();
+		calc_gradients(opts);
 
 		// Read in electric field
 		std::cout << "  - Electric field\n";
 		read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
+
+		// Read in electric field gradient (optional)
+		if (opts.calc_grad_elec_int() == 1)
+		{
+			std::cout << "  - Electric field gradient\n";
+			read_grad_elec_field(grid_data, gkyl_gradeX, gkyl_gradeY, 
+				gkyl_gradeZ);
+		}
 
 		// These arrays are only needed if the gkyl moments are BiMaxwellian
 		// (that is, it has vperp and vpar). We use vperp and gradB in the
@@ -241,6 +252,14 @@ namespace Gkyl
 		bkg.move_into_grid_Y(gkyl_grid_Y);
 		bkg.move_into_grid_Z(gkyl_grid_Z);
 		
+		// Only move these if they were calculated
+		if (opts.calc_grad_elec_int() == 1)
+		{
+			bkg.move_into_gradeX(gkyl_gradeX);
+			bkg.move_into_gradeY(gkyl_gradeY);
+			bkg.move_into_gradeZ(gkyl_gradeZ);
+		}
+
 		// Only needed for debuggin purposes, delete if not debugging
 		bkg.move_into_gradbX(gkyl_gradbX);
 		bkg.move_into_gradbY(gkyl_gradbY);
@@ -1033,7 +1052,7 @@ namespace Gkyl
 		}
 	}
 	
-	void calc_gradients()
+	void calc_gradients(const Options::Options& opts)
 	{
 		// See if a file already exists and load it. If not, calculate it.
 		// Let the user know one has been loaded, just in case they want Flan
@@ -1069,10 +1088,21 @@ namespace Gkyl
 					= omp_get_num_threads();
 			}
 
-			// The convert to a command
+
+			// Then convert to a command
 			std::stringstream calc_elec_field_cmd_ss {};
 			calc_elec_field_cmd_ss << "python " << calc_elec_field_py
 				<< " --num-processes " << num_processes; 
+
+			// Can optionally calculate electric field gradient. It's not used
+			// in the code, but can be useful in post-simulation analysis. 
+			// Append command line option if needed.
+			if (opts.calc_grad_elec_int() == 1)
+			{
+				calc_elec_field_cmd_ss << " --grad-elec";
+			}
+
+			// Finish creating command
 			std::string tmp_str {calc_elec_field_cmd_ss.str()};
 			const char* calc_elec_field_cmd {tmp_str.c_str()};
 				
@@ -1269,6 +1299,28 @@ namespace Gkyl
 		gkyl_eY.move_into_data(tmp_dataY);
 		gkyl_eZ.move_into_data(tmp_dataZ);
 		*/
+	}
+
+	void read_grad_elec_field(grid_data_t& grid_data, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradeX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradeY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_gradeZ)
+	{
+		// grad Ex	
+		Vectors::Vector4D<BkgFPType> tmp_dataX
+			{load_values<BkgFPType>("grad_elec_field_X")};
+
+		// grad Ey
+		Vectors::Vector4D<BkgFPType> tmp_dataY
+			{load_values<BkgFPType>("grad_elec_field_Y")};
+
+		// grad Ez
+		Vectors::Vector4D<BkgFPType> tmp_dataZ
+			{load_values<BkgFPType>("grad_elec_field_Z")};
+
+		// Call general fuction to handle calculated-gradient data.
+		read_gradient_data(grid_data, tmp_dataX, tmp_dataY, tmp_dataZ, 
+			gkyl_gradeX, gkyl_gradeY, gkyl_gradeZ);
 	}
 
 	void read_gradb(grid_data_t& grid_data, 

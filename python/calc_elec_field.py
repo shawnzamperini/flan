@@ -206,6 +206,98 @@ def write_field(field_XYZ, fname_base):
 			for j in range(0, len(field_XYZ[i])):
 				np.savetxt(f, field_XYZ[i][j].flatten())
 
+def calc_grad_elec(num_processes):
+	"""
+	Calculate gradient of electric field. This is really a hack, this whole
+	script should be C++'d, just need time.
+	"""
+
+	# We are essentially repeating everything in main. Ideally we'd just
+	# group this in with the potential and magnetic field gradient
+	# calculations, but we need the electric field first!
+
+	# Load each electric field component
+	XYZ = load_XYZ()
+	EX = load_bkg_file("bkg_from_pgkyl_elec_field_X.csv")
+	EY = load_bkg_file("bkg_from_pgkyl_elec_field_Y.csv")
+	EZ = load_bkg_file("bkg_from_pgkyl_elec_field_Z.csv")
+
+	# Calculate magnitude
+	E = np.sqrt(np.square(EX) + np.square(EY) + np.square(EZ))
+
+	# Make sure they are the same length. [0] here is because we have the
+	# electric field for every frame, so just need any random frame to check
+	# against.
+	if (len(XYZ) != len(E[0].flatten())):
+		print("Error! The number of X,Y,Z coordinates does not match the ")
+		print("number of electric field values!")
+		print("  len(XYZ)={}  len(E)={}".format(len(XYZ),	
+			len(E[0].flatten())))
+		return None
+
+	# Define chunk_size and break up into chunks (of frames) of that size. 
+	# If num_processes > number of frames, then just reassign num_processes
+	# to the number of frames.
+	if (num_processes > E.shape[0]): num_processes = E.shape[0]
+	chunk_size = E.shape[0] // num_processes
+
+	# Remainder if num_processes does not evenly divide the number of frames.
+	remainder = E.shape[0] % num_processes
+
+	# Assemble chunks
+	E_chunks = []
+	for i in range(num_processes):
+		start = i * chunk_size
+		end = start + chunk_size
+
+		# Last chunk absorbs remainder
+		if i == num_processes -1:
+			end += remainder
+
+		E_chunks.append(E[start:end])
+
+	# If num_processes does not evenly go into the number of times, then we
+	# need to assign the leftover frame to the last chunk.
+
+	# Zip together into args to be passed below. Note we pass E_chunks twice
+	# just so we don't have to mess with the format expected by 
+	# calc_gradients_3d. 
+	XYZs = [XYZ] * num_processes
+	ntimes = [E.shape[0]] * num_processes
+	args = list(zip(XYZs, E_chunks, E_chunks, ntimes))
+
+	# Create process pool and get each process a chunk of frames
+	shared_counter = Value("i", 0)
+	#print("Calculating gradients...")
+	with Pool(processes=num_processes, initializer=init_counter, 
+		initargs=(shared_counter,)) as pool:
+
+		# Calculate electric field and gradB components
+		results = pool.imap(calc_gradients_3d, args)
+
+		# Put each gradient result into separate lists
+		gEX_list, gEY_list, gEZ_list, _, _, _  \
+			= zip(*results)
+
+	# Clean up terminal from progress printing
+	print(" " * 50, end="\r")
+	print("Frames: {}/{} (100%)".format(E.shape[0], E.shape[0]))
+	
+	# Concatenate along time axis
+	gEX = np.concatenate(gEX_list, axis=0)
+	gEY = np.concatenate(gEY_list, axis=0)
+	gEZ = np.concatenate(gEZ_list, axis=0)
+
+	# Package up together in same format as if not multithreaded
+	grads = (gEX, gEY, gEZ, gEX, gEY, gEZ)
+			
+	# Separate out to be written
+	grad_elec_field_XYZ = grads[0:3]
+
+	# Write out the three X,Y,Z files each
+	write_field(grad_elec_field_XYZ, "bkg_from_pgkyl_grad_elec_field")
+
+
 def init_counter(shared_counter):
 	"""
 	Function to be called at the beginning of each process to access
@@ -214,10 +306,13 @@ def init_counter(shared_counter):
 	global counter
 	counter = shared_counter
 
-def main(num_processes=1):
+def main(num_processes=1, grad_elec=False):
 	"""
 	Controlling function for calculating electric field and magnetic field 
-	gradients
+	gradients.
+
+	num_processes (int): Number of threads to spawn for parallel calculation
+	grad_elec (bool): Calculate gradient of electric field
 	"""
 
 	# Files needed: cell_center_XYZ.csv, bkg_from_pgkyl_potential.csv and
@@ -308,6 +403,10 @@ def main(num_processes=1):
 	write_field(elec_field_XYZ, "bkg_from_pgkyl_elec_field")
 	write_field(gradB_XYZ, "bkg_from_pgkyl_gradb")
 
+	# Now do it all again for the electric field gradient, if desired
+	if grad_elec:
+		calc_grad_elec(num_processes)
+
 if __name__ == "__main__":
 
 	# Command line argument to access number of processes to spawn
@@ -315,10 +414,13 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description=desc)
 	parser.add_argument("-n", "--num-processes", type=int, default=1,
 		help="number of processes to run with")
+	parser.add_argument("-g", "--grad-elec", 
+		action=argparse.BooleanOptionalAction,
+		help="calculate electric field gradient")
 	
 	# Parse, defaults to one process if nothing provided
 	args = parser.parse_args()
 
 	# Run
-	main(args.num_processes)
+	main(args.num_processes, args.grad_elec)
 
