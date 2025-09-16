@@ -76,6 +76,9 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_eX {}; // Electric field components
 		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_eZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_gradeX {}; // Electric field gradient components
+		Vectors::Vector4D<BkgFPType> gkyl_gradeY {}; // in physical space
+		Vectors::Vector4D<BkgFPType> gkyl_gradeZ {};
 		Vectors::Vector4D<BkgFPType> gkyl_uz {}; // Parallel (to z) ion flow
 		Vectors::Vector4D<BkgFPType> gkyl_uX {}; // Flow components
 		Vectors::Vector4D<BkgFPType> gkyl_uY {}; // in physical space

@@ -431,7 +431,7 @@ namespace SaveResults
 
 		// Impurity charge
 		desc = "average impurity charge";
-		save_vector_4d(nc_file, imp_stats.get_charge(), "Zz", 
+		save_vector_4d(nc_file, imp_stats.get_charge(), "qz", 
 			dim1, dim2, dim3, dim4, desc, "()");
 
         // Jacobian

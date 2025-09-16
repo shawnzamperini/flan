@@ -116,7 +116,8 @@ class FlanPlots:
 
 	def plot_frame_xy(self, data_name, frame, z0, showplot=True, 
 		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
-		xlabel="x (m)", ylabel="y (m)", cbar_label=None, rsep=0.0):
+		xlabel="x (m)", ylabel="y (m)", cbar_label=None, rsep=0.0,
+		own_data=None):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -143,12 +144,16 @@ class FlanPlots:
 		# Load cell centers.
 		x, y, z = self.load_cell_centers()
 
-		# Load data at frame.
-		try:
-			data = self.load_data_frame(data_name, frame)
-		except ValueError as e:
-			print(e)
-			return None
+		# Load data at frame, either according to the variable name passed in
+		# or using the data passed in via own_data.
+		if own_data is None:
+			try:
+				data = self.load_data_frame(data_name, frame)
+			except ValueError as e:
+				print(e)
+				return None
+		else:
+			data = own_data[frame]
 
 		# Time at frame, starting it at zero
 		time = self.nc["time"][frame] - self.nc["time"][0]
@@ -194,7 +199,7 @@ class FlanPlots:
 
 	def plot_frame_xz(self, data_name, frame, y0, showplot=True, 
 		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
-		xlabel="x (m)", ylabel="z (m)", cbar_label=None):
+		xlabel="x (m)", ylabel="z (m)", cbar_label=None, own_data=None):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -221,12 +226,16 @@ class FlanPlots:
 		# Load cell centers.
 		x, y, z = self.load_cell_centers()
 
-		# Load data at frame.
-		try:
-			data = self.load_data_frame(data_name, frame)
-		except ValueError as e:
-			print(e)
-			return None
+		# Load data at frame, either according to the variable name passed in
+		# or using the data passed in via own_data.
+		if own_data is None:
+			try:
+				data = self.load_data_frame(data_name, frame)
+			except ValueError as e:
+				print(e)
+				return None
+		else:
+			data = own_data[frame]
 
 		# Time at frame, starting it at zero
 		time = self.nc["time"][frame] - self.nc["time"][0]
@@ -273,7 +282,7 @@ class FlanPlots:
 	def plot_frames_xy(self, data_name, frame_start, frame_end, z0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
 		vmin=None, vmax=None, save_path=None, xlabel="x (m)", ylabel="y (m)",
-		cbar_label=None, rsep=0.0):
+		cbar_label=None, rsep=0.0, own_data=None):
 		"""
 		Combine multiple plots from plot_frame_xy into an animation.
 		"""
@@ -287,7 +296,7 @@ class FlanPlots:
 				
 				try:
 					X, Y, data_xy = self.plot_frame_xy(data_name, f, z0, 
-						showplot=False)
+						showplot=False, own_data=own_data)
 
 				# TypeError will happen if we put in an invalid option for
 				# data_name.
@@ -314,7 +323,7 @@ class FlanPlots:
 
 		# Setup the first frame.
 		X, Y, data_xy = self.plot_frame_xy(data_name, frame_start, z0, 
-			showplot=False)
+			showplot=False, own_data=own_data)
 
 		# These commands are copied from plot_xy_frame. I wanted to have
 		# plot_xy_frame return the fig and associated objects, but I couldn't
@@ -345,7 +354,7 @@ class FlanPlots:
 			# Call for the next frame. i is being passed in zero-indexed, so to
 			# get the frame we offset it from the start_frame.
 			X, Y, data_xy = self.plot_frame_xy(data_name, frame_start + i, z0, 
-				showplot=False)
+				showplot=False, own_data=own_data)
 
 			# Time at frame, starting it at zero
 			time = self.nc["time"][i] - self.nc["time"][0]
@@ -391,7 +400,7 @@ class FlanPlots:
 	def plot_frames_xz(self, data_name, frame_start, frame_end, y0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
 		vmin=None, vmax=None, save_path=None, xlabel="x (m)", ylabel="z (m)",
-		cbar_label=None, rsep=0.0):
+		cbar_label=None, rsep=0.0, own_data=None):
 		"""
 		Combine multiple plots from plot_frame_xz into an animation.
 		"""
@@ -405,7 +414,7 @@ class FlanPlots:
 				
 				try:
 					X, Z, data_xz = self.plot_frame_xz(data_name, f, y0, 
-						showplot=False)
+						showplot=False, own_data=own_data)
 
 				# TypeError will happen if we put in an invalid option for
 				# data_name.
@@ -432,7 +441,7 @@ class FlanPlots:
 
 		# Setup the first frame.
 		X, Z, data_xz = self.plot_frame_xz(data_name, frame_start, y0, 
-			showplot=False)
+			showplot=False, own_data=own_data)
 
 		# These commands are copied from plot_xy_frame. I wanted to have
 		# plot_xy_frame return the fig and associated objects, but I couldn't
@@ -463,7 +472,7 @@ class FlanPlots:
 			# Call for the next frame. i is being passed in zero-indexed, so to
 			# get the frame we offset it from the start_frame.
 			X, Z, data_xz = self.plot_frame_xz(data_name, frame_start + i, y0, 
-				showplot=False)
+				showplot=False, own_data=own_data)
 
 			# Time at frame, starting it at zero
 			time = self.nc["time"][i] - self.nc["time"][0]
