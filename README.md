@@ -12,103 +12,17 @@ Typical usage is to track a trace amount of impurities in a turbulent background
 - Particle ionization and recombination is tracked via coupling to ADAS
 - The collision model is based on the publication: [Nanbu, K. Theory of cumulative small-angle collisions in plasmas. Phys. Rev. E 55, 4642–4652 (1997)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.55.4642). This is a fully general collision scheme for Monte Carlo applications valid in all plasma regimes (with the only approximation being the plasma is in thermal equlibrium when calculating the Coulomb logarithm, likely a relatively negligible effect).
 
-
 A publication detailing Flan is anticipated in 2025. 
 
-## Dependencies
+## Documentation
 
-CMake is used as a build system. The `mkdeps` shell script should handle installing all the dependencies, but they are: HDF5, NetCDF and zlib,. Conda/Mamba is also required, as the interface to Gkeyll (more specifically, the post-processing Gkeyll suite [postgkyl](https://github.com/ammarhakim/postgkyl/tree/main)) is written in python. A conda environment is automatically setup by `mkdeps` to handle this. 
-
-## Installing Flan
-
-Before installing flan, ensure you have a working installation of Conda on your machine. If you have that, then installing Flan should only require three commands. Navigate to the top directory of Flan and do the following:
-
-1. Install dependencies: `machines/mkdeps.[machine].sh`
-   - `machine` is where you are installing it on (probably `linux`)
-   - This installs the dependencies in `$HOME/flansoft`. If you want them somewhere else, change the `FLANSOFT` variable in your `mkdeps` file
-2. Generate Makefile with CMake: `cd build && cmake ..`
-   - If you changed `FLANSOFT` above, modify the `cmake` command with `-DFLANSOFT=/path/to/flansoft`
-3. Make and install Flan: `make && make install`
-
-This process installs the `flan` library in the `lib` directory and activates the `(flan)` conda environment. To run `flan`, one writes an input file in C++ and then compiles it with Flan. This process is detailed next, but it is important to note that the executable must be ran within the `(flan)` conda environment! 
-
-## Beginner's Guide
-
-It is useful to create a directory to contain all your `flan` cases, it can be anywhere (don't put it in the repository directory, bad practice). For this section we will assume it is called `flandir`. Within `flandir`, you can use the following script to setup a simulation directory named `test`:
-
-```
-(flan) $ /path/to/flan/scripts/flan_setup.sh test
-```
-
-This will create a directory called `test` and place the needed files in it. The input file is `test.cpp`. If you open this up, you will notice a function `mapc2p`, a function called `create_inputs` and `main`. For now, all you need to look at is `create_inputs`. This is where all the input options are entered. You will notice some input options are provided to get you started. It is good to be familiar with the Gkeyll simulation you are running `flan` with so that you can tell it where the impurities start. A possible bare-minimum set of input options could look like this:
-
-```
-inpts["case_name"] = "test";
-inpts["imp_num"] = 10000;
-
-// Tell Flan where to find the Gkeyll files and how many to use. This is one
-// that used the simple helical approximation, so the coordinates are already
-// Cartesian (this means nothing needs to be done with mapc2p).
-inpts["gkyl_dir"] = "/home/zamp/gkyldir/d3d-167196-v6-gpu";
-inpts["gkyl_casename"] = "d3d-167196-v6-gpu";
-inpts["gkyl_frame_start"] = 600;
-inpts["gkyl_frame_end"] = 699;
-inpts["gkyl_elec_name"] = "elc";
-inpts["gkyl_ion_name"] = "ion";
-
-// Setup simulation to follow W ions
-inpts["imp_num"] = 10000
-inpts["imp_mass_amu"] = 183.84;
-
-// I know from this Gkeyll simulation that this corresponds to the "left"
-// or inner edge of the simulation, so start W ions there and we will
-// watch them transport from there.
-inpts["imp_xmin"] = 2.315;
-inpts["imp_xmax"] = 2.315;
-
-// Randomly start the ions anywhere in the y direction
-inpts["imp_ystart_opt"] = "range";
-
-// Need to know where to find the ADAS files and what year to use
-inpts["openadas_root"] = "/home/zamp/flandir/openadas";
-inpts["openadas_year"] = 50;
-```
-
-You can leave the rest of the input file alone for now. To run the simulation, you must compile it first to create an executable, then run the executable. This is easily done (don't forget to make sure the `flan` conda environment is active):
-
-```
-(flan) $ make
-(flan) $ ./test
-```
-
-Once finished, we can plot the data using the provided `flan_plots` python plotting library. Note: You must have the `flan` conda environment active
-
-```
-(flan) $ ipython
-In [1]: import flan_plots
-In [2]: fp = flan_plots.FlanPlots("test.nc")
-In [3]: fp.plot_frames_xy("imp_density", 0, 99, 0.0, animate_cbar=True, vmin=1e-6, vmax=1e-3, norm_type="log", xlabel="R-Rsep (m)", ylabel="Binormal (m)", cbar_label="W Density (arb.)")
-```
-
-This creates an animated plot, a screenshot of which is shown below. Fancier plots, such as 2D poloidal cross sections for more complicated geometries, is handled via Gkeyll plotting scripts elsewhere and is not covered here since that process is not yet standardized. Please contact Shawn if you want more details.
-
-<img src="https://github.com/shawnzamperini/flan/blob/main/docs/flan_ex_v1.png" width="250">
-
-Data can be extracted for more detailed analysis. This will be covered in future `flan_plots` documentation (one day).
-
-## Regression Cases
-
-To-do.
-
-## Post-processing
-
-Interfacing with Flan data and making some basic plots are handled via a [python class interface](https://github.com/shawnzamperini/flan/blob/main/python/flan_plots.py). A tutorial showing how to use this will eventually be written, but most cases will only need `FlanPlots.plot_frame_xy` and/or `FlanPlots.plot_frames_xy`. Check the docstrings for more details on using those.  
+[Link to the ReadTheDocs](https://flannery.readthedocs.io/en/latest/index.html)
 
 ## Upcoming Changes
 
 - Incorporate MPI to spread computation across multiple nodes (Funding requested)
 - Investigate if GPUs can be used to speed up transport calculations (Funding requested)
-- Couple to CGYRO (Funding requested)
-- Add time profiling
+- Couple to CGYRO or XGC (Funding requested)
+- ~~Add time profiling~~ Merged to main 7/31/25
 - ~~Upgrade to Nanbu collision model~~ Merged to main 7/23/25
 - ~~Expand code to non-Cartesian geometries (e.g., tokamak coordinates)~~ Merged to main 5/30/25
