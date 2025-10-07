@@ -235,15 +235,33 @@ namespace Impurity
 	{
 		// Need to assemble things as vectors and then do dot products with 
 		// the B field to get vperp. To-do, as B is not stored as a vector.
-		std::cerr << "gyroradius calculation incorrect! not calculating.\n";
+		std::cerr << "gyroradius calculation incomplete! not calculating.\n";
 
 		/*
 		// Calculate gyroradius and add it to the running total. Charge must
 		// be 1 or higher since neutrals do not gyrate. 
 		if (imp.get_charge() > 0)
 		{
-			const BkgFPType vperp {sqrt(imp.get_vX()*imp.get_vX() 
-				+ imp.get_vY()*imp.get_vY())};
+			// Local variables
+			const double imp_vX {imp.get_vX()};
+			const double imp_vY {imp.get_vY()};
+			const double imp_vZ {imp.get_vZ()};
+			const double bX {bkg.get_bX(tidx, xidx, yidx, zidx)};
+			const double bY {bkg.get_bY(tidx, xidx, yidx, zidx)};
+			const double bZ {bkg.get_bZ(tidx, xidx, yidx, zidx)};
+
+			// Scalar projection of v onto B and B^2
+			const double scalar_proj {imp_vX * bX + imp_vY * bY + imp_vZ * bZ)};
+			const double B_sq {bX * bX + bY * bY + bZ * bZ};
+
+			// Need the perpendicular-to-B impurity velocity. Get this by
+			// subtracting the parallel projection of v from v. 
+			const double imp_vparX {imp_vX - scalar_proj / B_sq * bX};
+			const double imp_vparY {imp_vY - scalar_proj / B_sq * bY};
+			const double imp_vparZ {imp_vZ - scalar_proj / B_sq * bZ};
+			
+			// To-do
+
 			const BkgFPType gyrorad {vperp * imp.get_mass() / 
 				(-imp.get_charge() * Constants::charge_e * 
 				bkg.get_b()(tidx, xidx, yidx, zidx))};

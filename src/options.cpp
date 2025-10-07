@@ -57,6 +57,7 @@ namespace Options
 		set_imp_vel_stats(m_imp_vel_stats);
 		set_imp_iz_recomb(m_imp_iz_recomb);
 		set_min_xbound_type(m_min_xbound_type);
+		set_calc_grad_elec(m_calc_grad_elec);
 	}
 
 	// Setter definitions. They're all the same, so just throwing together
@@ -553,7 +554,7 @@ namespace Options
 			// initialize_control_ints. Easy mistake to make.
 			std::cerr << "Error! Control integer for " << var_name 
 				<< " was never set! This is a programming error, contact a "
-				<< "developer.\n";
+				<< "developer. See initialize_control_ints for details.\n";
 		}
 		return control_int;
 	}

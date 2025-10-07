@@ -694,3 +694,42 @@ class FlanPlots:
 			v_curv_Z[i] = (X * BY[i] - Y * BX[i]) * vpar_sq[i] / (omega_c[i] 
 				* R_sq * B[i])
 		return v_curv_X, v_curv_Y, v_curv_Z
+	
+	def calc_gyrorad(self):
+		"""
+		Calculate average gyroradius using the average velocity and charges. 
+		"""
+
+		# Pull out some arrays
+		vX = self.nc["v_X"][:]
+		vY = self.nc["v_Y"][:]
+		vZ = self.nc["v_Z"][:]
+		BX = self.nc["B_X"][:]
+		BY = self.nc["B_Y"][:]
+		BZ = self.nc["B_Z"][:]
+		qz = self.nc["qz"][:]
+		mz_kg = self.nc["mz"][:] * amu_to_kg
+
+		# Magnetic field magnitude squared
+		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
+
+		# Perpendicular to B velocity. Can obtain the perpendicular components
+		# by subtracting the parallel projection of the impurity velocity from 
+		# the total velocity vector.
+		scalar_proj = (vX * BX + vY * BY + vZ * BZ)
+		vparX = scalar_proj * BX / Bsq
+		vparY = scalar_proj * BY / Bsq
+		vparZ = scalar_proj * BZ / Bsq
+		vperpX = vX - vparX
+		vperpY = vY - vparY
+		vperpZ = vZ - vparZ
+		vperp = np.sqrt(np.square(vperpX) + np.square(vperpY) 
+			+ np.square(vperpZ))
+
+		# Cyclotron frequency
+		omega_c = np.abs(qz * elec) * np.sqrt(Bsq) / mz_kg
+
+		# Larmor radius
+		return vperp / omega_c
+
+
