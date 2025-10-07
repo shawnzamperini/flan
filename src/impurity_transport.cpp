@@ -357,13 +357,18 @@ namespace Impurity
         imp.set_z(imp.get_z() + dz);
 
         // Bound checking (move to separate function). 
-		// Absorbing at maximum x
-		if (imp.get_x() > bkg.get_grid_x().back()) return false;
+		// Absorbing at maximum x. xbound_buffer move the BC off the x bound
+		// by that much to help avoid some common issues in the background
+		// that can happen there, causing impurities to "stick" to the 
+		// boundary instead of a proper BC being applied 
+		if ((imp.get_x() + opts.imp_xbound_buffer()) > bkg.get_grid_x().back()) 
+			return false;
 
 		// Minimum x can also be absorbing (0) or mimic a core boundary (1)
 		if (opts.min_xbound_type_int() == 0)
 		{
-			if (imp.get_x() < bkg.get_grid_x()[0]) return false;
+			if ((imp.get_x() - opts.imp_xbound_buffer()) < bkg.get_grid_x()[0]) 
+				return false;
 		}
 
 		else if (opts.min_xbound_type_int() == 1)
@@ -371,8 +376,9 @@ namespace Impurity
 			// At minimum x move the particle to a random y,z cell. This is a
 			// rough approximation to entering the core and leaving it 
 			// somewhere else.
-			if (imp.get_x() < bkg.get_grid_x()[0])
+			if ((imp.get_x() - opts.imp_xbound_buffer()) < bkg.get_grid_x()[0])
 			{
+				imp.set_x(bkg.get_grid_x()[0] + opts.imp_xbound_buffer());
 				imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
 					static_cast<double>(bkg.get_y_max())));
 				imp.set_z(Random::get(static_cast<double>(bkg.get_z_min()), 
