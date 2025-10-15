@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "background.h"
+#include "config.h"
 #include "flan_types.h"
 #include "netcdf"
 #include "options.h"
@@ -49,11 +50,21 @@ namespace SaveResults
 			{
 				var = nc_file.addVar(var_name, netCDF::ncInt, dim);
 			}
+			else if constexpr (std::is_same_v<T, std::vector<std::string>>)
+			{
+				std::cerr << "Error! If you want to save a string you must "
+					<< "call save_string.\n";
+			}
+			else
+			{
+				std::cerr << "Error! Variable type for NetCDF file not "
+					<< "recognized. var_name = " << var_name << '\n';
+			}
 
 			return var;
 	}
 
-	// Save a scalar into nc_file.
+	// Save a scalar to nc_file.
 	template <typename T>
 	void save_scalar(const netCDF::NcFile& nc_file, const T value, 
 		const std::string& var_name, const netCDF::NcDim& dim, 
@@ -71,6 +82,25 @@ namespace SaveResults
 
 			// Add units
 			var.putAtt("units", units);
+	}
+
+	void save_string(const netCDF::NcFile& nc_file, const std::string value, 
+		const std::string& var_name, const netCDF::NcDim& dim, 
+		const std::string& description)
+	{
+			// Create netCDF variable holding the templated type
+			netCDF::NcVar var {nc_file.addVar(var_name, netCDF::ncString, dim)};
+			
+			// NetCDF expects the string to be passed as an array of C-style
+			// strings since the API is just a wrapper for the C API.. They just
+			// can't make anything simple can they.
+			std::vector<const char*> c_strs {value.c_str()};
+
+			// Put string vector into it
+			var.putVar(c_strs.data());
+
+			// Add description
+			var.putAtt("description", description);
 	}
 
 	// Save a 1D vector into nc_file. dim must be matched by the programmer.
@@ -248,6 +278,11 @@ namespace SaveResults
 		// Scalars just have length 1 dimension
 		netCDF::NcDim dim_scalar = nc_file.addDim("scalar", 1);
 
+		// Dimension for string variables. Right now there's only one variable,
+		// but just make the length the length of the largest string if another
+		// comes along.
+		netCDF::NcDim dim_str {nc_file.addDim("num_string", 1)};
+
 		// Dimensions for the arrays containing data at the cell centers. 
 		// First dimension is time, then x, y, z.
 		netCDF::NcDim dim1 {nc_file.addDim("time", bkg.get_dim1())};
@@ -264,8 +299,13 @@ namespace SaveResults
 		// Details about the simulation (system, time run, time spent, etc.)
 		// To-do
 
+		// Save commit hash.
+		const std::string commit_hash {GIT_COMMIT_HASH};
+		desc = "commit hash";
+		save_string(nc_file, commit_hash, "commit", dim_str, desc);
+
 		// Save all input options used for this case
-		// To-do
+		// save_input_options();
 
 		// Impurity mass
 		desc = "impurity mass";
@@ -483,6 +523,8 @@ namespace SaveResults
 		desc = "dual basis magnetic vector (z)";
 		save_vector_3d(nc_file, bkg.get_b_z(), "b_z", dim2, 
 			dim3, dim4, desc, "(?)");
+
+		std::cout << "Saved as " << nc_filename << '\n';
 	}
 
 }

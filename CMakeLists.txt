@@ -1,6 +1,6 @@
 # This version is likely a bit too strict, it is just the one I built this with
 cmake_minimum_required(VERSION 3.26)
-project(flan VERSION 0.6.1)
+project(flan VERSION 0.6.3)
 
 # Load options from when the dependencies were built. Contains FLANSOFT
 # and FLANROOT
@@ -12,6 +12,16 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/install-deps/build-opts.cmake REQUIRED)
 #endif()
 message(STATUS "FLANSOFT set to ${FLANSOFT}")
 message(STATUS "FLANROOT set to ${FLANROOT}")
+
+# Load the git commit hash into a variable. It is then used in the config file
+# when configure_file is used below.
+execute_process(
+	COMMAND git log -1 --format=%h
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	OUTPUT_VARIABLE GIT_COMMIT_HASH
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "Commit: ${GIT_COMMIT_HASH}")
 
 # Print out version and make configuration header file so version is accessible
 # within flan

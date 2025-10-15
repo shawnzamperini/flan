@@ -30,7 +30,8 @@ void flan(const Inputs& inpts)
 	std::cout << std::unitbuf;
 
 	// Load version info from config.h file
-	std::cout << "Welcome to Flan v" << PROJECT_VERSION << "\n";
+	std::cout << "Welcome to Flan v" << PROJECT_VERSION << '\n';
+	std::cout << "Commit: " << GIT_COMMIT_HASH << '\n';
 
 	// Load options
 	Options::Options opts {Options::load_options(inpts)};
