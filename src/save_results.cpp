@@ -3,6 +3,8 @@
 * @brief Routines for saving results of Flan simulation
 *
 * Right now only outputting everything into a single netCDF file is supported.
+* Important to know that NcFile inherits from NcGroup, so we can pass an
+* NcFile object into a function that calls for an NcGroup.
 */
 #include <filesystem>
 #include <iostream>
@@ -32,7 +34,8 @@ namespace SaveResults
 
 	// Create a NetCDF variable of the chosen type
 	template <typename T>
-	netCDF::NcVar create_var(const netCDF::NcFile& nc_file,
+	//netCDF::NcVar create_var(const netCDF::NcFile& nc_file,
+	netCDF::NcVar create_var(const netCDF::NcGroup& nc_file,
 		const std::string& var_name, const netCDF::NcDim& dim)
 	{
 			// Create variable with netCDF type based on which template is 
@@ -66,7 +69,8 @@ namespace SaveResults
 
 	// Save a scalar to nc_file.
 	template <typename T>
-	void save_scalar(const netCDF::NcFile& nc_file, const T value, 
+	//void save_scalar(const netCDF::NcFile& nc_file, const T value, 
+	void save_scalar(const netCDF::NcGroup& nc_file, const T value, 
 		const std::string& var_name, const netCDF::NcDim& dim, 
 		const std::string& description, const std::string& units)
 	{
@@ -84,7 +88,9 @@ namespace SaveResults
 			var.putAtt("units", units);
 	}
 
-	void save_string(const netCDF::NcFile& nc_file, const std::string value, 
+	// Save a string to nc_file.
+	//void save_string(const netCDF::NcFile& nc_file, const std::string value, 
+	void save_string(const netCDF::NcGroup& nc_file, const std::string value, 
 		const std::string& var_name, const netCDF::NcDim& dim, 
 		const std::string& description)
 	{
@@ -248,6 +254,32 @@ namespace SaveResults
 		}
 	}
 
+	// Save input options to netCDF file
+	void save_input_options(const netCDF::NcFile& nc_file, 
+		const netCDF::NcDim& dim_str, const netCDF::NcDim& dim_scalar, 
+		const Options::Options& opts)
+	{
+		// Create group to organize things into
+		netCDF::NcGroup input_group {nc_file.addGroup("inputs")};
+
+		// Save one at a time
+		save_string(input_group, opts.case_name(), "case_name", dim_str, 
+			"case name");
+		save_string(input_group, opts.gkyl_dir(), "gkyl_dir", dim_str, 
+			"directory containing Gkeyll data");
+		save_string(input_group, opts.gkyl_casename(), "gkyl_casename", dim_str, 
+			"name of Gkeyll case");
+		save_scalar(input_group, opts.gkyl_frame_start(), "gkyl_frame_start", 
+			dim_scalar, "first Gkeyll frame to load", "");
+		save_scalar(input_group, opts.gkyl_frame_end(), "gkyl_frame_end", 
+			dim_scalar, "last Gkeyll frame to load", "");
+		save_string(input_group, opts.gkyl_elec_name(), "gkyl_elec_name", 
+			dim_str, "name of electron species in Gkeyll");
+		save_string(input_group, opts.gkyl_ion_name(), "gkyl_ion_name", 
+			dim_str, "name of deuterium species in Gkeyll");
+
+	}
+
 	void save_netcdf(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts)
 	{
@@ -305,7 +337,7 @@ namespace SaveResults
 		save_string(nc_file, commit_hash, "commit", dim_str, desc);
 
 		// Save all input options used for this case
-		// save_input_options();
+		save_input_options(nc_file, dim_str, dim_scalar, opts);
 
 		// Impurity mass
 		desc = "impurity mass";
