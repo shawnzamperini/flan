@@ -440,7 +440,7 @@ namespace Impurity
 			imp_stats.add_vels(tidx, xidx, yidx, zidx, 
 				static_cast<BkgFPType>(imp.get_vX()), 
 				static_cast<BkgFPType>(imp.get_vY()), 
-				static_cast<BkgFPType>(imp.get_vZ()));
+				static_cast<BkgFPType>(imp.get_vZ()), bkg);
 		}
 
 		// Add value of gyroradius to running sum at this location

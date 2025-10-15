@@ -68,7 +68,7 @@ namespace Impurity
 		// location
 		void add_vels(const int tidx, const int xidx, const int yidx,
 			const int zidx, const BkgFPType vX, const BkgFPType vY, 
-			const BkgFPType vZ);
+			const BkgFPType vZ, const Background::Background& bkg);
 
 		// Function add the calculated gyroradius to the corresponding array
 		// location

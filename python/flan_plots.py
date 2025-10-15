@@ -731,5 +731,33 @@ class FlanPlots:
 
 		# Larmor radius
 		return vperp / omega_c
+	
+	def calc_E_R(self):
+		"""
+		Calculates the radial electric field, ensuring to assign the correct 
+		sign. Positive = radially outwards, nagative = radially inwards.
+		"""
 
+		# Pull out arrays
+		X = self.nc["X"][:].data
+		Y = self.nc["Y"][:].data
+		EX = self.nc["E_X"][:].data
+		EY = self.nc["E_Y"][:].data
+
+		# Loop through each time
+		ER = np.zeros(EX.shape)
+		for i in range(EX.shape[0]):
+
+			# Scalar projection of E onto R
+			scalar_proj = X * EX[i] + Y * EY[i]
+
+			# Direction scalar to determine if ER points radially outwards (+) or 
+			# inwards (-)
+			dir_scalar = np.ones(X.shape)
+			dir_scalar[scalar_proj < 0] = -1
+
+			# Put it all together
+			ER[i] = dir_scalar * np.sqrt(np.square(EX[i]) + np.square(EY[i]))
+
+		return ER
 
