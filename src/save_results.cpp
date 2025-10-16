@@ -344,6 +344,33 @@ namespace SaveResults
 		save_scalar(input_group, opts.imp_source_scale_fact(), 
 			"imp_source_scale_fact", dim_scalar, 
 			"scaling factor to convert density to m-3", "(particles/s)");
+		save_string(input_group, opts.imp_iz_recomb(), "imp_iz_recomb", 
+			dim_str, "impurity ionization/recombination option");
+
+		// Variance reduction options
+		save_string(input_group, opts.var_red_split(), "var_red_split", 
+			dim_str, "variance reduction particle splitting option");
+		save_string(input_group, opts.var_red_import(), "var_red_import", 
+			dim_str, "importance criteria for variance reduction");
+		save_scalar(input_group, opts.var_red_freq(), "var_red_freq", 
+			dim_scalar, "variance reduction criteria update frequency", "");
+		save_scalar(input_group, opts.var_red_min_weight(), 
+			"var_red_min_weight", dim_scalar, 
+			"minimum allowed particle weight for variance reduction", "");
+		save_scalar(input_group, opts.var_red_med_mod(), 
+			"var_red_med_mod", dim_scalar, 
+			"multiplier for median importance (var_red_import = median)", "");
+		save_string(input_group, opts.var_red_rusrol(), "var_red_rusrol", 
+			dim_str, "Russian roullette variance reduciton option");
+		save_scalar(input_group, opts.var_red_rusrol_prob(), 
+			"var_red_rusrol_prob", dim_scalar, 
+			"kill probability for Russian roullette variance reduction", "");
+
+		// OpenADAS options
+		save_string(input_group, opts.openadas_root(), "openadas_root", 
+			dim_scalar, "directory containing OpenADAS data");
+		save_scalar(input_group, opts.openadas_year(), "openadas_year", 
+			dim_scalar, "year for OpenADAS files", "");
 
 	}
 
