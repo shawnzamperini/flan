@@ -54,7 +54,6 @@ namespace Options
 		set_var_red_import(m_var_red_import);
 		set_var_red_rusrol(m_var_red_rusrol);
 		set_imp_time_step_opt(m_imp_time_step_opt);
-		set_imp_vel_stats(m_imp_vel_stats);
 		set_imp_iz_recomb(m_imp_iz_recomb);
 		set_min_xbound_type(m_min_xbound_type);
 		set_calc_grad_elec(m_calc_grad_elec);
@@ -386,21 +385,6 @@ namespace Options
 	void Options::set_imp_source_scale_fact(double imp_source_scale_fact) 
 		{m_imp_source_scale_fact = imp_source_scale_fact;}
 	
-	// imp_vel_stats
-	void Options::set_imp_vel_stats(std::string imp_vel_stats) 
-		{
-			// Only assign if valid option, leaving as default if not
-			if (check_input<std::string>("imp_vel_stats", imp_vel_stats, 
-				{"off", "on"}))
-			{
-				m_imp_vel_stats = imp_vel_stats;
-			}
-
-			// Assign control integers
-			if (imp_vel_stats == "off") m_imp_vel_stats_int = 0;
-			else if (imp_vel_stats == "on") m_imp_vel_stats_int = 1;
-		}
-	
 	// imp_xbound_buffer
 	void Options::set_imp_xbound_buffer(double imp_xbound_buffer) 
 		{m_imp_xbound_buffer = imp_xbound_buffer;}
@@ -527,8 +511,6 @@ namespace Options
 		{return m_imp_time_step_min;}
 	const double Options::imp_source_scale_fact() const 
 		{return m_imp_source_scale_fact;}
-	const std::string& Options::imp_vel_stats() const 
-		{return m_imp_vel_stats;}
 	const double Options::imp_xbound_buffer() const 
 		{return m_imp_xbound_buffer;}
 	const std::string& Options::imp_iz_recomb() const 
@@ -578,8 +560,6 @@ namespace Options
 		{return get_control_int("var_red_rusrol", m_var_red_rusrol_int);}
 	const int Options::imp_time_step_opt_int() const
 		{return get_control_int("imp_time_step_opt", m_imp_time_step_opt_int);}
-	const int Options::imp_vel_stats_int() const
-		{return get_control_int("imp_vel_stats", m_imp_vel_stats_int);}
 	const int Options::imp_iz_recomb_int() const
 		{return get_control_int("imp_iz_recomb", m_imp_iz_recomb_int);}
 	const int Options::min_xbound_type_int() const

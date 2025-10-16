@@ -252,9 +252,11 @@ namespace SaveResults
 		netCDF::NcDim dim_scalar {nc_file.getDim("scalar")};
 		netCDF::NcDim dim_str {nc_file.getDim("num_string")};
 
-		// Save one at a time
+		// Meta options for the simulation
 		save_string(input_group, opts.case_name(), "case_name", dim_str, 
 			"case name");
+
+		// Options related to reading in Gkeyll files
 		save_string(input_group, opts.gkyl_dir(), "gkyl_dir", dim_str, 
 			"directory containing Gkeyll data");
 		save_string(input_group, opts.gkyl_casename(), "gkyl_casename", dim_str, 
@@ -267,10 +269,81 @@ namespace SaveResults
 			dim_str, "name of electron species in Gkeyll");
 		save_string(input_group, opts.gkyl_ion_name(), "gkyl_ion_name", 
 			dim_str, "name of deuterium species in Gkeyll");
-		save_scalar(input_group, opts.imp_mass_amu(), "imp_mass_amu", 
-			dim_scalar, "impurity mass", "(amu)");
+
+		// Geometry options
+		save_scalar(input_group, opts.lcfs_x(), "lcfs_x", 
+			dim_scalar, "x value where the LCFS is located", "(?)");
+		save_scalar(input_group, opts.imp_xbound_buffer(), "imp_xbound_buffer", 
+			dim_scalar, "buffer for x boundary conditions", "(?)");
+		save_string(input_group, opts.min_xbound_type(), "min_xbound_type", 
+			dim_str, "minimum x boundary condition");
+
+		// Impurity chracteristics
 		save_scalar(input_group, opts.imp_atom_num(), "imp_atom_num", 
 			dim_scalar, "impurity atomic number", "");
+		save_scalar(input_group, opts.imp_mass_amu(), "imp_mass_amu", 
+			dim_scalar, "impurity mass", "(amu)");
+		save_scalar(input_group, opts.imp_init_charge(), "imp_init_charge", 
+			dim_scalar, "impurity initial charge", "");
+
+		// Impurity transport options
+		save_scalar(input_group, opts.imp_num(), "imp_num", 
+			dim_scalar, "number of primary impurities followed", "");
+		save_string(input_group, opts.imp_tstart_opt(), "imp_tstart_opt", 
+			dim_str, "impurity starting time option");
+		save_scalar(input_group, opts.imp_tstart_val(), "imp_tstart_val", 
+			dim_scalar, 
+			"impurity starting time (imp_tstart_opt = single_value)", "(s)");
+		save_scalar(input_group, opts.imp_trange_min(), "imp_trange_min", 
+			dim_scalar, 
+			"impurity starting time minimum (imp_tstart_opt = range)", "(s)");
+		save_scalar(input_group, opts.imp_trange_max(), "imp_trange_max", 
+			dim_scalar, 
+			"impurity starting time maximum (imp_tstart_opt = range)", "(s)");
+		save_string(input_group, opts.imp_xstart_opt(), "imp_xstart_opt", 
+			dim_str, "impurity starting x option");
+		save_scalar(input_group, opts.imp_xstart_val(), "imp_xstart_val", 
+			dim_scalar, 
+			"impurity starting x (imp_xstart_opt = single_value)", "(?)");
+		save_scalar(input_group, opts.imp_xrange_min(), "imp_xrange_min", 
+			dim_scalar, 
+			"impurity starting x minimum (imp_xstart_opt = range)", "(?)");
+		save_scalar(input_group, opts.imp_xrange_max(), "imp_xrange_max", 
+			dim_scalar, 
+			"impurity starting x maximum (imp_xstart_opt = range)", "(?)");
+		save_string(input_group, opts.imp_ystart_opt(), "imp_ystart_opt", 
+			dim_str, "impurity starting y option");
+		save_scalar(input_group, opts.imp_ystart_val(), "imp_ystart_val", 
+			dim_scalar, 
+			"impurity starting y (imp_ystart_opt = single_value)", "(?)");
+		save_scalar(input_group, opts.imp_yrange_min(), "imp_yrange_min", 
+			dim_scalar, 
+			"impurity starting y minimum (imp_ystart_opt = range)", "(?)");
+		save_scalar(input_group, opts.imp_yrange_max(), "imp_yrange_max", 
+			dim_scalar, 
+			"impurity starting y maximum (imp_ystart_opt = range)", "(?)");
+		save_string(input_group, opts.imp_zstart_opt(), "imp_zstart_opt", 
+			dim_str, "impurity starting z option");
+		save_scalar(input_group, opts.imp_zstart_val(), "imp_zstart_val", 
+			dim_scalar, 
+			"impurity starting z (imp_zstart_opt = single_value)", "(?)");
+		save_scalar(input_group, opts.imp_zrange_min(), "imp_zrange_min", 
+			dim_scalar, 
+			"impurity starting z minimum (imp_zstart_opt = range)", "(?)");
+		save_scalar(input_group, opts.imp_zrange_max(), "imp_zrange_max", 
+			dim_scalar, 
+			"impurity starting z maximum (imp_zstart_opt = range)", "(?)");
+		save_string(input_group, opts.imp_collisions(), "imp_collisions", 
+			dim_str, "impurity collisions with background plasma option");
+		save_string(input_group, opts.imp_time_step_opt(), "imp_time_step_opt", 
+			dim_str, "impurity time step option");
+		save_scalar(input_group, opts.imp_time_step(), "imp_time_step", 
+			dim_scalar, "impurity time step", "(s)");
+		save_scalar(input_group, opts.imp_time_step_min(), "imp_time_step_min", 
+			dim_scalar, "minimum allowed impurity time step", "(s)");
+		save_scalar(input_group, opts.imp_source_scale_fact(), 
+			"imp_source_scale_fact", dim_scalar, 
+			"scaling factor to convert density to m-3", "(particles/s)");
 
 	}
 
@@ -448,20 +521,17 @@ namespace SaveResults
 		save_vector_4d(out_group, imp_stats.get_density(), "nz", 
 			dim1, dim2, dim3, dim4, "impurity density", "(m-3)");
 
-		if (opts.imp_vel_stats_int() == 1)
-		{
-			// Impurity average X velocity in physical space
-			save_vector_4d(out_group, imp_stats.get_vX(), "v_X", 
-				dim1, dim2, dim3, dim4, "average impurity X velocity", "(m/s)");
+		// Impurity average X velocity in physical space
+		save_vector_4d(out_group, imp_stats.get_vX(), "v_X", 
+			dim1, dim2, dim3, dim4, "average impurity X velocity", "(m/s)");
 
-			// Impurity average Y velocity in physical space
-			save_vector_4d(out_group, imp_stats.get_vY(), "v_Y", 
-				dim1, dim2, dim3, dim4, "average impurity Y velocity", "(m/s)");
+		// Impurity average Y velocity in physical space
+		save_vector_4d(out_group, imp_stats.get_vY(), "v_Y", 
+			dim1, dim2, dim3, dim4, "average impurity Y velocity", "(m/s)");
 
-			// Impurity average Z velocity in physical space
-			save_vector_4d(out_group, imp_stats.get_vZ(), "v_Z", 
-				dim1, dim2, dim3, dim4, "average impurity Z velocity", "(m/s)");
-		}
+		// Impurity average Z velocity in physical space
+		save_vector_4d(out_group, imp_stats.get_vZ(), "v_Z", 
+			dim1, dim2, dim3, dim4, "average impurity Z velocity", "(m/s)");
 
 		// Impurity charge
 		save_vector_4d(out_group, imp_stats.get_charge(), "qz", 

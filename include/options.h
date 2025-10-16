@@ -80,7 +80,6 @@ namespace Options
 		double m_imp_time_step                      {1e-8};
 		double m_imp_time_step_min                 {1e-12};
 		double m_imp_source_scale_fact               {1.0};
-		std::string m_imp_vel_stats                 {"on"};
 		std::string m_imp_iz_recomb                 {"on"};
 		int m_print_interval                          {10};
 
@@ -118,7 +117,6 @@ namespace Options
 		int m_var_red_import_int	{-1};
 		int m_var_red_rusrol_int	{-1};
 		int m_imp_time_step_opt_int {-1};
-		int m_imp_vel_stats_int		{-1};
 		int m_imp_iz_recomb_int		{-1};
 		int m_min_xbound_type_int	{-1};
 		int m_calc_grad_elec_int	{-1};
@@ -192,7 +190,6 @@ namespace Options
 		void set_imp_time_step(double imp_time_step);
 		void set_imp_time_step_min(double imp_time_step_min);
 		void set_imp_source_scale_fact(double imp_source_scale_fact);
-		void set_imp_vel_stats(std::string imp_vel_stats);
 		void set_imp_xbound_buffer(double imp_xbound_buffer);
 		void set_imp_iz_recomb(std::string imp_iz_recomb);
 		void set_print_interval(int print_interval);
@@ -247,7 +244,6 @@ namespace Options
 		const double imp_time_step() const;
 		const double imp_time_step_min() const;
 		const double imp_source_scale_fact() const;
-		const std::string& imp_vel_stats() const;
 		const double imp_xbound_buffer() const;
 		const std::string& imp_iz_recomb() const;
 		const int print_interval() const;
@@ -270,7 +266,6 @@ namespace Options
 		const int var_red_import_int() const;
 		const int var_red_rusrol_int() const;
 		const int imp_time_step_opt_int() const;
-		const int imp_vel_stats_int() const;
 		const int imp_iz_recomb_int() const;
 		const int min_xbound_type_int() const;
 		const int calc_grad_elec_int() const;

@@ -435,13 +435,10 @@ namespace Impurity
 			static_cast<BkgFPType>(imp.get_weight() * imp_time_step));
 
 		// Add each velocity component to the running sum for this location
-		if (imp_stats.get_vel_stats())
-		{
-			imp_stats.add_vels(tidx, xidx, yidx, zidx, 
-				static_cast<BkgFPType>(imp.get_vX()), 
-				static_cast<BkgFPType>(imp.get_vY()), 
-				static_cast<BkgFPType>(imp.get_vZ()), bkg);
-		}
+		imp_stats.add_vels(tidx, xidx, yidx, zidx, 
+			static_cast<BkgFPType>(imp.get_vX()), 
+			static_cast<BkgFPType>(imp.get_vY()), 
+			static_cast<BkgFPType>(imp.get_vZ()), bkg);
 
 		// Add value of gyroradius to running sum at this location
 		//imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
@@ -857,8 +854,7 @@ namespace Impurity
 		// Statistics object. Option to control if the three velocity arrays
 		// are allocated (to save memory).
 		Statistics imp_stats {bkg.get_dim1(), bkg.get_dim2(), 
-			bkg.get_dim3(), bkg.get_dim4(), 
-			static_cast<bool>(opts.imp_vel_stats_int())};
+			bkg.get_dim3(), bkg.get_dim4()};
 
 		// Load OpenADAS data needed for ionization/recombination rates. 
 		OpenADAS::OpenADAS oa_ioniz {opts.openadas_root(), 
@@ -875,11 +871,8 @@ namespace Impurity
 		std::cout << "  Density...\n";
 		imp_stats.calc_density(bkg, opts.imp_num(), 
 			opts.imp_source_scale_fact());
-		if (imp_stats.get_vel_stats())
-		{
-			std::cout << "  Velocity...\n";
-			imp_stats.calc_vels();
-		}
+		std::cout << "  Velocity...\n";
+		imp_stats.calc_vels();
 		//imp_stats.calc_gyrorad();
 		std::cout << "  Charge...\n";
 		imp_stats.calc_charge();

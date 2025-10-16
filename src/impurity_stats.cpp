@@ -37,7 +37,7 @@ namespace Impurity
 	* Zero-initializes the member Vector4D's.
 	*/
 	Statistics::Statistics(const int dim1, const int dim2, const int dim3, 
-		const int dim4, const bool vel_stats)
+		const int dim4)
 		: m_dim1 {dim1}
 		, m_dim2 {dim2}
 		, m_dim3 {dim3}
@@ -50,21 +50,17 @@ namespace Impurity
 		//, m_vz (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 		, m_gyrorad (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 		, m_charge (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
-		, m_vel_stats {vel_stats}
 	{
 		// Issue: This code seems to not be correct, not sure how yet...
 		// These aren't always needed, can cut back on memory usage by not
 		// including them by default.
-		if (m_vel_stats)
-		{
-			//std::cout << "Allocating velocity arrays...\n";
-			m_vX.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-				dim4});
-			m_vY.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-				dim4});
-			m_vZ.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-				dim4});
-		}
+		//std::cout << "Allocating velocity arrays...\n";
+		m_vX.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
+			dim4});
+		m_vY.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
+			dim4});
+		m_vZ.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
+			dim4});
 	}
 
 	/**
@@ -145,13 +141,6 @@ namespace Impurity
 	Vectors::Vector4D<BkgFPType>& Statistics::get_charge() {return m_charge;}
 
 	/**
-	* @brief Accessor for if velocity stats are being tracked
-	* @return Returns boolean true if velocity stats are being tracked, false
-	* if not.
-	*/
-	bool Statistics::get_vel_stats() {return m_vel_stats;}
-
-	/**
 	* @brief Overload + to add two Statistics together
 	* @param other A Statistics object
 	* @return Statistics object with the summed data
@@ -161,19 +150,14 @@ namespace Impurity
 	*/
 	Statistics Statistics::operator+ (const Statistics& other) const
 	{
-		Statistics ret_stats {m_dim1, m_dim2, m_dim3, m_dim4, m_vel_stats};
+		Statistics ret_stats {m_dim1, m_dim2, m_dim3, m_dim4};
 		ret_stats.m_counts = m_counts + other.m_counts;
 		ret_stats.m_weights = m_weights + other.m_weights;
 		ret_stats.m_gyrorad = m_gyrorad + other.m_gyrorad;
 		ret_stats.m_charge = m_charge + other.m_charge;
-
-		// Only do this is we're tracking velocity stats
-		if (m_vel_stats)
-		{
-			ret_stats.m_vX = m_vX + other.m_vX;
-			ret_stats.m_vY = m_vY + other.m_vY;
-			ret_stats.m_vZ = m_vZ + other.m_vZ;
-		}
+		ret_stats.m_vX = m_vX + other.m_vX;
+		ret_stats.m_vY = m_vY + other.m_vY;
+		ret_stats.m_vZ = m_vZ + other.m_vZ;
 
 		return ret_stats;
 	}
@@ -355,43 +339,34 @@ namespace Impurity
 	*/
 	void Statistics::calc_vels()
 	{
-		if (!m_vel_stats)
+		// Need to loop through the entire Vector4D. Unconventional 
+		// indentation here just to keep it clean.
+		for (int i {}; i < m_dim1; ++i)
 		{
-			std::cerr << "Error! Cannot calculate average impurity velocities"
-				<< " if velocity tracking is off. Set imp_vel_stats to yes if"
-				<< " velocity tracking is desired.\n";
+		for (int j {}; j < m_dim2; ++j)
+		{
+		for (int k {}; k < m_dim3; ++k)
+		{
+		for (int l {}; l < m_dim4; ++l)
+		{
+			// Convert each velocity sum in each cell to an average velocity
+			// by dividing it by the number of counts.
+			double counts {static_cast<double>(m_counts(i,j,k,l))};
+			if (counts > 0)
+			{
+				m_vX(i,j,k,l) /= counts;
+				m_vY(i,j,k,l) /= counts;
+				m_vZ(i,j,k,l) /= counts;
+			}
+			else
+			{
+				m_vX(i,j,k,l) = 0.0;
+				m_vY(i,j,k,l) = 0.0;
+				m_vZ(i,j,k,l) = 0.0;
+			}
 		}
-		else
-		{
-			// Need to loop through the entire Vector4D. Unconventional 
-			// indentation here just to keep it clean.
-			for (int i {}; i < m_dim1; ++i)
-			{
-			for (int j {}; j < m_dim2; ++j)
-			{
-			for (int k {}; k < m_dim3; ++k)
-			{
-			for (int l {}; l < m_dim4; ++l)
-			{
-				// Convert each velocity sum in each cell to an average velocity
-				// by dividing it by the number of counts.
-				double counts {static_cast<double>(m_counts(i,j,k,l))};
-				if (counts > 0)
-				{
-					m_vX(i,j,k,l) /= counts;
-					m_vY(i,j,k,l) /= counts;
-					m_vZ(i,j,k,l) /= counts;
-				}
-				else
-				{
-					m_vX(i,j,k,l) = 0.0;
-					m_vY(i,j,k,l) = 0.0;
-					m_vZ(i,j,k,l) = 0.0;
-				}
-			}
-			}
-			}	
-			}
+		}
+		}	
 		}
 	}
 

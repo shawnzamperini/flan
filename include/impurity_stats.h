@@ -33,13 +33,12 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType> m_vZ {};
 		Vectors::Vector4D<BkgFPType> m_gyrorad {};
 		Vectors::Vector4D<BkgFPType> m_charge {};
-		bool m_vel_stats {};
 
 	public:
 		
 		// Constructor
 		Statistics(const int dim1, const int dim2, const int dim3, 
-			const int dim4, const bool vel_stats);
+			const int dim4);
 
 		// Accessors
 		Vectors::Vector4D<int>& get_counts();
@@ -50,7 +49,6 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType>& get_vZ();
 		Vectors::Vector4D<BkgFPType>& get_gyrorad();
 		Vectors::Vector4D<BkgFPType>& get_charge();
-		bool get_vel_stats();
 
 		// Overload of + to add counts and weights together, returned as a 
 		// new Statistics object.
