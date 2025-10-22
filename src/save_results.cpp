@@ -248,7 +248,7 @@ namespace SaveResults
 		const Options::Options& opts)
 	{
 		// Create group to organize things into and access dimensions
-		netCDF::NcGroup input_group {nc_file.addGroup("inputs")};
+		netCDF::NcGroup input_group {nc_file.addGroup("input")};
 		netCDF::NcDim dim_scalar {nc_file.getDim("scalar")};
 		netCDF::NcDim dim_str {nc_file.getDim("num_string")};
 
