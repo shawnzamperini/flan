@@ -36,9 +36,9 @@ class FlanPlots:
 		 x, y, z = fp.load_cell_centers()
 		"""
 
-		x = self.nc["x"][:].data
-		y = self.nc["y"][:].data
-		z = self.nc["z"][:].data
+		x = self.nc["geometry"]["x"][:].data
+		y = self.nc["geometry"]["y"][:].data
+		z = self.nc["geometry"]["z"][:].data
 		return x, y, z
 	
 	def load_data_frame(self, data_name, frame):
@@ -59,14 +59,22 @@ class FlanPlots:
 			nz = fp.load_data_frame("imp_dens", 10)
 		"""
 
-		# 3D vectors don't have a time index
+		# Load data, correctly selecting the netCDF group it lives in
+		# Geometry data are 3D vectors and don't have a time index
 		if data_name in ["b_x", "b_y", "b_z", "jacobian", "gij_00", "gij_01",
 			"gij_02", "gij_11", "gij_12", "gij_22"]:
-			return self.nc[data_name][:].data
+			return self.nc["geometry"][data_name][:].data
 
-		# 4D vector, index frame
+		# 4D vector, index frame. Just loop through the groups until we find
+		# the correct one.
 		else:
-			return self.nc[data_name][frame].data
+			for group in ["input", "output", "background"]:
+				if data_name in self.nc[group].variables.keys():
+					return self.nc[group][data_name][frame].data
+
+		# If we hit here then we couldn't find the variable
+		print("Error! Cannot find variable: {}".format(data_name))
+		return None
 
 	def closest_index(self, arr, val):
 		"""
@@ -156,7 +164,8 @@ class FlanPlots:
 			data = own_data[frame]
 
 		# Time at frame, starting it at zero
-		time = self.nc["time"][frame] - self.nc["time"][0]
+		time = self.nc["geometry"]["time"][frame] \
+			- self.nc["geometry"]["time"][0]
 
 		# Find closest z index to input z value
 		z_idx = self.closest_index(z, z0) 
@@ -238,7 +247,8 @@ class FlanPlots:
 			data = own_data[frame]
 
 		# Time at frame, starting it at zero
-		time = self.nc["time"][frame] - self.nc["time"][0]
+		time = self.nc["geometry"]["time"][frame] \
+			- self.nc["geometry"]["time"][0]
 
 		# Find closest z index to input z value
 		y_idx = self.closest_index(y, y0) 
@@ -357,7 +367,8 @@ class FlanPlots:
 				showplot=False, own_data=own_data)
 
 			# Time at frame, starting it at zero
-			time = self.nc["time"][i] - self.nc["time"][0]
+			time = self.nc["geometry"]["time"][i] \
+				- self.nc["geometry"]["time"][0]
 				
 			norm = self.get_norm(data_xy, norm_type, vmin=vmin, vmax=vmax)
 			ax1.clear()
@@ -475,7 +486,8 @@ class FlanPlots:
 				showplot=False, own_data=own_data)
 
 			# Time at frame, starting it at zero
-			time = self.nc["time"][i] - self.nc["time"][0]
+			time = self.nc["geometry"]["time"][i] \
+				- self.nc["geometry"]["time"][0]
 				
 			norm = self.get_norm(data_xz, norm_type, vmin=vmin, vmax=vmax)
 			ax1.clear()
@@ -523,12 +535,12 @@ class FlanPlots:
 		"""
 		
 		# Pull out some arrays
-		EX = self.nc["E_X"][:]
-		EY = self.nc["E_Y"][:]
-		EZ = self.nc["E_Z"][:]
-		BX = self.nc["B_X"][:]
-		BY = self.nc["B_Y"][:]
-		BZ = self.nc["B_Z"][:]
+		EX = self.nc["background"]["E_X"][:]
+		EY = self.nc["background"]["E_Y"][:]
+		EZ = self.nc["background"]["E_Z"][:]
+		BX = self.nc["background"]["B_X"][:]
+		BY = self.nc["background"]["B_Y"][:]
+		BZ = self.nc["background"]["B_Z"][:]
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
 
 		# Perpendicular component of the electric field
@@ -557,16 +569,16 @@ class FlanPlots:
 		"""
 		
 		# Pull out some arrays
-		vX = self.nc["v_X"][:]
-		vY = self.nc["v_Y"][:]
-		vZ = self.nc["v_Z"][:]
-		BX = self.nc["B_X"][:]
-		BY = self.nc["B_Y"][:]
-		BZ = self.nc["B_Z"][:]
-		gradBX = self.nc["gradB_X"][:]
-		gradBY = self.nc["gradB_Y"][:]
-		gradBZ = self.nc["gradB_Z"][:]
-		mz_kg = self.nc["mz"][:] * amu_to_kg
+		vX = self.nc["output"]["v_X"][:]
+		vY = self.nc["output"]["v_Y"][:]
+		vZ = self.nc["output"]["v_Z"][:]
+		BX = self.nc["background"]["B_X"][:]
+		BY = self.nc["background"]["B_Y"][:]
+		BZ = self.nc["background"]["B_Z"][:]
+		gradBX = self.nc["background"]["gradB_X"][:]
+		gradBY = self.nc["background"]["gradB_Y"][:]
+		gradBZ = self.nc["background"]["gradB_Z"][:]
+		mz_kg = self.nc["input"]["mz"][:] * amu_to_kg
 
 		# Magnetic field magnitude squared
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
@@ -605,14 +617,14 @@ class FlanPlots:
 		"""
 
 		# Pull out some arrays
-		vX = self.nc["v_X"][:]
-		vY = self.nc["v_Y"][:]
-		vZ = self.nc["v_Z"][:]
-		BX = self.nc["B_X"][:]
-		BY = self.nc["B_Y"][:]
-		BZ = self.nc["B_Z"][:]
-		mz_kg = self.nc["mz"][:] * amu_to_kg
-		t = self.nc["time"][:]
+		vX = self.nc["output"]["v_X"][:]
+		vY = self.nc["output"]["v_Y"][:]
+		vZ = self.nc["output"]["v_Z"][:]
+		BX = self.nc["background"]["B_X"][:]
+		BY = self.nc["background"]["B_Y"][:]
+		BZ = self.nc["background"]["B_Z"][:]
+		mz_kg = self.nc["input"]["mz"][:] * amu_to_kg
+		t = self.nc["geometry"]["time"][:]
 
 		# Magnetic field magnitude squared
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
@@ -656,13 +668,13 @@ class FlanPlots:
 		"""
 		
 		# Pull out some arrays
-		vX = self.nc["v_X"][:]
-		vY = self.nc["v_Y"][:]
-		vZ = self.nc["v_Z"][:]
-		BX = self.nc["B_X"][:]
-		BY = self.nc["B_Y"][:]
-		BZ = self.nc["B_Z"][:]
-		mz_kg = self.nc["mz"][:] * amu_to_kg
+		vX = self.nc["output"]["v_X"][:]
+		vY = self.nc["output"]["v_Y"][:]
+		vZ = self.nc["output"]["v_Z"][:]
+		BX = self.nc["background"]["B_X"][:]
+		BY = self.nc["background"]["B_Y"][:]
+		BZ = self.nc["background"]["B_Z"][:]
+		mz_kg = self.nc["input"]["mz"][:] * amu_to_kg
 
 		# Magnetic field magnitude squared
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
@@ -679,8 +691,8 @@ class FlanPlots:
 
 		# Curvature vector. This is normally defined in terms of the magnetic
 		# field, but we have the X, Y coordinates so can just use that here.
-		X = self.nc["X"][:]
-		Y = self.nc["Y"][:]
+		X = self.nc["geometry"]["X"][:]
+		Y = self.nc["geometry"]["Y"][:]
 		R_sq = np.square(X) + np.square(Y)
 
 		# Calculate each component of curvature drift and return
@@ -701,14 +713,14 @@ class FlanPlots:
 		"""
 
 		# Pull out some arrays
-		vX = self.nc["v_X"][:]
-		vY = self.nc["v_Y"][:]
-		vZ = self.nc["v_Z"][:]
-		BX = self.nc["B_X"][:]
-		BY = self.nc["B_Y"][:]
-		BZ = self.nc["B_Z"][:]
-		qz = self.nc["qz"][:]
-		mz_kg = self.nc["mz"][:] * amu_to_kg
+		vX = self.nc["output"]["v_X"][:]
+		vY = self.nc["output"]["v_Y"][:]
+		vZ = self.nc["output"]["v_Z"][:]
+		BX = self.nc["geometry"]["B_X"][:]
+		BY = self.nc["geometry"]["B_Y"][:]
+		BZ = self.nc["geometry"]["B_Z"][:]
+		qz = self.nc["output"]["qz"][:]
+		mz_kg = self.nc["input"]["mz"][:] * amu_to_kg
 
 		# Magnetic field magnitude squared
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
@@ -739,10 +751,10 @@ class FlanPlots:
 		"""
 
 		# Pull out arrays
-		X = self.nc["X"][:].data
-		Y = self.nc["Y"][:].data
-		EX = self.nc["E_X"][:].data
-		EY = self.nc["E_Y"][:].data
+		X = self.nc["geometry"]["X"][:].data
+		Y = self.nc["geometry"]["Y"][:].data
+		EX = self.nc["background"]["E_X"][:].data
+		EY = self.nc["background"]["E_Y"][:].data
 
 		# Loop through each time
 		ER = np.zeros(EX.shape)
