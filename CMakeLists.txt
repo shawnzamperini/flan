@@ -4,7 +4,9 @@ project(flan VERSION 0.7.0)
 
 # Load options from when the dependencies were built. Contains FLANSOFT
 # and FLANROOT
-include(${CMAKE_CURRENT_SOURCE_DIR}/install-deps/build-opts.cmake REQUIRED)
+set(INSTALL_DEPS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/install-deps")
+#include(${CMAKE_CURRENT_SOURCE_DIR}/install-deps/build-opts.cmake REQUIRED)
+include("${INSTALL_DEPS_PATH}/build-opts.cmake" REQUIRED)
 
 # User must specify where the dependencies are stored via the FLANSOFT variable
 #if(NOT DEFINED FLANSOFT)
@@ -90,7 +92,8 @@ install(EXPORT flan_targets
 # can execute the generate script as part of the build process.
 add_custom_command(
 	OUTPUT script_output.txt
-	COMMAND bash ${FLANROOT}/scripts/generate_flan_setup.sh ${FLANROOT} ${FLANSOFT}
+	#COMMAND bash ${FLANROOT}/scripts/generate_flan_setup.sh ${FLANROOT} ${FLANSOFT}
+	COMMAND bash ${FLANROOT}/scripts/generate_flan_setup.sh ${FLANROOT} "${INSTALL_DEPS_PATH}/build-opts.sh"
 	WORKING_DIRECTORY ${FLANROOT}/scripts
 	COMMENT "Generating flan_setup.sh"
 )
