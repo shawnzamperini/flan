@@ -463,6 +463,7 @@ namespace Gkyl
 
 		// Define variables needed for the following loop
 		std::string line {};
+		std::vector<std::string> lines {};
 		std::vector<BkgFPType> data_flattened {};
 		std::vector<int> dims {};
 		int ndata {};
@@ -512,11 +513,14 @@ namespace Gkyl
 
 					// Set the capacity of the vector now that we know what it 
 					// will be.
+					lines.reserve(ndata);
 					data_flattened.reserve(ndata);
 				}
 				else
 				{
-					data_flattened.push_back(std::stod(line));
+					// Moved to parallel loop after reading in lines.
+					//data_flattened.push_back(std::stod(line));
+					lines.push_back(line);
 
 					// If count ends up being greater than all the values
 					// we need to read in, something went wrong.
@@ -538,6 +542,21 @@ namespace Gkyl
 			}
 		}
 		fstream.close();
+
+		// Copies values in lines to data_flattened as floating point. We do 
+		// this after the fact so we can parallelize it since stod can in
+		// fact be somewhat expensive. 
+		#pragma omp parallel for
+		for (int i = 0; i < std::ssize(lines); ++i) 
+		{
+			data_flattened[i] = std::stod(lines[i]);
+		}
+
+		std::cout << "in load_values: data_flattened\n";
+		for (int i = 0; i < 10; ++i) 
+		{
+			std::cout << data_flattened[i] << '\n';
+		}
 
 		// Move the data into a 4D vector and return it
 		return {data_flattened, dims[0], dims[1], dims[2], dims[3]};
@@ -624,6 +643,12 @@ namespace Gkyl
 	{
 		// Variable to keep track of number of replaced values
 		int num_replaced {};
+
+		std::cout << "in floor: vec\n";
+		for (int i = 0; i < 10; ++i) 
+		{
+			std::cout << vec(0,0,0,i) << '\n';
+		}
 
 		// Loop through every value, replacing with floor_val if below it
 		#pragma omp parallel for reduction(+:num_replaced)
@@ -776,6 +801,13 @@ namespace Gkyl
 			// as [species]_[data_type].
 			Vectors::Vector4D<T> tmp_data {
 				load_values<T>(species + "_" + data_type)};
+
+			std::cout << "in read_data_pgkyl: tmp_data\n";
+			for (int i = 0; i < 10; ++i) 
+			{
+				std::cout << tmp_data(0,0,0,i) << '\n';
+			}
+
 			gkyl_data.move_into_data(tmp_data);
 		}
 		else
@@ -794,6 +826,11 @@ namespace Gkyl
 		// load all the grid data.
 		read_data_pgkyl(opts.gkyl_elec_name(), "density", grid_data, gkyl_ne, 
 			opts, 0, true);
+		std::cout << "in density: vec\n";
+		for (int i = 0; i < 10; ++i) 
+		{
+			std::cout << gkyl_ne(0,0,0,i) << '\n';
+		}
 		set_vec_floor(gkyl_ne, 1e15);
 	}
 

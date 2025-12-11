@@ -91,6 +91,7 @@ def calc_gradients_3d(XYZ_pot_bmag_ntimes):
 	global counter
 
 	# Unpack arguments
+	print("Unpacking...")
 	XYZ, pot, bmag, ntimes = XYZ_pot_bmag_ntimes
 
 	# No t dimension, hence the [1:] here. Also append 3 to preserve coordinate
@@ -152,7 +153,9 @@ def calc_gradients_3d(XYZ_pot_bmag_ntimes):
 	# To-do: Parallelize this loop, probably with numba
 	#print("Calculating potential and magnetic field gradients for each frame...")
 	#for t in tqdm(range(pot.shape[0])):
+	print("Starting t loop...", flush=True)
 	for t in range(pot.shape[0]):
+		print("t = {}".format(t))
 		for i in range(pot.shape[1]):
 			for j in range(pot.shape[2]):
 				for k in range(pot.shape[3]):
@@ -173,6 +176,7 @@ def calc_gradients_3d(XYZ_pot_bmag_ntimes):
 		with counter.get_lock():
 			counter.value += 1
 			perc = int(counter.value / ntimes * 100)
+			print(counter.value, flush=True)
 			print("Frames: {}/{} ({:d}%)".format(counter.value, ntimes, perc), 
 				end="\r", flush=True)
 
@@ -205,12 +209,10 @@ def write_field(field_XYZ, fname_base):
 			f.write(num_vals)
 			for j in range(0, len(field_XYZ[i])):
 				np.savetxt(f, field_XYZ[i][j].flatten())
-
+"""
 def calc_grad_elec(num_processes):
-	"""
-	Calculate gradient of electric field. This is really a hack, this whole
-	script should be C++'d, just need time.
-	"""
+	#Calculate gradient of electric field. This is really a hack, this whole
+	#script should be C++'d, just need time.
 
 	# We are essentially repeating everything in main. Ideally we'd just
 	# group this in with the potential and magnetic field gradient
@@ -296,7 +298,7 @@ def calc_grad_elec(num_processes):
 
 	# Write out the three X,Y,Z files each
 	write_field(grad_elec_field_XYZ, "bkg_from_pgkyl_grad_elec_field")
-
+"""
 
 def init_counter(shared_counter):
 	"""
@@ -370,11 +372,18 @@ def main(num_processes=1, grad_elec=False):
 	# Create process pool and get each process a chunk of frames
 	shared_counter = Value("i", 0)
 	#print("Calculating gradients...")
+	print("num_processes = {}".format(num_processes))
 	with Pool(processes=num_processes, initializer=init_counter, 
 		initargs=(shared_counter,)) as pool:
 
+		# Wrap imap with tqdm to show progress
+		results = []
+		for res in tqdm(pool.imap(calc_gradients_3d, args), total=len(args)):
+			results.append(res)
+
 		# Calculate electric field and gradB components
-		results = pool.imap(calc_gradients_3d, args)
+		#print("Running imap...")
+		#results = pool.imap(calc_gradients_3d, args)
 
 		# Put each gradient result into separate lists
 		eX_list, eY_list, eZ_list, gbX_list, gbY_list, gbZ_list  \
