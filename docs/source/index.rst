@@ -11,8 +11,9 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 1
 
    installation.rst
-   beginnerGuide.rst
-   inputOptions.rst
+   beginners_guide.rst
+   input_options.rst
    publications.rst
