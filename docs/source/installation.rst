@@ -1,6 +1,6 @@
-============
-Installation
-============
+========================
+Installation and Testing 
+========================
 
 Dependencies
 ------------
