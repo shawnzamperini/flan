@@ -13,15 +13,15 @@ Before installing Flan, ensure you have a working installation of Anaconda on yo
 
 1. Install dependencies: :literal:`machines/mkdeps.[machine].sh` 
 
-    -:literal:`machine` is where you are installing it on (probably linux)
+    - :literal:`machine` is where you are installing it on (probably linux)
 
-    -This installs the dependencies in :literal:`$HOME/flansoft.` If you want them somewhere else, change the FLANSOFT variable in your mkdeps file
+    - This installs the dependencies in :literal:`$HOME/flansoft.` If you want them somewhere else, change the FLANSOFT variable in your mkdeps file
 
-    -A conda environment named :literal:`flan` is created as part of this process, which you can activate with :literal:`conda activate flan`
+    - A conda environment named :literal:`flan` is created as part of this process, which you can activate with :literal:`conda activate flan`
 
 2. Generate build system: :literal:`cd build && cmake ..`
 
-  -If you changed :literal:`FLANSOFT` above, modify the cmake command with :literal:`-DFLANSOFT=/path/to/flansoft`
+  - If you changed :literal:`FLANSOFT` above, modify the cmake command with :literal:`-DFLANSOFT=/path/to/flansoft`
 
 3. Make and install Flan: :literal:`make && make install`
 
