@@ -49,8 +49,11 @@ echo "EOF" >> flan_setup.sh
 
 cat <<EOF >> flan_setup.sh
 
+# Source build-opts.sh for compiler names (CC and CXX)
+source $2
+
 # Run CMake, setting up the Makefile for the user
-cmake .
+cmake -DCMAKE_CXX_COMPILER=\${CXX} .
 EOF
 
 # Let the user execute it

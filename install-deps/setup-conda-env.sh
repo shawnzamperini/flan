@@ -19,7 +19,7 @@ cd $PREFIX
 # 2. Checkout commit from 8/20/24. We can update (or comment this line out) 
 # for a more recent commit, but we're doing this just to keep things 
 # constant.
-git -c advice.detachedHead=false checkout b11210b
+git -c advice.detachedHead=false checkout a381be8eb64afb95220032ee90d507f3b416928d
 
 # 3. Create the flan conda environment using the postgkyl one as a starting
 # point. Delete the flan environment if it already exists.

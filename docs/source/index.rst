@@ -1,21 +1,19 @@
 Welcome to Flan's documentation!
 ===================================
 
-**Flan** (/flann/) is a Fully kinetic Monte Carlo code that was developed to follow trace amount of impurities in a turbulent plasma. Flan hosts its documentation on readthedocs.
-
-Check out the  section for further information, including
-how to  the project.
+Flan is a kinematic Monte Carlo code that follows trace amount of impurities in a turbulent plasma. It was named after Shawn's dog, Flannery.
 
 .. note::
 
-   This project is under active development. Edit
+   This documentation is still being written.
 
 Contents
 --------
 
 .. toctree::
+   :maxdepth: 1
 
-   Installation.rst
-   beginnerGuide.rst
-   inputOptions.rst
+   installation.rst
+   beginners_guide.rst
+   input_options.rst
    publications.rst

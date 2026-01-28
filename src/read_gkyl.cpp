@@ -463,7 +463,7 @@ namespace Gkyl
 
 		// Define variables needed for the following loop
 		std::string line {};
-		std::vector<BkgFPType> data_flattened {};
+		std::vector<std::string> lines {};
 		std::vector<int> dims {};
 		int ndata {};
 		bool ndata_read {false};
@@ -508,15 +508,16 @@ namespace Gkyl
 					ndata = std::accumulate(dims.begin(), dims.end(), 1, 
 						std::multiplies<int>());
 					ndata_read = true;
-					//std::cout << "Reading " << ndata << " data values\n";
 
 					// Set the capacity of the vector now that we know what it 
 					// will be.
-					data_flattened.reserve(ndata);
+					lines.reserve(ndata);
 				}
 				else
 				{
-					data_flattened.push_back(std::stod(line));
+					// Load value as a string, we will convert to a float
+					// after we load the lines (so we can parallelize it).
+					lines.push_back(line);
 
 					// If count ends up being greater than all the values
 					// we need to read in, something went wrong.
@@ -538,6 +539,16 @@ namespace Gkyl
 			}
 		}
 		fstream.close();
+
+		// Copies values in lines to data_flattened as floating point. We do 
+		// this after the fact so we can parallelize it since stod can in
+		// fact be somewhat expensive. 
+		std::vector<BkgFPType> data_flattened(lines.size());
+		#pragma omp parallel for
+		for (int i = 0; i < std::ssize(lines); ++i) 
+		{
+			data_flattened[i] = std::stod(lines[i]);
+		}
 
 		// Move the data into a 4D vector and return it
 		return {data_flattened, dims[0], dims[1], dims[2], dims[3]};
