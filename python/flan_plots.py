@@ -65,6 +65,10 @@ class FlanPlots:
 			"gij_02", "gij_11", "gij_12", "gij_22"]:
 			return self.nc["geometry"][data_name][:].data
 
+		# Derived quantities
+		elif data_name == "cyclotron_frequency":
+			return self.calc_cyclo_freq()[frame]
+
 		# 4D vector, index frame. Just loop through the groups until we find
 		# the correct one.
 		else:
@@ -578,7 +582,7 @@ class FlanPlots:
 		gradBX = self.nc["background"]["gradB_X"][:]
 		gradBY = self.nc["background"]["gradB_Y"][:]
 		gradBZ = self.nc["background"]["gradB_Z"][:]
-		mz_kg = self.nc["input"]["mz"][:] * amu_to_kg
+		mz_kg = self.nc["input"]["imp_mass_amu"][:] * amu_to_kg
 
 		# Magnetic field magnitude squared
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
@@ -623,7 +627,7 @@ class FlanPlots:
 		BX = self.nc["background"]["B_X"][:]
 		BY = self.nc["background"]["B_Y"][:]
 		BZ = self.nc["background"]["B_Z"][:]
-		mz_kg = self.nc["input"]["mz"][:] * amu_to_kg
+		mz_kg = self.nc["input"]["imp_mass_amu"][:] * amu_to_kg
 		t = self.nc["geometry"]["time"][:]
 
 		# Magnetic field magnitude squared
@@ -674,7 +678,7 @@ class FlanPlots:
 		BX = self.nc["background"]["B_X"][:]
 		BY = self.nc["background"]["B_Y"][:]
 		BZ = self.nc["background"]["B_Z"][:]
-		mz_kg = self.nc["input"]["mz"][:] * amu_to_kg
+		mz_kg = self.nc["input"]["imp_mass_amu"][:] * amu_to_kg
 
 		# Magnetic field magnitude squared
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
@@ -707,6 +711,25 @@ class FlanPlots:
 				* R_sq * B[i])
 		return v_curv_X, v_curv_Y, v_curv_Z
 	
+	def calc_cyclo_freq(self):
+		"""
+		Calculate average cyclotron frequency using the average charges. 
+		"""
+
+		# Pull out some arrays
+		BX = self.nc["background"]["B_X"][:]
+		BY = self.nc["background"]["B_Y"][:]
+		BZ = self.nc["background"]["B_Z"][:]
+		qz = self.nc["output"]["qz"][:]
+		mz_kg = self.nc["input"]["imp_mass_amu"][:] * amu_to_kg
+
+		# Magnetic field magnitude squared
+		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
+
+		# Cyclotron frequency
+		omega_c = np.abs(qz * elec) * np.sqrt(Bsq) / mz_kg
+		return omega_c
+
 	def calc_gyrorad(self):
 		"""
 		Calculate average gyroradius using the average velocity and charges. 
@@ -716,11 +739,11 @@ class FlanPlots:
 		vX = self.nc["output"]["v_X"][:]
 		vY = self.nc["output"]["v_Y"][:]
 		vZ = self.nc["output"]["v_Z"][:]
-		BX = self.nc["geometry"]["B_X"][:]
-		BY = self.nc["geometry"]["B_Y"][:]
-		BZ = self.nc["geometry"]["B_Z"][:]
+		BX = self.nc["background"]["B_X"][:]
+		BY = self.nc["background"]["B_Y"][:]
+		BZ = self.nc["background"]["B_Z"][:]
 		qz = self.nc["output"]["qz"][:]
-		mz_kg = self.nc["input"]["mz"][:] * amu_to_kg
+		mz_kg = self.nc["input"]["imp_mass_amu"][:] * amu_to_kg
 
 		# Magnetic field magnitude squared
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)

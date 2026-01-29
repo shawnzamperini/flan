@@ -1,5 +1,5 @@
 ======================================================================================================
-Input options
+Input Options
 ======================================================================================================
 
 This page contains all the input options available to the user, their definition/allowed values, and finally the default values that each variable takes on. 
