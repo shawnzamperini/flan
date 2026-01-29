@@ -254,6 +254,9 @@ namespace Vectors
 		*/
 		const std::vector<T>& get_data() const;
 
+		// DEBUG: Overload to allow overwriting the data
+		std::vector<T>& get_data();
+
 		/**
 		* @brief Convert from 4D index to the 1D one used in the underlying 
 		* m_data.

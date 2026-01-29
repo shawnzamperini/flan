@@ -283,6 +283,26 @@ namespace Gkyl
 		Vectors::Vector3D gkyl_gij_22_3D {gkyl_gij_22.slice_dim1(0)};
 		bkg.move_into_gij_22(gkyl_gij_22_3D);
 
+		// Likewise for the tangent basis vectors
+		Vectors::Vector3D gkyl_dxdX_3D {gkyl_dxdX.slice_dim1(0)};
+		bkg.move_into_dxdX(gkyl_dxdX_3D);
+		Vectors::Vector3D gkyl_dxdY_3D {gkyl_dxdY.slice_dim1(0)};
+		bkg.move_into_dxdY(gkyl_dxdY_3D);
+		Vectors::Vector3D gkyl_dxdZ_3D {gkyl_dxdZ.slice_dim1(0)};
+		bkg.move_into_dxdZ(gkyl_dxdZ_3D);
+		Vectors::Vector3D gkyl_dydX_3D {gkyl_dydX.slice_dim1(0)};
+		bkg.move_into_dydX(gkyl_dydX_3D);
+		Vectors::Vector3D gkyl_dydY_3D {gkyl_dydY.slice_dim1(0)};
+		bkg.move_into_dydY(gkyl_dydY_3D);
+		Vectors::Vector3D gkyl_dydZ_3D {gkyl_dydZ.slice_dim1(0)};
+		bkg.move_into_dydZ(gkyl_dydZ_3D);
+		Vectors::Vector3D gkyl_dzdX_3D {gkyl_dzdX.slice_dim1(0)};
+		bkg.move_into_dzdX(gkyl_dzdX_3D);
+		Vectors::Vector3D gkyl_dzdY_3D {gkyl_dzdY.slice_dim1(0)};
+		bkg.move_into_dzdY(gkyl_dzdY_3D);
+		Vectors::Vector3D gkyl_dzdZ_3D {gkyl_dzdZ.slice_dim1(0)};
+		bkg.move_into_dzdZ(gkyl_dzdZ_3D);
+
 		// Likewise for covariant components of magnetic field
 		Vectors::Vector3D gkyl_b_x_3D {gkyl_b_x.slice_dim1(0)};
 		bkg.move_into_b_x(gkyl_b_x_3D);

@@ -221,6 +221,10 @@ namespace Vectors
 	template <typename T>
 	const std::vector<T>& Vector4D<T>::get_data() const {return m_data;}
 
+	// DEBUG: Overload to allow overwriting the data
+	template <typename T>
+	std::vector<T>& Vector4D<T>::get_data() {return m_data;}
+
 	template <typename T>
 	int Vector4D<T>::calc_index(const int i, const int j, const int k, 
 		const int l) const
