@@ -149,13 +149,9 @@ def calc_gradients_3d(XYZ_pot_bmag_ntimes):
 	gradB_Y = np.zeros(bmag.shape)
 	gradB_Z = np.zeros(bmag.shape)
 
-	# Go through one frame at a time
-	# To-do: Parallelize this loop, probably with numba
+	# Handle one frame at a time
 	#print("Calculating potential and magnetic field gradients for each frame...")
-	#for t in tqdm(range(pot.shape[0])):
-	print("Starting t loop...", flush=True)
 	for t in range(pot.shape[0]):
-		print("t = {}".format(t))
 		for i in range(pot.shape[1]):
 			for j in range(pot.shape[2]):
 				for k in range(pot.shape[3]):

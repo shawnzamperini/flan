@@ -63,6 +63,7 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_ti {};
 		Vectors::Vector4D<BkgFPType> gkyl_viperp_sq {};  // Perp ion velocity
 		Vectors::Vector4D<BkgFPType> gkyl_vp {};
+		Vectors::Vector4D<BkgFPType> gkyl_bmag {};
 		Vectors::Vector4D<BkgFPType> gkyl_b_x {}; // Covariant components of
 		Vectors::Vector4D<BkgFPType> gkyl_b_y {}; // magnetic field
 		Vectors::Vector4D<BkgFPType> gkyl_b_z {}; 
@@ -70,9 +71,9 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_bY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_bZ {}; 
 		Vectors::Vector4D<BkgFPType> gkyl_bR {}; 
-		Vectors::Vector4D<BkgFPType> gkyl_gradbX {}; // Magnetic field gradient
-		Vectors::Vector4D<BkgFPType> gkyl_gradbY {}; // components in physical
-		Vectors::Vector4D<BkgFPType> gkyl_gradbZ {}; // space
+		Vectors::Vector4D<BkgFPType> gkyl_dbdX {}; // Magnetic field gradient
+		Vectors::Vector4D<BkgFPType> gkyl_dbdY {}; // components in physical
+		Vectors::Vector4D<BkgFPType> gkyl_dbdZ {}; // space
 		Vectors::Vector4D<BkgFPType> gkyl_eX {}; // Electric field components
 		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_eZ {};
@@ -83,6 +84,15 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_uX {}; // Flow components
 		Vectors::Vector4D<BkgFPType> gkyl_uY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_uZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_dXdx {};
+		Vectors::Vector4D<BkgFPType> gkyl_dYdx {};
+		Vectors::Vector4D<BkgFPType> gkyl_dZdx {};
+		Vectors::Vector4D<BkgFPType> gkyl_dXdy {};
+		Vectors::Vector4D<BkgFPType> gkyl_dYdy {};
+		Vectors::Vector4D<BkgFPType> gkyl_dZdy {};
+		Vectors::Vector4D<BkgFPType> gkyl_dXdz {};
+		Vectors::Vector4D<BkgFPType> gkyl_dYdz {};
+		Vectors::Vector4D<BkgFPType> gkyl_dZdz {};
 		Vectors::Vector4D<BkgFPType> gkyl_dxdX {};
 		Vectors::Vector4D<BkgFPType> gkyl_dxdY {};
 		Vectors::Vector4D<BkgFPType> gkyl_dxdZ {};
@@ -122,7 +132,8 @@ namespace Gkyl
 		read_ion_temperature(grid_data, gkyl_ti, opts);
 		std::cout << "  - Plasma potential\n";
 		read_potential(grid_data, gkyl_vp, opts);
-		//std::cout << "  - Magnetic field\n";
+		std::cout << "  - Magnetic field magnitude\n";
+		read_potential(grid_data, gkyl_bmag, opts);
 
 		// Calculate the Cartesian (X,Y,Z) coordinate of each cell center
 		std::cout << "  - X,Y,Z coordinates\n";
@@ -133,6 +144,32 @@ namespace Gkyl
 		// to take advantage of scipy library in calculating gradients on
 		// irregular grids (i.e., for the electric field). 
 		write_XYZ(grid_data, opts);
+
+		// DEBUG
+		// Loop through each index
+		/*
+		Vectors::Vector3D<BkgFPType> X {std::get<7>(grid_data)};
+		Vectors::Vector3D<BkgFPType> Y {std::get<8>(grid_data)};
+		Vectors::Vector3D<BkgFPType> Z {std::get<9>(grid_data)};
+		int tdim {static_cast<int>(std::get<0>(grid_data).size())};
+		int xdim {static_cast<int>(std::get<1>(grid_data).size())};
+		int ydim {static_cast<int>(std::get<2>(grid_data).size())};
+		int zdim {static_cast<int>(std::get<3>(grid_data).size())};
+
+		std::cout << "OVERWRITING VP\n";
+		#pragma omp parallel for
+		for (int i = 0; i < tdim; ++i)  // t
+		{
+		for (int j {}; j < xdim; ++j)  // x
+		{
+		for (int k {}; k < ydim; ++k)  // y
+		{
+		for (int l {}; l < zdim; ++l)  // z
+		{	
+			gkyl_vp(i,j,k,l) = X(j,k,l) + 2*Y(j,k,l) + 3*Z(j,k,l);
+			//gkyl_vp(i,j,k,l) = 5.0;
+		}}}}
+		*/
 
 		// Read in Jacobian
 		std::cout << "  - Jacobian\n";
@@ -147,17 +184,29 @@ namespace Gkyl
 		read_gij(grid_data, gkyl_gij_12, opts, "12");
 		read_gij(grid_data, gkyl_gij_22, opts, "22");
 
-		// Read in tangent basis vector (dz/dX) of coordinate system
-		std::cout << "  - Tangent basis vector\n";
-		read_tangent_basis(grid_data, gkyl_dxdX, opts, "xX");
-		read_tangent_basis(grid_data, gkyl_dxdY, opts, "xY");
-		read_tangent_basis(grid_data, gkyl_dxdZ, opts, "xZ");
-		read_tangent_basis(grid_data, gkyl_dydX, opts, "yX");
-		read_tangent_basis(grid_data, gkyl_dydY, opts, "yY");
-		read_tangent_basis(grid_data, gkyl_dydZ, opts, "yZ");
-		read_tangent_basis(grid_data, gkyl_dzdX, opts, "zX");
-		read_tangent_basis(grid_data, gkyl_dzdY, opts, "zY");
-		read_tangent_basis(grid_data, gkyl_dzdZ, opts, "zZ");
+		// Read in tangent (covariant) basis vectors (dX/dz)
+		std::cout << "  - Tangent basis vectors\n";
+		read_tangent_basis(grid_data, gkyl_dXdx, opts, "Xx");
+		read_tangent_basis(grid_data, gkyl_dYdx, opts, "Yx");
+		read_tangent_basis(grid_data, gkyl_dZdx, opts, "Zx");
+		read_tangent_basis(grid_data, gkyl_dXdy, opts, "Xy");
+		read_tangent_basis(grid_data, gkyl_dYdy, opts, "Yy");
+		read_tangent_basis(grid_data, gkyl_dZdy, opts, "Zy");
+		read_tangent_basis(grid_data, gkyl_dXdz, opts, "Xz");
+		read_tangent_basis(grid_data, gkyl_dYdz, opts, "Yz");
+		read_tangent_basis(grid_data, gkyl_dZdz, opts, "Zz");
+
+		// Read in reciprocal (contravariant) basis vectors (dz/dX)
+		std::cout << "  - Reciprocal basis vectors\n";
+		read_reciprocal_basis(grid_data, gkyl_dxdX, opts, "xX");
+		read_reciprocal_basis(grid_data, gkyl_dxdY, opts, "xY");
+		read_reciprocal_basis(grid_data, gkyl_dxdZ, opts, "xZ");
+		read_reciprocal_basis(grid_data, gkyl_dydX, opts, "yX");
+		read_reciprocal_basis(grid_data, gkyl_dydY, opts, "yY");
+		read_reciprocal_basis(grid_data, gkyl_dydZ, opts, "yZ");
+		read_reciprocal_basis(grid_data, gkyl_dzdX, opts, "zX");
+		read_reciprocal_basis(grid_data, gkyl_dzdY, opts, "zY");
+		read_reciprocal_basis(grid_data, gkyl_dzdZ, opts, "zZ");
 
 		// Read in covariant components of coordinate system 
 		std::cout << "  - Covariant components\n";
@@ -174,18 +223,22 @@ namespace Gkyl
 		//read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
 		//	opts);
 
-		// At this point calculate gradients (E, gradB)
+		// At this point we can calculate gradient fields (E, gradB)
 		std::cout << "Calculating gradient fields...\n";
-		calc_gradients(opts);
+		calc_gradients(grid_data, gkyl_vp, gkyl_eX, gkyl_eY, gkyl_eZ, 
+			gkyl_bmag, gkyl_dbdX, gkyl_dbdY, gkyl_dbdZ, 
+			gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ, 
+			gkyl_dydX, gkyl_dydY, gkyl_dydZ, 
+			gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, opts);
 
 		// Read in electric field
-		std::cout << "  - Electric field\n";
-		read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
+		//std::cout << "  - Electric field\n";
+		//read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
 
 		// Read in electric field gradient (optional)
 		if (opts.calc_grad_elec_int() == 1)
 		{
-			std::cout << "  - Electric field gradient\n";
+			std::cout << "  - CHECK IF CORRECT Electric field gradient\n";
 			read_grad_elec_field(grid_data, gkyl_gradeX, gkyl_gradeY, 
 				gkyl_gradeZ);
 		}
@@ -206,13 +259,14 @@ namespace Gkyl
 			// Read in magnetic field gradient. Note these are just needed to
 			// calculate the gradB drift of the plasma flow, it is not needed
 			// beyond that and thus doesn not go into bkg below.
-			std::cout << "  - Magnetic field gradient\n";
-			read_gradb(grid_data, gkyl_gradbX, gkyl_gradbY, gkyl_gradbZ);
+			//std::cout << "  - Magnetic field gradient\n";
+			//read_gradb(grid_data, gkyl_dbdX, gkyl_dbdY, gkyl_dbdZ);
 
 			// Calculate the background flows in each Cartesian direction
+			std::cout << "  - Calculating background flow\n";
 			calc_bkg_flow(grid_data, gkyl_uz, gkyl_uX, 
 				gkyl_uY, gkyl_uZ, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_eX, 
-				gkyl_eY, gkyl_eZ, gkyl_gradbX, gkyl_gradbY, gkyl_gradbZ, 
+				gkyl_eY, gkyl_eZ, gkyl_dbdX, gkyl_dbdY, gkyl_dbdZ, 
 				gkyl_viperp_sq, opts);
 		}
 
@@ -258,9 +312,9 @@ namespace Gkyl
 		}
 
 		// Only needed for debuggin purposes, delete if not debugging
-		bkg.move_into_gradbX(gkyl_gradbX);
-		bkg.move_into_gradbY(gkyl_gradbY);
-		bkg.move_into_gradbZ(gkyl_gradbZ);
+		bkg.move_into_gradbX(gkyl_dbdX);
+		bkg.move_into_gradbY(gkyl_dbdY);
+		bkg.move_into_gradbZ(gkyl_dbdZ);
 
 		// Special case. gkyl_J is a 4D vector so we didn't have to write a
 		// whole new function just for a 3D vector - less maintainable code. 
@@ -284,6 +338,9 @@ namespace Gkyl
 		bkg.move_into_gij_22(gkyl_gij_22_3D);
 
 		// Likewise for the tangent basis vectors
+		// Add to Background first (if necessary?)
+
+		// Likewise for the reciprocal basis vectors
 		Vectors::Vector3D gkyl_dxdX_3D {gkyl_dxdX.slice_dim1(0)};
 		bkg.move_into_dxdX(gkyl_dxdX_3D);
 		Vectors::Vector3D gkyl_dxdY_3D {gkyl_dxdY.slice_dim1(0)};
@@ -752,15 +809,24 @@ namespace Gkyl
 			data_type == "metric_coeff11" ||
 			data_type == "metric_coeff12" ||
 			data_type == "metric_coeff22" ||
-			data_type == "tangent_basis_xX" ||
-			data_type == "tangent_basis_xY" ||
-			data_type == "tangent_basis_xZ" ||
-			data_type == "tangent_basis_yX" ||
-			data_type == "tangent_basis_yY" ||
-			data_type == "tangent_basis_yZ" ||
-			data_type == "tangent_basis_zX" ||
-			data_type == "tangent_basis_zY" ||
-			data_type == "tangent_basis_zZ" ||
+			data_type == "tangent_basis_Xx" ||
+			data_type == "tangent_basis_Yx" ||
+			data_type == "tangent_basis_Zx" ||
+			data_type == "tangent_basis_Xy" ||
+			data_type == "tangent_basis_Yy" ||
+			data_type == "tangent_basis_Zy" ||
+			data_type == "tangent_basis_Xz" ||
+			data_type == "tangent_basis_Yz" ||
+			data_type == "tangent_basis_Zz" ||
+			data_type == "reciprocal_basis_xX" ||
+			data_type == "reciprocal_basis_xY" ||
+			data_type == "reciprocal_basis_xZ" ||
+			data_type == "reciprocal_basis_yX" ||
+			data_type == "reciprocal_basis_yY" ||
+			data_type == "reciprocal_basis_yZ" ||
+			data_type == "reciprocal_basis_zX" ||
+			data_type == "reciprocal_basis_zY" ||
+			data_type == "reciprocal_basis_zZ" ||
 			data_type == "covariant_comp_b_x" ||
 			data_type == "covariant_comp_b_y" ||
 			data_type == "covariant_comp_b_z")
@@ -860,6 +926,19 @@ namespace Gkyl
 		// name with the potential file so just putting a placeholder
 		// string. The script handles things.
 		read_data_pgkyl("null"s, "potential", grid_data, gkyl_vp, opts);
+	}
+
+	template <typename T>
+	void read_magnetic_magnitude(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_bmag, const Options::Options& opts)
+	{
+		using namespace std::string_literals;
+
+		// Call pgkyl to load data into gkyl_bmag. There is no species
+		// name with the magnetic field magnitude file so just putting a 
+		// placeholder string. The script handles things.
+		read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
+			opts);
 	}
 
 	template <typename T>
@@ -1049,6 +1128,22 @@ namespace Gkyl
 
 	template <typename T>
 	void read_tangent_basis(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_dxdz, const Options::Options& opts,
+		const std::string& idx)
+	{
+		using namespace std::string_literals;
+
+		// Assign the correct string for the vector needed. idx is one of
+		// dXdx, ...
+		std::string tangent_basis_str {"tangent_basis_"};
+		tangent_basis_str += idx;
+
+		read_data_pgkyl("null"s, tangent_basis_str, grid_data, 
+			gkyl_dxdz, opts);
+	}
+
+	template <typename T>
+	void read_reciprocal_basis(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_dzdx, const Options::Options& opts,
 		const std::string& idx)
 	{
@@ -1056,10 +1151,10 @@ namespace Gkyl
 
 		// Assign the correct string for the vector needed. idx is one of
 		// dxdX, dxdY, dxdZ, dydX, dydY, dydZ, dzdX, dzdY, dzdZ
-		std::string tangent_basis_str {"tangent_basis_"};
-		tangent_basis_str += idx;
+		std::string reciprocal_basis_str {"reciprocal_basis_"};
+		reciprocal_basis_str += idx;
 
-		read_data_pgkyl("null"s, tangent_basis_str, grid_data, 
+		read_data_pgkyl("null"s, reciprocal_basis_str, grid_data, 
 			gkyl_dzdx, opts);
 	}
 
@@ -1080,8 +1175,28 @@ namespace Gkyl
 		}
 	}
 	
-	void calc_gradients(const Options::Options& opts)
+	template <typename T>
+	void calc_gradients(grid_data_t& grid_data, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_vp, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_bmag, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdZ, 
+		const Vectors::Vector4D<T>& gkyl_dxdX, 
+		const Vectors::Vector4D<T>& gkyl_dxdY, 
+		const Vectors::Vector4D<T>& gkyl_dxdZ, 
+		const Vectors::Vector4D<T>& gkyl_dydX, 
+		const Vectors::Vector4D<T>& gkyl_dydY, 
+		const Vectors::Vector4D<T>& gkyl_dydZ, 
+		const Vectors::Vector4D<T>& gkyl_dzdX, 
+		const Vectors::Vector4D<T>& gkyl_dzdY, 
+		const Vectors::Vector4D<T>& gkyl_dzdZ,
+		const Options::Options& opts)
 	{
+		/*
 		// See if a file already exists and load it. If not, calculate it.
 		// Let the user know one has been loaded, just in case they want Flan
 		// to recalculate the values.
@@ -1136,6 +1251,144 @@ namespace Gkyl
 				
 			// And execute it
 			[[maybe_unused]] int sys_result {system(calc_elec_field_cmd)};
+		}
+		*/
+
+		// Calculate electric field and magnetic field gradient using the
+		// gradient in computational (curvilinear) coordinates and the
+		// reciprocal (contravariant) vectors
+		
+		// Resize Vector4D's Vp has the dimensions
+		gkyl_eX.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
+		gkyl_eY.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
+		gkyl_eZ.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
+		gkyl_dbdX.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
+		gkyl_dbdY.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
+		gkyl_dbdZ.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
+
+		// Calculate dx, dy, dz, hence assuming a uniform grid, but this
+		// can easily be generalized into arbitrary spacing if needed.
+		double dx {std::get<1>(grid_data)[1] - std::get<1>(grid_data)[0]};
+		double dy {std::get<2>(grid_data)[1] - std::get<2>(grid_data)[0]};
+		double dz {std::get<3>(grid_data)[1] - std::get<3>(grid_data)[0]};
+
+		// Loop through each index
+		int tdim {static_cast<int>(std::get<0>(grid_data).size())};
+		int xdim {static_cast<int>(std::get<1>(grid_data).size())};
+		int ydim {static_cast<int>(std::get<2>(grid_data).size())};
+		int zdim {static_cast<int>(std::get<3>(grid_data).size())};
+
+		#pragma omp parallel for
+		for (int i = 0; i < tdim; ++i)  // t
+		{
+		for (int j {}; j < xdim; ++j)  // x
+		{
+		for (int k {}; k < ydim; ++k)  // y
+		{
+		for (int l {}; l < zdim; ++l)  // z
+		{	
+			// Calculate x,y,z partial derivative for Vp and B. Using
+			// central difference formula, reverting to forward or 
+			// backward for the edge cases.
+			//std::cout << i << " " << j << " " << k << " " << l << ": "
+			//	<< "Vp = " << gkyl_vp(i,j,k,l) << '\n';
+
+			// x
+			double dVpdx {};
+			double dBdx {};
+			if (j == 0)
+			{
+				dVpdx = (gkyl_vp(i,j+1,k,l) - gkyl_vp(i,j,k,l)) / dx;
+				dBdx = (gkyl_bmag(i,j+1,k,l) - gkyl_bmag(i,j,k,l)) / dx;
+			}
+			else if (j == (xdim-1))
+			{
+				dVpdx = (gkyl_vp(i,j,k,l) - gkyl_vp(i,j-1,k,l)) / dx;
+				dBdx = (gkyl_bmag(i,j,k,l) - gkyl_bmag(i,j-1,k,l)) / dx;
+			}
+			else
+			{
+				dVpdx = (gkyl_vp(i,j+1,k,l) - gkyl_vp(i,j-1,k,l)) / (2 * dx);
+				dBdx = (gkyl_bmag(i,j+1,k,l) - gkyl_bmag(i,j-1,k,l)) / (2 * dx);
+			}
+
+			// y
+			double dVpdy {};
+			double dBdy {};
+			if (k == 0)
+			{
+				dVpdy = (gkyl_vp(i,j,k+1,l) - gkyl_vp(i,j,k,l)) / dy;
+				dBdy = (gkyl_bmag(i,j,k+1,l) - gkyl_bmag(i,j,k,l)) / dy;
+			}
+			else if (k == (ydim-1))
+			{
+				dVpdy = (gkyl_vp(i,j,k,l) - gkyl_vp(i,j,k-1,l)) / dy;
+				dBdy = (gkyl_bmag(i,j,k,l) - gkyl_bmag(i,j,k-1,l)) / dy;
+			}
+			else
+			{
+				dVpdy = (gkyl_vp(i,j,k+1,l) - gkyl_vp(i,j,k-1,l)) / (2 * dy);
+				dBdy = (gkyl_bmag(i,j,k+1,l) - gkyl_bmag(i,j,k-1,l)) / (2 * dy);
+			}
+
+			// z
+			double dVpdz {};
+			double dBdz {};
+			if (l == 0)
+			{
+				dVpdz = (gkyl_vp(i,j,k,l+1) - gkyl_vp(i,j,k,l)) / dz;
+				dBdz = (gkyl_bmag(i,j,k,l+1) - gkyl_bmag(i,j,k,l)) / dz;
+			}
+			else if (l == (zdim-1))
+			{
+				dVpdz = (gkyl_vp(i,j,k,l) - gkyl_vp(i,j,k,l-1)) / dz;
+				dBdz = (gkyl_bmag(i,j,k,l) - gkyl_bmag(i,j,k,l-1)) / dz;
+			}
+			else
+			{
+				dVpdz = (gkyl_vp(i,j,k,l+1) - gkyl_vp(i,j,k,l-1)) / (2 * dz);
+				dBdz = (gkyl_bmag(i,j,k,l+1) - gkyl_bmag(i,j,k,l-1)) / (2 * dz);
+			}
+
+			// Assemble Cartesian X,Y,Z gradient
+			// Warning! I've found a landmine that you need to be careful
+			// with, a result of something slipping through the cracks in how
+			// data is read in. The basis vectors are actually 3D data that's
+			// stored in 4D arrays. This ends up meaning only i=0 has the data
+			// in it, and it's undefined everywhere else! I need to convert
+			// these to 3D arrays.
+			double dVpdX {dVpdx * gkyl_dxdX(0,j,k,l) 
+				+ dVpdy * gkyl_dydX(0,j,k,l) + dVpdz * gkyl_dzdX(0,j,k,l)};
+			double dVpdY {dVpdx * gkyl_dxdY(0,j,k,l) 
+				+ dVpdy * gkyl_dydY(0,j,k,l) + dVpdz * gkyl_dzdY(0,j,k,l)};
+			double dVpdZ {dVpdx * gkyl_dxdZ(0,j,k,l) 
+				+ dVpdy * gkyl_dydZ(0,j,k,l) + dVpdz * gkyl_dzdZ(0,j,k,l)};
+			double dBdX {dBdx * gkyl_dxdX(0,j,k,l) 
+				+ dBdy * gkyl_dydX(0,j,k,l) + dBdz * gkyl_dzdX(0,j,k,l)};
+			double dBdY {dBdx * gkyl_dxdY(0,j,k,l) 
+				+ dBdy * gkyl_dydY(0,j,k,l) + dBdz * gkyl_dzdY(0,j,k,l)};
+			double dBdZ {dBdx * gkyl_dxdZ(0,j,k,l) 
+				+ dBdy * gkyl_dydZ(0,j,k,l) + dBdz * gkyl_dzdZ(0,j,k,l)};
+			
+			// Store in Vector4D, not forgetting the minus sign!
+			gkyl_eX(i,j,k,l) = -dVpdX;
+			gkyl_eY(i,j,k,l) = -dVpdY;
+			gkyl_eZ(i,j,k,l) = -dVpdZ;
+			//gkyl_eX(i,j,k,l) = gkyl_dydX(i,j,k,l);
+			//gkyl_eY(i,j,k,l) = gkyl_dydY(i,j,k,l);
+			//gkyl_eZ(i,j,k,l) = gkyl_dydZ(i,j,k,l);
+			gkyl_dbdX(i,j,k,l) = dBdX;
+			gkyl_dbdY(i,j,k,l) = dBdY;
+			gkyl_dbdZ(i,j,k,l) = dBdZ;
+		}
+		}
+		}
 		}
 	}
 	
@@ -1240,9 +1493,9 @@ namespace Gkyl
 	{
 
 		// Apply fix to y boundaries where the gradient generally messes up
-		gradient_ybound_fix(grid_data, dataX);
-		gradient_ybound_fix(grid_data, dataY);
-		gradient_ybound_fix(grid_data, dataZ);
+		//gradient_ybound_fix(grid_data, dataX);
+		//gradient_ybound_fix(grid_data, dataY);
+		//gradient_ybound_fix(grid_data, dataZ);
 
 		// Move into arrays
 		gkyl_dataX.move_into_data(dataX);
@@ -1352,9 +1605,9 @@ namespace Gkyl
 	}
 
 	void read_gradb(grid_data_t& grid_data, 
-		Vectors::Vector4D<BkgFPType>& gkyl_gradbX, 
-		Vectors::Vector4D<BkgFPType>& gkyl_gradbY, 
-		Vectors::Vector4D<BkgFPType>& gkyl_gradbZ)
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdZ)
 	{
 		// gradB_X
 		Vectors::Vector4D<BkgFPType> tmp_dataX
@@ -1370,7 +1623,7 @@ namespace Gkyl
 
 		// Call general fuction to handle calculated-gradient data.
 		read_gradient_data(grid_data, tmp_dataX, tmp_dataY, tmp_dataZ, 
-			gkyl_gradbX, gkyl_gradbY, gkyl_gradbZ);
+			gkyl_dbdX, gkyl_dbdY, gkyl_dbdZ);
 	}
 
 
@@ -1456,9 +1709,9 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 
-		Vectors::Vector4D<BkgFPType>& gkyl_gradbX, 
-		Vectors::Vector4D<BkgFPType>& gkyl_gradbY,
-		Vectors::Vector4D<BkgFPType>& gkyl_gradbZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdY,
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdZ, 
 		Vectors::Vector4D<BkgFPType>& gkyl_viperp_sq, 
 		const Options::Options& opts)
 	{
@@ -1485,9 +1738,9 @@ namespace Gkyl
 			double bX {gkyl_bX(i,j,k,l)};
 			double bY {gkyl_bY(i,j,k,l)};
 			double bZ {gkyl_bZ(i,j,k,l)};
-			double gradbX {gkyl_gradbX(i,j,k,l)};
-			double gradbY {gkyl_gradbY(i,j,k,l)};
-			double gradbZ {gkyl_gradbZ(i,j,k,l)};
+			double gradbX {gkyl_dbdX(i,j,k,l)};
+			double gradbY {gkyl_dbdY(i,j,k,l)};
+			double gradbZ {gkyl_dbdZ(i,j,k,l)};
 			double eX {gkyl_eX(i,j,k,l)};
 			double eY {gkyl_eY(i,j,k,l)};
 			double eZ {gkyl_eZ(i,j,k,l)};

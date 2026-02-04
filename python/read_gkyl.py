@@ -9,12 +9,14 @@ import numpy as np
 
 
 # Parameters that are time-independent
-time_independent_data = ["jacobian", "metric_coeff00", 
-	"metric_coeff01", "metric_coeff02", "metric_coeff11", "metric_coeff12", 
-	"metric_coeff22", "tangent_basis_xX", "tangent_basis_xY", 
-	"tangent_basis_xZ", "tangent_basis_yX", "tangent_basis_yY", 
-	"tangent_basis_yZ", "tangent_basis_zX", "tangent_basis_zY", 
-	"tangent_basis_zZ"]
+time_independent_data = ["jacobian", "metric_coeff00", "metric_coeff01", 
+	"metric_coeff02", "metric_coeff11", "metric_coeff12", "metric_coeff22", 
+	"tangent_basis_Xx", "tangent_basis_Yx", "tangent_basis_Zx", 
+	"tangent_basis_Xy", "tangent_basis_Yy", "tangent_basis_Zy", 
+	"tangent_basis_Xz", "tangent_basis_Yz", "tangent_basis_Zz", 
+	"reciprocal_basis_xX", "reciprocal_basis_xY", "reciprocal_basis_xZ",
+	"reciprocal_basis_yX", "reciprocal_basis_yY", "reciprocal_basis_yZ",
+	"reciprocal_basis_zX", "reciprocal_basis_zY", "reciprocal_basis_zZ"]
 			
 def load_binary_wrapper(args):
 	"""
@@ -229,22 +231,45 @@ def load_binary_params(args):
 
 		value_scale = 1.0
 	
-	# Tangent basis vector components, (xX = dx/dX, ...)
-	elif (args.gkyl_data_type in ["tangent_basis_xX", "tangent_basis_xY", 
-		"tangent_basis_xZ", "tangent_basis_yX", "tangent_basis_yY", 
-		"tangent_basis_yZ", "tangent_basis_zX", "tangent_basis_zY", 
-		"tangent_basis_zZ"]):
-		data_dname = "dzdx"
+	# Tangent basis vector components, (Xx = dX/dx, ...). Components in the
+	# .gkyl file are organized as e_1, e_2, e_3, where each is printed out
+	# ordered in X, Y, Z.
+	elif (args.gkyl_data_type in ["tangent_basis_Xx", "tangent_basis_Yx", 
+		"tangent_basis_Zx", "tangent_basis_Xy", "tangent_basis_Yy", 
+		"tangent_basis_Zy", "tangent_basis_Xz", "tangent_basis_Yz", 
+		"tangent_basis_Zz"]):
+		data_dname = "dxdz"
 		
-		if args.gkyl_data_type == "tangent_basis_xX": comp = 0
-		elif args.gkyl_data_type == "tangent_basis_xY": comp = 1
-		elif args.gkyl_data_type == "tangent_basis_xZ": comp = 2
-		elif args.gkyl_data_type == "tangent_basis_yX": comp = 3
-		elif args.gkyl_data_type == "tangent_basis_yY": comp = 4
-		elif args.gkyl_data_type == "tangent_basis_yZ": comp = 5
-		elif args.gkyl_data_type == "tangent_basis_zX": comp = 6
-		elif args.gkyl_data_type == "tangent_basis_zY": comp = 7
-		elif args.gkyl_data_type == "tangent_basis_zZ": comp = 8
+		if args.gkyl_data_type == "tangent_basis_Xx": comp = 0
+		elif args.gkyl_data_type == "tangent_basis_Yx": comp = 1
+		elif args.gkyl_data_type == "tangent_basis_Zx": comp = 2
+		elif args.gkyl_data_type == "tangent_basis_Xy": comp = 3
+		elif args.gkyl_data_type == "tangent_basis_Yy": comp = 4
+		elif args.gkyl_data_type == "tangent_basis_Zy": comp = 5
+		elif args.gkyl_data_type == "tangent_basis_Xz": comp = 6
+		elif args.gkyl_data_type == "tangent_basis_Yz": comp = 7
+		elif args.gkyl_data_type == "tangent_basis_Zz": comp = 8
+
+		value_scale = 1.0
+
+	# Reciprocal basis vector components, (xX = dx/dX, ...). Components in the
+	# .gkyl file are organized as e_1, e_2, e_3, where each is printed out
+	# ordered in X, Y, Z.
+	elif (args.gkyl_data_type in ["reciprocal_basis_xX", "reciprocal_basis_xY",
+		"reciprocal_basis_xZ", "reciprocal_basis_yX", "reciprocal_basis_yY",
+		"reciprocal_basis_yZ", "reciprocal_basis_zX", "reciprocal_basis_zY", 
+		"reciprocal_basis_zZ"]): 
+		data_dname = "dzdx"
+
+		if args.gkyl_data_type == "reciprocal_basis_xX": comp = 0
+		elif args.gkyl_data_type == "reciprocal_basis_xY": comp = 1
+		elif args.gkyl_data_type == "reciprocal_basis_xZ": comp = 2
+		elif args.gkyl_data_type == "reciprocal_basis_yX": comp = 3
+		elif args.gkyl_data_type == "reciprocal_basis_yY": comp = 4
+		elif args.gkyl_data_type == "reciprocal_basis_yZ": comp = 5
+		elif args.gkyl_data_type == "reciprocal_basis_zX": comp = 6
+		elif args.gkyl_data_type == "reciprocal_basis_zY": comp = 7
+		elif args.gkyl_data_type == "reciprocal_basis_zZ": comp = 8
 
 		value_scale = 1.0
 
@@ -286,9 +311,12 @@ def load_binary_path(args, data_dname, frame):
 		"magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
 		"metric_coeff00", "metric_coeff01", "metric_coeff02", 
 		"metric_coeff11", "metric_coeff12", "metric_coeff22",
-		"tangent_basis_xX", "tangent_basis_xY", "tangent_basis_xZ", 
-		"tangent_basis_yX", "tangent_basis_yY", "tangent_basis_yZ", 
-		"tangent_basis_zX", "tangent_basis_zY", "tangent_basis_zZ",
+		"tangent_basis_Xx", "tangent_basis_Yx", "tangent_basis_Zx", 
+		"tangent_basis_Xy", "tangent_basis_Yy", "tangent_basis_Zy", 
+		"tangent_basis_Xz", "tangent_basis_Yz", "tangent_basis_Zz",
+		"reciprocal_basis_xX", "reciprocal_basis_xY", "reciprocal_basis_xZ",
+		"reciprocal_basis_yX", "reciprocal_basis_yY", "reciprocal_basis_yZ",
+		"reciprocal_basis_zX", "reciprocal_basis_zY", "reciprocal_basis_zZ",
 		"covariant_comp_b_x", "covariant_comp_b_y", "covariant_comp_b_z"]):
 		path = args.gkyl_dir + "/" + args.gkyl_case_name + \
 			"-" + data_dname \
@@ -365,10 +393,13 @@ def load_binary(path, args, comp, value_scale=1.0):
 	# Only time-dependent data has time in it
 	if (args.gkyl_data_type not in ["jacobian", "metric_coeff00", 
 		"metric_coeff01", "metric_coeff02", "metric_coeff11", 
-		"metric_coeff12", "metric_coeff22", "tangent_basis_xX", 
-		"tangent_basis_xY", "tangent_basis_xZ", "tangent_basis_yX", 
-		"tangent_basis_yY", "tangent_basis_yZ", "tangent_basis_zX", 
-		"tangent_basis_zY", "tangent_basis_zZ"]):
+		"metric_coeff12", "metric_coeff22", 
+		"tangent_basis_Xx", "tangent_basis_Yx", "tangent_basis_Zx", 
+		"tangent_basis_Xy", "tangent_basis_Yy", "tangent_basis_Zy", 
+		"tangent_basis_Xz", "tangent_basis_Yz", "tangent_basis_Zz",
+		"reciprocal_basis_xX", "reciprocal_basis_xY", "reciprocal_basis_xZ", 
+		"reciprocal_basis_yX", "reciprocal_basis_yY", "reciprocal_basis_yZ", 
+		"reciprocal_basis_zX", "reciprocal_basis_zY", "reciprocal_basis_zZ"]): 
 		time = data.ctx["time"]
 	else:
 		time = []
@@ -496,9 +527,12 @@ def main():
 		"magnetic_unit_Y", "magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
 		"metric_coeff00", "metric_coeff01", "metric_coeff02", "metric_coeff11",
 		"metric_coeff12", "metric_coeff22", "par_flow", "vperp_sq",
-		"tangent_basis_xX", "tangent_basis_xY", "tangent_basis_xZ", 
-		"tangent_basis_yX", "tangent_basis_yY", "tangent_basis_yZ", 
-		"tangent_basis_zX", "tangent_basis_zY", "tangent_basis_zZ",
+		"tangent_basis_Xx", "tangent_basis_Yx", "tangent_basis_Zx", 
+		"tangent_basis_Xy", "tangent_basis_Yy", "tangent_basis_Zy", 
+		"tangent_basis_Xz", "tangent_basis_Yz", "tangent_basis_Zz",
+		"reciprocal_basis_xX", "reciprocal_basis_xY", "reciprocal_basis_xZ",
+		"reciprocal_basis_yX", "reciprocal_basis_yY", "reciprocal_basis_yZ",
+		"reciprocal_basis_zX", "reciprocal_basis_zY", "reciprocal_basis_zZ",
 		"covariant_comp_b_x", "covariant_comp_b_y", "covariant_comp_b_z"]
 
 	# Parse command line arguments

@@ -171,6 +171,13 @@ namespace Gkyl
 		Vectors::Vector4D<T>& gkyl_vp, const Options::Options& opts);
 
 	/**
+	* @brief Read magnetic field magnitude into gkyl_bmag.
+	*/
+	template <typename T>
+	void read_magnetic_magnitude(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_bmag, const Options::Options& opts);
+
+	/**
 	* @brief Read covariant components of magnetic field
 	*/
 	template <typename T>
@@ -224,6 +231,14 @@ namespace Gkyl
 	*/
 	template <typename T>
 	void read_tangent_basis(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_dxdz, const Options::Options& opts,
+		const std::string& idx);
+
+	/*
+	* @brief Read cotravariant components into gkyl_dzdx.
+	*/
+	template <typename T>
+	void read_reciprocal_basis(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_dzdx, const Options::Options& opts,
 		const std::string& idx);
 
@@ -246,7 +261,26 @@ namespace Gkyl
 	* potential, and the magnetic field gradient. This function actually calls 
 	* the python script calc_elec.py.
 	*/
-	void calc_gradients(const Options::Options& opts);
+	template <typename T>
+	void calc_gradients(grid_data_t& grid_data, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_vp, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_bmag, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdZ, 
+		const Vectors::Vector4D<T>& gkyl_dxdX, 
+		const Vectors::Vector4D<T>& gkyl_dxdY, 
+		const Vectors::Vector4D<T>& gkyl_dxdZ, 
+		const Vectors::Vector4D<T>& gkyl_dydX, 
+		const Vectors::Vector4D<T>& gkyl_dydY, 
+		const Vectors::Vector4D<T>& gkyl_dydZ, 
+		const Vectors::Vector4D<T>& gkyl_dzdX, 
+		const Vectors::Vector4D<T>& gkyl_dzdY, 
+		const Vectors::Vector4D<T>& gkyl_dzdZ,
+		const Options::Options& opts);
 
 	/**
 	* @brief Calculate cell X,Y,Z coordinates for center of cells

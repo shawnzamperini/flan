@@ -62,10 +62,9 @@ endif()
 add_library(flan SHARED ${SOURCES})
 
 # Compilation flags
-target_compile_options(flan PRIVATE -Wall -O3 -fopenmp)
+target_compile_options(flan PRIVATE -Wall -O3 -fopenmp -march=native)
 
-# Specify the libraries to link against. I am not fully certain why we need
-# the -fopenmp flag here in the linking stage, but it's needed
+# Specify the libraries to link against
 target_link_libraries(flan PRIVATE -fopenmp netcdf netcdf-cxx4)
 
 # Set the rpath so we can find the netCDF shared library
