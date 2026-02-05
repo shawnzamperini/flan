@@ -44,7 +44,7 @@ namespace Impurity
 		, m_dim4 {dim4}
 		, m_counts (Vectors::Vector4D<int> {dim1, dim2, dim3, dim4})
 		, m_weights (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
-		, m_density (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
+		//, m_density (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 		, m_charge (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 	{
 		// Issue: This code seems to not be correct, not sure how yet...
@@ -82,7 +82,8 @@ namespace Impurity
 	* @return Vector4D<BkgFPType>
 	* @sa calc_density()
 	*
-	* calc_density() is used to fill this vector.
+	* calc_density() is used to fill this vector. Remains unallocated until
+	* then.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_density() {return m_density;}
 
@@ -224,6 +225,13 @@ namespace Impurity
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)
 	{
+		// Allocate empty density Vector4D. Important we do this here,
+		// since if we do it when ImpurityStats gets constructed that means
+		// a pointless allocated Vector4D gets created for each OpenMP thread
+		// during the impurity following code!
+		m_density = Vectors::Vector4D<BkgFPType>(m_dim1, m_dim2, m_dim3, 
+			m_dim4);
+
 		// Need to loop through the entire Vector4D. Unconventional 
 		// indentation here just to keep it clean.
 		for (int i {}; i < m_dim1; ++i)
