@@ -359,8 +359,8 @@ namespace Impurity
             + bkg.get_gij_22()(xidx, yidx, zidx) * dZ};
 		*/
 
-		// Calculate the step in computational space using the tangent basis
-		// vectors.
+		// Calculate the step in computational space using the reciprocal basis
+		// vectors. This is Eq. 2.3.6 in Dhaeseleer.
 		double dx {bkg.get_dxdX()(xidx, yidx, zidx) * dX
 			+ bkg.get_dxdY()(xidx, yidx, zidx) * dY
 			+ bkg.get_dxdZ()(xidx, yidx, zidx) * dZ};

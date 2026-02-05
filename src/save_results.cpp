@@ -434,6 +434,7 @@ namespace SaveResults
 			dim3, dim4, "Jacobian", "()");
 
 		// Metric coefficients
+		/*
 		save_vector_3d(geo_group, bkg.get_gij_00(), "gij_00", dim2, 
 			dim3, dim4, "metric coefficient (00)", "(?)");
 		save_vector_3d(geo_group, bkg.get_gij_01(), "gij_01", dim2, 
@@ -446,6 +447,7 @@ namespace SaveResults
 			dim3, dim4, "metric coefficient (12)", "(?)");
 		save_vector_3d(geo_group, bkg.get_gij_22(), "gij_22", dim2, 
 			dim3, dim4, "metric coefficient (22)", "(?)");
+		*/
 
 		// Duals of the magnetic field
 		save_vector_3d(geo_group, bkg.get_b_x(), "b_x", dim2, 
@@ -509,21 +511,21 @@ namespace SaveResults
 			dim1, dim2, dim3, dim4, "magnetic field (R)", "(T)");
 
 		// Magnetic field gradient
-		save_vector_4d(bkg_group, bkg.get_gradbX(), "gradB_X", 
+		save_vector_4d(bkg_group, bkg.get_gradbX(), "dBdX", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (X)", "(T)");
-		save_vector_4d(bkg_group, bkg.get_gradbY(), "gradB_Y", 
+		save_vector_4d(bkg_group, bkg.get_gradbY(), "dBdY", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (Y)", "(T)");
-		save_vector_4d(bkg_group, bkg.get_gradbZ(), "gradB_Z", 
+		save_vector_4d(bkg_group, bkg.get_gradbZ(), "dBdZ", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (Z)", "(T)");
 
 		// Electric field gradient
 		if (opts.calc_grad_elec_int() == 1)
 		{
-			save_vector_4d(bkg_group, bkg.get_gradeX(), "gradE_X", dim1, dim2, 
+			save_vector_4d(bkg_group, bkg.get_gradeX(), "dEdX", dim1, dim2, 
 				dim3, dim4, "electric field gradient (X)", "(V/m2)");
-			save_vector_4d(bkg_group, bkg.get_gradeY(), "gradE_Y", dim1, dim2, 
+			save_vector_4d(bkg_group, bkg.get_gradeY(), "dEdY", dim1, dim2, 
 				dim3, dim4, "electric field gradient (Y)", "(V/m2)");
-			save_vector_4d(bkg_group, bkg.get_gradeZ(), "gradE_Z", dim1, dim2, 
+			save_vector_4d(bkg_group, bkg.get_gradeZ(), "dEdZ", dim1, dim2, 
 				dim3, dim4, "electric field gradient (Z)", "(V/m2)");
 		}
 

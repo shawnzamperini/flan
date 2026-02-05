@@ -38,6 +38,10 @@ namespace Gkyl
 		// I feel like the logic could've shaken out better here, but in the 
 		// end the data in these arrays are moved into a Background object 
 		// (not copied) and then go out of scope, so end of the day it's fine. 
+		// This file uses the convention that all variable names are lowercase.
+		// x,y,z always refers to computational (Gkeyll, curvilinear) 
+		// coordinates and X,Y,Z always refers to physical (Cartesian)
+		// coordinates.
 		std::vector<BkgFPType> gkyl_times {};
 		std::vector<BkgFPType> gkyl_x {};  // Cell centers
 		std::vector<BkgFPType> gkyl_y {};
@@ -176,6 +180,7 @@ namespace Gkyl
 		read_jacobian(grid_data, gkyl_J, opts);
 
 		// Read in metric coefficients. Each has its own vector.
+		/*
 		std::cout << "  - Metric coefficients\n";
 		read_gij(grid_data, gkyl_gij_00, opts, "00");
 		read_gij(grid_data, gkyl_gij_01, opts, "01");
@@ -183,6 +188,7 @@ namespace Gkyl
 		read_gij(grid_data, gkyl_gij_11, opts, "11");
 		read_gij(grid_data, gkyl_gij_12, opts, "12");
 		read_gij(grid_data, gkyl_gij_22, opts, "22");
+		*/
 
 		// Read in tangent (covariant) basis vectors (dX/dz)
 		std::cout << "  - Tangent basis vectors\n";
@@ -213,7 +219,7 @@ namespace Gkyl
 		read_covariant_comp_b(grid_data, gkyl_b_x, gkyl_b_y, gkyl_b_z, opts);
 		
 		// Calculate Cartesian components of the magnetic field
-		std::cout << "  - Magnetic field\n";
+		std::cout << "  - Magnetic field (CHECK THIS)\n";
 		calc_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR, 
 			gkyl_b_x, gkyl_b_y, gkyl_b_z, gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ,
 			gkyl_dydX, gkyl_dydY, gkyl_dydZ, gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, 
@@ -324,6 +330,7 @@ namespace Gkyl
 		bkg.move_into_J(gkyl_J_3D);
 
 		// Likewise for the 6 metric coefficient arrays
+		/*
 		Vectors::Vector3D gkyl_gij_00_3D {gkyl_gij_00.slice_dim1(0)};
 		bkg.move_into_gij_00(gkyl_gij_00_3D);
 		Vectors::Vector3D gkyl_gij_01_3D {gkyl_gij_01.slice_dim1(0)};
@@ -336,6 +343,7 @@ namespace Gkyl
 		bkg.move_into_gij_12(gkyl_gij_12_3D);
 		Vectors::Vector3D gkyl_gij_22_3D {gkyl_gij_22.slice_dim1(0)};
 		bkg.move_into_gij_22(gkyl_gij_22_3D);
+		*/
 
 		// Likewise for the tangent basis vectors
 		// Add to Background first (if necessary?)
@@ -1072,7 +1080,7 @@ namespace Gkyl
 			constexpr double bmag {1.0};
 
 			// Calculate Cartesian components of magnetic field. We do this
-			// by calculating the dot product between the tangent basis
+			// by calculating the dot product between the reciprocal basis
 			// vector (dz/dX) and the magnetic field covariant components (b_i).
 			// BX
 			gkyl_bX(i,j,k,l) = (gkyl_b_x(0,j,k,l) * gkyl_dxdX(0,j,k,l)
@@ -1356,7 +1364,8 @@ namespace Gkyl
 				dBdz = (gkyl_bmag(i,j,k,l+1) - gkyl_bmag(i,j,k,l-1)) / (2 * dz);
 			}
 
-			// Assemble Cartesian X,Y,Z gradient
+			// Assemble Cartesian X,Y,Z gradient. This is Eq. 2.6.35 in
+			// Dhaeseleer. 
 			// Warning! I've found a landmine that you need to be careful
 			// with, a result of something slipping through the cracks in how
 			// data is read in. The basis vectors are actually 3D data that's
@@ -1380,9 +1389,6 @@ namespace Gkyl
 			gkyl_eX(i,j,k,l) = -dVpdX;
 			gkyl_eY(i,j,k,l) = -dVpdY;
 			gkyl_eZ(i,j,k,l) = -dVpdZ;
-			//gkyl_eX(i,j,k,l) = gkyl_dydX(i,j,k,l);
-			//gkyl_eY(i,j,k,l) = gkyl_dydY(i,j,k,l);
-			//gkyl_eZ(i,j,k,l) = gkyl_dydZ(i,j,k,l);
 			gkyl_dbdX(i,j,k,l) = dBdX;
 			gkyl_dbdY(i,j,k,l) = dBdY;
 			gkyl_dbdZ(i,j,k,l) = dBdZ;
