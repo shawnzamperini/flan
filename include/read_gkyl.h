@@ -208,8 +208,7 @@ namespace Gkyl
 		Vectors::Vector4D<T>& gkyl_dydX, Vectors::Vector4D<T>& gkyl_dydY, 
 		Vectors::Vector4D<T>& gkyl_dydZ, Vectors::Vector4D<T>& gkyl_dzdX, 
 		Vectors::Vector4D<T>& gkyl_dzdY, Vectors::Vector4D<T>& gkyl_dzdZ, 
-		const Vectors::Vector3D<T>& gkyl_X, const Vectors::Vector3D<T>& gkyl_Y, 
-		const Vectors::Vector3D<T>& gkyl_Z, const Options::Options& opts);
+		const Options::Options& opts);
 
 	/**
 	* @brief Read Jacobian into gkyl_J.

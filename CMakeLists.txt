@@ -1,6 +1,6 @@
 # This version is likely a bit too strict, it is just the one I built this with
 cmake_minimum_required(VERSION 3.26)
-project(flan VERSION 0.7.0)
+project(flan VERSION 0.8.0)
 
 # Load options from when the dependencies were built. Contains FLANSOFT
 # and FLANROOT

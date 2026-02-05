@@ -203,23 +203,8 @@ namespace Impurity
 		m_vY(tidx, xidx, yidx, zidx) += vY;
 		m_vZ(tidx, xidx, yidx, zidx) += vZ;
 
-		// Little temporary thing to output the velocities for some distribution
-		// function analysis for the paper and stuff. This is super specific,
-		// but I leave it here to inspire future code development. Or just
-		// delete it if you're tired of seeing it!
-		/*
-		if (xidx == 33 && zidx == 8)  // R-Rsep = 6 cm
-		{
-			#pragma omp critical	
-			{
-				std::cout << std::fixed << std::setprecision(2);
-				std::cout << "flag " << bkg.get_X()(xidx, yidx, zidx) << " " 
-					<< bkg.get_Y()(xidx, yidx, zidx) << " " 
-					<< bkg.get_Z()(xidx, yidx, zidx) << " " 
-					<< vX << " " << vY << " " << vZ << '\n';
-			}
-		}
-		*/
+		// Note that one could add velocity distribution counting for a future
+		// update if the memory load isn't too demanding, but it may be.
 	}
 
 	/**

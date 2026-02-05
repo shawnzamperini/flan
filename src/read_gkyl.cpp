@@ -223,7 +223,7 @@ namespace Gkyl
 		calc_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR, 
 			gkyl_b_x, gkyl_b_y, gkyl_b_z, gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ,
 			gkyl_dydX, gkyl_dydY, gkyl_dydZ, gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, 
-			gkyl_X, gkyl_Y, gkyl_Z, opts);
+			opts);
 
 		// Old-style magnetic field
 		//read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
@@ -244,7 +244,7 @@ namespace Gkyl
 		// Read in electric field gradient (optional)
 		if (opts.calc_grad_elec_int() == 1)
 		{
-			std::cout << "  - CHECK IF CORRECT Electric field gradient\n";
+			std::cout << "  - NEED TO REDO Electric field gradient\n";
 			read_grad_elec_field(grid_data, gkyl_gradeX, gkyl_gradeY, 
 				gkyl_gradeZ);
 		}
@@ -1041,8 +1041,7 @@ namespace Gkyl
 		Vectors::Vector4D<T>& gkyl_dydX, Vectors::Vector4D<T>& gkyl_dydY, 
 		Vectors::Vector4D<T>& gkyl_dydZ, Vectors::Vector4D<T>& gkyl_dzdX, 
 		Vectors::Vector4D<T>& gkyl_dzdY, Vectors::Vector4D<T>& gkyl_dzdZ, 
-		const Vectors::Vector3D<T>& gkyl_X, const Vectors::Vector3D<T>& gkyl_Y, 
-		const Vectors::Vector3D<T>& gkyl_Z, const Options::Options& opts)
+		const Options::Options& opts)
 	{
 
 		// Load the magnetic field magnitude. Only used internally to scale
@@ -1076,8 +1075,8 @@ namespace Gkyl
 			// Magnitude. I am still unsure if the magnetic field needs to be
 			// multiplied by bmag or not! At some point it seemed like the
 			// right thing to do, but now it seems like it isn't.
-			//const double bmag {gkyl_bmag(i,j,k,l)};
-			constexpr double bmag {1.0};
+			const double bmag {gkyl_bmag(i,j,k,l)};
+			//constexpr double bmag {1.0};
 
 			// Calculate Cartesian components of magnetic field. We do this
 			// by calculating the dot product between the reciprocal basis
