@@ -219,15 +219,15 @@ namespace Gkyl
 		read_covariant_comp_b(grid_data, gkyl_b_x, gkyl_b_y, gkyl_b_z, opts);
 		
 		// Calculate Cartesian components of the magnetic field
-		std::cout << "  - Magnetic field (CHECK THIS)\n";
-		calc_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR, 
-			gkyl_b_x, gkyl_b_y, gkyl_b_z, gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ,
-			gkyl_dydX, gkyl_dydY, gkyl_dydZ, gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, 
-			opts);
+		std::cout << "  - Magnetic field (still figuring out...)\n";
+		//calc_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR, 
+		//	gkyl_b_x, gkyl_b_y, gkyl_b_z, gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ,
+		//	gkyl_dydX, gkyl_dydY, gkyl_dydZ, gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, 
+		//	opts);
 
 		// Old-style magnetic field
-		//read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
-		//	opts);
+		read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
+			opts);
 
 		// At this point we can calculate gradient fields (E, gradB)
 		std::cout << "Calculating gradient fields...\n";
@@ -991,19 +991,28 @@ namespace Gkyl
 		read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
 			opts);
 
+		constexpr double unit_tol_min {0.95}; 
+		constexpr double unit_tol_max {1.05}; 
+		int outside_tol {};
+
+		int tdim {static_cast<int>(std::get<0>(grid_data).size())};
+		int xdim {static_cast<int>(std::get<1>(grid_data).size())};
+		int ydim {static_cast<int>(std::get<2>(grid_data).size())};
+		int zdim {static_cast<int>(std::get<3>(grid_data).size())};
+
 		// The unit vector is actually a bit finnicky on the gkyl side of
 		// things. It's not actually guaranteed to be 1.0 magnitude at the
 		// cell centers which I guess is where it's calculated. So right now we
 		// just hope the relative sizes of each component are mostly correct,
 		// renormalize to 1.0 unit vector magnitude before multiplying by bmag.
 		#pragma omp parallel for
-		for (int i = 0; i < std::ssize(std::get<0>(grid_data)); ++i)  // t
+		for (int i = 0; i < tdim; ++i)  // t
 		{
-		for (int j {}; j < std::ssize(std::get<1>(grid_data)); ++j)  // x
+		for (int j {}; j < xdim; ++j)  // x
 		{
-		for (int k {}; k < std::ssize(std::get<2>(grid_data)); ++k)  // y
+		for (int k {}; k < ydim; ++k)  // y
 		{
-		for (int l {}; l < std::ssize(std::get<3>(grid_data)); ++l)  // z
+		for (int l {}; l < zdim; ++l)  // z
 		{
 			// Unit vector magnitude. Ideally 1.0, but life is not always so 
 			// gentle. If the unit vector is just straight up wrong, then this
@@ -1012,6 +1021,10 @@ namespace Gkyl
 			double unit_mag {std::sqrt(gkyl_bX(i,j,k,l) * gkyl_bX(i,j,k,l)
 				+ gkyl_bY(i,j,k,l) * gkyl_bY(i,j,k,l)
 				+ gkyl_bZ(i,j,k,l) * gkyl_bZ(i,j,k,l))};
+
+			// Record if outside tolerance range.
+			if (unit_mag < unit_tol_min || unit_mag > unit_tol_max)
+				outside_tol += 1;
 			
 			// Renormalize each component, and multiply by the magnetic
 			// field magnitude for each component.
@@ -1028,6 +1041,17 @@ namespace Gkyl
 		}
 		}
 		}
+		}
+
+		// Let user know how many were out of bounds. TBD if this is useful.
+		if (outside_tol)
+		{
+			double outside_tol_perc {static_cast<double>(outside_tol) 
+				/ static_cast<double>(tdim* xdim * ydim * zdim) * 100};
+			std::cout << "  " << outside_tol << " values (" 
+				<< outside_tol_perc << "%)  outside of [" << unit_tol_min 
+				<< ", " << unit_tol_max << "]\n";
+			std::cout << "  This may be fine...\n";
 		}
 	}
 
@@ -1050,6 +1074,13 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_bmag {}; 
 		read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
 			opts);
+
+		// There is an inconsistency in the b_i.gkyl file. Sometimes it is 
+		// normalized in curvilinear space, such that it needs to be multiplied
+		// by bmag for the actual B value. Other times it already includes
+		// bmag and is not a unit vector. We try to detect that here so we
+		// know if we need to multiply by bmag or not in the loop.
+
 
 		// Create zero-filled Vector4Ds for each magnetic field component
 		int tdim {static_cast<int>(std::get<0>(grid_data).size())};
