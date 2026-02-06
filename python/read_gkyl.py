@@ -416,7 +416,7 @@ def load_binary(path, args, comp, value_scale=1.0):
 
 	return time, grid, value
 
-def save_csv(args, times, grid, values):
+def save_csv(args, times, grid, values, values_ftype="csv"):
 	"""
 	Creates three csv files for each array: times, grid, and the values at 
 	each time. Parameters that do not depend on time skip the time step.
@@ -476,31 +476,62 @@ def save_csv(args, times, grid, values):
 		for i in range(0, 3):
 			np.savetxt(f, grid[i])
 
-	# Add an informative header just for clarity's sake
-	header = ( 
-			 "# The values for the specified type of data requested from\n"
-			 "# Gkeyll. The first row are integers: the number of frames,\n"
-			 "# and then the shape of each array (x, y, z dimensions).\n"
-			 "# Then each array for each frame is printed out flattened\n"
-			 "# using C-style indexing.\n"
-			 ) 
-	
 	# Data like density and temperature could be ion or electron (or some other
 	# species), so we need to add that extra qualifier.
 	if args.gkyl_data_type in ["density", "temperature", "par_flow", 
 		"vperp_sq"]:
 		fname = fname_base + args.gkyl_species + "_" + \
-			args.gkyl_data_type + ".csv"
+			args.gkyl_data_type
 	else:
-		fname = fname_base + args.gkyl_data_type + ".csv"
+		fname = fname_base + args.gkyl_data_type
 
-	with open(fname, "w") as f:
-		f.write(header)
-		num_vals = "{:d} {:d} {:d} {:d}\n".format(len(values), values[0].shape[0], 
-				values[0].shape[1], values[0].shape[2]) 
-		f.write(num_vals)
-		for i in range(0, len(values)):
-			np.savetxt(f, values[i].flatten())
+	# Saving the values as a csv can take an enormous amount of I/O time since
+	# there can be millions. So for optimization it'd be better to make this
+	# binary, but we leave the old csv option since it's easy to inspect.
+	if values_ftype == "csv":
+
+		# Add an informative header just for clarity's sake
+		header = ( 
+				 "# The values for the specified type of data requested from\n"
+				 "# Gkeyll. The first row are integers: the number of frames,\n"
+				 "# and then the shape of each array (x, y, z dimensions).\n"
+				 "# Then each array for each frame is printed out flattened\n"
+				 "# using C-style indexing.\n"
+				 ) 
+
+		with open(fname + ".csv", "w") as f:
+			f.write(header)
+			num_vals = "{:d} {:d} {:d} {:d}\n".format(len(values), values[0].shape[0], 
+					values[0].shape[1], values[0].shape[2]) 
+			f.write(num_vals)
+			for i in range(0, len(values)):
+				np.savetxt(f, values[i].flatten())
+	
+	# Much more efficient to write in binary
+	elif values_ftype == "binary":
+
+		# Array dimensions
+		tdim = len(values)
+		xdim = values[0].shape[0] 
+		ydim = values[0].shape[1] 
+		zdim = values[0].shape[2]
+		
+		# File format is:
+		# int32 tdim
+		# int32 xdim
+		# int32 ydim
+		# int32 zdim
+		# double values[tdim * xdim * ydim * zdim]
+		with open(fname + ".bin", "wb") as f: 
+		
+			# Write header as 32-bit integers 
+			np.array([tdim, xdim, ydim, zdim], dtype=np.int32).tofile(f) 
+
+			# Write all values as doubles in binary 
+			np.array(values).astype(np.float64).tofile(f)
+	
+	else:
+		print("Error! Unrecognized format for values: {}".format(values_ftype))
 
 	# Save the interpolation settings
 	header = (
@@ -575,8 +606,8 @@ def main():
 	else:
 		print("Error! Only binary Gkyell files (.gkyl) are currently supported.")
 
-	# Save to csv file with numpy.
-	save_csv(args, times, grid, values)
+	# Save to binary file with numpy.
+	save_csv(args, times, grid, values, values_ftype="binary")
 
 
 if __name__ == "__main__":

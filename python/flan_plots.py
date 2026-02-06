@@ -20,6 +20,21 @@ class FlanPlots:
 	def __init__(self, nc_path):
 		
 		self.nc = netCDF4.Dataset(nc_path)
+		self._closed = False
+	
+	def close(self): 
+		"""
+		Close NetCDF file before leaving
+		"""
+		if not self._closed: 
+			self.nc.close() 
+			self._closed = True
+
+	def __enter__(self): 
+		return self 
+	
+	def __exit__(self, exc_type, exc, tb): 
+		self.close()
 	
 	def load_cell_centers(self):
 		"""

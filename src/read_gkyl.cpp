@@ -130,6 +130,15 @@ namespace Gkyl
 		std::cout << "Loading Gkeyll data...\n";
 		std::cout << "  - Electron density\n";
 		read_elec_density(grid_data, gkyl_ne, opts);
+
+		// After the first array, confirm that the number of times read
+		// match that from the input file. This can happen if the user changes
+		// fstart or fend without deleting the existing background files first.
+		// It is safe to assume the x,y,z dimensions don't change, since that
+		// would mean a completely different simulation (which would mean the
+		// user has no idea what they're doing, and we should fail!). 
+		check_tdim(gkyl_ne, opts);
+
 		std::cout << "  - Electron temperature\n";
 		read_elec_temperature(grid_data, gkyl_te, opts);
 		std::cout << "  - Ion temperature\n";
@@ -538,6 +547,7 @@ namespace Gkyl
 		return std::make_tuple(grid_x, grid_y, grid_z);
 	}
 
+	/*
 	// Read in data values using pgkyl, returning as a Vector4D.
 	template <typename T>
 	Vectors::Vector4D<T> load_values(const std::string& data_type)
@@ -637,6 +647,45 @@ namespace Gkyl
 
 		// Move the data into a 4D vector and return it
 		return {data_flattened, dims[0], dims[1], dims[2], dims[3]};
+	}
+	*/
+
+	// Read in data values using pgkyl, returning as a Vector4D.
+	template <typename T>
+	Vectors::Vector4D<T> load_values(const std::string& data_type)
+	{
+		// Filename is treated as a constant.
+		std::string filename {"bkg_from_pgkyl_" + data_type + ".bin"};
+		std::ifstream fstream (filename, std::ios::binary);
+
+		// First four values in file a 32-bit ints consising of the 
+		// dimensions.
+		int32_t tdim, xdim, ydim, zdim;
+		fstream.read(reinterpret_cast<char*>(&tdim), sizeof(int32_t));
+		fstream.read(reinterpret_cast<char*>(&xdim), sizeof(int32_t));
+		fstream.read(reinterpret_cast<char*>(&ydim), sizeof(int32_t));
+		fstream.read(reinterpret_cast<char*>(&zdim), sizeof(int32_t));
+
+		// Next are the array values stored as 64-bit doubles. Calculate as
+		// size_t to avoid potentially overflowing 32-bit int range.
+		size_t num_vals = size_t(tdim) * xdim * ydim * zdim;
+
+		// Load bytes into 1D vector. 
+		std::vector<double> values (num_vals);
+		fstream.read(reinterpret_cast<char*>(values.data()), 
+			num_vals * sizeof(double));
+
+		// If BkgFPType is not double, we need another vector of that type
+		// to return. If it is already double, well I hope the compiler
+		// can optimize this out. Not a huge deal.
+		std::vector<BkgFPType> values_bkgtype (values.size());
+
+		#pragma omp parallel for
+		for (std::size_t i=0; i < values_bkgtype.size(); ++i)
+			values_bkgtype[i] = static_cast<BkgFPType>(values[i]);
+
+		// Return as a Vector4D
+		return {values_bkgtype, tdim, xdim, ydim, zdim};
 	}
 
 	// Load file with the interpolation setting used by Gkeyll
@@ -761,11 +810,13 @@ namespace Gkyl
 		std::string filename {};
 		if (data_type == "density" || data_type == "temperature")
 		{
-			filename = "bkg_from_pgkyl_" + species + "_" + data_type + ".csv";
+			//filename = "bkg_from_pgkyl_" + species + "_" + data_type + ".csv";
+			filename = "bkg_from_pgkyl_" + species + "_" + data_type + ".bin";
 		}
 		else
 		{
-			filename = "bkg_from_pgkyl_" + data_type + ".csv";
+			//filename = "bkg_from_pgkyl_" + data_type + ".csv";
+			filename = "bkg_from_pgkyl_" + data_type + ".bin";
 		}
 
 		if (std::filesystem::exists(filename) && !force_load)
@@ -782,6 +833,16 @@ namespace Gkyl
 				Vectors::Vector4D<T> tmp_data {load_values<T>(data_type)};
 				gkyl_data.move_into_data(tmp_data);
 			}
+
+			// Load in grid data. Code copied from below in this function,
+			// see it for the comments. I left them out for brevity.
+			std::get<0>(grid_data) = {load_times()};  // gkyl_times
+			std::tie(std::get<4>(grid_data), std::get<5>(grid_data), 
+				std::get<6>(grid_data)) = load_grid();
+			std::get<1>(grid_data) = cell_centers(std::get<4>(grid_data));
+			std::get<2>(grid_data) = cell_centers(std::get<5>(grid_data));
+			std::get<3>(grid_data) = cell_centers(std::get<6>(grid_data));
+
 			return;
 		}
 
@@ -897,8 +958,13 @@ namespace Gkyl
 		// Call pgkyl to load data into gkyl_ne. We force load the density
 		// since it gets called first, and we need at least one load to 
 		// load all the grid data.
+		//read_data_pgkyl(opts.gkyl_elec_name(), "density", grid_data, gkyl_ne, 
+		//	opts, 0, true);
+
+		// No longer force loading, as it can waste a large amount of time
+		// for longer simulations. Delete above commented code when ready.
 		read_data_pgkyl(opts.gkyl_elec_name(), "density", grid_data, gkyl_ne, 
-			opts, 0, true);
+			opts, 0);
 		set_vec_floor(gkyl_ne, 1e15);
 	}
 
@@ -1811,5 +1877,21 @@ namespace Gkyl
 		}
 		}
 		}
+	}
+
+	void check_tdim(Vectors::Vector4D<BkgFPType>& gkyl_arr, 
+		const Options::Options& opts)
+	{
+		// Load trange from user input.
+		const int tstart {opts.gkyl_frame_start()};
+		const int tend {opts.gkyl_frame_end()};
+		const int trange {tend - tstart + 1}; // Inclusive
+		
+		if (trange != gkyl_arr.get_dim1())
+			std::cerr << "Error! Number of time frames in loaded background "
+				<< "(" << gkyl_arr.get_dim1() << ") is different from the "
+				<< "requested range (" << trange << "). Delete all background "
+				<< "files and rerun.\n";
+
 	}
 }

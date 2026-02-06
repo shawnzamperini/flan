@@ -77,8 +77,20 @@ namespace Gkyl
 	*
 	* @return Returns a Vector4D object of the data (t,x,y,z).
 	*/
+	//template <typename T>
+	//Vectors::Vector4D<T> load_values(const std::string& data_type);
+
+	/**
+	* @brief Read in data values from pgkyl that were saved to a binary file,
+	* returning it as a Vector4D. 
+	* 
+	* @param data_type String identifying which data file to load. This is one
+	* of density, temperature, magnetic_field, potential or times.
+	*
+	* @return Returns a Vector4D object of the data (t,x,y,z).
+	*/
 	template <typename T>
-	Vectors::Vector4D<T> load_values(const std::string& data_type);
+	Vectors::Vector4D<T> load_values_binary(const std::string& data_type);
 
 	/**
 	* @brief Load file with the interpolation setting used by Gkeyll
@@ -381,6 +393,21 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_gradbY,
 		Vectors::Vector4D<BkgFPType>& gkyl_gradbZ, 
 		Vectors::Vector4D<BkgFPType>& gkyl_viperp_sq, 
+		const Options::Options& opts);
+
+	/**
+	* @brief Check that the number of frames in the loaded background matches
+	* that requested for the simulation.
+	*
+	* This only need to be run once. It is useful if the user is reusing an
+	* already calculated background, but changed the frames in the input file.
+	* In that case the background files should be deleted so that they can be 
+	* regenerated, since the default is to read any existing files.
+	* Note you can circumvent this error checking if the range of frames stays
+	* the same, but that's fringe case and not worth the effort to protect
+	* against at the moment.
+	*/
+	void check_tdim(Vectors::Vector4D<BkgFPType>& gkyl_arr, 
 		const Options::Options& opts);
 }
 
