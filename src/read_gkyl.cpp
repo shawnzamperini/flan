@@ -148,47 +148,24 @@ namespace Gkyl
 		std::cout << "  - Magnetic field magnitude\n";
 		read_potential(grid_data, gkyl_bmag, opts);
 
-		// Calculate the Cartesian (X,Y,Z) coordinate of each cell center
-		std::cout << "  - X,Y,Z coordinates\n";
-		calc_cell_XYZ_centers(grid_data, opts);
-		calc_cell_XYZ_edges(grid_data, opts);
+		// Calculate the Cartesian (X,Y,Z) coordinate of each cell center. 
+		// These aren't actually used, but left here just in case they become
+		// useful in the future.
+		//std::cout << "  - X,Y,Z coordinates\n";
+		//calc_cell_XYZ_centers(grid_data, opts);
+		//calc_cell_XYZ_edges(grid_data, opts);
 
 		// Write out the (X,Y,Z) coordinates so that we can load them in python
 		// to take advantage of scipy library in calculating gradients on
 		// irregular grids (i.e., for the electric field). 
-		write_XYZ(grid_data, opts);
-
-		// DEBUG
-		// Loop through each index
-		/*
-		Vectors::Vector3D<BkgFPType> X {std::get<7>(grid_data)};
-		Vectors::Vector3D<BkgFPType> Y {std::get<8>(grid_data)};
-		Vectors::Vector3D<BkgFPType> Z {std::get<9>(grid_data)};
-		int tdim {static_cast<int>(std::get<0>(grid_data).size())};
-		int xdim {static_cast<int>(std::get<1>(grid_data).size())};
-		int ydim {static_cast<int>(std::get<2>(grid_data).size())};
-		int zdim {static_cast<int>(std::get<3>(grid_data).size())};
-
-		std::cout << "OVERWRITING VP\n";
-		#pragma omp parallel for
-		for (int i = 0; i < tdim; ++i)  // t
-		{
-		for (int j {}; j < xdim; ++j)  // x
-		{
-		for (int k {}; k < ydim; ++k)  // y
-		{
-		for (int l {}; l < zdim; ++l)  // z
-		{	
-			gkyl_vp(i,j,k,l) = X(j,k,l) + 2*Y(j,k,l) + 3*Z(j,k,l);
-			//gkyl_vp(i,j,k,l) = 5.0;
-		}}}}
-		*/
+		//write_XYZ(grid_data, opts);
 
 		// Read in Jacobian
 		std::cout << "  - Jacobian\n";
 		read_jacobian(grid_data, gkyl_J, opts);
 
-		// Read in metric coefficients. Each has its own vector.
+		// Read in metric coefficients. Each has its own vector. Commented
+		// out since it isn't used anymore, but uncomment if needed again.
 		/*
 		std::cout << "  - Metric coefficients\n";
 		read_gij(grid_data, gkyl_gij_00, opts, "00");
@@ -199,7 +176,10 @@ namespace Gkyl
 		read_gij(grid_data, gkyl_gij_22, opts, "22");
 		*/
 
-		// Read in tangent (covariant) basis vectors (dX/dz)
+		// Read in tangent (covariant) basis vectors (dX/dz). We don't 
+		// actually need these, but they're included here for completeness
+		// just in case they become needed.
+		/*
 		std::cout << "  - Tangent basis vectors\n";
 		read_tangent_basis(grid_data, gkyl_dXdx, opts, "Xx");
 		read_tangent_basis(grid_data, gkyl_dYdx, opts, "Yx");
@@ -210,6 +190,7 @@ namespace Gkyl
 		read_tangent_basis(grid_data, gkyl_dXdz, opts, "Xz");
 		read_tangent_basis(grid_data, gkyl_dYdz, opts, "Yz");
 		read_tangent_basis(grid_data, gkyl_dZdz, opts, "Zz");
+		*/
 
 		// Read in reciprocal (contravariant) basis vectors (dz/dX)
 		std::cout << "  - Reciprocal basis vectors\n";
@@ -227,35 +208,35 @@ namespace Gkyl
 		std::cout << "  - Covariant components\n";
 		read_covariant_comp_b(grid_data, gkyl_b_x, gkyl_b_y, gkyl_b_z, opts);
 		
-		// Calculate Cartesian components of the magnetic field
-		std::cout << "  - Magnetic field (still figuring out...)\n";
+		// Calculate Cartesian components of the magnetic field. The function
+		// calc_magnetic_field uses the covariant components of B and the 
+		// reciprocal basis vectors to calculate the Cartesian components of
+		// B, but it is problematic is that it is not clear if Bmag is baked
+		// into the covariant components or not. So instead we use
+		// read_magnetic_field, where it loads the Cartesian unit vector,
+		// rescales it to 1.0 magnitude and then multiplies each component
+		// by Bmag. It seems to work fine, but keep an eye on it.
+		std::cout << "  - Magnetic field\n";
 		//calc_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR, 
 		//	gkyl_b_x, gkyl_b_y, gkyl_b_z, gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ,
 		//	gkyl_dydX, gkyl_dydY, gkyl_dydZ, gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, 
 		//	opts);
-
-		// Old-style magnetic field
 		read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
 			opts);
 
 		// At this point we can calculate gradient fields (E, gradB)
-		std::cout << "Calculating gradient fields...\n";
+		std::cout << "  - Calculating gradient fields\n";
 		calc_gradients(grid_data, gkyl_vp, gkyl_eX, gkyl_eY, gkyl_eZ, 
 			gkyl_bmag, gkyl_dbdX, gkyl_dbdY, gkyl_dbdZ, 
 			gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ, 
 			gkyl_dydX, gkyl_dydY, gkyl_dydZ, 
 			gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, opts);
 
-		// Read in electric field
-		//std::cout << "  - Electric field\n";
-		//read_elec_field(grid_data, gkyl_eX, gkyl_eY, gkyl_eZ);
-
 		// Read in electric field gradient (optional)
 		if (opts.calc_grad_elec_int() == 1)
 		{
-			std::cout << "  - NEED TO REDO Electric field gradient\n";
-			read_grad_elec_field(grid_data, gkyl_gradeX, gkyl_gradeY, 
-				gkyl_gradeZ);
+			std::cout << "  - Warning: Electric field gradient requested but "
+				<< "not implemented! It's easy though, ask Shawn to do it.\n";
 		}
 
 		// These arrays are only needed if the gkyl moments are BiMaxwellian
@@ -270,12 +251,6 @@ namespace Gkyl
 
 			std::cout << "  - Ion perpendicular thermal velocity\n";
 			read_ion_vperp_sq(grid_data, gkyl_viperp_sq, opts);
-
-			// Read in magnetic field gradient. Note these are just needed to
-			// calculate the gradB drift of the plasma flow, it is not needed
-			// beyond that and thus doesn not go into bkg below.
-			//std::cout << "  - Magnetic field gradient\n";
-			//read_gradb(grid_data, gkyl_dbdX, gkyl_dbdY, gkyl_dbdZ);
 
 			// Calculate the background flows in each Cartesian direction
 			std::cout << "  - Calculating background flow\n";
@@ -327,9 +302,9 @@ namespace Gkyl
 		}
 
 		// Only needed for debuggin purposes, delete if not debugging
-		bkg.move_into_gradbX(gkyl_dbdX);
-		bkg.move_into_gradbY(gkyl_dbdY);
-		bkg.move_into_gradbZ(gkyl_dbdZ);
+		//bkg.move_into_gradbX(gkyl_dbdX);
+		//bkg.move_into_gradbY(gkyl_dbdY);
+		//bkg.move_into_gradbZ(gkyl_dbdZ);
 
 		// Special case. gkyl_J is a 4D vector so we didn't have to write a
 		// whole new function just for a 3D vector - less maintainable code. 
@@ -354,10 +329,8 @@ namespace Gkyl
 		bkg.move_into_gij_22(gkyl_gij_22_3D);
 		*/
 
-		// Likewise for the tangent basis vectors
-		// Add to Background first (if necessary?)
-
-		// Likewise for the reciprocal basis vectors
+		// Likewise for the reciprocal basis vectors. Tangent basis vectors
+		// not needed, so not saved.
 		Vectors::Vector3D gkyl_dxdX_3D {gkyl_dxdX.slice_dim1(0)};
 		bkg.move_into_dxdX(gkyl_dxdX_3D);
 		Vectors::Vector3D gkyl_dxdY_3D {gkyl_dxdY.slice_dim1(0)};

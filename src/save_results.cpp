@@ -413,6 +413,7 @@ namespace SaveResults
 
 		// Cell centers in physical space - X, Y, Z
 		// Note dims are dim2, dim3 and dim4
+		/*
 		save_vector_3d(geo_group, bkg.get_X(), "X", dim2, dim3, dim4, 
 			"X cell centers", "(m)");
 		save_vector_3d(geo_group, bkg.get_Y(), "Y", dim2, dim3, dim4, 
@@ -428,6 +429,7 @@ namespace SaveResults
 			grid_dim3, grid_dim4, "Y grid edges", "(m)");
 		save_vector_3d(geo_group, bkg.get_grid_Z(), "grid_Z", grid_dim2, 
 			grid_dim3, grid_dim4, "Z grid edges", "(m)");
+		*/
 
 		// Jacobian
 		save_vector_3d(geo_group, bkg.get_J(), "J", dim2, 
@@ -511,12 +513,14 @@ namespace SaveResults
 			dim1, dim2, dim3, dim4, "magnetic field (R)", "(T)");
 
 		// Magnetic field gradient
+		/*
 		save_vector_4d(bkg_group, bkg.get_gradbX(), "dBdX", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (X)", "(T)");
 		save_vector_4d(bkg_group, bkg.get_gradbY(), "dBdY", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (Y)", "(T)");
 		save_vector_4d(bkg_group, bkg.get_gradbZ(), "dBdZ", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (Z)", "(T)");
+		*/
 
 		// Electric field gradient
 		if (opts.calc_grad_elec_int() == 1)
