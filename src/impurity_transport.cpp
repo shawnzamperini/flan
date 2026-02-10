@@ -192,6 +192,7 @@ namespace Impurity
 		double vX_imp {0.0};
 		double vY_imp {0.0};
 		double vZ_imp {0.0};
+		//double vZ_imp {2500.0};
 
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);
@@ -332,6 +333,12 @@ namespace Impurity
 		imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
 		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
 
+		// Step in physical space
+        double dX {imp.get_X() - imp.get_prevX()};
+        double dY {imp.get_Y() - imp.get_prevY()};
+        double dZ {imp.get_Z() - imp.get_prevZ()};
+
+		/*
         // Using the metric coefficients, update the particle position in 
         // computational space. The equation is derived from Dhaeseleer 2.4.2.
         // The equations are:
@@ -340,18 +347,31 @@ namespace Impurity
         //   dz = g02*dX + g12*dY + g22*dZ
         // Where I've already accounted for the fact that gij is symmetric and
         // swapped variables according (e.g., gij01 = gij10). 
-        double dX {imp.get_X() - imp.get_prevX()};
-        double dY {imp.get_Y() - imp.get_prevY()};
-        double dZ {imp.get_Z() - imp.get_prevZ()};
         double dx {bkg.get_gij_00()(xidx, yidx, zidx) * dX
             + bkg.get_gij_01()(xidx, yidx, zidx) * dY 
             + bkg.get_gij_02()(xidx, yidx, zidx) * dZ};
         double dy {bkg.get_gij_01()(xidx, yidx, zidx) * dX
             + bkg.get_gij_11()(xidx, yidx, zidx) * dY 
-            + bkg.get_gij_22()(xidx, yidx, zidx) * dZ};
+            //+ bkg.get_gij_22()(xidx, yidx, zidx) * dZ};
+            + bkg.get_gij_12()(xidx, yidx, zidx) * dZ};
         double dz {bkg.get_gij_02()(xidx, yidx, zidx) * dX
             + bkg.get_gij_12()(xidx, yidx, zidx) * dY 
             + bkg.get_gij_22()(xidx, yidx, zidx) * dZ};
+		*/
+
+		// Calculate the step in computational space using the reciprocal basis
+		// vectors. This is Eq. 2.3.6 in Dhaeseleer.
+		double dx {bkg.get_dxdX()(xidx, yidx, zidx) * dX
+			+ bkg.get_dxdY()(xidx, yidx, zidx) * dY
+			+ bkg.get_dxdZ()(xidx, yidx, zidx) * dZ};
+		double dy {bkg.get_dydX()(xidx, yidx, zidx) * dX
+			+ bkg.get_dydY()(xidx, yidx, zidx) * dY
+			+ bkg.get_dydZ()(xidx, yidx, zidx) * dZ};
+		double dz {bkg.get_dzdX()(xidx, yidx, zidx) * dX
+			+ bkg.get_dzdY()(xidx, yidx, zidx) * dY
+			+ bkg.get_dzdZ()(xidx, yidx, zidx) * dZ};
+
+		// Update position in computational space.
         imp.set_x(imp.get_x() + dx);
         imp.set_y(imp.get_y() + dy);
         imp.set_z(imp.get_z() + dz);
@@ -439,9 +459,6 @@ namespace Impurity
 			static_cast<BkgFPType>(imp.get_vX()), 
 			static_cast<BkgFPType>(imp.get_vY()), 
 			static_cast<BkgFPType>(imp.get_vZ()), bkg);
-
-		// Add value of gyroradius to running sum at this location
-		//imp_stats.add_gyrorad(tidx, xidx, yidx, zidx, imp, bkg);
 
 		// Add charge to the running sum for this location
 		imp_stats.add_charge(tidx, xidx, yidx, zidx, 
@@ -602,7 +619,8 @@ namespace Impurity
 					+ imp.get_Y()*imp.get_Y() + imp.get_Z()*imp.get_Z())};
 				std::cout << "Before step\n";
 				std::cout << "  id, tidx, q, t, x, y, z, dt, fX, fY, fZ, " << 
-					"vX, vY, vZ, X, Y, Z, R: \n" << " " << imp_id << ", " 
+					"vX, vY, vZ, X, Y, Z, R, tidx, xidx, yidx, zidx: \n" 
+					<< " " << imp_id << ", " 
 					<< tidx << ", " << imp.get_charge() << ", "<< imp.get_t() 
 					<< ", " << imp.get_x() << ", " << imp.get_y() << ", " 
 					<< imp.get_z() << ", " << imp_time_step << '\n' << "  " 
@@ -625,7 +643,8 @@ namespace Impurity
 					+ imp.get_Y()*imp.get_Y() + imp.get_Z()*imp.get_Z())};
 				std::cout << "After step\n";
 				std::cout << "  id, tidx, q, t, x, y, z, dt, fX, fY, fZ, " << 
-					"vX, vY, vZ, X, Y, Z, R: \n" << " " << imp_id << ", " 
+					"vX, vY, vZ, X, Y, Z, R, tidx, xidx, yidx, zidx: \n" 
+					<< " " << imp_id << ", " 
 					<< tidx << ", " << imp.get_charge() << ", "<< imp.get_t() 
 					<< ", " << imp.get_x() << ", " << imp.get_y() << ", " 
 					<< imp.get_z() << ", " << imp_time_step << '\n' << "  " 
@@ -873,7 +892,6 @@ namespace Impurity
 			opts.imp_source_scale_fact());
 		std::cout << "  Velocity...\n";
 		imp_stats.calc_vels();
-		//imp_stats.calc_gyrorad();
 		std::cout << "  Charge...\n";
 		imp_stats.calc_charge();
 		

@@ -31,7 +31,6 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType> m_vX {};
 		Vectors::Vector4D<BkgFPType> m_vY {};
 		Vectors::Vector4D<BkgFPType> m_vZ {};
-		Vectors::Vector4D<BkgFPType> m_gyrorad {};
 		Vectors::Vector4D<BkgFPType> m_charge {};
 
 	public:
@@ -47,7 +46,6 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType>& get_vX();
 		Vectors::Vector4D<BkgFPType>& get_vY();
 		Vectors::Vector4D<BkgFPType>& get_vZ();
-		Vectors::Vector4D<BkgFPType>& get_gyrorad();
 		Vectors::Vector4D<BkgFPType>& get_charge();
 
 		// Overload of + to add counts and weights together, returned as a 
@@ -68,12 +66,6 @@ namespace Impurity
 			const int zidx, const BkgFPType vX, const BkgFPType vY, 
 			const BkgFPType vZ, const Background::Background& bkg);
 
-		// Function add the calculated gyroradius to the corresponding array
-		// location
-		void add_gyrorad(const int tidx, const int xidx, 
-			const int yidx, const int zidx, const Impurity& imp, 
-			const Background::Background& bkg);
-
 		// Function to increase charge
 		void add_charge(const int tidx, const int xidx, const int yidx, 
 			const int zidx, const BkgFPType value);
@@ -85,9 +77,6 @@ namespace Impurity
 
 		// Calculate the average velocity in each cell. 
 		void calc_vels();
-
-		// Calculate the average gyroradius. 
-		void calc_gyrorad();
 
 		// Calculate the average charge. 
 		void calc_charge();

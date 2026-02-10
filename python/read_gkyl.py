@@ -9,12 +9,14 @@ import numpy as np
 
 
 # Parameters that are time-independent
-time_independent_data = ["jacobian", "metric_coeff00", 
-	"metric_coeff01", "metric_coeff02", "metric_coeff11", "metric_coeff12", 
-	"metric_coeff22", "tangent_basis_xX", "tangent_basis_xY", 
-	"tangent_basis_xZ", "tangent_basis_yX", "tangent_basis_yY", 
-	"tangent_basis_yZ", "tangent_basis_zX", "tangent_basis_zY", 
-	"tangent_basis_zZ"]
+time_independent_data = ["jacobian", "metric_coeff00", "metric_coeff01", 
+	"metric_coeff02", "metric_coeff11", "metric_coeff12", "metric_coeff22", 
+	"tangent_basis_Xx", "tangent_basis_Yx", "tangent_basis_Zx", 
+	"tangent_basis_Xy", "tangent_basis_Yy", "tangent_basis_Zy", 
+	"tangent_basis_Xz", "tangent_basis_Yz", "tangent_basis_Zz", 
+	"reciprocal_basis_xX", "reciprocal_basis_xY", "reciprocal_basis_xZ",
+	"reciprocal_basis_yX", "reciprocal_basis_yY", "reciprocal_basis_yZ",
+	"reciprocal_basis_zX", "reciprocal_basis_zY", "reciprocal_basis_zZ"]
 			
 def load_binary_wrapper(args):
 	"""
@@ -229,22 +231,45 @@ def load_binary_params(args):
 
 		value_scale = 1.0
 	
-	# Tangent basis vector components, (xX = dx/dX, ...)
-	elif (args.gkyl_data_type in ["tangent_basis_xX", "tangent_basis_xY", 
-		"tangent_basis_xZ", "tangent_basis_yX", "tangent_basis_yY", 
-		"tangent_basis_yZ", "tangent_basis_zX", "tangent_basis_zY", 
-		"tangent_basis_zZ"]):
-		data_dname = "dzdx"
+	# Tangent basis vector components, (Xx = dX/dx, ...). Components in the
+	# .gkyl file are organized as e_1, e_2, e_3, where each is printed out
+	# ordered in X, Y, Z.
+	elif (args.gkyl_data_type in ["tangent_basis_Xx", "tangent_basis_Yx", 
+		"tangent_basis_Zx", "tangent_basis_Xy", "tangent_basis_Yy", 
+		"tangent_basis_Zy", "tangent_basis_Xz", "tangent_basis_Yz", 
+		"tangent_basis_Zz"]):
+		data_dname = "dxdz"
 		
-		if args.gkyl_data_type == "tangent_basis_xX": comp = 0
-		elif args.gkyl_data_type == "tangent_basis_xY": comp = 1
-		elif args.gkyl_data_type == "tangent_basis_xZ": comp = 2
-		elif args.gkyl_data_type == "tangent_basis_yX": comp = 3
-		elif args.gkyl_data_type == "tangent_basis_yY": comp = 4
-		elif args.gkyl_data_type == "tangent_basis_yZ": comp = 5
-		elif args.gkyl_data_type == "tangent_basis_zX": comp = 6
-		elif args.gkyl_data_type == "tangent_basis_zY": comp = 7
-		elif args.gkyl_data_type == "tangent_basis_zZ": comp = 8
+		if args.gkyl_data_type == "tangent_basis_Xx": comp = 0
+		elif args.gkyl_data_type == "tangent_basis_Yx": comp = 1
+		elif args.gkyl_data_type == "tangent_basis_Zx": comp = 2
+		elif args.gkyl_data_type == "tangent_basis_Xy": comp = 3
+		elif args.gkyl_data_type == "tangent_basis_Yy": comp = 4
+		elif args.gkyl_data_type == "tangent_basis_Zy": comp = 5
+		elif args.gkyl_data_type == "tangent_basis_Xz": comp = 6
+		elif args.gkyl_data_type == "tangent_basis_Yz": comp = 7
+		elif args.gkyl_data_type == "tangent_basis_Zz": comp = 8
+
+		value_scale = 1.0
+
+	# Reciprocal basis vector components, (xX = dx/dX, ...). Components in the
+	# .gkyl file are organized as e_1, e_2, e_3, where each is printed out
+	# ordered in X, Y, Z.
+	elif (args.gkyl_data_type in ["reciprocal_basis_xX", "reciprocal_basis_xY",
+		"reciprocal_basis_xZ", "reciprocal_basis_yX", "reciprocal_basis_yY",
+		"reciprocal_basis_yZ", "reciprocal_basis_zX", "reciprocal_basis_zY", 
+		"reciprocal_basis_zZ"]): 
+		data_dname = "dzdx"
+
+		if args.gkyl_data_type == "reciprocal_basis_xX": comp = 0
+		elif args.gkyl_data_type == "reciprocal_basis_xY": comp = 1
+		elif args.gkyl_data_type == "reciprocal_basis_xZ": comp = 2
+		elif args.gkyl_data_type == "reciprocal_basis_yX": comp = 3
+		elif args.gkyl_data_type == "reciprocal_basis_yY": comp = 4
+		elif args.gkyl_data_type == "reciprocal_basis_yZ": comp = 5
+		elif args.gkyl_data_type == "reciprocal_basis_zX": comp = 6
+		elif args.gkyl_data_type == "reciprocal_basis_zY": comp = 7
+		elif args.gkyl_data_type == "reciprocal_basis_zZ": comp = 8
 
 		value_scale = 1.0
 
@@ -286,9 +311,12 @@ def load_binary_path(args, data_dname, frame):
 		"magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
 		"metric_coeff00", "metric_coeff01", "metric_coeff02", 
 		"metric_coeff11", "metric_coeff12", "metric_coeff22",
-		"tangent_basis_xX", "tangent_basis_xY", "tangent_basis_xZ", 
-		"tangent_basis_yX", "tangent_basis_yY", "tangent_basis_yZ", 
-		"tangent_basis_zX", "tangent_basis_zY", "tangent_basis_zZ",
+		"tangent_basis_Xx", "tangent_basis_Yx", "tangent_basis_Zx", 
+		"tangent_basis_Xy", "tangent_basis_Yy", "tangent_basis_Zy", 
+		"tangent_basis_Xz", "tangent_basis_Yz", "tangent_basis_Zz",
+		"reciprocal_basis_xX", "reciprocal_basis_xY", "reciprocal_basis_xZ",
+		"reciprocal_basis_yX", "reciprocal_basis_yY", "reciprocal_basis_yZ",
+		"reciprocal_basis_zX", "reciprocal_basis_zY", "reciprocal_basis_zZ",
 		"covariant_comp_b_x", "covariant_comp_b_y", "covariant_comp_b_z"]):
 		path = args.gkyl_dir + "/" + args.gkyl_case_name + \
 			"-" + data_dname \
@@ -365,10 +393,13 @@ def load_binary(path, args, comp, value_scale=1.0):
 	# Only time-dependent data has time in it
 	if (args.gkyl_data_type not in ["jacobian", "metric_coeff00", 
 		"metric_coeff01", "metric_coeff02", "metric_coeff11", 
-		"metric_coeff12", "metric_coeff22", "tangent_basis_xX", 
-		"tangent_basis_xY", "tangent_basis_xZ", "tangent_basis_yX", 
-		"tangent_basis_yY", "tangent_basis_yZ", "tangent_basis_zX", 
-		"tangent_basis_zY", "tangent_basis_zZ"]):
+		"metric_coeff12", "metric_coeff22", 
+		"tangent_basis_Xx", "tangent_basis_Yx", "tangent_basis_Zx", 
+		"tangent_basis_Xy", "tangent_basis_Yy", "tangent_basis_Zy", 
+		"tangent_basis_Xz", "tangent_basis_Yz", "tangent_basis_Zz",
+		"reciprocal_basis_xX", "reciprocal_basis_xY", "reciprocal_basis_xZ", 
+		"reciprocal_basis_yX", "reciprocal_basis_yY", "reciprocal_basis_yZ", 
+		"reciprocal_basis_zX", "reciprocal_basis_zY", "reciprocal_basis_zZ"]): 
 		time = data.ctx["time"]
 	else:
 		time = []
@@ -385,7 +416,7 @@ def load_binary(path, args, comp, value_scale=1.0):
 
 	return time, grid, value
 
-def save_csv(args, times, grid, values):
+def save_csv(args, times, grid, values, values_ftype="csv"):
 	"""
 	Creates three csv files for each array: times, grid, and the values at 
 	each time. Parameters that do not depend on time skip the time step.
@@ -445,31 +476,62 @@ def save_csv(args, times, grid, values):
 		for i in range(0, 3):
 			np.savetxt(f, grid[i])
 
-	# Add an informative header just for clarity's sake
-	header = ( 
-			 "# The values for the specified type of data requested from\n"
-			 "# Gkeyll. The first row are integers: the number of frames,\n"
-			 "# and then the shape of each array (x, y, z dimensions).\n"
-			 "# Then each array for each frame is printed out flattened\n"
-			 "# using C-style indexing.\n"
-			 ) 
-	
 	# Data like density and temperature could be ion or electron (or some other
 	# species), so we need to add that extra qualifier.
 	if args.gkyl_data_type in ["density", "temperature", "par_flow", 
 		"vperp_sq"]:
 		fname = fname_base + args.gkyl_species + "_" + \
-			args.gkyl_data_type + ".csv"
+			args.gkyl_data_type
 	else:
-		fname = fname_base + args.gkyl_data_type + ".csv"
+		fname = fname_base + args.gkyl_data_type
 
-	with open(fname, "w") as f:
-		f.write(header)
-		num_vals = "{:d} {:d} {:d} {:d}\n".format(len(values), values[0].shape[0], 
-				values[0].shape[1], values[0].shape[2]) 
-		f.write(num_vals)
-		for i in range(0, len(values)):
-			np.savetxt(f, values[i].flatten())
+	# Saving the values as a csv can take an enormous amount of I/O time since
+	# there can be millions. So for optimization it'd be better to make this
+	# binary, but we leave the old csv option since it's easy to inspect.
+	if values_ftype == "csv":
+
+		# Add an informative header just for clarity's sake
+		header = ( 
+				 "# The values for the specified type of data requested from\n"
+				 "# Gkeyll. The first row are integers: the number of frames,\n"
+				 "# and then the shape of each array (x, y, z dimensions).\n"
+				 "# Then each array for each frame is printed out flattened\n"
+				 "# using C-style indexing.\n"
+				 ) 
+
+		with open(fname + ".csv", "w") as f:
+			f.write(header)
+			num_vals = "{:d} {:d} {:d} {:d}\n".format(len(values), values[0].shape[0], 
+					values[0].shape[1], values[0].shape[2]) 
+			f.write(num_vals)
+			for i in range(0, len(values)):
+				np.savetxt(f, values[i].flatten())
+	
+	# Much more efficient to write in binary
+	elif values_ftype == "binary":
+
+		# Array dimensions
+		tdim = len(values)
+		xdim = values[0].shape[0] 
+		ydim = values[0].shape[1] 
+		zdim = values[0].shape[2]
+		
+		# File format is:
+		# int32 tdim
+		# int32 xdim
+		# int32 ydim
+		# int32 zdim
+		# double values[tdim * xdim * ydim * zdim]
+		with open(fname + ".bin", "wb") as f: 
+		
+			# Write header as 32-bit integers 
+			np.array([tdim, xdim, ydim, zdim], dtype=np.int32).tofile(f) 
+
+			# Write all values as doubles in binary 
+			np.array(values).astype(np.float64).tofile(f)
+	
+	else:
+		print("Error! Unrecognized format for values: {}".format(values_ftype))
 
 	# Save the interpolation settings
 	header = (
@@ -496,9 +558,12 @@ def main():
 		"magnetic_unit_Y", "magnetic_unit_Z", "jacobian", "magnetic_magnitude", 
 		"metric_coeff00", "metric_coeff01", "metric_coeff02", "metric_coeff11",
 		"metric_coeff12", "metric_coeff22", "par_flow", "vperp_sq",
-		"tangent_basis_xX", "tangent_basis_xY", "tangent_basis_xZ", 
-		"tangent_basis_yX", "tangent_basis_yY", "tangent_basis_yZ", 
-		"tangent_basis_zX", "tangent_basis_zY", "tangent_basis_zZ",
+		"tangent_basis_Xx", "tangent_basis_Yx", "tangent_basis_Zx", 
+		"tangent_basis_Xy", "tangent_basis_Yy", "tangent_basis_Zy", 
+		"tangent_basis_Xz", "tangent_basis_Yz", "tangent_basis_Zz",
+		"reciprocal_basis_xX", "reciprocal_basis_xY", "reciprocal_basis_xZ",
+		"reciprocal_basis_yX", "reciprocal_basis_yY", "reciprocal_basis_yZ",
+		"reciprocal_basis_zX", "reciprocal_basis_zY", "reciprocal_basis_zZ",
 		"covariant_comp_b_x", "covariant_comp_b_y", "covariant_comp_b_z"]
 
 	# Parse command line arguments
@@ -541,8 +606,8 @@ def main():
 	else:
 		print("Error! Only binary Gkyell files (.gkyl) are currently supported.")
 
-	# Save to csv file with numpy.
-	save_csv(args, times, grid, values)
+	# Save to binary file with numpy.
+	save_csv(args, times, grid, values, values_ftype="binary")
 
 
 if __name__ == "__main__":

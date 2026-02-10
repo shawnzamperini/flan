@@ -1,6 +1,6 @@
 # This version is likely a bit too strict, it is just the one I built this with
 cmake_minimum_required(VERSION 3.26)
-project(flan VERSION 0.7.0)
+project(flan VERSION 0.8.0)
 
 # Load options from when the dependencies were built. Contains FLANSOFT
 # and FLANROOT
@@ -62,10 +62,9 @@ endif()
 add_library(flan SHARED ${SOURCES})
 
 # Compilation flags
-target_compile_options(flan PRIVATE -Wall -O3 -fopenmp)
+target_compile_options(flan PRIVATE -Wall -O3 -fopenmp -march=native)
 
-# Specify the libraries to link against. I am not fully certain why we need
-# the -fopenmp flag here in the linking stage, but it's needed
+# Specify the libraries to link against
 target_link_libraries(flan PRIVATE -fopenmp netcdf netcdf-cxx4)
 
 # Set the rpath so we can find the netCDF shared library

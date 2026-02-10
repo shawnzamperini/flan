@@ -77,8 +77,20 @@ namespace Gkyl
 	*
 	* @return Returns a Vector4D object of the data (t,x,y,z).
 	*/
+	//template <typename T>
+	//Vectors::Vector4D<T> load_values(const std::string& data_type);
+
+	/**
+	* @brief Read in data values from pgkyl that were saved to a binary file,
+	* returning it as a Vector4D. 
+	* 
+	* @param data_type String identifying which data file to load. This is one
+	* of density, temperature, magnetic_field, potential or times.
+	*
+	* @return Returns a Vector4D object of the data (t,x,y,z).
+	*/
 	template <typename T>
-	Vectors::Vector4D<T> load_values(const std::string& data_type);
+	Vectors::Vector4D<T> load_values_binary(const std::string& data_type);
 
 	/**
 	* @brief Load file with the interpolation setting used by Gkeyll
@@ -171,6 +183,13 @@ namespace Gkyl
 		Vectors::Vector4D<T>& gkyl_vp, const Options::Options& opts);
 
 	/**
+	* @brief Read magnetic field magnitude into gkyl_bmag.
+	*/
+	template <typename T>
+	void read_magnetic_magnitude(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_bmag, const Options::Options& opts);
+
+	/**
 	* @brief Read covariant components of magnetic field
 	*/
 	template <typename T>
@@ -201,8 +220,7 @@ namespace Gkyl
 		Vectors::Vector4D<T>& gkyl_dydX, Vectors::Vector4D<T>& gkyl_dydY, 
 		Vectors::Vector4D<T>& gkyl_dydZ, Vectors::Vector4D<T>& gkyl_dzdX, 
 		Vectors::Vector4D<T>& gkyl_dzdY, Vectors::Vector4D<T>& gkyl_dzdZ, 
-		const Vectors::Vector3D<T>& gkyl_X, const Vectors::Vector3D<T>& gkyl_Y, 
-		const Vectors::Vector3D<T>& gkyl_Z, const Options::Options& opts);
+		const Options::Options& opts);
 
 	/**
 	* @brief Read Jacobian into gkyl_J.
@@ -224,6 +242,14 @@ namespace Gkyl
 	*/
 	template <typename T>
 	void read_tangent_basis(grid_data_t& grid_data, 
+		Vectors::Vector4D<T>& gkyl_dxdz, const Options::Options& opts,
+		const std::string& idx);
+
+	/*
+	* @brief Read cotravariant components into gkyl_dzdx.
+	*/
+	template <typename T>
+	void read_reciprocal_basis(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_dzdx, const Options::Options& opts,
 		const std::string& idx);
 
@@ -246,7 +272,26 @@ namespace Gkyl
 	* potential, and the magnetic field gradient. This function actually calls 
 	* the python script calc_elec.py.
 	*/
-	void calc_gradients(const Options::Options& opts);
+	template <typename T>
+	void calc_gradients(grid_data_t& grid_data, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_vp, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 
+		const Vectors::Vector4D<BkgFPType>& gkyl_bmag, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdX, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdY, 
+		Vectors::Vector4D<BkgFPType>& gkyl_dbdZ, 
+		const Vectors::Vector4D<T>& gkyl_dxdX, 
+		const Vectors::Vector4D<T>& gkyl_dxdY, 
+		const Vectors::Vector4D<T>& gkyl_dxdZ, 
+		const Vectors::Vector4D<T>& gkyl_dydX, 
+		const Vectors::Vector4D<T>& gkyl_dydY, 
+		const Vectors::Vector4D<T>& gkyl_dydZ, 
+		const Vectors::Vector4D<T>& gkyl_dzdX, 
+		const Vectors::Vector4D<T>& gkyl_dzdY, 
+		const Vectors::Vector4D<T>& gkyl_dzdZ,
+		const Options::Options& opts);
 
 	/**
 	* @brief Calculate cell X,Y,Z coordinates for center of cells
@@ -348,6 +393,21 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_gradbY,
 		Vectors::Vector4D<BkgFPType>& gkyl_gradbZ, 
 		Vectors::Vector4D<BkgFPType>& gkyl_viperp_sq, 
+		const Options::Options& opts);
+
+	/**
+	* @brief Check that the number of frames in the loaded background matches
+	* that requested for the simulation.
+	*
+	* This only need to be run once. It is useful if the user is reusing an
+	* already calculated background, but changed the frames in the input file.
+	* In that case the background files should be deleted so that they can be 
+	* regenerated, since the default is to read any existing files.
+	* Note you can circumvent this error checking if the range of frames stays
+	* the same, but that's fringe case and not worth the effort to protect
+	* against at the moment.
+	*/
+	void check_tdim(Vectors::Vector4D<BkgFPType>& gkyl_arr, 
 		const Options::Options& opts);
 }
 
