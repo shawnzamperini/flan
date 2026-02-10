@@ -823,7 +823,8 @@ namespace Gkyl
 		if (std::filesystem::exists(filename) && !force_load)
 		{
 			//std::cout << "Previous file located\n";
-			if (data_type == "density" || data_type == "temperature")
+			if (data_type == "density" || data_type == "temperature"
+				|| data_type == "par_flow" || data_type == "vperp_sq")
 			{
 				Vectors::Vector4D<T> tmp_data {
 					load_values<T>(species + "_" + data_type)};
