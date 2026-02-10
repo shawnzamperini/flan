@@ -1072,7 +1072,7 @@ namespace Gkyl
 		// cell centers which I guess is where it's calculated. So right now we
 		// just hope the relative sizes of each component are mostly correct,
 		// renormalize to 1.0 unit vector magnitude before multiplying by bmag.
-		#pragma omp parallel for
+		#pragma omp parallel for reduction(+:outside_tol)
 		for (int i = 0; i < tdim; ++i)  // t
 		{
 		for (int j {}; j < xdim; ++j)  // x
