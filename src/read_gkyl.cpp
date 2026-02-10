@@ -680,7 +680,7 @@ namespace Gkyl
 		// can optimize this out. Not a huge deal.
 		std::vector<BkgFPType> values_bkgtype (values.size());
 
-		#pragma omp parallel for
+		#pragma omp parallel for simd
 		for (std::size_t i=0; i < values_bkgtype.size(); ++i)
 			values_bkgtype[i] = static_cast<BkgFPType>(values[i]);
 
@@ -808,7 +808,8 @@ namespace Gkyl
 		// loading if we want to circumvent this. Account for the fact that
 		// some files have the species name in them.
 		std::string filename {};
-		if (data_type == "density" || data_type == "temperature")
+		if (data_type == "density" || data_type == "temperature" 
+			|| data_type == "par_flow" || data_type == "vperp_sq")
 		{
 			//filename = "bkg_from_pgkyl_" + species + "_" + data_type + ".csv";
 			filename = "bkg_from_pgkyl_" + species + "_" + data_type + ".bin";
