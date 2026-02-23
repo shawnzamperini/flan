@@ -413,7 +413,6 @@ namespace SaveResults
 
 		// Cell centers in physical space - X, Y, Z
 		// Note dims are dim2, dim3 and dim4
-		/*
 		save_vector_3d(geo_group, bkg.get_X(), "X", dim2, dim3, dim4, 
 			"X cell centers", "(m)");
 		save_vector_3d(geo_group, bkg.get_Y(), "Y", dim2, dim3, dim4, 
@@ -429,7 +428,6 @@ namespace SaveResults
 			grid_dim3, grid_dim4, "Y grid edges", "(m)");
 		save_vector_3d(geo_group, bkg.get_grid_Z(), "grid_Z", grid_dim2, 
 			grid_dim3, grid_dim4, "Z grid edges", "(m)");
-		*/
 
 		// Jacobian
 		save_vector_3d(geo_group, bkg.get_J(), "J", dim2, 

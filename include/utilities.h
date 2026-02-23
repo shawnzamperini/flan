@@ -36,6 +36,7 @@ namespace Utilities
 	/**
 	* @brief Perform a bilinear interpolation between z0=f(x0,y0) and 
 	* z1=f(x1,y1) to estimate z=f(x,y).
+	*
 	* @param x0 Value in f(x0,y0)
 	* @param y0 Value in f(x0,y0)
 	* @param z0 Value at f(x0,y0)
@@ -50,6 +51,49 @@ namespace Utilities
 	double bilinear_interpolate(const double x0, const double y0,
 		const double z0, const double x1, const double y1, const double z1,
 		const double x, const double y);
+
+	/**
+	* @brief Perform a trilinear interpolation on a regularly spaced grid for
+	* a value defined in 3D space, z=f(x,y,z).
+	*
+	* @param x0 Value in f(x0,y0,z0)
+	* @param y0 Value in f(x0,y0,z0)
+	* @param z0 Value in f(x0,y0,z0)
+	* @param x1 Value in f(x1,y1,z1)
+	* @param y1 Value in f(x1,y1,z1)
+	* @param z1 Value in f(x1,y1,z1)
+	* @param v000 Value at vertex (0,0,0), normalized coordinates
+	* @param v100 Value at vertex (1,0,0), normalized coordinates
+	* @param v010 Value at vertex (0,1,0), normalized coordinates
+	* @param v110 Value at vertex (1,1,0), normalized coordinates
+	* @param v001 Value at vertex (0,0,1), normalized coordinates
+	* @param v101 Value at vertex (1,0,1), normalized coordinates
+	* @param v011 Value at vertex (0,1,1), normalized coordinates
+	* @param v111 Value at vertex (1,1,1), normalized coordinates
+	* @param x Value at f(x,y,z)
+	* @param y Value at f(x,y,z)
+	* @param z Value at f(x,y,z)
+	*
+	* The two corners of the bounding cell are (x0,y0,z0) and (x1,y1,z1). The 
+	* values at each cell vertex are v000, v100, etc., where the numbers 
+	* indicate the 8 vertices in normalized coordinates.
+	*
+	* @return Trilinearly interpolated value from the vertex values.
+	*/
+	double trilinear_interpolate(
+		const double x0, const double y0, const double z0, 
+		const double x1, const double y1, const double z1,
+		const double v000, const double v100, const double v010, 
+		const double v110, const double v001, const double v101, 
+		const double v011, const double v111,
+		const double x, const double y, const double z);
+
+	/**
+	*
+	*/
+	template <typename T>
+	int get_neighbor_index(const double val, 
+		const std::vector<T>& cell_centers, const int idx);
 
 	/**
 	* @brief Return value at x in set of (xarr, yarr) values using linear

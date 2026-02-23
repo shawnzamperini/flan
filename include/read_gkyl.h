@@ -204,7 +204,7 @@ namespace Gkyl
 	void read_magnetic_field(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY, 
 		Vectors::Vector4D<T>& gkyl_bZ, Vectors::Vector4D<T>& gkyl_bR,
-		const Options::Options& opts);
+		Vectors::Vector4D<T>& gkyl_bmag, const Options::Options& opts);
 
 	/**
 	* @brief Calculate magentic field components from the dual vector
@@ -278,6 +278,7 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_emag, 
 		const Vectors::Vector4D<BkgFPType>& gkyl_bmag, 
 		Vectors::Vector4D<BkgFPType>& gkyl_dbdX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_dbdY, 

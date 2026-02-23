@@ -23,6 +23,7 @@
 #include "options.h"
 #include "random.h"
 #include "timer.h"
+#include "utilities.h"
 #include "variance_reduction.h"
 #include "vectors.h"
 
@@ -188,11 +189,21 @@ namespace Impurity
 		double z_imp = get_birth_z(bkg, opts);
 		auto [X_imp, Y_imp, Z_imp] = opts.mapc2p()(x_imp, y_imp, z_imp);
 
+		// DEBUG for test_gyro. Assign a parallel (toroidal) velocity.
+		double vT_imp {5000.0};
+		double tor_ang {std::atan2(Y_imp, X_imp)};
+
 		// Assume starting at rest, but if this ever changes do it here
-		double vX_imp {0.0};
-		double vY_imp {0.0};
-		double vZ_imp {0.0};
-		//double vZ_imp {2500.0};
+		//double vX_imp {0.0};
+		//double vY_imp {0.0};
+		std::cout << "DEBUG: Starting at v_tor = " << vT_imp << "\n";
+		double vX_imp {-std::sin(tor_ang) * vT_imp};
+		double vY_imp {std::cos(tor_ang) * vT_imp};
+		std::cout << vX_imp << "\t" << vY_imp << '\n';
+		//std::cout << "DEBUG: Starting at 2500 m/s!\n";
+		//double vY_imp {2500.0};
+		//double vZ_imp {0.0};
+		double vZ_imp {2500.0};
 
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);
@@ -275,6 +286,7 @@ namespace Impurity
 		else return index - 1;
 	}
 
+	/*
 	std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
 		const Background::Background& bkg, const int tidx, const int xidx, 
 		const int yidx, const int zidx)
@@ -310,11 +322,72 @@ namespace Impurity
 		// Return as tuple
 		return std::make_tuple(fX, fY, fZ);
 	}
+	*/
 
-	bool step(Impurity& imp, const double fX, const double fY, const double fZ, 
-		const double imp_time_step, const Background::Background& bkg,
-		const Options::Options& opts, const int tidx, int& xidx, int& yidx, 
-		int& zidx)
+	// Interpolate the reciprocal basis functions at the impurity location
+	std::array<double, 9> interp_recp(const Impurity& imp, 
+		const Background::Background& bkg, const int xidx, const int yidx, 
+		const int zidx)
+	{
+		// Get nearest neighbor indices for each direction. These tell us
+		// which direction we should interpolate towards, i.e., which
+		// rectangle made by the neighboring cell centers our particle
+		// is bounded by.
+		const int xidx_neighbor {Utilities::get_neighbor_index(imp.get_x(), 
+			bkg.get_x(), xidx)};
+		const int yidx_neighbor {Utilities::get_neighbor_index(imp.get_y(), 
+			bkg.get_y(), yidx)};
+		const int zidx_neighbor {Utilities::get_neighbor_index(imp.get_z(), 
+			bkg.get_z(), zidx)};
+
+		// x, y, z coordinates of two bounding vertices to interpolate 
+		// between. Note these are not grid vertices, but rather are formed
+		// by cell center coordinates since that's where B/E are assumed
+		// to be defined. It is essentially a cell shifted by dx/2, dy/2
+		// and dz/2 if that helps.
+		const double x0 {bkg.get_x()[xidx]};
+		const double x1 {bkg.get_x()[xidx_neighbor]};
+		const double y0 {bkg.get_y()[yidx]};
+		const double y1 {bkg.get_y()[yidx_neighbor]};
+		const double z0 {bkg.get_z()[zidx]};
+		const double z1 {bkg.get_z()[zidx_neighbor]};
+
+		// Array of references to each reciprocal basis vector
+		const std::array<std::reference_wrapper<
+			const Vectors::Vector3D<BkgFPType>>, 9> recp_basis {
+			bkg.get_dxdX(), bkg.get_dxdY(), bkg.get_dxdZ(),
+			bkg.get_dydX(), bkg.get_dydY(), bkg.get_dydZ(),
+			bkg.get_dzdX(), bkg.get_dzdY(), bkg.get_dzdZ()};
+
+		// Loop through and interpolate each basis vector
+		std::array<double, 9> interp_vals {};
+		for (int i {}; i < 9; ++i)
+		{
+			// Values at each vertex, 8 total because it's a rectangle.
+			const double v000 {recp_basis[i](xidx, yidx, zidx)};
+			const double v100 {recp_basis[i](xidx_neighbor, yidx, zidx)};
+			const double v010 {recp_basis[i](xidx, yidx_neighbor, zidx)};
+			const double v110 {recp_basis[i](xidx_neighbor, yidx_neighbor, 
+				zidx)};
+			const double v001 {recp_basis[i](xidx, yidx, zidx_neighbor)};
+			const double v101 {recp_basis[i](xidx_neighbor, yidx, 
+				zidx_neighbor)};
+			const double v011 {recp_basis[i](xidx, yidx_neighbor, 
+				zidx_neighbor)};
+			const double v111 {recp_basis[i](xidx_neighbor, yidx_neighbor,	
+				zidx_neighbor)};
+
+			// Perform interpolation, storing value in our local array
+			interp_vals[i] = Utilities::trilinear_interpolate(x0, y0, z0, 
+				x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, v111, 
+				imp.get_x(), imp.get_y(), imp.get_z());
+		}
+		return interp_vals;
+	}
+
+	bool step(Impurity& imp, const double imp_time_step, 
+		const Background::Background& bkg, const Options::Options& opts, 
+		const int tidx, int& xidx, int& yidx, int& zidx)
 	{
 		// If we've run past the time range covered by the background plasma
 		// then we're done
@@ -324,11 +397,20 @@ namespace Impurity
 			return false;
 		}
 
-		// Use Boris algorithm to update particle velocity
+		/*
+		std::cout << tidx << "\t" << xidx << "\t" << yidx << "\t" << zidx << "\t" 
+			<< std::scientific << imp.get_t() << "\t" << imp.get_x() 
+			<< "\t" << imp.get_y() << "\t" << imp.get_z() << "\t"
+			<< imp.get_X() << "\t" << imp.get_Y() << "\t" << imp.get_Z() << "\t"
+			<< imp.get_vX() << "\t" << imp.get_vY() << "\t" << imp.get_vZ() <<'\n';
+		*/
+
+		// Use Boris algorithm to update particle velocity, defined at 
+		// half-steps, v_(t-dt/2) --> v_(t+dt/2).
 		Boris::update_velocity(imp, bkg, imp_time_step, tidx, xidx, yidx, 
 			zidx);
 
-		// Update particle position in physical space.
+		// Update particle position in physical space after Boris update.
 		imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
 		imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
 		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
@@ -338,29 +420,13 @@ namespace Impurity
         double dY {imp.get_Y() - imp.get_prevY()};
         double dZ {imp.get_Z() - imp.get_prevZ()};
 
-		/*
-        // Using the metric coefficients, update the particle position in 
-        // computational space. The equation is derived from Dhaeseleer 2.4.2.
-        // The equations are:
-        //   dx = g00*dX + g10*dY + g20*dZ
-        //   dy = g01*dX + g11*dY + g21*dZ
-        //   dz = g02*dX + g12*dY + g22*dZ
-        // Where I've already accounted for the fact that gij is symmetric and
-        // swapped variables according (e.g., gij01 = gij10). 
-        double dx {bkg.get_gij_00()(xidx, yidx, zidx) * dX
-            + bkg.get_gij_01()(xidx, yidx, zidx) * dY 
-            + bkg.get_gij_02()(xidx, yidx, zidx) * dZ};
-        double dy {bkg.get_gij_01()(xidx, yidx, zidx) * dX
-            + bkg.get_gij_11()(xidx, yidx, zidx) * dY 
-            //+ bkg.get_gij_22()(xidx, yidx, zidx) * dZ};
-            + bkg.get_gij_12()(xidx, yidx, zidx) * dZ};
-        double dz {bkg.get_gij_02()(xidx, yidx, zidx) * dX
-            + bkg.get_gij_12()(xidx, yidx, zidx) * dY 
-            + bkg.get_gij_22()(xidx, yidx, zidx) * dZ};
-		*/
+		// Interpolate reciprocal basis vector at impurity location
+		std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
+			yidx, zidx)};
 
 		// Calculate the step in computational space using the reciprocal basis
 		// vectors. This is Eq. 2.3.6 in Dhaeseleer.
+		/*
 		double dx {bkg.get_dxdX()(xidx, yidx, zidx) * dX
 			+ bkg.get_dxdY()(xidx, yidx, zidx) * dY
 			+ bkg.get_dxdZ()(xidx, yidx, zidx) * dZ};
@@ -370,6 +436,13 @@ namespace Impurity
 		double dz {bkg.get_dzdX()(xidx, yidx, zidx) * dX
 			+ bkg.get_dzdY()(xidx, yidx, zidx) * dY
 			+ bkg.get_dzdZ()(xidx, yidx, zidx) * dZ};
+		*/
+		double dx {int_rec_bas[0] * dX + int_rec_bas[1] * dY 
+			+ int_rec_bas[2] * dZ};
+		double dy {int_rec_bas[3] * dX + int_rec_bas[4] * dY 
+			+ int_rec_bas[5] * dZ};
+		double dz {int_rec_bas[6] * dX + int_rec_bas[7] * dY 
+			+ int_rec_bas[8] * dZ};
 
 		// Update position in computational space.
         imp.set_x(imp.get_x() + dx);
@@ -574,8 +647,8 @@ namespace Impurity
 
 			// Calculate Lorentz force components. First loop these are all
 			// zero if particles start at rest.
-			auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
-				zidx);
+			//auto [fX, fY, fZ] = lorentz_forces(imp, bkg, tidx, xidx, yidx, 
+			//	zidx);
 
 			if (var_red_on)
 			{
@@ -624,7 +697,7 @@ namespace Impurity
 					<< tidx << ", " << imp.get_charge() << ", "<< imp.get_t() 
 					<< ", " << imp.get_x() << ", " << imp.get_y() << ", " 
 					<< imp.get_z() << ", " << imp_time_step << '\n' << "  " 
-					<< fX << ", " << fY << ", " << fZ << ", " << imp.get_vX() 
+					<< imp.get_vX() 
 					<< ", " << imp.get_vY() << ", " << imp.get_vZ() << ", "
 					<< imp.get_X() << ", " << imp.get_Y() << ", " 
 					<< imp.get_Z() << ", " << R << '\n' << tidx << " " 
@@ -634,7 +707,7 @@ namespace Impurity
 			// Perform particle step, update time and tidx. The final location 
 			// of the particle could end up out of the grid. That's what the 
 			// following code does before recording stats.
-			continue_following = step(imp, fX, fY, fZ, imp_time_step, bkg, 
+			continue_following = step(imp, imp_time_step, bkg, 
 				opts, tidx, xidx, yidx, zidx);
 
 			if (debug)
@@ -648,7 +721,7 @@ namespace Impurity
 					<< tidx << ", " << imp.get_charge() << ", "<< imp.get_t() 
 					<< ", " << imp.get_x() << ", " << imp.get_y() << ", " 
 					<< imp.get_z() << ", " << imp_time_step << '\n' << "  " 
-					<< fX << ", " << fY << ", " << fZ << ", " << imp.get_vX() 
+					<< imp.get_vX() 
 					<< ", " << imp.get_vY() << ", " << imp.get_vZ() << ", "
 					<< imp.get_X() << ", " << imp.get_Y() << ", " 
 					<< imp.get_Z() << ", " << R << '\n' << tidx << " " 

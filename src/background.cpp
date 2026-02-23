@@ -31,22 +31,26 @@ namespace Background
 	const Vectors::Vector4D<BkgFPType>& Background::get_bY() const {return m_bY;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_bZ() const {return m_bZ;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_bR() const {return m_bR;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_te()  {return m_te;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_ti()  {return m_ti;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_vp()  {return m_vp;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_bX()  {return m_bX;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_bY()  {return m_bY;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_bZ()  {return m_bZ;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_bR()  {return m_bR;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_bmag() const {return m_bmag;}
+	Vectors::Vector4D<BkgFPType>& Background::get_te()  {return m_te;}
+	Vectors::Vector4D<BkgFPType>& Background::get_ti()  {return m_ti;}
+	Vectors::Vector4D<BkgFPType>& Background::get_vp()  {return m_vp;}
+	Vectors::Vector4D<BkgFPType>& Background::get_bX()  {return m_bX;}
+	Vectors::Vector4D<BkgFPType>& Background::get_bY()  {return m_bY;}
+	Vectors::Vector4D<BkgFPType>& Background::get_bZ()  {return m_bZ;}
+	Vectors::Vector4D<BkgFPType>& Background::get_bR()  {return m_bR;}
+	Vectors::Vector4D<BkgFPType>& Background::get_bmag()  {return m_bmag;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_gradbX() const {return m_gradbX;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_gradbY() const {return m_gradbY;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_gradbZ() const {return m_gradbZ;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_eX() const {return m_eX;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_eY() const {return m_eY;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_eZ() const {return m_eZ;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_eX()  {return m_eX;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_eY()  {return m_eY;}
-	 Vectors::Vector4D<BkgFPType>& Background::get_eZ()  {return m_eZ;}
+	const Vectors::Vector4D<BkgFPType>& Background::get_emag() const {return m_emag;}
+	Vectors::Vector4D<BkgFPType>& Background::get_eX()  {return m_eX;}
+	Vectors::Vector4D<BkgFPType>& Background::get_eY()  {return m_eY;}
+	Vectors::Vector4D<BkgFPType>& Background::get_eZ()  {return m_eZ;}
+	Vectors::Vector4D<BkgFPType>& Background::get_emag()  {return m_emag;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_gradeX() const 
 		{return m_gradeX;}
 	const Vectors::Vector4D<BkgFPType>& Background::get_gradeY() const 
@@ -110,6 +114,34 @@ namespace Background
         return m_dzdY;
     }
 	const Vectors::Vector3D<BkgFPType>& Background::get_dzdZ() const {
+        return m_dzdZ;
+    }
+
+	Vectors::Vector3D<BkgFPType>& Background::get_dxdX() {
+        return m_dxdX;
+    }
+	Vectors::Vector3D<BkgFPType>& Background::get_dxdY() {
+        return m_dxdY;
+    }
+	Vectors::Vector3D<BkgFPType>& Background::get_dxdZ() {
+        return m_dxdZ;
+    }
+	Vectors::Vector3D<BkgFPType>& Background::get_dydX() {
+        return m_dydX;
+    }
+	Vectors::Vector3D<BkgFPType>& Background::get_dydY() {
+        return m_dydY;
+    }
+	Vectors::Vector3D<BkgFPType>& Background::get_dydZ() {
+        return m_dydZ;
+    }
+	Vectors::Vector3D<BkgFPType>& Background::get_dzdX() {
+        return m_dzdX;
+    }
+	Vectors::Vector3D<BkgFPType>& Background::get_dzdY() {
+        return m_dzdY;
+    }
+	Vectors::Vector3D<BkgFPType>& Background::get_dzdZ() {
         return m_dzdZ;
     }
 
@@ -264,6 +296,11 @@ namespace Background
 		set_dims(bR, "bR");
 		m_bR.move_into_data(bR);
 	}
+	void Background::move_into_bmag(Vectors::Vector4D<BkgFPType>& bmag) 
+	{
+		set_dims(bmag, "bmag");
+		m_bmag.move_into_data(bmag);
+	}
 	void Background::move_into_gradbX(Vectors::Vector4D<BkgFPType>& gradbX) 
 	{
 		set_dims(gradbX, "gradbX");
@@ -293,6 +330,11 @@ namespace Background
 	{
 		set_dims(eZ, "eZ");
 		m_eZ.move_into_data(eZ);
+	}
+	void Background::move_into_emag(Vectors::Vector4D<BkgFPType>& emag) 
+	{
+		set_dims(emag, "emag");
+		m_emag.move_into_data(emag);
 	}
 	void Background::move_into_gradeX(Vectors::Vector4D<BkgFPType>& gradeX) 
 	{

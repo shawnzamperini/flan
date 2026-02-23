@@ -83,6 +83,14 @@ class FlanPlots:
 		# Derived quantities
 		elif data_name == "cyclotron_frequency":
 			return self.calc_cyclo_freq()[frame]
+		elif data_name == "ExB_X":
+			return self.calc_exb_drift()[0][frame]
+		elif data_name == "ExB_Y":
+			return self.calc_exb_drift()[1][frame]
+		elif data_name == "ExB_Z":
+			return self.calc_exb_drift()[2][frame]
+		elif data_name == "v_R":
+			return self.calc_v_R()[frame]
 
 		# 4D vector, index frame. Just loop through the groups until we find
 		# the correct one.
@@ -545,6 +553,27 @@ class FlanPlots:
 			#anim.save(save_path + ".mp4", writer=writer) 
 
 		plt.show()
+
+	def calc_v_R(self):
+		"""
+		Calculate and return the radial velocity
+
+		Outputs: Returns an array of the radial velocity [t,x,y,z]
+		"""
+		
+		# Pull out some arrays
+		vX = self.nc["output"]["v_X"][:]
+		vY = self.nc["output"]["v_Y"][:]
+		X = self.nc["geometry"]["X"][:]
+		Y = self.nc["geometry"]["Y"][:]
+		vR_mag = np.sqrt(np.square(vX) + np.square(vY))
+
+		# If scalar_proj < 0 we need to multiply vR by -1
+		scalar_proj = (vX * X + vY * Y)
+		vR_sign = np.ones(scalar_proj.shape)
+		vR_sign[scalar_proj < 0] = -1
+
+		return vR_mag * vR_sign
 
 	def calc_exb_drift(self):
 		"""

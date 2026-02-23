@@ -141,9 +141,16 @@ namespace Impurity
 	* @return Returns 3-tuple of doubles of each Lorentz force component,
 	* [fX, fY, fZ].
 	*/
-	std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
-		const Background::Background& bkg, const int tidx, const int xidx, 
-		const int yidx, const int zidx);
+	//std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
+	//	const Background::Background& bkg, const int tidx, const int xidx, 
+	//	const int yidx, const int zidx);
+
+	/**
+	*
+	*/
+	std::array<double, 9> interp_recp(const Impurity& imp, 
+		const Background::Background& bkg, const int xidx, const int yidx, 
+		const int zidx);
 	
 	/**
 	* @brief Move particle based on its current velocity and the time step
@@ -151,10 +158,9 @@ namespace Impurity
 	* @param imp Impurity object that is updated within function
 	* @param imp_time_step Size of time step specified in input file
 	*/
-	bool step(Impurity& imp, const double fX, const double fY, const double fZ, 
-		const double imp_time_step, const Background::Background& bkg, 
-		const Options::Options& opts, const int tidx, int& xidx, int& yidx, 
-		int& zidx);
+	bool step(Impurity& imp, const double imp_time_step, 
+		const Background::Background& bkg, const Options::Options& opts, 
+		const int tidx, int& xidx, int& yidx, int& zidx);
 
 	/**
 	* @brief Record/score particle in the ImpurityStats object

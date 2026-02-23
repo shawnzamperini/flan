@@ -81,6 +81,7 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType> gkyl_eX {}; // Electric field components
 		Vectors::Vector4D<BkgFPType> gkyl_eY {}; // in physical space
 		Vectors::Vector4D<BkgFPType> gkyl_eZ {};
+		Vectors::Vector4D<BkgFPType> gkyl_emag {};
 		Vectors::Vector4D<BkgFPType> gkyl_gradeX {}; // Electric field gradient
 		Vectors::Vector4D<BkgFPType> gkyl_gradeY {}; // components in physical
 		Vectors::Vector4D<BkgFPType> gkyl_gradeZ {}; // space
@@ -145,15 +146,15 @@ namespace Gkyl
 		read_ion_temperature(grid_data, gkyl_ti, opts);
 		std::cout << "  - Plasma potential\n";
 		read_potential(grid_data, gkyl_vp, opts);
-		std::cout << "  - Magnetic field magnitude\n";
-		read_potential(grid_data, gkyl_bmag, opts);
+		//std::cout << "  - Magnetic field magnitude\n";
+		//read_magnetic_magnitude(grid_data, gkyl_bmag, opts);
 
 		// Calculate the Cartesian (X,Y,Z) coordinate of each cell center. 
 		// These aren't actually used, but left here just in case they become
 		// useful in the future.
 		//std::cout << "  - X,Y,Z coordinates\n";
-		//calc_cell_XYZ_centers(grid_data, opts);
-		//calc_cell_XYZ_edges(grid_data, opts);
+		calc_cell_XYZ_centers(grid_data, opts);
+		calc_cell_XYZ_edges(grid_data, opts);
 
 		// Write out the (X,Y,Z) coordinates so that we can load them in python
 		// to take advantage of scipy library in calculating gradients on
@@ -222,11 +223,11 @@ namespace Gkyl
 		//	gkyl_dydX, gkyl_dydY, gkyl_dydZ, gkyl_dzdX, gkyl_dzdY, gkyl_dzdZ, 
 		//	opts);
 		read_magnetic_field(grid_data, gkyl_bX, gkyl_bY, gkyl_bZ, gkyl_bR,
-			opts);
+			gkyl_bmag, opts);
 
 		// At this point we can calculate gradient fields (E, gradB)
 		std::cout << "  - Calculating gradient fields\n";
-		calc_gradients(grid_data, gkyl_vp, gkyl_eX, gkyl_eY, gkyl_eZ, 
+		calc_gradients(grid_data, gkyl_vp, gkyl_eX, gkyl_eY, gkyl_eZ, gkyl_emag,
 			gkyl_bmag, gkyl_dbdX, gkyl_dbdY, gkyl_dbdZ, 
 			gkyl_dxdX, gkyl_dxdY, gkyl_dxdZ, 
 			gkyl_dydX, gkyl_dydY, gkyl_dydZ, 
@@ -280,9 +281,11 @@ namespace Gkyl
 		bkg.move_into_bY(gkyl_bY);
 		bkg.move_into_bZ(gkyl_bZ);
 		bkg.move_into_bR(gkyl_bR); // Just for debugging, not actually used
+		bkg.move_into_bmag(gkyl_bmag);
 		bkg.move_into_eX(gkyl_eX);
 		bkg.move_into_eY(gkyl_eY);
 		bkg.move_into_eZ(gkyl_eZ);
+		bkg.move_into_emag(gkyl_emag);
 		bkg.move_into_uX(gkyl_uX);
 		bkg.move_into_uY(gkyl_uY);
 		bkg.move_into_uZ(gkyl_uZ);
@@ -1009,7 +1012,7 @@ namespace Gkyl
 	void read_magnetic_field(grid_data_t& grid_data, 
 		Vectors::Vector4D<T>& gkyl_bX, Vectors::Vector4D<T>& gkyl_bY,
 		Vectors::Vector4D<T>& gkyl_bZ, Vectors::Vector4D<T>& gkyl_bR,
-		const Options::Options& opts)
+		Vectors::Vector4D<T>& gkyl_bmag, const Options::Options& opts)
 	{
 		using namespace std::string_literals;
 
@@ -1028,7 +1031,7 @@ namespace Gkyl
 		//	gkyl_bX.get_dim3(), gkyl_bX.get_dim4());
 
 		// Load the magnetic field magnitude at each location
-		Vectors::Vector4D<BkgFPType> gkyl_bmag {}; 
+		//Vectors::Vector4D<BkgFPType> gkyl_bmag {}; 
 		read_data_pgkyl("null"s, "magnetic_magnitude", grid_data, gkyl_bmag, 
 			opts);
 
@@ -1260,6 +1263,7 @@ namespace Gkyl
 		Vectors::Vector4D<BkgFPType>& gkyl_eX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eY, 
 		Vectors::Vector4D<BkgFPType>& gkyl_eZ, 
+		Vectors::Vector4D<BkgFPType>& gkyl_emag, 
 		const Vectors::Vector4D<BkgFPType>& gkyl_bmag, 
 		Vectors::Vector4D<BkgFPType>& gkyl_dbdX, 
 		Vectors::Vector4D<BkgFPType>& gkyl_dbdY, 
@@ -1343,6 +1347,8 @@ namespace Gkyl
 		gkyl_eY.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
 			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
 		gkyl_eZ.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
+			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
+		gkyl_emag.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
 			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
 		gkyl_dbdX.resize(gkyl_vp.get_dim1(), gkyl_vp.get_dim2(), 
 			gkyl_vp.get_dim3(), gkyl_vp.get_dim4());
@@ -1463,6 +1469,10 @@ namespace Gkyl
 			gkyl_dbdX(i,j,k,l) = dBdX;
 			gkyl_dbdY(i,j,k,l) = dBdY;
 			gkyl_dbdZ(i,j,k,l) = dBdZ;
+
+			// Also store electric field magnitude
+			gkyl_emag(i,j,k,l) = std::sqrt(dVpdX * dVpdX + dVpdY * dVpdY 
+				+ dVpdZ * dVpdZ);
 		}
 		}
 		}

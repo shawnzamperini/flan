@@ -4,8 +4,9 @@
 * @brief Entry point and top level control of Flan library.
 */
 
-#include <iostream>
+#include <cmath>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include "background.h"
@@ -43,7 +44,6 @@ void flan(const Inputs& inpts)
 	Background::Background bkg {Gkyl::read_gkyl(opts)};
 	timer.end_read_timer();
 
-	/*
 	// DEBUG: Flan is missing a test suite. For the paper, the reviewer wants
 	// some kind of test, so I am going to overwrite the background with 
 	// constant values to test simple particle gyromotion.
@@ -58,6 +58,7 @@ void flan(const Inputs& inpts)
 	std::vector<BkgFPType> const_bZ_t0 (std::ssize(bkg.get_z()));
 	for (int l {}; l < std::ssize(bkg.get_z()); ++l)
 	{
+		/*
 		// Values at the middle of x, y, z that we will set for the constant 
 		// values. Using midpoint in x, y directions.
 		const_eX_t0[l] = 0.0; 
@@ -68,11 +69,20 @@ void flan(const Inputs& inpts)
 		}
 		else
 		{
-			const_eZ_t0[l] = bkg.get_eZ()(0, 48, 32, l); 
+			//const_eZ_t0[l] = bkg.get_eZ()(0, 48, 32, l); 
+			const_eZ_t0[l] = 500; 
 		}
-		const_bX_t0[l] = bkg.get_bX()(0, 48, 32, l); 
-		const_bY_t0[l] = bkg.get_bY()(0, 48, 32, l); 
-		const_bZ_t0[l] = bkg.get_bZ()(0, 48, 32, l); 
+		*/
+
+		// Normalize B (bkg.bmag set to 1.0 in below loop).
+		const double bmag = std::sqrt(
+			bkg.get_bX()(0, 48, 32, l) * bkg.get_bX()(0, 48, 32, l) +
+			bkg.get_bY()(0, 48, 32, l) * bkg.get_bY()(0, 48, 32, l) +
+			bkg.get_bZ()(0, 48, 32, l) * bkg.get_bZ()(0, 48, 32, l)
+		);
+		const_bX_t0[l] = bkg.get_bX()(0, 48, 32, l) / bmag; 
+		const_bY_t0[l] = bkg.get_bY()(0, 48, 32, l) / bmag; 
+		const_bZ_t0[l] = bkg.get_bZ()(0, 48, 32, l) / bmag; 
 
 		// Useful printout
 		std::cout << "---------------------------\n";
@@ -81,6 +91,34 @@ void flan(const Inputs& inpts)
 		std::cout << "  BX = " << const_bX_t0[l] << '\n';
 		std::cout << "  BY = " << const_bY_t0[l] << '\n';
 		std::cout << "  BZ = " << const_bZ_t0[l] << '\n';
+	}
+
+	#pragma omp parallel for
+	for (int i = 0; i < std::ssize(bkg.get_x()); ++i)  // x
+	{
+	for (int j {}; j < std::ssize(bkg.get_y()); ++j)  // y
+	{
+	for (int k {}; k < std::ssize(bkg.get_z()); ++k)  // z
+	{
+		// Calculate index in 1D vector
+		int idx {bkg.get_dxdX().calc_index(i,j,k)};
+
+		// Need to also assign the reciprocal basis vectors such that we are
+		// just simulating a simple rectangular volume. Comment out for 
+		// simple helical.
+		/*
+		bkg.get_dxdX().get_data()[idx] = 1.0;
+		bkg.get_dxdY().get_data()[idx] = 0.0;
+		bkg.get_dxdZ().get_data()[idx] = 0.0;
+		bkg.get_dydX().get_data()[idx] = 0.0;
+		bkg.get_dydY().get_data()[idx] = 1.0;
+		bkg.get_dydZ().get_data()[idx] = 0.0;
+		bkg.get_dzdX().get_data()[idx] = 0.0;
+		bkg.get_dzdY().get_data()[idx] = 0.0;
+		bkg.get_dzdZ().get_data()[idx] = 1.0;
+		*/
+	}
+	}
 	}
 
 	#pragma omp parallel for
@@ -103,23 +141,31 @@ void flan(const Inputs& inpts)
 		bkg.get_vp().get_data()[idx] = 0.0; // Not needed
 
 		// Need to account for toroidal curvature.
-		bkg.get_eX().get_data()[idx] = const_eX_t0[l];
-		bkg.get_eY().get_data()[idx] = const_eY_t0[l];
-		bkg.get_eZ().get_data()[idx] = const_eZ_t0[l];
+		//bkg.get_eX().get_data()[idx] = const_eX_t0[l];
+		//bkg.get_eY().get_data()[idx] = const_eY_t0[l];
+		//bkg.get_eZ().get_data()[idx] = const_eZ_t0[l];
 		bkg.get_bX().get_data()[idx] = const_bX_t0[l];
 		bkg.get_bY().get_data()[idx] = const_bY_t0[l];
 		bkg.get_bZ().get_data()[idx] = const_bZ_t0[l];
+		bkg.get_bmag().get_data()[idx] = 1.0;
+
+		bkg.get_eX().get_data()[idx] = 0.0;
+		//bkg.get_eY().get_data()[idx] = 500.0;
+		bkg.get_eY().get_data()[idx] = 0.0;
+		bkg.get_eZ().get_data()[idx] = 0.0;
+		bkg.get_emag().get_data()[idx] = 0.0;
+		//bkg.get_bX().get_data()[idx] = 0.0;
+		//bkg.get_bY().get_data()[idx] = 0.0;
+		//bkg.get_bZ().get_data()[idx] = 1.0;
 
 		// Shouldn't matter without collisions but set to zero anyways
 		bkg.get_uX().get_data()[idx] = 0.0;
 		bkg.get_uY().get_data()[idx] = 0.0;
 		bkg.get_uZ().get_data()[idx] = 0.0;
-
 	}
 	}
 	}
 	}
-	*/
 
 	// Interpolate additional frames between each Gkeyll frame to artificially
 	// increase the time resolution of the simulation.
