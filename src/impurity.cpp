@@ -42,9 +42,15 @@ namespace Impurity
 	double Impurity::get_X() const {return m_X;}
 	double Impurity::get_Y() const {return m_Y;}
 	double Impurity::get_Z() const {return m_Z;}
+	double Impurity::get_vx() const {return m_vx;}
+	double Impurity::get_vy() const {return m_vy;}
+	double Impurity::get_vz() const {return m_vz;}
 	double Impurity::get_vX() const {return m_vX;}
 	double Impurity::get_vY() const {return m_vY;}
 	double Impurity::get_vZ() const {return m_vZ;}
+	double Impurity::get_prev_vX() const {return m_prev_vX;}
+	double Impurity::get_prev_vY() const {return m_prev_vY;}
+	double Impurity::get_prev_vZ() const {return m_prev_vZ;}
 	double Impurity::get_mass() const {return m_mass;}
 	int Impurity::get_charge() const {return m_charge;}
 	int Impurity::get_atom_num() const {return m_atom_num;}
@@ -74,8 +80,24 @@ namespace Impurity
 		m_Z = Z;
 	}
 
-	void Impurity::set_vX(double vX) {m_vX = vX;}
-	void Impurity::set_vY(double vY) {m_vY = vY;}
-	void Impurity::set_vZ(double vZ) {m_vZ = vZ;}
+	void Impurity::set_vx(double vx) {m_vx = vx;}
+	void Impurity::set_vy(double vy) {m_vy = vy;}
+	void Impurity::set_vz(double vz) {m_vz = vz;}
+	void Impurity::set_vX(double vX, bool set_prev) 
+	{
+		if (set_prev) m_prev_vX = m_vX;
+		m_vX = vX;
+	}
+	void Impurity::set_vY(double vY, bool set_prev) 
+	{
+		if (set_prev) m_prev_vY = m_vY;
+		m_vY = vY;
+	}
+	void Impurity::set_vZ(double vZ, bool set_prev) 
+	{
+		if (set_prev) m_prev_vZ = m_vZ;
+		m_vZ = vZ;
+	}
+
 	void Impurity::set_charge(int charge) {m_charge = charge;}
 }

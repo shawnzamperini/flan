@@ -41,6 +41,7 @@ using Inputs = std::map<std::string, std::variant<int, double, std::string,
 * quickly. Only double and float are valid, but others could be added if
 * there is a good reason.
 */
-using BkgFPType = float;
+//using BkgFPType = float;
+using BkgFPType = double;
 
 #endif

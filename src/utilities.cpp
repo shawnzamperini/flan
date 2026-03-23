@@ -44,6 +44,25 @@ namespace Utilities
 		
 	}
 
+	// Calculate cross product and return array
+	std::array<double, 3> cross_product(const std::array<double, 3>& a, 
+		const std::array<double, 3>& b)
+	{
+		return 
+		{ 
+			a[1] * b[2] - a[2] * b[1],
+			a[2] * b[0] - a[0] * b[2],
+			a[0] * b[1] - a[1] * b[0] 
+		};
+	}
+
+	// Calculate dot product
+	double dot_product(const std::array<double, 3>& a, 
+		const std::array<double, 3>& b)
+	{
+		return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+	}
+
 	double bilinear_interpolate(const double x0, const double y0,
 		const double z0, const double x1, const double y1, const double z1,
 		const double x, const double y)

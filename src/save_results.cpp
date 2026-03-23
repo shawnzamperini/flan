@@ -449,6 +449,46 @@ namespace SaveResults
 			dim3, dim4, "metric coefficient (22)", "(?)");
 		*/
 
+		// Tangent basis vector components
+		save_vector_3d(geo_group, bkg.get_dXdx(), "dXdx", dim2, 
+			dim3, dim4, "reciprocal basis vector (dX/dx)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dYdx(), "dYdx", dim2, 
+			dim3, dim4, "reciprocal basis vector (dY/dx)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dZdx(), "dZdx", dim2, 
+			dim3, dim4, "reciprocal basis vector (dZ/dx)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dXdy(), "dXdy", dim2, 
+			dim3, dim4, "reciprocal basis vector (dX/dy)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dYdy(), "dYdy", dim2, 
+			dim3, dim4, "reciprocal basis vector (dY/dy)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dZdy(), "dZdy", dim2, 
+			dim3, dim4, "reciprocal basis vector (dZ/dy)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dXdz(), "dXdz", dim2, 
+			dim3, dim4, "reciprocal basis vector (dX/dz)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dYdz(), "dYdz", dim2, 
+			dim3, dim4, "reciprocal basis vector (dY/dz)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dZdz(), "dZdz", dim2, 
+			dim3, dim4, "reciprocal basis vector (dZ/dz)", "(?)");
+
+		// Reciprocal basis vector components
+		save_vector_3d(geo_group, bkg.get_dxdX(), "dxdX", dim2, 
+			dim3, dim4, "reciprocal basis vector (dx/dX)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dxdY(), "dxdY", dim2, 
+			dim3, dim4, "reciprocal basis vector (dx/dY)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dxdZ(), "dxdZ", dim2, 
+			dim3, dim4, "reciprocal basis vector (dx/dZ)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dydX(), "dydX", dim2, 
+			dim3, dim4, "reciprocal basis vector (dy/dX)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dydY(), "dydY", dim2, 
+			dim3, dim4, "reciprocal basis vector (dy/dY)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dydZ(), "dydZ", dim2, 
+			dim3, dim4, "reciprocal basis vector (dy/dZ)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dzdX(), "dzdX", dim2, 
+			dim3, dim4, "reciprocal basis vector (dz/dX)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dzdY(), "dzdY", dim2, 
+			dim3, dim4, "reciprocal basis vector (dz/dY)", "(?)");
+		save_vector_3d(geo_group, bkg.get_dzdZ(), "dzdZ", dim2, 
+			dim3, dim4, "reciprocal basis vector (dz/dZ)", "(?)");
+
 		// Duals of the magnetic field
 		save_vector_3d(geo_group, bkg.get_b_x(), "b_x", dim2, 
 			dim3, dim4, "dual basis magnetic vector (x)", "(?)");

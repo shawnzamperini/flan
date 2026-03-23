@@ -19,6 +19,7 @@ namespace Background
 	const std::vector<BkgFPType>& Background::get_x() const {return m_x;}
 	const std::vector<BkgFPType>& Background::get_y() const {return m_y;}
 	const std::vector<BkgFPType>& Background::get_z() const {return m_z;}
+	std::vector<BkgFPType>& Background::get_z() {return m_z;}
 	const std::vector<BkgFPType>& Background::get_grid_x() const {return m_grid_x;}
 	const std::vector<BkgFPType>& Background::get_grid_y() const {return m_grid_y;}
 	const std::vector<BkgFPType>& Background::get_grid_z() const {return m_grid_z;}
@@ -115,6 +116,34 @@ namespace Background
     }
 	const Vectors::Vector3D<BkgFPType>& Background::get_dzdZ() const {
         return m_dzdZ;
+    }
+
+	const Vectors::Vector3D<BkgFPType>& Background::get_dXdx() const {
+        return m_dXdx;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_dYdx() const {
+        return m_dYdx;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_dZdx() const {
+        return m_dZdx;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_dXdy() const {
+        return m_dXdy;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_dYdy() const {
+        return m_dYdy;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_dZdy() const {
+        return m_dZdy;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_dXdz() const {
+        return m_dXdz;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_dYdz() const {
+        return m_dYdz;
+    }
+	const Vectors::Vector3D<BkgFPType>& Background::get_dZdz() const {
+        return m_dZdz;
     }
 
 	Vectors::Vector3D<BkgFPType>& Background::get_dxdX() {
@@ -481,6 +510,45 @@ namespace Background
 	void Background::move_into_dzdZ(Vectors::Vector3D<BkgFPType>& dzdZ) 
 	{
 		m_dzdZ.move_into_data(dzdZ);
+	}
+
+	void Background::move_into_dXdx(Vectors::Vector3D<BkgFPType>& dXdx) 
+	{
+		m_dXdx.move_into_data(dXdx);
+	}
+	void Background::move_into_dYdx(Vectors::Vector3D<BkgFPType>& dYdx) 
+	{
+		m_dYdx.move_into_data(dYdx);
+	}
+	void Background::move_into_dZdx(Vectors::Vector3D<BkgFPType>& dZdx) 
+	{
+		m_dZdx.move_into_data(dZdx);
+	}
+
+	void Background::move_into_dXdy(Vectors::Vector3D<BkgFPType>& dXdy) 
+	{
+		m_dXdy.move_into_data(dXdy);
+	}
+	void Background::move_into_dYdy(Vectors::Vector3D<BkgFPType>& dYdy) 
+	{
+		m_dYdy.move_into_data(dYdy);
+	}
+	void Background::move_into_dZdy(Vectors::Vector3D<BkgFPType>& dZdy) 
+	{
+		m_dZdy.move_into_data(dZdy);
+	}
+
+	void Background::move_into_dXdz(Vectors::Vector3D<BkgFPType>& dXdz) 
+	{
+		m_dXdz.move_into_data(dXdz);
+	}
+	void Background::move_into_dYdz(Vectors::Vector3D<BkgFPType>& dYdz) 
+	{
+		m_dYdz.move_into_data(dYdz);
+	}
+	void Background::move_into_dZdz(Vectors::Vector3D<BkgFPType>& dZdz) 
+	{
+		m_dZdz.move_into_data(dZdz);
 	}
 
 	void Background::move_into_b_x(Vectors::Vector3D<BkgFPType>& b_x) 

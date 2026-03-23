@@ -189,21 +189,25 @@ namespace Impurity
 		double z_imp = get_birth_z(bkg, opts);
 		auto [X_imp, Y_imp, Z_imp] = opts.mapc2p()(x_imp, y_imp, z_imp);
 
-		// DEBUG for test_gyro. Assign a parallel (toroidal) velocity.
-		double vT_imp {5000.0};
-		double tor_ang {std::atan2(Y_imp, X_imp)};
+		// DEBUG for test_gyro. Assign a parallel (toroidal) velocity to test
+		// for curvature drift.
+		//double vT_imp {5000.0};
+		//double tor_ang {std::atan2(Y_imp, X_imp)};
+		//double tor_ang {z_imp / (1.722 + 0.59)};
+		//double tor_ang {z_imp};
 
 		// Assume starting at rest, but if this ever changes do it here
-		//double vX_imp {0.0};
-		//double vY_imp {0.0};
-		std::cout << "DEBUG: Starting at v_tor = " << vT_imp << "\n";
-		double vX_imp {-std::sin(tor_ang) * vT_imp};
-		double vY_imp {std::cos(tor_ang) * vT_imp};
-		std::cout << vX_imp << "\t" << vY_imp << '\n';
+		double vX_imp {0.0};
+		double vY_imp {0.0};
+		//std::cout << "DEBUG: Starting at v_tor = " << vT_imp << " (" 
+		//	<< tor_ang << ")" << "\n";
+		//double vX_imp {-std::sin(tor_ang) * vT_imp};
+		//double vY_imp {std::cos(tor_ang) * vT_imp};
+		//std::cout << vX_imp << "\t" << vY_imp << '\n';
 		//std::cout << "DEBUG: Starting at 2500 m/s!\n";
 		//double vY_imp {2500.0};
-		//double vZ_imp {0.0};
-		double vZ_imp {2500.0};
+		double vZ_imp {0.0};
+		//double vZ_imp {2500.0};
 
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);
@@ -397,32 +401,34 @@ namespace Impurity
 			return false;
 		}
 
-		/*
-		std::cout << tidx << "\t" << xidx << "\t" << yidx << "\t" << zidx << "\t" 
-			<< std::scientific << imp.get_t() << "\t" << imp.get_x() 
-			<< "\t" << imp.get_y() << "\t" << imp.get_z() << "\t"
-			<< imp.get_X() << "\t" << imp.get_Y() << "\t" << imp.get_Z() << "\t"
-			<< imp.get_vX() << "\t" << imp.get_vY() << "\t" << imp.get_vZ() <<'\n';
-		*/
-
-		// Use Boris algorithm to update particle velocity, defined at 
-		// half-steps, v_(t-dt/2) --> v_(t+dt/2).
-		Boris::update_velocity(imp, bkg, imp_time_step, tidx, xidx, yidx, 
-			zidx);
-
-		// Update particle position in physical space after Boris update.
-		imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
-		imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
-		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
-
 		// Step in physical space
-        double dX {imp.get_X() - imp.get_prevX()};
-        double dY {imp.get_Y() - imp.get_prevY()};
-        double dZ {imp.get_Z() - imp.get_prevZ()};
+        //double dX {imp.get_X() - imp.get_prevX()};
+        //double dY {imp.get_Y() - imp.get_prevY()};
+        //double dZ {imp.get_Z() - imp.get_prevZ()};
 
 		// Interpolate reciprocal basis vector at impurity location
 		std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
 			yidx, zidx)};
+
+		// Use Boris algorithm to update particle velocity, defined at 
+		// half-steps, v_(t-dt/2) --> v_(t+dt/2).
+		Boris::update_velocity(imp, bkg, opts, imp_time_step, tidx, xidx, yidx, 
+			zidx);
+
+		//std::cout << "vmag_sq2: " << imp.get_vX()*imp.get_vX() 
+		//	+ imp.get_vY()*imp.get_vY() + imp.get_vZ()*imp.get_vZ() << '\n';
+
+		// Update particle position in physical space after Boris update. This
+		// code is actually bad in that it allows a lot of numerical diffusion
+		// to enter the update. 
+		imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
+		imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
+		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
+
+        double dX {imp.get_X() - imp.get_prevX()};
+        double dY {imp.get_Y() - imp.get_prevY()};
+        double dZ {imp.get_Z() - imp.get_prevZ()};
+
 
 		// Calculate the step in computational space using the reciprocal basis
 		// vectors. This is Eq. 2.3.6 in Dhaeseleer.
@@ -437,6 +443,7 @@ namespace Impurity
 			+ bkg.get_dzdY()(xidx, yidx, zidx) * dY
 			+ bkg.get_dzdZ()(xidx, yidx, zidx) * dZ};
 		*/
+
 		double dx {int_rec_bas[0] * dX + int_rec_bas[1] * dY 
 			+ int_rec_bas[2] * dZ};
 		double dy {int_rec_bas[3] * dX + int_rec_bas[4] * dY 
@@ -448,6 +455,9 @@ namespace Impurity
         imp.set_x(imp.get_x() + dx);
         imp.set_y(imp.get_y() + dy);
         imp.set_z(imp.get_z() + dz);
+        //imp.set_x(imp.get_x() + imp.get_vx() * imp_time_step);
+        //imp.set_y(imp.get_y() + imp.get_vy() * imp_time_step);
+        //imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);
 
         // Bound checking (move to separate function). 
 		// Absorbing at maximum x. xbound_buffer move the BC off the x bound
@@ -617,7 +627,7 @@ namespace Impurity
 		// will actually be the velocity at a half timestep earlier, i.e.,
 		// at t - dt/2. So we still need to push the particle velocity
 		// back by half a time step.
-		Boris::update_velocity(imp, bkg, -imp_time_step / 2.0, tidx, xidx, 
+		Boris::update_velocity(imp, bkg, opts, -imp_time_step / 2.0, tidx, xidx, 
 			yidx, zidx);
 
 		// Record starting position in statistics arrays
@@ -676,7 +686,13 @@ namespace Impurity
 				if (!continue_following) break;
 			}
 
-			// Check for a collision
+			// Check for a collision. Since this happens after the Boris update,
+			// the velocity stored in imp is v_n+1/2 (and thus prev_v 
+			// is v_n-1/2). This is important because collisions happen at
+			// full time steps, not the half time steps Boris defines the 
+			// velocity at, so the collision step will operate 
+			// on v_n = (v_n-1/2 + v_n+1/2) / 2 and then appropriately update
+			// v_n+1/2 so the next time step works as expected.
 			if (opts.imp_collisions_int() > 0)
 			{
 				timer.start_coll_timer();
@@ -872,6 +888,84 @@ namespace Impurity
 
 			// Create starting impurity ion
 			Impurity primary_imp = create_primary_imp(bkg, opts);
+
+			/*
+			// ----- START DEBUG -----
+			std::cout << "DEBUG: Assigning velocity!\n";
+			primary_imp.set_vx(0.0);
+			primary_imp.set_vy(2500.0);
+			//primary_imp.set_vz(5000.0);
+			primary_imp.set_vz(0.0);
+			// Need to assign vX, vY and vZ
+			// Use mapc2p to calculate the tangent basis vector components
+			constexpr double eps {1e-8};
+			double X0 {};
+			double Y0 {};
+			double Z0 {};
+			double X1 {};
+			double Y1 {};
+			double Z1 {};
+			
+			// e_1
+			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x()-eps, primary_imp.get_y(), 
+				primary_imp.get_z());
+			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x()+eps, primary_imp.get_y(), 
+				primary_imp.get_z());
+			double dXdx {(X1 - X0) / (2 * eps)};
+			double dYdx {(Y1 - Y0) / (2 * eps)};
+			double dZdx {(Z1 - Z0) / (2 * eps)};
+			std::array<double, 3> e_1 {dXdx, dYdx, dZdx};
+
+			// e_2
+			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y()-eps, 
+				primary_imp.get_z());
+			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y()+eps, 
+				primary_imp.get_z());
+			double dXdy {(X1 - X0) / (2 * eps)};
+			double dYdy {(Y1 - Y0) / (2 * eps)};
+			double dZdy {(Z1 - Z0) / (2 * eps)};
+			std::array<double, 3> e_2 {dXdy, dYdy, dZdy};
+			
+			// e_3
+			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y(), 
+				primary_imp.get_z()-eps);
+			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y(), 
+				primary_imp.get_z()+eps);
+			double dXdz {(X1 - X0) / (2 * eps)};
+			double dYdz {(Y1 - Y0) / (2 * eps)};
+			double dZdz {(Z1 - Z0) / (2 * eps)};
+			std::array<double, 3> e_3 {dXdz, dYdz, dZdz};
+		
+			// Scalar triple product (Jacobian)
+			double J {Utilities::dot_product(e_1,	
+				Utilities::cross_product(e_2, e_3))};
+
+			// Calculate reciprocal basis vector
+			std::array<double, 3> e1 {Utilities::cross_product(e_2, e_3)}; // dxdX, dxdY, dxdZ
+			std::array<double, 3> e2 {Utilities::cross_product(e_3, e_1)}; // dydX, dydY, dydZ
+			std::array<double, 3> e3 {Utilities::cross_product(e_1, e_2)}; // dzdX, dzdY, dzdZ
+			for (int i {}; i < 3; ++i)
+			{
+				e1[i] = e1[i] / J;
+				e2[i] = e2[i] / J;
+				e3[i] = e3[i] / J;
+			}
+
+			// Update Cartesian components with new values
+			double primary_imp_vmag0 {std::sqrt(primary_imp.get_vX()*primary_imp.get_vX() 
+				+ primary_imp.get_vY()*primary_imp.get_vY() + primary_imp.get_vZ()*primary_imp.get_vZ())};
+
+			// This update is NOT energy conserving! So we need to rescale it to
+			// make sure the magnitude does not change.
+			primary_imp.set_vX(primary_imp.get_vx() * e_1[0] + primary_imp.get_vy() * e_2[0] 
+				+ primary_imp.get_vz() * e_3[0]);
+			primary_imp.set_vY(primary_imp.get_vx() * e_1[1] + primary_imp.get_vy() * e_2[1] 
+				+ primary_imp.get_vz() * e_3[1]);
+			primary_imp.set_vZ(primary_imp.get_vx() * e_1[2] + primary_imp.get_vy() * e_2[2] 
+				+ primary_imp.get_vz() * e_3[2]);
+
+			*/
+			// ----- END DEBUG -----
 			
 			// Each thread starts with one impurity ion, but it may end up 
 			// following more than that because that ion may split off another

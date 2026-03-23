@@ -180,7 +180,6 @@ namespace Gkyl
 		// Read in tangent (covariant) basis vectors (dX/dz). We don't 
 		// actually need these, but they're included here for completeness
 		// just in case they become needed.
-		/*
 		std::cout << "  - Tangent basis vectors\n";
 		read_tangent_basis(grid_data, gkyl_dXdx, opts, "Xx");
 		read_tangent_basis(grid_data, gkyl_dYdx, opts, "Yx");
@@ -191,7 +190,6 @@ namespace Gkyl
 		read_tangent_basis(grid_data, gkyl_dXdz, opts, "Xz");
 		read_tangent_basis(grid_data, gkyl_dYdz, opts, "Yz");
 		read_tangent_basis(grid_data, gkyl_dZdz, opts, "Zz");
-		*/
 
 		// Read in reciprocal (contravariant) basis vectors (dz/dX)
 		std::cout << "  - Reciprocal basis vectors\n";
@@ -352,6 +350,26 @@ namespace Gkyl
 		bkg.move_into_dzdY(gkyl_dzdY_3D);
 		Vectors::Vector3D gkyl_dzdZ_3D {gkyl_dzdZ.slice_dim1(0)};
 		bkg.move_into_dzdZ(gkyl_dzdZ_3D);
+
+		// Tangeny basis vectors
+		Vectors::Vector3D gkyl_dXdx_3D {gkyl_dXdx.slice_dim1(0)};
+		bkg.move_into_dXdx(gkyl_dXdx_3D);
+		Vectors::Vector3D gkyl_dYdx_3D {gkyl_dYdx.slice_dim1(0)};
+		bkg.move_into_dYdx(gkyl_dYdx_3D);
+		Vectors::Vector3D gkyl_dZdx_3D {gkyl_dZdx.slice_dim1(0)};
+		bkg.move_into_dZdx(gkyl_dZdx_3D);
+		Vectors::Vector3D gkyl_dXdy_3D {gkyl_dXdy.slice_dim1(0)};
+		bkg.move_into_dXdy(gkyl_dXdy_3D);
+		Vectors::Vector3D gkyl_dYdy_3D {gkyl_dYdy.slice_dim1(0)};
+		bkg.move_into_dYdy(gkyl_dYdy_3D);
+		Vectors::Vector3D gkyl_dZdy_3D {gkyl_dZdy.slice_dim1(0)};
+		bkg.move_into_dZdy(gkyl_dZdy_3D);
+		Vectors::Vector3D gkyl_dXdz_3D {gkyl_dXdz.slice_dim1(0)};
+		bkg.move_into_dXdz(gkyl_dXdz_3D);
+		Vectors::Vector3D gkyl_dYdz_3D {gkyl_dYdz.slice_dim1(0)};
+		bkg.move_into_dYdz(gkyl_dYdz_3D);
+		Vectors::Vector3D gkyl_dZdz_3D {gkyl_dZdz.slice_dim1(0)};
+		bkg.move_into_dZdz(gkyl_dZdz_3D);
 
 		// Likewise for covariant components of magnetic field
 		Vectors::Vector3D gkyl_b_x_3D {gkyl_b_x.slice_dim1(0)};

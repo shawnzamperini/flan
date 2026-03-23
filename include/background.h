@@ -69,6 +69,15 @@ namespace Background
 		Vectors::Vector3D<BkgFPType> m_dzdX {};
 		Vectors::Vector3D<BkgFPType> m_dzdY {};
 		Vectors::Vector3D<BkgFPType> m_dzdZ {};
+		Vectors::Vector3D<BkgFPType> m_dXdx {};
+		Vectors::Vector3D<BkgFPType> m_dYdx {};
+		Vectors::Vector3D<BkgFPType> m_dZdx {};
+		Vectors::Vector3D<BkgFPType> m_dXdy {};
+		Vectors::Vector3D<BkgFPType> m_dYdy {};
+		Vectors::Vector3D<BkgFPType> m_dZdy {};
+		Vectors::Vector3D<BkgFPType> m_dXdz {};
+		Vectors::Vector3D<BkgFPType> m_dYdz {};
+		Vectors::Vector3D<BkgFPType> m_dZdz {};
 
 		// The following are just for debugging and post analysis
 		Vectors::Vector4D<BkgFPType> m_bR {};
@@ -90,6 +99,7 @@ namespace Background
 		const std::vector<BkgFPType>& get_times() const;
 		const std::vector<BkgFPType>& get_x() const;
 		const std::vector<BkgFPType>& get_y() const;
+		std::vector<BkgFPType>& get_z();
 		const std::vector<BkgFPType>& get_z() const;
 		const std::vector<BkgFPType>& get_grid_x() const;
 		const std::vector<BkgFPType>& get_grid_y() const;
@@ -163,6 +173,15 @@ namespace Background
 		Vectors::Vector3D<BkgFPType>& get_dzdX();
 		Vectors::Vector3D<BkgFPType>& get_dzdY();
 		Vectors::Vector3D<BkgFPType>& get_dzdZ();
+		const Vectors::Vector3D<BkgFPType>& get_dXdx() const;
+		const Vectors::Vector3D<BkgFPType>& get_dYdx() const;
+		const Vectors::Vector3D<BkgFPType>& get_dZdx() const;
+		const Vectors::Vector3D<BkgFPType>& get_dXdy() const;
+		const Vectors::Vector3D<BkgFPType>& get_dYdy() const;
+		const Vectors::Vector3D<BkgFPType>& get_dZdy() const;
+		const Vectors::Vector3D<BkgFPType>& get_dXdz() const;
+		const Vectors::Vector3D<BkgFPType>& get_dYdz() const;
+		const Vectors::Vector3D<BkgFPType>& get_dZdz() const;
 		const Vectors::Vector3D<BkgFPType>& get_b_x() const;
 		const Vectors::Vector3D<BkgFPType>& get_b_y() const;
 		const Vectors::Vector3D<BkgFPType>& get_b_z() const;
@@ -263,6 +282,15 @@ namespace Background
 		void move_into_dzdX(Vectors::Vector3D<BkgFPType>& dzdX);
 		void move_into_dzdY(Vectors::Vector3D<BkgFPType>& dzdY);
 		void move_into_dzdZ(Vectors::Vector3D<BkgFPType>& dzdZ);
+		void move_into_dXdx(Vectors::Vector3D<BkgFPType>& dXdx);
+		void move_into_dYdx(Vectors::Vector3D<BkgFPType>& dYdx);
+		void move_into_dZdx(Vectors::Vector3D<BkgFPType>& dZdx);
+		void move_into_dXdy(Vectors::Vector3D<BkgFPType>& dXdy);
+		void move_into_dYdy(Vectors::Vector3D<BkgFPType>& dYdy);
+		void move_into_dZdy(Vectors::Vector3D<BkgFPType>& dZdy);
+		void move_into_dXdz(Vectors::Vector3D<BkgFPType>& dXdz);
+		void move_into_dYdz(Vectors::Vector3D<BkgFPType>& dYdz);
+		void move_into_dZdz(Vectors::Vector3D<BkgFPType>& dZdz);
 		void move_into_b_x(Vectors::Vector3D<BkgFPType>& b_x);
 		void move_into_b_y(Vectors::Vector3D<BkgFPType>& b_y);
 		void move_into_b_z(Vectors::Vector3D<BkgFPType>& b_z);

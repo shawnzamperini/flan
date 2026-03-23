@@ -33,9 +33,15 @@ namespace Impurity
 		double m_prevX {};
 		double m_prevY {};
 		double m_prevZ {};
+		double m_vx {};
+		double m_vy {};
+		double m_vz {};
 		double m_vX {};
 		double m_vY {};
 		double m_vZ {};
+		double m_prev_vX {};
+		double m_prev_vY {};
+		double m_prev_vZ {};
 		double m_weight {};
 		int m_charge {};
 		double m_mass {};
@@ -115,20 +121,65 @@ namespace Impurity
 		*/
 		double get_Z() const;
 		/**
-		* @brief Accessor for particle x velocity (m/s)
+		* @brief Accessor for particle x velocity (?/s)
 		* @return Returns particle x velocity as double
+		*/
+		double get_vx() const;
+		/**
+		* @brief Accessor for particle y velocity (?/s)
+		* @return Returns particle y velocity as double
+		*/
+		double get_vy() const;
+		/**
+		* @brief Accessor for particle z velocity (?/s)
+		* @return Returns particle z velocity as double
+		*/
+		double get_vz() const;
+		/**
+		* @brief Accessor for particle X velocity (m/s), defined at half-steps
+		* @return Returns particle X velocity as double
 		*/
 		double get_vX() const;
 		/**
-		* @brief Accessor for particle y velocity (m/s)
-		* @return Returns particle y velocity as double
+		* @brief Accessor for particle Y velocity (m/s), defined at half-steps
+		* @return Returns particle Y velocity as double
 		*/
 		double get_vY() const;
 		/**
-		* @brief Accessor for particle z velocity (m/s)
-		* @return Returns particle z velocity as double
+		* @brief Accessor for particle Z velocity (m/s), defined at half-steps
+		* @return Returns particle Z velocity as double
 		*/
 		double get_vZ() const;
+		/**
+		* @brief Accessor for particle's previous X velocity at (m/s), defined 
+		* at half-steps.
+		*
+		* Generally this is the velocity at the previous half time step, often
+		* labeled as n-1/2 in the Boris scheme of things.
+		*
+		* @return Returns particle's previous X velocity as double
+		*/
+		double get_prev_vX() const;
+		/**
+		* @brief Accessor for particle's previous Y velocity at (m/s), defined 
+		* at half-steps.
+		*
+		* Generally this is the velocity at the previous half time step, often
+		* labeled as n-1/2 in the Boris scheme of things.
+		*
+		* @return Returns particle's previous Y velocity as double
+		*/
+		double get_prev_vY() const;
+		/**
+		* @brief Accessor for particle's previous Z velocity at (m/s), defined 
+		* at half-steps.
+		*
+		* Generally this is the velocity at the previous half time step, often
+		* labeled as n-1/2 in the Boris scheme of things.
+		*
+		* @return Returns particle's previous Z velocity as double
+		*/
+		double get_prev_vZ() const;
 		/**
 		* @brief Accessor for particle mass (kg)
 		* @return Returns particle mass as double
@@ -180,15 +231,27 @@ namespace Impurity
 		/**
 		* @brief Setter for particle x velocity
 		*/
-		void set_vX(double vX);
+		void set_vx(double vx);
 		/**
 		* @brief Setter for particle y velocity
 		*/
-		void set_vY(double vY);
+		void set_vy(double vy);
 		/**
 		* @brief Setter for particle z velocity
 		*/
-		void set_vZ(double vZ);
+		void set_vz(double vz);
+		/**
+		* @brief Setter for particle X velocity
+		*/
+		void set_vX(double vX, bool set_prev = true);
+		/**
+		* @brief Setter for particle Y velocity
+		*/
+		void set_vY(double vY, bool set_prev = true);
+		/**
+		* @brief Setter for particle Z velocity
+		*/
+		void set_vZ(double vZ, bool set_prev = true);
 		/**
 		* @brief Setter for particle charge
 		*/

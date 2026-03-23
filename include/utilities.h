@@ -34,6 +34,18 @@ namespace Utilities
 	std::vector<std::string> split_str_at_spaces(std::string& str);
 
 	/**
+	* @brief Calculate cross product
+	*/
+	std::array<double, 3> cross_product(const std::array<double, 3>& a, 
+		const std::array<double, 3>& b);
+
+	/**
+	* @brief Calculate cross product
+	*/
+	double dot_product(const std::array<double, 3>& a, 
+		const std::array<double, 3>& b);
+
+	/**
 	* @brief Perform a bilinear interpolation between z0=f(x0,y0) and 
 	* z1=f(x1,y1) to estimate z=f(x,y).
 	*
