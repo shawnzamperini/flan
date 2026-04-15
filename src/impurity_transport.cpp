@@ -100,80 +100,6 @@ namespace Impurity
 			bkg.get_z_min(), bkg.get_z_max());
 	}
 
-/*
-	double get_birth_x(const Background::Background& bkg,
-		const Options::Options& opts)
-	{	
-		// Uniformily distributed between xmin, xmax.
-		double start_x {Random::get(opts.imp_xmin(), opts.imp_xmax())};
-
-		// We need to start the impurity at a grid node, otherwise the 
-		// code may autolocate it somewhere further away. This is actually
-		// super subtle yet extremely important and can have surprisingly
-		// huge and confusing implication if you neglect it. I lost years off 
-		// my life figuring this out.
-		//int xidx {get_nearest_cell_index(bkg.get_grid_x(), 
-		//	static_cast<BkgFPType>(start_x))};
-		//return static_cast<double>(bkg.get_grid_x()[xidx]);
-
-		return start_x;
-	}
-
-	double get_birth_y(const Background::Background& bkg, 
-		const Options::Options& opts)
-	{
-		// Start at specific point
-		double start_y {};
-		if (opts.imp_ystart_opt_int() == 0)
-		{
-			 start_y = opts.imp_ystart_val();
-		}
-
-		// Start between a user-specified range 
-		else if (opts.imp_ystart_opt_int() == 1)
-		{
-			start_y = Random::get(opts.imp_yrange_min(), opts.imp_yrange_max());
-		}
-
-		// Start between the full range of the simulation volume 
-		else if (opts.imp_ystart_opt_int() == 2)
-		{
-			start_y = Random::get(static_cast<double>(bkg.get_y_min()), 
-				static_cast<double>(bkg.get_y_max()));
-		}
-		
-		return start_y;
-	}
-
-	double get_birth_z(const Background::Background& bkg,
-		const Options::Options& opts)
-	{
-		double start_z {};
-		if (opts.imp_zstart_opt_int() == 0)
-		{
-			 start_z = opts.imp_zstart_val();
-		}
-
-		// Start between a range (here defaults to the full z-width of the 
-		// simulation volume).
-		else if (opts.imp_zstart_opt_int() == 1)
-		{
-			start_z = Random::get(static_cast<double>(bkg.get_z_min()), 
-				static_cast<double>(bkg.get_z_max()));
-		}
-
-		// We need to start the impurity at a grid node, otherwise the 
-		// code may autolocate it somewhere further away. This is actually
-		// super subtle yet extremely important and can have surprisingly
-		// huge and confusing implication if you neglect it. I lost years off 
-		// my life figuring this out.
-		//int zidx {get_nearest_cell_index(bkg.get_grid_z(), 
-		//	static_cast<BkgFPType>(start_z))};
-		//return static_cast<double>(bkg.get_grid_z()[zidx]);
-
-		return start_z;
-	}
-*/
 	int get_birth_charge(const Options::Options& opts)
 	{
 		return opts.imp_init_charge();
@@ -189,25 +115,24 @@ namespace Impurity
 		double z_imp = get_birth_z(bkg, opts);
 		auto [X_imp, Y_imp, Z_imp] = opts.mapc2p()(x_imp, y_imp, z_imp);
 
-		// DEBUG for test_gyro. Assign a parallel (toroidal) velocity to test
-		// for curvature drift.
-		//double vT_imp {5000.0};
-		//double tor_ang {std::atan2(Y_imp, X_imp)};
-		//double tor_ang {z_imp / (1.722 + 0.59)};
-		//double tor_ang {z_imp};
+		// -- BEGIN HARDCODED TEST SUITE --
+		// Slab: Give particle initial Y velocity so it gyrates
+		//std::cout << "DEBUG: Starting at 2500 m/s!\n";
+		//double vY_imp {2500.0};
 
-		// Assume starting at rest, but if this ever changes do it here
-		double vX_imp {0.0};
-		double vY_imp {0.0};
+		// Cylindrical: Assign parallel (toroidal) velocity for curvature drift.
+		//double vT_imp {5000.0};
+		//double tor_ang {z_imp};
 		//std::cout << "DEBUG: Starting at v_tor = " << vT_imp << " (" 
 		//	<< tor_ang << ")" << "\n";
 		//double vX_imp {-std::sin(tor_ang) * vT_imp};
 		//double vY_imp {std::cos(tor_ang) * vT_imp};
-		//std::cout << vX_imp << "\t" << vY_imp << '\n';
-		//std::cout << "DEBUG: Starting at 2500 m/s!\n";
-		//double vY_imp {2500.0};
+		//double vZ_imp {2500.0};  // For gyrating
+
+		// Assume starting at rest, but if this ever changes do it here
+		double vX_imp {0.0};
+		double vY_imp {0.0};
 		double vZ_imp {0.0};
-		//double vZ_imp {2500.0};
 
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);
@@ -406,17 +331,10 @@ namespace Impurity
         //double dY {imp.get_Y() - imp.get_prevY()};
         //double dZ {imp.get_Z() - imp.get_prevZ()};
 
-		// Interpolate reciprocal basis vector at impurity location
-		std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
-			yidx, zidx)};
-
 		// Use Boris algorithm to update particle velocity, defined at 
 		// half-steps, v_(t-dt/2) --> v_(t+dt/2).
 		Boris::update_velocity(imp, bkg, opts, imp_time_step, tidx, xidx, yidx, 
 			zidx);
-
-		//std::cout << "vmag_sq2: " << imp.get_vX()*imp.get_vX() 
-		//	+ imp.get_vY()*imp.get_vY() + imp.get_vZ()*imp.get_vZ() << '\n';
 
 		// Update particle position in physical space after Boris update. This
 		// code is actually bad in that it allows a lot of numerical diffusion
@@ -429,20 +347,26 @@ namespace Impurity
         double dY {imp.get_Y() - imp.get_prevY()};
         double dZ {imp.get_Z() - imp.get_prevZ()};
 
-
 		// Calculate the step in computational space using the reciprocal basis
-		// vectors. This is Eq. 2.3.6 in Dhaeseleer.
-		/*
-		double dx {bkg.get_dxdX()(xidx, yidx, zidx) * dX
-			+ bkg.get_dxdY()(xidx, yidx, zidx) * dY
-			+ bkg.get_dxdZ()(xidx, yidx, zidx) * dZ};
-		double dy {bkg.get_dydX()(xidx, yidx, zidx) * dX
-			+ bkg.get_dydY()(xidx, yidx, zidx) * dY
-			+ bkg.get_dydZ()(xidx, yidx, zidx) * dZ};
-		double dz {bkg.get_dzdX()(xidx, yidx, zidx) * dX
-			+ bkg.get_dzdY()(xidx, yidx, zidx) * dY
-			+ bkg.get_dzdZ()(xidx, yidx, zidx) * dZ};
-		*/
+		// vectors. This is Eq. 2.3.6 in Dhaeseleer. Can either use the discrete
+		// values for the grid, or interpolate them for a continuous basis
+		// vector. Both have their drawbacks though. Discrete is technically
+		// only correct at the cell center, and interpolated does not
+		// guarantee orthogonality (likely violates it). Pick your poison.
+		
+		//double dx {bkg.get_dxdX()(xidx, yidx, zidx) * dX
+		//	+ bkg.get_dxdY()(xidx, yidx, zidx) * dY
+		//	+ bkg.get_dxdZ()(xidx, yidx, zidx) * dZ};
+		//double dy {bkg.get_dydX()(xidx, yidx, zidx) * dX
+		//	+ bkg.get_dydY()(xidx, yidx, zidx) * dY
+		//	+ bkg.get_dydZ()(xidx, yidx, zidx) * dZ};
+		//double dz {bkg.get_dzdX()(xidx, yidx, zidx) * dX
+		//	+ bkg.get_dzdY()(xidx, yidx, zidx) * dY
+		//	+ bkg.get_dzdZ()(xidx, yidx, zidx) * dZ};
+
+		// Interpolate reciprocal basis vector at impurity location
+		std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
+			yidx, zidx)};
 
 		double dx {int_rec_bas[0] * dX + int_rec_bas[1] * dY 
 			+ int_rec_bas[2] * dZ};
@@ -451,10 +375,14 @@ namespace Impurity
 		double dz {int_rec_bas[6] * dX + int_rec_bas[7] * dY 
 			+ int_rec_bas[8] * dZ};
 
-		// Update position in computational space.
+		// Update position in computational space
         imp.set_x(imp.get_x() + dx);
         imp.set_y(imp.get_y() + dy);
         imp.set_z(imp.get_z() + dz);
+
+		// This approach is redundant since vx,vy,vz are pretty much calculated
+		// in the dx,dy,dz calculations above. It's just if we want to have 
+		// the curvilinear velocity tracked we can do it that way too.
         //imp.set_x(imp.get_x() + imp.get_vx() * imp_time_step);
         //imp.set_y(imp.get_y() + imp.get_vy() * imp_time_step);
         //imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);

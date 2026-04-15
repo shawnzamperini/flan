@@ -44,41 +44,10 @@ void flan(const Inputs& inpts)
 	Background::Background bkg {Gkyl::read_gkyl(opts)};
 	timer.end_read_timer();
 
-	// ---- DEBUG ----
-	/*
+	// ---- BEGIN HARDCODED TEST SUITE ----
 	// Flan is missing a test suite. For the paper, the reviewer wants
 	// some kind of test, so I am going to overwrite the background with 
 	// constant values to test simple particle gyromotion.
-	std::cout << "WARNING! Replacing background with constant values for debugging!\n";
-
-	// Vector to hold constant values that have X,Y,Z components
-	std::vector<BkgFPType> const_eX_t0 (std::ssize(bkg.get_z()));
-	std::vector<BkgFPType> const_eY_t0 (std::ssize(bkg.get_z()));
-	std::vector<BkgFPType> const_eZ_t0 (std::ssize(bkg.get_z()));
-	std::vector<BkgFPType> const_bX_t0 (std::ssize(bkg.get_z()));
-	std::vector<BkgFPType> const_bY_t0 (std::ssize(bkg.get_z()));
-	std::vector<BkgFPType> const_bZ_t0 (std::ssize(bkg.get_z()));
-	for (int l {}; l < std::ssize(bkg.get_z()); ++l)
-	{
-		// Normalize B (bkg.bmag set to 1.0 in below loop).
-		const double bmag = std::sqrt(
-			bkg.get_bX()(0, 48, 32, l) * bkg.get_bX()(0, 48, 32, l) +
-			bkg.get_bY()(0, 48, 32, l) * bkg.get_bY()(0, 48, 32, l) +
-			bkg.get_bZ()(0, 48, 32, l) * bkg.get_bZ()(0, 48, 32, l)
-		);
-		const_bX_t0[l] = bkg.get_bX()(0, 48, 32, l) / bmag; 
-		const_bY_t0[l] = bkg.get_bY()(0, 48, 32, l) / bmag; 
-		const_bZ_t0[l] = bkg.get_bZ()(0, 48, 32, l) / bmag; 
-
-		// Useful printout
-		std::cout << "---------------------------\n";
-		std::cout << "zidx = " << l << '\n';
-		std::cout << "  EZ = " << const_eZ_t0[l] << '\n';
-		std::cout << "  BX = " << const_bX_t0[l] << '\n';
-		std::cout << "  BY = " << const_bY_t0[l] << '\n';
-		std::cout << "  BZ = " << const_bZ_t0[l] << '\n';
-	}
-	*/
 
 	#pragma omp parallel for
 	for (int i = 0; i < std::ssize(bkg.get_x()); ++i)  // x
@@ -90,8 +59,10 @@ void flan(const Inputs& inpts)
 		// Calculate index in 1D vector
 		//int idx {bkg.get_dxdX().calc_index(i,j,k)};
 
-		// Need to also assign the reciprocal basis vectors such that we are
-		// just simulating a simple rectangular volume.
+		// Need to manually assign the reciprocal basis vectors to resemble
+		// a specific geometry
+
+		// Slab
 		//bkg.get_dxdX().get_data()[idx] = 1.0;
 		//bkg.get_dxdY().get_data()[idx] = 0.0;
 		//bkg.get_dxdZ().get_data()[idx] = 0.0;
@@ -113,8 +84,9 @@ void flan(const Inputs& inpts)
 		//bkg.get_dzdY().get_data()[idx] = 0.0;
 		//bkg.get_dzdZ().get_data()[idx] = 1.0;
 
-		// Cylindrical. Reassign z to be toroidal angle from 0-pi/2 (phi).
-		//bkg.get_z()[k] = static_cast<double>(k) / std::ssize(bkg.get_z()) * 3.1415 / 2.0;
+		// Cylindrical: Reassign z to be toroidal angle from 0-pi/2 (phi).
+		//bkg.get_z()[k] = static_cast<double>(k) / std::ssize(bkg.get_z()) 
+			//* 3.1415 / 2.0;
 		//double R  = bkg.get_x()[i];   // x = R
 		//double Zc = bkg.get_y()[j];   // y = Z
 		//double phi = bkg.get_z()[k];  // z = phi
@@ -144,36 +116,28 @@ void flan(const Inputs& inpts)
 		// Calculate index in 1D vector
 		//int idx {bkg.get_ne().calc_index(i,j,k,l)};
 
-		// Replace with constant values
+		// Overwrite with constant plasma values
 		//bkg.get_ne().get_data()[idx] = 1e20;
 		//bkg.get_te().get_data()[idx] = 1;
 		//bkg.get_ti().get_data()[idx] = 1;
 		//bkg.get_vp().get_data()[idx] = 0.0; // Not needed
 
-		// Need to account for toroidal curvature if doing simple helical
-		//bkg.get_eX().get_data()[idx] = const_eX_t0[l];
-		//bkg.get_eY().get_data()[idx] = const_eY_t0[l];
-		//bkg.get_eZ().get_data()[idx] = const_eZ_t0[l];
-		//bkg.get_bX().get_data()[idx] = const_bX_t0[l];
-		//bkg.get_bY().get_data()[idx] = const_bY_t0[l];
-		//bkg.get_bZ().get_data()[idx] = const_bZ_t0[l];
-		//bkg.get_bmag().get_data()[idx] = 1.0;
-
+		// No electric field
 		//bkg.get_eX().get_data()[idx] = 0.0;
 		//bkg.get_eY().get_data()[idx] = 0.0;
 		//bkg.get_eZ().get_data()[idx] = 0.0;
 		//bkg.get_emag().get_data()[idx] = 0.0;
 
-		// Add 500 V/m E field in Y direction
+		// Slab: 500 V/m E field in Y direction
 		//bkg.get_eY().get_data()[idx] = 500.0;
 		//bkg.get_emag().get_data()[idx] = 500.0;
 
-		// Slab time varying E field for polarization drift
+		// Slab: Time varying E field for polarization drift
 		//constexpr double slope {-1000000}; // 1000000 V/s or 1 V/us
 		//bkg.get_eY().get_data()[idx] = 500.0 + slope * bkg.get_times()[i];
 		//bkg.get_emag().get_data()[idx] = 500.0 + slope * bkg.get_times()[i];
 
-		// Slab constant magnetic field
+		// Slab: Magnetic field. Choose correct bmag.
 		//bkg.get_bX().get_data()[idx] = 0.0;
 		//bkg.get_bX().get_data()[idx] = 1.0;
 		//bkg.get_bY().get_data()[idx] = 0.0;
@@ -181,38 +145,29 @@ void flan(const Inputs& inpts)
 		//bkg.get_bmag().get_data()[idx] = 1.0;
 		//bkg.get_bmag().get_data()[idx] = 0.0;
 		
-		// No magnetic field
-		//bkg.get_bZ().get_data()[idx] = 0.0;
-		//bkg.get_bmag().get_data()[idx] = 0.0;
-
-		// Slab BZ-gradient in y direction for grad-B drift
-		//bkg.get_bX().get_data()[idx] = 0.0;
-		//bkg.get_bY().get_data()[idx] = 0.0;
+		// Slab: BZ-gradient in y direction for grad-B drift
 		//constexpr double slope {5}; // 5 T/m or 0.05 T/cm
 		//bkg.get_bZ().get_data()[idx] = slope * bkg.get_y()[k] + 1.0;
 		//bkg.get_bmag().get_data()[idx] = slope * bkg.get_y()[k] + 1.0;
 
-		// Shouldn't matter without collisions but set to zero anyways
+		// Slab: No flow or set to a value for friction force testing
 		//bkg.get_uX().get_data()[idx] = 0.0;
 		//bkg.get_uX().get_data()[idx] = 1000.0;
 		//bkg.get_uY().get_data()[idx] = 0.0;
 		//bkg.get_uZ().get_data()[idx] = 0.0;
-		//bkg.get_uZ().get_data()[idx] = 500000.0;
 
 		// Cylindrical: Purely toroidal B field
-		/*
-		double phi = bkg.get_z()[l]; // z = phi
-		double B0 = 1.0;
-		bkg.get_bX().get_data()[idx] = -B0 * std::sin(phi);
-		bkg.get_bY().get_data()[idx] =  B0 * std::cos(phi);
-		bkg.get_bZ().get_data()[idx] =  0.0;
-		bkg.get_bmag().get_data()[idx] = B0;
-		*/
+		//double phi = bkg.get_z()[l]; // z = phi
+		//double B0 = 1.0;
+		//bkg.get_bX().get_data()[idx] = -B0 * std::sin(phi);
+		//bkg.get_bY().get_data()[idx] =  B0 * std::cos(phi);
+		//bkg.get_bZ().get_data()[idx] =  0.0;
+		//bkg.get_bmag().get_data()[idx] = B0;
 	}
 	}
 	}
 	}
-	// ---- END DEBUG ----
+	// ---- END HARDCODED TEST SUITE ----
 
 	// Interpolate additional frames between each Gkeyll frame to artificially
 	// increase the time resolution of the simulation.

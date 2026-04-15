@@ -241,7 +241,9 @@ namespace Collisions
 		// in that case.
 		if (imp.get_charge() == 0) return;
 
-		// Will always need electron temperature/density
+		// Will always need electron temperature/density. Trilinearly
+		// interpolate in space and then linearly interpolate in time.
+		// To-do
 		double Te {bkg.get_te()(tidx, xidx, yidx, zidx)};
 		double ne {bkg.get_ne()(tidx, xidx, yidx, zidx)};
 
@@ -266,9 +268,17 @@ namespace Collisions
 		// So reconstruct the full-time step as
 		// the average between v_n-1/2 and v_n+1/2 and use that in the following.
 		// We will overwrite v_n+1/2 with the post-collision value.
-		double imp_vX_n {(imp.get_vX() + imp.get_prev_vX()) / 2.0};
-		double imp_vY_n {(imp.get_vY() + imp.get_prev_vY()) / 2.0};
-		double imp_vZ_n {(imp.get_vZ() + imp.get_prev_vZ()) / 2.0};
+		// ---
+		// These aren't used right now in the following functions, but it still 
+		// may be the correct thing to do. Will need time to test/compare the 
+		// two. Right now just set to zero so we can leave the function calls
+		// in place.
+		//double imp_vX_n {(imp.get_vX() + imp.get_prev_vX()) / 2.0};
+		//double imp_vY_n {(imp.get_vY() + imp.get_prev_vY()) / 2.0};
+		//double imp_vZ_n {(imp.get_vZ() + imp.get_prev_vZ()) / 2.0};
+		constexpr double imp_vX_n {0.0};
+		constexpr double imp_vY_n {0.0};
+		constexpr double imp_vZ_n {0.0};
 
 		// Calculate s (Eq. 19), making sure to pass in the full time step
 		// velocities.
@@ -305,34 +315,35 @@ namespace Collisions
 		// accelerate the velocity forward half a timestep before storing it.
 		// The Lorentz force is used to calculate the acceleration at time
 		// step n.
-		const double q_m {imp.get_charge() * Constants::charge_e 
-			/ imp.get_mass()};
-		const double EX {bkg.get_eX()(tidx, xidx, yidx, zidx)};
-		const double EY {bkg.get_eY()(tidx, xidx, yidx, zidx)};
-		const double EZ {bkg.get_eZ()(tidx, xidx, yidx, zidx)};
-		const double BX {bkg.get_bX()(tidx, xidx, yidx, zidx)};
-		const double BY {bkg.get_bY()(tidx, xidx, yidx, zidx)};
-		const double BZ {bkg.get_bZ()(tidx, xidx, yidx, zidx)};
+		//const double q_m {imp.get_charge() * Constants::charge_e 
+		//	/ imp.get_mass()};
+		//const double EX {bkg.get_eX()(tidx, xidx, yidx, zidx)};
+		//const double EY {bkg.get_eY()(tidx, xidx, yidx, zidx)};
+		//const double EZ {bkg.get_eZ()(tidx, xidx, yidx, zidx)};
+		//const double BX {bkg.get_bX()(tidx, xidx, yidx, zidx)};
+		//const double BY {bkg.get_bY()(tidx, xidx, yidx, zidx)};
+		//const double BZ {bkg.get_bZ()(tidx, xidx, yidx, zidx)};
 
 		// Assemble arrays and calculate v x B
-		const std::array<double, 3> v_n {vX_post, vY_post, vZ_post};
-		const std::array<double, 3> B_n {BX, BY, BZ};
-		const std::array<double, 3> v_cross_B	
-			{Utilities::cross_product(v_n, B_n)};
+		//const std::array<double, 3> v_n {vX_post, vY_post, vZ_post};
+		//const std::array<double, 3> B_n {BX, BY, BZ};
+		//const std::array<double, 3> v_cross_B	
+		//	{Utilities::cross_product(v_n, B_n)};
 
 		// Calculate acceleration. This is just a = F_Lorentz / m
-		double aX_n {q_m * (EX + v_cross_B[0])};
-		double aY_n {q_m * (EY + v_cross_B[1])};
-		double aZ_n {q_m * (EZ + v_cross_B[2])};
+		//double aX_n {q_m * (EX + v_cross_B[0])};
+		//double aY_n {q_m * (EY + v_cross_B[1])};
+		//double aZ_n {q_m * (EZ + v_cross_B[2])};
+
+		//imp.set_vX(vX_post + 0.5 * aX_n * imp_time_step, false);
+		//imp.set_vY(vY_post + 0.5 * aY_n * imp_time_step, false);
+		//imp.set_vZ(vZ_post + 0.5 * aZ_n * imp_time_step, false);
 
 		// Update impurity velocity, which is v_n+1/2 since this is happening
 		// after the Boris update.
 		imp.set_vX(vX_post);
 		imp.set_vY(vY_post);
 		imp.set_vZ(vZ_post);
-		//imp.set_vX(vX_post + 0.5 * aX_n * imp_time_step, false);
-		//imp.set_vY(vY_post + 0.5 * aY_n * imp_time_step, false);
-		//imp.set_vZ(vZ_post + 0.5 * aZ_n * imp_time_step, false);
 
 	}
 }

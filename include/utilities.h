@@ -109,10 +109,14 @@ namespace Utilities
 
 	/**
 	* @brief Return value at x in set of (xarr, yarr) values using linear
-	* interpolation. Written by AI.
+	* interpolation.
 	* @param xarr Array of x values
 	* @param yarr Array of y values
 	* @param x Value to get y value at
+	*
+	* This is defined in the header file here because otherwise we would need
+	* to have definitions in the source file for every N that we use (which
+	* is of course silly and not a real option).
 	*
 	* @return Returns linearly interpolated value at f(x)
 	*/

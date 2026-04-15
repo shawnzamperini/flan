@@ -17,47 +17,6 @@
 
 namespace Boris
 {
-
-	// Calculate cross product and return array
-	std::array<double, 3> cross_product(const std::array<double, 3>& a, 
-		const std::array<double, 3>& b)
-	{
-		return 
-		{ 
-			a[1] * b[2] - a[2] * b[1],
-			a[2] * b[0] - a[0] * b[2],
-			a[0] * b[1] - a[1] * b[0] 
-		};
-	}
-
-	// Find nearest neighbor index by essentially seeing which half of the
-	// cell a particle is in and returning the index of the neighboring cell
-	// closest to that half. Designed to be run once per x,y,z. Note that this
-	// will not work for times, since those are defined at the frame (it's not
-	// a "cell center" coordinate, it's more of a "grid coordinate").
-	int get_neighbor_index(const double val, 
-		const std::vector<BkgFPType>& cell_centers, const int idx)
-	{
-		// dx > 0 --> (1*2 - 1) = +1
-		// dx < 0 --> (0*2 - 1) = -1
-		double dx_from_center {val - cell_centers[idx]};
-		int side {2 * (dx_from_center > 0.0) - 1};
-
-		// Need to check we aren't at grid edges
-		int is_left_edge {(idx == 0)};
-		int is_right_edge {(idx == std::ssize(cell_centers) - 1)};
-
-		// This will correctly do -1 --> 1 if we're at the left edge, and
-		// 1 --> -1 if we're at the right edge. This effectively means we
-		// are using the only neighboring option.
-		int offset {
-			  side * (1 - is_left_edge - is_right_edge)
-			+ 1    * is_left_edge
-			+ (-1) * is_right_edge};
-
-		return idx + offset;
-	}
-
 	// Interpolate the reciprocal basis functions at the impurity location
 	std::array<double, 9> interp_recp(const Impurity::Impurity& imp, 
 		const Background::Background& bkg, const int xidx, const int yidx, 
@@ -200,12 +159,12 @@ namespace Boris
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
-		const int xidx_neighbor {get_neighbor_index(imp.get_x(), bkg.get_x(), 
-			xidx)};
-		const int yidx_neighbor {get_neighbor_index(imp.get_y(), bkg.get_y(), 
-			yidx)};
-		const int zidx_neighbor {get_neighbor_index(imp.get_z(), bkg.get_z(), 
-			zidx)};
+		const int xidx_neighbor {Utilities::get_neighbor_index(imp.get_x(), 
+			bkg.get_x(), xidx)};
+		const int yidx_neighbor {Utilities::get_neighbor_index(imp.get_y(), 
+			bkg.get_y(), yidx)};
+		const int zidx_neighbor {Utilities::get_neighbor_index(imp.get_z(), 
+			bkg.get_z(), zidx)};
 
 		// Similarly for t, except we can't use get_neighbor_index since it
 		// uses cell center coordinates, and t is defined at each frame (i.e.,
@@ -391,12 +350,14 @@ namespace Boris
 
 		// v prime
 		std::array<double, 3> vprime {};
-		std::array<double, 3> vminus_cross_t {cross_product(vminus, t)};
+		std::array<double, 3> vminus_cross_t {Utilities::cross_product(vminus,	
+			t)};
 		for (int i {}; i < 3; ++i) vprime[i] = vminus[i] + vminus_cross_t[i];
 
 		// v plus
 		std::array<double, 3> vplus {};
-		std::array<double ,3> vprime_cross_s {cross_product(vprime, s)};
+		std::array<double ,3> vprime_cross_s {Utilities::cross_product(vprime, 
+			s)};
 		for (int i {}; i < 3; ++i) vplus[i] = vminus[i] + vprime_cross_s[i];
 
 		// v n+1/2
@@ -406,79 +367,9 @@ namespace Boris
 		imp.set_vY(vplus[1] + q_m * E_local[1] * 0.5 * dt);
 		imp.set_vZ(vplus[2] + q_m * E_local[2] * 0.5 * dt);
 
-		/*
-		// ----- DEBUG and maybe incorporate -----
-		// Use mapc2p to calculate the tangent basis vector components
-		constexpr double eps {1e-8};
-		double X0 {};
-		double Y0 {};
-		double Z0 {};
-		double X1 {};
-		double Y1 {};
-		double Z1 {};
-		
-		// e_1
-		std::tie(X0, Y0, Z0) = opts.mapc2p()(imp.get_x()-eps, imp.get_y(), 
-			imp.get_z());
-		std::tie(X1, Y1, Z1) = opts.mapc2p()(imp.get_x()+eps, imp.get_y(), 
-			imp.get_z());
-		double dXdx {(X1 - X0) / (2 * eps)};
-		double dYdx {(Y1 - Y0) / (2 * eps)};
-		double dZdx {(Z1 - Z0) / (2 * eps)};
-		std::array<double, 3> e_1 {dXdx, dYdx, dZdx};
-
-		// e_2
-		std::tie(X0, Y0, Z0) = opts.mapc2p()(imp.get_x(), imp.get_y()-eps, 
-			imp.get_z());
-		std::tie(X1, Y1, Z1) = opts.mapc2p()(imp.get_x(), imp.get_y()+eps, 
-			imp.get_z());
-		double dXdy {(X1 - X0) / (2 * eps)};
-		double dYdy {(Y1 - Y0) / (2 * eps)};
-		double dZdy {(Z1 - Z0) / (2 * eps)};
-		std::array<double, 3> e_2 {dXdy, dYdy, dZdy};
-		
-		// e_3
-		std::tie(X0, Y0, Z0) = opts.mapc2p()(imp.get_x(), imp.get_y(), 
-			imp.get_z()-eps);
-		std::tie(X1, Y1, Z1) = opts.mapc2p()(imp.get_x(), imp.get_y(), 
-			imp.get_z()+eps);
-		double dXdz {(X1 - X0) / (2 * eps)};
-		double dYdz {(Y1 - Y0) / (2 * eps)};
-		double dZdz {(Z1 - Z0) / (2 * eps)};
-		std::array<double, 3> e_3 {dXdz, dYdz, dZdz};
-	
-		// Scalar triple product (Jacobian)
-		double J {Utilities::dot_product(e_1,	
-			Utilities::cross_product(e_2, e_3))};
-
-		// Calculate reciprocal basis vector
-		std::array<double, 3> e1 {Utilities::cross_product(e_2, e_3)}; // dxdX, dxdY, dxdZ
-		std::array<double, 3> e2 {Utilities::cross_product(e_3, e_1)}; // dydX, dydY, dydZ
-		std::array<double, 3> e3 {Utilities::cross_product(e_1, e_2)}; // dzdX, dzdY, dzdZ
-		for (int i {}; i < 3; ++i)
-		{
-			e1[i] = e1[i] / J;
-			e2[i] = e2[i] / J;
-			e3[i] = e3[i] / J;
-		}
-
-		// Test that e^i dot e_i = 1
-		//std::cout << "e^1 * e_1 = " << Utilities::dot_product(e1, e_1) << '\n';
-		//std::cout << "e^2 * e_2 = " << Utilities::dot_product(e2, e_2) << '\n';
-		//std::cout << "e^3 * e_3 = " << Utilities::dot_product(e3, e_3) << '\n';
-
-		//std::cout << "e1: " << e1[0] << '\t' << e1[1] << '\t' << e1[2] << '\n';
-		//std::cout << "e2: " << e2[0] << '\t' << e2[1] << '\t' << e2[2] << '\n';
-		//std::cout << "e3: " << e3[0] << '\t' << e3[1] << '\t' << e3[2] << '\n';
-		//std::cout << e3[0] << "*" << imp.get_vX() << " + " << e3[1] << "*"
-		//	<< imp.get_vY() << " + " << e3[2] << "*" << imp.get_vZ() 
-		//	<< " = " << e3[0] * imp.get_vX() + e3[1] * imp.get_vY() 
-		//	+ e3[2] * imp.get_vZ() << '\n';
-
-		*/
 		// Interpolate reciprocal basis vector at impurity location
-		std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
-			yidx, zidx)};
+		//std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
+		//	yidx, zidx)};
 		//std::array<double, 9> int_tan_bas {interp_tang(imp, bkg, xidx, 
 		//	yidx, zidx)};
 		/*
@@ -545,40 +436,42 @@ namespace Boris
 		std::cout << "e3 * e_3 = " << Utilities::dot_product(e3, e_3) << '\n';
 		*/
 
-		// Calculate velocity vector in computational coordinates
-		imp.set_vx(int_rec_bas[0] * imp.get_vX() 
-			+ int_rec_bas[1] * imp.get_vY() + int_rec_bas[2] * imp.get_vZ());
-		imp.set_vy(int_rec_bas[3] * imp.get_vX() 
-			+ int_rec_bas[4] * imp.get_vY() + int_rec_bas[5] * imp.get_vZ());
-		imp.set_vz(int_rec_bas[6] * imp.get_vX() 
-			+ int_rec_bas[7] * imp.get_vY() + int_rec_bas[8] * imp.get_vZ());
+		// Calculate velocity vector in computational coordinates using
+		// interpolated reciprocal basis vector. Not used right now since it's
+		// redundant/not needed in the particle update step, but leaving since
+		// it's an interesting idea.
+		//imp.set_vx(int_rec_bas[0] * imp.get_vX() 
+		//	+ int_rec_bas[1] * imp.get_vY() + int_rec_bas[2] * imp.get_vZ());
+		//imp.set_vy(int_rec_bas[3] * imp.get_vX() 
+		//	+ int_rec_bas[4] * imp.get_vY() + int_rec_bas[5] * imp.get_vZ());
+		//imp.set_vz(int_rec_bas[6] * imp.get_vX() 
+		//	+ int_rec_bas[7] * imp.get_vY() + int_rec_bas[8] * imp.get_vZ());
 
-		/*
-		imp.set_vx(bkg.get_dxdX()(xidx, yidx, zidx) * imp.get_vX()
-			+ bkg.get_dxdY()(xidx, yidx, zidx) * imp.get_vY()
-			+ bkg.get_dxdZ()(xidx, yidx, zidx) * imp.get_vZ());
-		imp.set_vy(bkg.get_dydX()(xidx, yidx, zidx) * imp.get_vX()
-			+ bkg.get_dydY()(xidx, yidx, zidx) * imp.get_vY()
-			+ bkg.get_dydZ()(xidx, yidx, zidx) * imp.get_vZ());
-		imp.set_vz(bkg.get_dzdX()(xidx, yidx, zidx) * imp.get_vX()
-			+ bkg.get_dzdY()(xidx, yidx, zidx) * imp.get_vY()
-			+ bkg.get_dzdZ()(xidx, yidx, zidx) * imp.get_vZ());
-		*/
+		// Calculate velocity vector in computational coordinates using
+		// discrete reciprocal basis vector.
+		//imp.set_vx(bkg.get_dxdX()(xidx, yidx, zidx) * imp.get_vX()
+		//	+ bkg.get_dxdY()(xidx, yidx, zidx) * imp.get_vY()
+		//	+ bkg.get_dxdZ()(xidx, yidx, zidx) * imp.get_vZ());
+		//imp.set_vy(bkg.get_dydX()(xidx, yidx, zidx) * imp.get_vX()
+		//	+ bkg.get_dydY()(xidx, yidx, zidx) * imp.get_vY()
+		//	+ bkg.get_dydZ()(xidx, yidx, zidx) * imp.get_vZ());
+		//imp.set_vz(bkg.get_dzdX()(xidx, yidx, zidx) * imp.get_vX()
+		//	+ bkg.get_dzdY()(xidx, yidx, zidx) * imp.get_vY()
+		//	+ bkg.get_dzdZ()(xidx, yidx, zidx) * imp.get_vZ());
 
-		// Useful printout
-		/*
-		std::cout << tidx << "\t" << xidx << "\t" << yidx << "\t" << zidx << "\t" 
-			<< std::scientific << imp.get_t() << "\t" << imp.get_x() 
-			<< "\t" << imp.get_y() << "\t" << imp.get_z() << "\t"
-			<< imp.get_X() << "\t" << imp.get_Y() << "\t" << imp.get_Z() << "\t"
-			<< imp.get_vX() << "\t" << imp.get_vY() << "\t" << imp.get_vZ() << "\t"
-			<< B_local[0] << "\t" << B_local[1] << "\t" << B_local[2] << '\t'
-			<< E_local[0] << "\t" << E_local[1] << "\t" << E_local[2] <<'\t'
-			<< int_rec_bas[0] << "\t" << int_rec_bas[1] << "\t" << int_rec_bas[2] <<'\t'
-			<< int_rec_bas[3] << "\t" << int_rec_bas[4] << "\t" << int_rec_bas[5] <<'\t'
-			<< int_rec_bas[6] << "\t" << int_rec_bas[7] << "\t" << int_rec_bas[8] <<'\t'
-			<< imp.get_vx() << "\t" << imp.get_vy() << "\t" << imp.get_vz() << "\n";
-		*/
+		// HARDCODED TEST SUITE
+		// Useful printout for tracking a single particle's motion
+		//std::cout << tidx << "\t" << xidx << "\t" << yidx << "\t" << zidx << "\t" 
+		//	<< std::scientific << imp.get_t() << "\t" << imp.get_x() 
+		//	<< "\t" << imp.get_y() << "\t" << imp.get_z() << "\t"
+		//	<< imp.get_X() << "\t" << imp.get_Y() << "\t" << imp.get_Z() << "\t"
+		//	<< imp.get_vX() << "\t" << imp.get_vY() << "\t" << imp.get_vZ() << "\t"
+		//	<< B_local[0] << "\t" << B_local[1] << "\t" << B_local[2] << '\t'
+		//	<< E_local[0] << "\t" << E_local[1] << "\t" << E_local[2] <<'\t'
+		//	<< int_rec_bas[0] << "\t" << int_rec_bas[1] << "\t" << int_rec_bas[2] <<'\t'
+		//	<< int_rec_bas[3] << "\t" << int_rec_bas[4] << "\t" << int_rec_bas[5] <<'\t'
+		//	<< int_rec_bas[6] << "\t" << int_rec_bas[7] << "\t" << int_rec_bas[8] <<'\t'
+		//	<< imp.get_vx() << "\t" << imp.get_vy() << "\t" << imp.get_vz() << "\n";
 	}
 }
 
