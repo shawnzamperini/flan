@@ -113,7 +113,12 @@ namespace Impurity
 		double x_imp = get_birth_x(bkg, opts);
 		double y_imp = get_birth_y(bkg, opts);
 		double z_imp = get_birth_z(bkg, opts);
-		auto [X_imp, Y_imp, Z_imp] = opts.mapc2p()(x_imp, y_imp, z_imp);
+
+		// Planning to remove this since it's not needed and also tricky
+		//auto [X_imp, Y_imp, Z_imp] = opts.mapc2p()(x_imp, y_imp, z_imp);
+		double X_imp {0.0};
+		double Y_imp {0.0};
+		double Z_imp {0.0};
 
 		// -- BEGIN HARDCODED TEST SUITE --
 		// Slab: Give particle initial Y velocity so it gyrates
@@ -339,13 +344,15 @@ namespace Impurity
 		// Update particle position in physical space after Boris update. This
 		// code is actually bad in that it allows a lot of numerical diffusion
 		// to enter the update. 
-		imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
-		imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
-		imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
-
-        double dX {imp.get_X() - imp.get_prevX()};
-        double dY {imp.get_Y() - imp.get_prevY()};
-        double dZ {imp.get_Z() - imp.get_prevZ()};
+		//imp.set_X(imp.get_X() + imp.get_vX() * imp_time_step);
+		//imp.set_Y(imp.get_Y() + imp.get_vY() * imp_time_step);
+		//imp.set_Z(imp.get_Z() + imp.get_vZ() * imp_time_step);
+        //double dX {imp.get_X() - imp.get_prevX()};
+        //double dY {imp.get_Y() - imp.get_prevY()};
+        //double dZ {imp.get_Z() - imp.get_prevZ()};
+		double dX {imp.get_vX() * imp_time_step};
+		double dY {imp.get_vY() * imp_time_step};
+		double dZ {imp.get_vZ() * imp_time_step};
 
 		// Calculate the step in computational space using the reciprocal basis
 		// vectors. This is Eq. 2.3.6 in Dhaeseleer. Can either use the discrete

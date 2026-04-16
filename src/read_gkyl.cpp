@@ -1527,13 +1527,18 @@ namespace Gkyl
 			{
 				for (int k {}; k < dim3; ++k)
 				{
+					// Planning to remove mapc2p so likely will delete
+
 					// Get the three Cartesian coordinates and store within
 					// our 3D vector of 3-tuples
-					auto [X, Y, Z] = opts.mapc2p()(std::get<1>(grid_data)[i], 
-						std::get<2>(grid_data)[j], std::get<3>(grid_data)[k]);
-					std::get<7>(grid_data)(i,j,k) = X;
-					std::get<8>(grid_data)(i,j,k) = Y;
-					std::get<9>(grid_data)(i,j,k) = Z;
+					//auto [X, Y, Z] = opts.mapc2p()(std::get<1>(grid_data)[i], 
+					//	std::get<2>(grid_data)[j], std::get<3>(grid_data)[k]);
+
+					//std::get<7>(grid_data)(i,j,k) = X;
+					//std::get<8>(grid_data)(i,j,k) = Y;
+					//std::get<9>(grid_data)(i,j,k) = Z;
+
+
 				}
 			}
 		}
@@ -1576,11 +1581,12 @@ namespace Gkyl
 
 					// Get the three Cartesian coordinates and store within
 					// our 3D vector of 3-tuples
-					auto [X, Y, Z] = opts.mapc2p()(std::get<4>(grid_data)[i], 
-						std::get<5>(grid_data)[j], std::get<6>(grid_data)[k]);
-					std::get<10>(grid_data)(i,j,k) = X;
-					std::get<11>(grid_data)(i,j,k) = Y;
-					std::get<12>(grid_data)(i,j,k) = Z;
+					//auto [X, Y, Z] = opts.mapc2p()(std::get<4>(grid_data)[i], 
+					//	std::get<5>(grid_data)[j], std::get<6>(grid_data)[k]);
+					//std::get<10>(grid_data)(i,j,k) = X;
+					//std::get<11>(grid_data)(i,j,k) = Y;
+					//std::get<12>(grid_data)(i,j,k) = Z;
+
 					//std::cout << "X, Y, Z, R: " << X << ", " << Y << ", "
 					//	<< Z << ", " << std::sqrt(X*X+Y*Y) << '\n';
 				}
