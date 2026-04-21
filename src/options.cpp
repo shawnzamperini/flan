@@ -137,7 +137,7 @@ namespace Options
 	{
 		// Only assign if valid option, leaving as default if not
 		if (check_input<std::string>("min_xbound_type", min_xbound_type,
-			{"absorbing", "core"}))
+			{"absorbing", "core", "separatrix"}))
 		{
 			m_min_xbound_type = min_xbound_type;
 		}
@@ -145,11 +145,20 @@ namespace Options
 		// Assign control integers
 		if (min_xbound_type == "absorbing") m_min_xbound_type_int = 0;
 		else if (min_xbound_type == "core") m_min_xbound_type_int = 1;
+		else if (min_xbound_type == "separatrix") m_min_xbound_type_int = 2;
 	}
 
 	// lcfs_x
 	void Options::set_lcfs_x(double lcfs_x) 
 		{m_lcfs_x = lcfs_x;}
+
+	// sep_x_bc_xp_z1
+	void Options::set_sep_x_bc_xp_z1(double sep_x_bc_xp_z1) 
+		{m_sep_x_bc_xp_z1 = sep_x_bc_xp_z1;}
+
+	// sep_x_bc_xp_z2
+	void Options::set_sep_x_bc_xp_z2(double sep_x_bc_xp_z2) 
+		{m_sep_x_bc_xp_z2 = sep_x_bc_xp_z2;}
 
 	// imp_atom_num
 	void Options::set_imp_atom_num(int imp_atom_num) 
@@ -447,6 +456,10 @@ namespace Options
 		{return m_min_xbound_type;}
 	const double Options::lcfs_x() const 
 		{return m_lcfs_x;}
+	const double Options::sep_x_bc_xp_z1() const 
+		{return m_sep_x_bc_xp_z1;}
+	const double Options::sep_x_bc_xp_z2() const 
+		{return m_sep_x_bc_xp_z2;}
 	const int Options::imp_atom_num() const 
 		{return m_imp_atom_num;}
 	const double Options::imp_mass_amu() const 

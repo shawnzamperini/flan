@@ -56,7 +56,7 @@ class FlanPlots:
 		z = self.nc["geometry"]["z"][:].data
 		return x, y, z
 	
-	def load_data_frame(self, data_name, frame):
+	def load_data_frame(self, data_name, frame, charge=1):
 		"""
 		Helper function to load data_name at a given frame (if applicable, 3D
 		data is returned ignoring frame).
@@ -76,21 +76,39 @@ class FlanPlots:
 
 		# Load data, correctly selecting the netCDF group it lives in
 		# Geometry data are 3D vectors and don't have a time index
-		if data_name in ["b_x", "b_y", "b_z", "jacobian", "gij_00", "gij_01",
-			"gij_02", "gij_11", "gij_12", "gij_22"]:
+		if data_name in ["b_x", "b_y", "b_z", "J", "dXdx", "dYdx", 
+			"dZdx", "dXdy", "dYdy", "dZdy", "dXdz", "dYdz", "dZdz",
+			"X", "Y", "Z"]:
 			return self.nc["geometry"][data_name][:].data
 
-		# Derived quantities
+		# Cyclotron frequency
 		elif data_name == "cyclotron_frequency":
 			return self.calc_cyclo_freq()[frame]
-		elif data_name == "ExB_X":
-			return self.calc_exb_drift()[0][frame]
-		elif data_name == "ExB_Y":
-			return self.calc_exb_drift()[1][frame]
-		elif data_name == "ExB_Z":
-			return self.calc_exb_drift()[2][frame]
+
+		# Radial velocity
 		elif data_name == "v_R":
 			return self.calc_v_R()[frame]
+
+		# ExB drift components
+		elif data_name == "ExB_X":
+			return self.calc_exb_drift(frame=frame)[0]
+		elif data_name == "ExB_Y":
+			return self.calc_exb_drift(frame=frame)[1]
+		elif data_name == "ExB_Z":
+			return self.calc_exb_drift(frame=frame)[2]
+
+		# Grad-B drift components
+		elif data_name == "gradB_X":
+			return self.calc_gradb_drift(charge)[0][frame]
+		elif data_name == "gradB_Y":
+			return self.calc_gradb_drift(charge)[1][frame]
+		elif data_name == "gradB_Z":
+			return self.calc_gradb_drift(charge)[2][frame]
+
+		# Polarization drift components
+		elif data_name == "pol_X":
+			return self.calc_polarization_drift(charge=charge, frame=frame)[0]
+
 
 		# 4D vector, index frame. Just loop through the groups until we find
 		# the correct one.
@@ -152,7 +170,7 @@ class FlanPlots:
 	def plot_frame_xy(self, data_name, frame, z0, showplot=True, 
 		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
 		xlabel="x (m)", ylabel="y (m)", cbar_label=None, rsep=0.0,
-		own_data=None):
+		own_data=None, charge=1):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -166,6 +184,8 @@ class FlanPlots:
 		 - cmap (str)      : A matplotlib colormap name for the plot.
 		 - norm_type (str) : The normalization of the colorbar. Options are
 		                      "linear" or "log".
+		 - charge (int)    : Charge of the impurity, used in calculating
+		                      grad-B drift.
 
 		Outputs: Returns a tuple of the x and y grid and the data at each
 		 location.
@@ -183,7 +203,7 @@ class FlanPlots:
 		# or using the data passed in via own_data.
 		if own_data is None:
 			try:
-				data = self.load_data_frame(data_name, frame)
+				data = self.load_data_frame(data_name, frame, charge)
 			except ValueError as e:
 				print(e)
 				return None
@@ -575,20 +595,29 @@ class FlanPlots:
 
 		return vR_mag * vR_sign
 
-	def calc_exb_drift(self):
+	def calc_exb_drift(self, frame=None):
 		"""
 		Calculate and return the X,Y,Z components of the ExB drift
 
 		Outputs: Returns a tuple of the X,Y,Z ExB drift components
 		"""
 		
-		# Pull out some arrays
-		EX = self.nc["background"]["E_X"][:]
-		EY = self.nc["background"]["E_Y"][:]
-		EZ = self.nc["background"]["E_Z"][:]
-		BX = self.nc["background"]["B_X"][:]
-		BY = self.nc["background"]["B_Y"][:]
-		BZ = self.nc["background"]["B_Z"][:]
+		# Pull out some arrays, getting a specific frame if desired
+		if frame == None:
+			EX = self.nc["background"]["E_X"][:]
+			EY = self.nc["background"]["E_Y"][:]
+			EZ = self.nc["background"]["E_Z"][:]
+			BX = self.nc["background"]["B_X"][:]
+			BY = self.nc["background"]["B_Y"][:]
+			BZ = self.nc["background"]["B_Z"][:]
+		else:
+			EX = self.nc["background"]["E_X"][frame]
+			EY = self.nc["background"]["E_Y"][frame]
+			EZ = self.nc["background"]["E_Z"][frame]
+			BX = self.nc["background"]["B_X"][frame]
+			BY = self.nc["background"]["B_Y"][frame]
+			BZ = self.nc["background"]["B_Z"][frame]
+
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
 
 		# Perpendicular component of the electric field
@@ -606,7 +635,7 @@ class FlanPlots:
 		v_exb_Z = (EperpX * BY - EperpY * BX) / Bsq
 		return v_exb_X, v_exb_Y, v_exb_Z
 	
-	def calc_gradb_drift(self, charge):
+	def calc_gradb_drift(self, charge, frame=None):
 		"""
 		Calculate and return the X,Y,Z components of the grad-B drift
 
@@ -617,15 +646,27 @@ class FlanPlots:
 		"""
 		
 		# Pull out some arrays
-		vX = self.nc["output"]["v_X"][:]
-		vY = self.nc["output"]["v_Y"][:]
-		vZ = self.nc["output"]["v_Z"][:]
-		BX = self.nc["background"]["B_X"][:]
-		BY = self.nc["background"]["B_Y"][:]
-		BZ = self.nc["background"]["B_Z"][:]
-		gradBX = self.nc["background"]["gradB_X"][:]
-		gradBY = self.nc["background"]["gradB_Y"][:]
-		gradBZ = self.nc["background"]["gradB_Z"][:]
+		if frame == None:
+			vX = self.nc["output"]["v_X"][:]
+			vY = self.nc["output"]["v_Y"][:]
+			vZ = self.nc["output"]["v_Z"][:]
+			BX = self.nc["background"]["B_X"][:]
+			BY = self.nc["background"]["B_Y"][:]
+			BZ = self.nc["background"]["B_Z"][:]
+			gradBX = self.nc["background"]["dBdX"][:]
+			gradBY = self.nc["background"]["dBdY"][:]
+			gradBZ = self.nc["background"]["dBdZ"][:]
+		else:
+			vX = self.nc["output"]["v_X"][frame]
+			vY = self.nc["output"]["v_Y"][frame]
+			vZ = self.nc["output"]["v_Z"][frame]
+			BX = self.nc["background"]["B_X"][frame]
+			BY = self.nc["background"]["B_Y"][frame]
+			BZ = self.nc["background"]["B_Z"][frame]
+			gradBX = self.nc["background"]["dBdX"][frame]
+			gradBY = self.nc["background"]["dBdY"][frame]
+			gradBZ = self.nc["background"]["dBdZ"][frame]
+
 		mz_kg = self.nc["input"]["imp_mass_amu"][:] * amu_to_kg
 
 		# Magnetic field magnitude squared
@@ -654,7 +695,7 @@ class FlanPlots:
 		v_gradB_Z = vperp_sq / (2 * omega_c * Bsq) * (BX * gradBY - BY * gradBX)
 		return v_gradB_X, v_gradB_Y, v_gradB_Z
 	
-	def calc_polarization_drift(self, charge):
+	def calc_polarization_drift(self, charge, frame=None):
 		"""
 		Calculate and return the X,Y,Z components of the polarization drift
 
@@ -665,14 +706,27 @@ class FlanPlots:
 		"""
 
 		# Pull out some arrays
-		vX = self.nc["output"]["v_X"][:]
-		vY = self.nc["output"]["v_Y"][:]
-		vZ = self.nc["output"]["v_Z"][:]
-		BX = self.nc["background"]["B_X"][:]
-		BY = self.nc["background"]["B_Y"][:]
-		BZ = self.nc["background"]["B_Z"][:]
+		if frame == None:
+			vX = self.nc["output"]["v_X"][:]
+			vY = self.nc["output"]["v_Y"][:]
+			vZ = self.nc["output"]["v_Z"][:]
+			BX = self.nc["background"]["B_X"][:]
+			BY = self.nc["background"]["B_Y"][:]
+			BZ = self.nc["background"]["B_Z"][:]
+			t = self.nc["geometry"]["time"][:]
+
+		# If we just specify a frame, we will still need the previous frame
+		# so we can do a forward difference for the acceleration calculation
+		else:
+			vX = self.nc["output"]["v_X"][frame-1:frame+1]
+			vY = self.nc["output"]["v_Y"][frame-1:frame+1]
+			vZ = self.nc["output"]["v_Z"][frame-1:frame+1]
+			BX = self.nc["background"]["B_X"][frame-1:frame+1]
+			BY = self.nc["background"]["B_Y"][frame-1:frame+1]
+			BZ = self.nc["background"]["B_Z"][frame-1:frame+1]
+			t = self.nc["geometry"]["time"][frame-1:frame+1]
+
 		mz_kg = self.nc["input"]["imp_mass_amu"][:] * amu_to_kg
-		t = self.nc["geometry"]["time"][:]
 
 		# Magnetic field magnitude squared
 		Bsq = np.square(BX) + np.square(BY) + np.square(BZ)
@@ -703,7 +757,14 @@ class FlanPlots:
 		v_pol_X = (bY * aZ - bZ * aY) / omega_c
 		v_pol_Y = -(bX * aZ - bZ * aX) / omega_c
 		v_pol_Z = (bX * aY - bY * aX) / omega_c
-		return v_pol_X, v_pol_Y, v_pol_Z
+	
+		# Return the components at the desired frame, if necessary, which
+		# is just index = 1 since 0 is the previous frame used for calculating
+		# derivatives.
+		if frame == None:
+			return v_pol_X, v_pol_Y, v_pol_Z
+		else:
+			return v_pol_X[1], v_pol_Y[1], v_pol_Z[1]
 	
 	def calc_curvature_drift(self, charge):
 		"""
@@ -839,4 +900,11 @@ class FlanPlots:
 			ER[i] = dir_scalar * np.sqrt(np.square(EX[i]) + np.square(EY[i]))
 
 		return ER
-
+	
+	def calc_E_xyx(self):
+		"""
+		Calculates the x,y,z (curvilinear) coordinates of the electric field.
+		In other words, the negative derivative of Vp on the curvilinear
+		grid.
+		"""
+		pass

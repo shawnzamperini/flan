@@ -47,15 +47,23 @@ namespace Impurity
 		//, m_density (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 		, m_charge (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
 	{
-		// Issue: This code seems to not be correct, not sure how yet...
-		// These aren't always needed, can cut back on memory usage by not
-		// including them by default.
-		//std::cout << "Allocating velocity arrays...\n";
+		// These arrays can take up a lot of space. Could consider an option
+		// to only allocate and track these if requested.
+
+		// Cartesian velocity components
 		m_vX.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
 			dim4});
 		m_vY.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
 			dim4});
 		m_vZ.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
+			dim4});
+
+		// Curvilinear velocity components
+		m_vx.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
+			dim4});
+		m_vy.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
+			dim4});
+		m_vz.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
 			dim4});
 	}
 
@@ -88,7 +96,7 @@ namespace Impurity
 	Vectors::Vector4D<BkgFPType>& Statistics::get_density() {return m_density;}
 
 	/**
-	* @brief Accessor for x velocity data
+	* @brief Accessor for X velocity data
 	* @return Vector4D<BkgFPType>
 	* @sa calc_vels()
 	*
@@ -98,7 +106,7 @@ namespace Impurity
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vX() {return m_vX;}
 
 	/**
-	* @brief Accessor for y velocity data
+	* @brief Accessor for Y velocity data
 	* @return Vector4D<BkgFPType>
 	* @sa calc_vels()
 	*
@@ -108,7 +116,7 @@ namespace Impurity
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vY() {return m_vY;}
 
 	/**
-	* @brief Accessor for z velocity data
+	* @brief Accessor for Z velocity data
 	* @return Vector4D<BkgFPType>
 	* @sa calc_vels()
 	*
@@ -116,6 +124,36 @@ namespace Impurity
 	* Before doing that it's just a collection of Monte Carlo type values.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vZ() {return m_vZ;}
+
+	/**
+	* @brief Accessor for x velocity data
+	* @return Vector4D<BkgFPType>
+	* @sa calc_vels()
+	*
+	* calc_vels() is used to turn the data in this into an actual velocity.
+	* Before doing that it's just a collection of Monte Carlo type values.
+	*/
+	Vectors::Vector4D<BkgFPType>& Statistics::get_vx() {return m_vx;}
+
+	/**
+	* @brief Accessor for y velocity data
+	* @return Vector4D<BkgFPType>
+	* @sa calc_vels()
+	*
+	* calc_vels() is used to turn the data in this into an actual velocity.
+	* Before doing that it's just a collection of Monte Carlo type values.
+	*/
+	Vectors::Vector4D<BkgFPType>& Statistics::get_vy() {return m_vy;}
+
+	/**
+	* @brief Accessor for z velocity data
+	* @return Vector4D<BkgFPType>
+	* @sa calc_vels()
+	*
+	* calc_vels() is used to turn the data in this into an actual velocity.
+	* Before doing that it's just a collection of Monte Carlo type values.
+	*/
+	Vectors::Vector4D<BkgFPType>& Statistics::get_vz() {return m_vz;}
 
 	/**
 	* @brief Accessor for charge data
@@ -144,6 +182,9 @@ namespace Impurity
 		ret_stats.m_vX = m_vX + other.m_vX;
 		ret_stats.m_vY = m_vY + other.m_vY;
 		ret_stats.m_vZ = m_vZ + other.m_vZ;
+		ret_stats.m_vx = m_vx + other.m_vx;
+		ret_stats.m_vy = m_vy + other.m_vy;
+		ret_stats.m_vz = m_vz + other.m_vz;
 
 		return ret_stats;
 	}
@@ -182,12 +223,16 @@ namespace Impurity
 	*/
 	void Statistics::add_vels(const int tidx, const int xidx, const int yidx,
 		const int zidx, const BkgFPType vX, const BkgFPType vY, 
-		const BkgFPType vZ, const Background::Background& bkg)
+		const BkgFPType vZ, const BkgFPType vx, const BkgFPType vy, 
+		const BkgFPType vz,const Background::Background& bkg)
 	{
 		// Add velocities to the running total at each cell location
 		m_vX(tidx, xidx, yidx, zidx) += vX;
 		m_vY(tidx, xidx, yidx, zidx) += vY;
 		m_vZ(tidx, xidx, yidx, zidx) += vZ;
+		m_vx(tidx, xidx, yidx, zidx) += vx;
+		m_vy(tidx, xidx, yidx, zidx) += vy;
+		m_vz(tidx, xidx, yidx, zidx) += vz;
 
 		// Note that one could add velocity distribution counting for a future
 		// update if the memory load isn't too demanding, but it may be.

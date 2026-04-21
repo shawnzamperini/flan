@@ -51,8 +51,10 @@ namespace Options
 		double m_lcfs_x                              {0.0};
 		double m_imp_xbound_buffer                   {0.0};
 		std::string m_min_xbound_type        {"absorbing"};
+		double m_sep_x_bc_xp_z1                        {0.0};
+		double m_sep_x_bc_xp_z2                        {0.0};
 
-		// Impurity chracteristics
+		// Impurity characteristics
 		int m_imp_atom_num                            {74};
 		double m_imp_mass_amu                     {183.84};
 		int m_imp_init_charge                          {1};
@@ -158,6 +160,8 @@ namespace Options
 		void set_calc_grad_elec(std::string calc_grad_elec);
 		void set_min_xbound_type(std::string min_xbound_type);
 		void set_lcfs_x(double lcfs_x);
+		void set_sep_x_bc_xp_z1(double sep_x_bc_xp_z1);
+		void set_sep_x_bc_xp_z2(double sep_x_bc_xp_z2);
 		void set_imp_atom_num(int imp_atom_num);
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
@@ -212,6 +216,8 @@ namespace Options
 		const std::string& calc_grad_elec() const;
 		const std::string& min_xbound_type() const;
 		const double lcfs_x() const;
+		const double sep_x_bc_xp_z1() const;
+		const double sep_x_bc_xp_z2() const;
 		const int imp_atom_num() const;
 		const double imp_mass_amu() const;
 		const int imp_init_charge() const;

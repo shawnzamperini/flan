@@ -141,6 +141,20 @@ namespace Options
 				assign_option<double>(set_func, var, key);
 			}
 
+			else if (key == "sep_x_bc_xp_z1") 
+			{
+				auto set_func = std::bind(&Options::set_sep_x_bc_xp_z1, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "sep_x_bc_xp_z2") 
+			{
+				auto set_func = std::bind(&Options::set_sep_x_bc_xp_z2, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "imp_atom_num") 
 			{
 				auto set_func = std::bind(&Options::set_imp_atom_num, &opts, 

@@ -303,9 +303,9 @@ namespace Gkyl
 		}
 
 		// Only needed for debuggin purposes, delete if not debugging
-		//bkg.move_into_gradbX(gkyl_dbdX);
-		//bkg.move_into_gradbY(gkyl_dbdY);
-		//bkg.move_into_gradbZ(gkyl_dbdZ);
+		bkg.move_into_gradbX(gkyl_dbdX);
+		bkg.move_into_gradbY(gkyl_dbdY);
+		bkg.move_into_gradbZ(gkyl_dbdZ);
 
 		// Special case. gkyl_J is a 4D vector so we didn't have to write a
 		// whole new function just for a 3D vector - less maintainable code. 
@@ -351,7 +351,7 @@ namespace Gkyl
 		Vectors::Vector3D gkyl_dzdZ_3D {gkyl_dzdZ.slice_dim1(0)};
 		bkg.move_into_dzdZ(gkyl_dzdZ_3D);
 
-		// Tangeny basis vectors
+		// Tangent basis vectors
 		Vectors::Vector3D gkyl_dXdx_3D {gkyl_dXdx.slice_dim1(0)};
 		bkg.move_into_dXdx(gkyl_dXdx_3D);
 		Vectors::Vector3D gkyl_dYdx_3D {gkyl_dYdx.slice_dim1(0)};
@@ -1531,12 +1531,12 @@ namespace Gkyl
 
 					// Get the three Cartesian coordinates and store within
 					// our 3D vector of 3-tuples
-					//auto [X, Y, Z] = opts.mapc2p()(std::get<1>(grid_data)[i], 
-					//	std::get<2>(grid_data)[j], std::get<3>(grid_data)[k]);
+					auto [X, Y, Z] = opts.mapc2p()(std::get<1>(grid_data)[i], 
+						std::get<2>(grid_data)[j], std::get<3>(grid_data)[k]);
 
-					//std::get<7>(grid_data)(i,j,k) = X;
-					//std::get<8>(grid_data)(i,j,k) = Y;
-					//std::get<9>(grid_data)(i,j,k) = Z;
+					std::get<7>(grid_data)(i,j,k) = X;
+					std::get<8>(grid_data)(i,j,k) = Y;
+					std::get<9>(grid_data)(i,j,k) = Z;
 
 
 				}

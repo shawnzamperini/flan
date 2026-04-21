@@ -551,14 +551,12 @@ namespace SaveResults
 			dim1, dim2, dim3, dim4, "magnetic field (R)", "(T)");
 
 		// Magnetic field gradient
-		/*
 		save_vector_4d(bkg_group, bkg.get_gradbX(), "dBdX", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (X)", "(T)");
 		save_vector_4d(bkg_group, bkg.get_gradbY(), "dBdY", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (Y)", "(T)");
 		save_vector_4d(bkg_group, bkg.get_gradbZ(), "dBdZ", 
 			dim1, dim2, dim3, dim4, "magnetic field gradient (Z)", "(T)");
-		*/
 
 		// Electric field gradient
 		if (opts.calc_grad_elec_int() == 1)
@@ -603,6 +601,18 @@ namespace SaveResults
 		// Impurity average Z velocity in physical space
 		save_vector_4d(out_group, imp_stats.get_vZ(), "v_Z", 
 			dim1, dim2, dim3, dim4, "average impurity Z velocity", "(m/s)");
+
+		// Impurity average x velocity in physical space
+		save_vector_4d(out_group, imp_stats.get_vx(), "v_x", 
+			dim1, dim2, dim3, dim4, "average impurity x velocity", "(?/s)");
+			
+		// Impurity average y velocity in physical space
+		save_vector_4d(out_group, imp_stats.get_vy(), "v_y", 
+			dim1, dim2, dim3, dim4, "average impurity y velocity", "(?/s)");
+
+		// Impurity average z velocity in physical space
+		save_vector_4d(out_group, imp_stats.get_vz(), "v_z", 
+			dim1, dim2, dim3, dim4, "average impurity z velocity", "(?/s)");
 
 		// Impurity charge
 		save_vector_4d(out_group, imp_stats.get_charge(), "qz", 

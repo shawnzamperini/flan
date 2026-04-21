@@ -367,47 +367,47 @@ namespace Boris
 		imp.set_vY(vplus[1] + q_m * E_local[1] * 0.5 * dt);
 		imp.set_vZ(vplus[2] + q_m * E_local[2] * 0.5 * dt);
 
-		// Interpolate reciprocal basis vector at impurity location
-		//std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
-		//	yidx, zidx)};
+		// Interpolate reciprocal and tangent basis vector at impurity location
+		std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
+			yidx, zidx)};
 		//std::array<double, 9> int_tan_bas {interp_tang(imp, bkg, xidx, 
 		//	yidx, zidx)};
-		/*
-		std::array<double, 3> e1 {int_rec_bas[0], int_rec_bas[1], 
-			int_rec_bas[2]};
-		std::array<double, 3> e2 {int_rec_bas[3], int_rec_bas[4], 
-			int_rec_bas[5]};
-		std::array<double, 3> e3 {int_rec_bas[6], int_rec_bas[7], 
-			int_rec_bas[8]};
-		std::array<double, 3> e_1 {int_tan_bas[0], int_tan_bas[1], 
-			int_tan_bas[2]};
-		std::array<double, 3> e_2 {int_tan_bas[3], int_tan_bas[4], 
-			int_tan_bas[5]};
-		std::array<double, 3> e_3 {int_tan_bas[6], int_tan_bas[7], 
-			int_tan_bas[8]};
-		*/
 
-		// No interpolation
-		/*
-		std::array<double, 3> e1 {bkg.get_dxdX()(xidx, yidx, zidx),
-			bkg.get_dxdY()(xidx, yidx, zidx),
-			bkg.get_dxdZ()(xidx, yidx, zidx)};
-		std::array<double, 3> e2 {bkg.get_dydX()(xidx, yidx, zidx),
-			bkg.get_dydY()(xidx, yidx, zidx),
-			bkg.get_dydZ()(xidx, yidx, zidx)};
-		std::array<double, 3> e3 {bkg.get_dzdX()(xidx, yidx, zidx),
-			bkg.get_dzdY()(xidx, yidx, zidx),
-			bkg.get_dzdZ()(xidx, yidx, zidx)};
-		std::array<double, 3> e_1 {bkg.get_dXdx()(xidx, yidx, zidx),
-			bkg.get_dYdx()(xidx, yidx, zidx),
-			bkg.get_dZdx()(xidx, yidx, zidx)};
-		std::array<double, 3> e_2 {bkg.get_dXdy()(xidx, yidx, zidx),
-			bkg.get_dYdy()(xidx, yidx, zidx),
-			bkg.get_dZdy()(xidx, yidx, zidx)};
-		std::array<double, 3> e_3 {bkg.get_dXdz()(xidx, yidx, zidx),
-			bkg.get_dYdz()(xidx, yidx, zidx),
-			bkg.get_dZdz()(xidx, yidx, zidx)};
-		*/
+		// Put basis vectors into arrays for easier manipulation below. Can
+		// either use the interpolated ones or the discrete ones without
+		// interpolation.
+		//std::array<double, 3> e1 {int_rec_bas[0], int_rec_bas[1], 
+		//	int_rec_bas[2]};
+		//std::array<double, 3> e2 {int_rec_bas[3], int_rec_bas[4], 
+		//	int_rec_bas[5]};
+		//std::array<double, 3> e3 {int_rec_bas[6], int_rec_bas[7], 
+		//	int_rec_bas[8]};
+		//std::array<double, 3> e_1 {int_tan_bas[0], int_tan_bas[1], 
+		//	int_tan_bas[2]};
+		//std::array<double, 3> e_2 {int_tan_bas[3], int_tan_bas[4], 
+		//	int_tan_bas[5]};
+		//std::array<double, 3> e_3 {int_tan_bas[6], int_tan_bas[7], 
+		//	int_tan_bas[8]};
+		
+		// Discrete, no interpolation
+		//std::array<double, 3> e1 {bkg.get_dxdX()(xidx, yidx, zidx),
+		//	bkg.get_dxdY()(xidx, yidx, zidx),
+		//	bkg.get_dxdZ()(xidx, yidx, zidx)};
+		//std::array<double, 3> e2 {bkg.get_dydX()(xidx, yidx, zidx),
+		//	bkg.get_dydY()(xidx, yidx, zidx),
+		//	bkg.get_dydZ()(xidx, yidx, zidx)};
+		//std::array<double, 3> e3 {bkg.get_dzdX()(xidx, yidx, zidx),
+		//	bkg.get_dzdY()(xidx, yidx, zidx),
+		//	bkg.get_dzdZ()(xidx, yidx, zidx)};
+		//std::array<double, 3> e_1 {bkg.get_dXdx()(xidx, yidx, zidx),
+		//	bkg.get_dYdx()(xidx, yidx, zidx),
+		//	bkg.get_dZdx()(xidx, yidx, zidx)};
+		//std::array<double, 3> e_2 {bkg.get_dXdy()(xidx, yidx, zidx),
+		//	bkg.get_dYdy()(xidx, yidx, zidx),
+		//	bkg.get_dZdy()(xidx, yidx, zidx)};
+		//std::array<double, 3> e_3 {bkg.get_dXdz()(xidx, yidx, zidx),
+		//	bkg.get_dYdz()(xidx, yidx, zidx),
+		//	bkg.get_dZdz()(xidx, yidx, zidx)};
 
 		// Check that coordinate system is mostly correct
 		/*
@@ -440,12 +440,12 @@ namespace Boris
 		// interpolated reciprocal basis vector. Not used right now since it's
 		// redundant/not needed in the particle update step, but leaving since
 		// it's an interesting idea.
-		//imp.set_vx(int_rec_bas[0] * imp.get_vX() 
-		//	+ int_rec_bas[1] * imp.get_vY() + int_rec_bas[2] * imp.get_vZ());
-		//imp.set_vy(int_rec_bas[3] * imp.get_vX() 
-		//	+ int_rec_bas[4] * imp.get_vY() + int_rec_bas[5] * imp.get_vZ());
-		//imp.set_vz(int_rec_bas[6] * imp.get_vX() 
-		//	+ int_rec_bas[7] * imp.get_vY() + int_rec_bas[8] * imp.get_vZ());
+		imp.set_vx(int_rec_bas[0] * imp.get_vX() 
+			+ int_rec_bas[1] * imp.get_vY() + int_rec_bas[2] * imp.get_vZ());
+		imp.set_vy(int_rec_bas[3] * imp.get_vX() 
+			+ int_rec_bas[4] * imp.get_vY() + int_rec_bas[5] * imp.get_vZ());
+		imp.set_vz(int_rec_bas[6] * imp.get_vX() 
+			+ int_rec_bas[7] * imp.get_vY() + int_rec_bas[8] * imp.get_vZ());
 
 		// Calculate velocity vector in computational coordinates using
 		// discrete reciprocal basis vector.

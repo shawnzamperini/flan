@@ -31,6 +31,9 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType> m_vX {};
 		Vectors::Vector4D<BkgFPType> m_vY {};
 		Vectors::Vector4D<BkgFPType> m_vZ {};
+		Vectors::Vector4D<BkgFPType> m_vx {};
+		Vectors::Vector4D<BkgFPType> m_vy {};
+		Vectors::Vector4D<BkgFPType> m_vz {};
 		Vectors::Vector4D<BkgFPType> m_charge {};
 
 	public:
@@ -46,6 +49,9 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType>& get_vX();
 		Vectors::Vector4D<BkgFPType>& get_vY();
 		Vectors::Vector4D<BkgFPType>& get_vZ();
+		Vectors::Vector4D<BkgFPType>& get_vx();
+		Vectors::Vector4D<BkgFPType>& get_vy();
+		Vectors::Vector4D<BkgFPType>& get_vz();
 		Vectors::Vector4D<BkgFPType>& get_charge();
 
 		// Overload of + to add counts and weights together, returned as a 
@@ -64,7 +70,8 @@ namespace Impurity
 		// location
 		void add_vels(const int tidx, const int xidx, const int yidx,
 			const int zidx, const BkgFPType vX, const BkgFPType vY, 
-			const BkgFPType vZ, const Background::Background& bkg);
+			const BkgFPType vZ, const BkgFPType vx, const BkgFPType vy,
+			const BkgFPType vz, const Background::Background& bkg);
 
 		// Function to increase charge
 		void add_charge(const int tidx, const int xidx, const int yidx, 

@@ -350,9 +350,9 @@ namespace Impurity
         //double dX {imp.get_X() - imp.get_prevX()};
         //double dY {imp.get_Y() - imp.get_prevY()};
         //double dZ {imp.get_Z() - imp.get_prevZ()};
-		double dX {imp.get_vX() * imp_time_step};
-		double dY {imp.get_vY() * imp_time_step};
-		double dZ {imp.get_vZ() * imp_time_step};
+		//double dX {imp.get_vX() * imp_time_step};
+		//double dY {imp.get_vY() * imp_time_step};
+		//double dZ {imp.get_vZ() * imp_time_step};
 
 		// Calculate the step in computational space using the reciprocal basis
 		// vectors. This is Eq. 2.3.6 in Dhaeseleer. Can either use the discrete
@@ -372,41 +372,50 @@ namespace Impurity
 		//	+ bkg.get_dzdZ()(xidx, yidx, zidx) * dZ};
 
 		// Interpolate reciprocal basis vector at impurity location
-		std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
-			yidx, zidx)};
-
-		double dx {int_rec_bas[0] * dX + int_rec_bas[1] * dY 
-			+ int_rec_bas[2] * dZ};
-		double dy {int_rec_bas[3] * dX + int_rec_bas[4] * dY 
-			+ int_rec_bas[5] * dZ};
-		double dz {int_rec_bas[6] * dX + int_rec_bas[7] * dY 
-			+ int_rec_bas[8] * dZ};
+		//std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
+		//	yidx, zidx)};
+		//double dx {int_rec_bas[0] * dX + int_rec_bas[1] * dY 
+		//	+ int_rec_bas[2] * dZ};
+		//double dy {int_rec_bas[3] * dX + int_rec_bas[4] * dY 
+		//	+ int_rec_bas[5] * dZ};
+		//double dz {int_rec_bas[6] * dX + int_rec_bas[7] * dY 
+		//	+ int_rec_bas[8] * dZ};
 
 		// Update position in computational space
-        imp.set_x(imp.get_x() + dx);
-        imp.set_y(imp.get_y() + dy);
-        imp.set_z(imp.get_z() + dz);
+        //imp.set_x(imp.get_x() + dx);
+        //imp.set_y(imp.get_y() + dy);
+        //imp.set_z(imp.get_z() + dz);
 
 		// This approach is redundant since vx,vy,vz are pretty much calculated
 		// in the dx,dy,dz calculations above. It's just if we want to have 
 		// the curvilinear velocity tracked we can do it that way too.
-        //imp.set_x(imp.get_x() + imp.get_vx() * imp_time_step);
-        //imp.set_y(imp.get_y() + imp.get_vy() * imp_time_step);
-        //imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);
+        imp.set_x(imp.get_x() + imp.get_vx() * imp_time_step);
+        imp.set_y(imp.get_y() + imp.get_vy() * imp_time_step);
+        imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);
 
         // Bound checking (move to separate function). 
 		// Absorbing at maximum x. xbound_buffer move the BC off the x bound
 		// by that much to help avoid some common issues in the background
 		// that can happen there, causing impurities to "stick" to the 
 		// boundary instead of a proper BC being applied 
+		//std::cout << imp.get_x() << "\t" << imp.get_y() << "\t" 
+		//	<< imp.get_z() << '\n';
 		if ((imp.get_x() + opts.imp_xbound_buffer()) > bkg.get_grid_x().back()) 
+		{
+			//std::cout << "Absorbed: Max x\n";
+			//std::cout << imp.get_x() << "\t" << imp.get_y() << "\t" 
+			//	<< imp.get_z() << '\n';
 			return false;
+		}
 
 		// Minimum x can also be absorbing (0) or mimic a core boundary (1)
 		if (opts.min_xbound_type_int() == 0)
 		{
 			if ((imp.get_x() - opts.imp_xbound_buffer()) < bkg.get_grid_x()[0]) 
+			{
+				//std::cout << "Absorbed: Min x\n";
 				return false;
+			}
 		}
 
 		else if (opts.min_xbound_type_int() == 1)
@@ -416,6 +425,8 @@ namespace Impurity
 			// somewhere else.
 			if ((imp.get_x() - opts.imp_xbound_buffer()) < bkg.get_grid_x()[0])
 			{
+				//std::cout << "Core BC applied\n";
+
 				imp.set_x(bkg.get_grid_x()[0] + opts.imp_xbound_buffer());
 				imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
 					static_cast<double>(bkg.get_y_max())));
@@ -424,23 +435,56 @@ namespace Impurity
 			}
 		}
 
+		// Separatrix boundary condition. There are two associated values with
+		// this option that define the z locations of the X-points. Between
+		// those z coordinates a core BC is applied, and outside of them we
+		// use an absorbing BC to mimic particle loss to the PFZ. 
+		else if (opts.min_xbound_type_int() == 2)
+		{
+			if ((imp.get_x() - opts.imp_xbound_buffer()) < bkg.get_grid_x()[0])
+			{
+				// Check if between z extents of X-point (core BC)
+				if (imp.get_z() > opts.sep_x_bc_xp_z1() && 
+					imp.get_z() < opts.sep_x_bc_xp_z2())
+				{
+					// Move particle to a random x, y, where z remains in the
+					// core range between the X-point z coordinates.
+					imp.set_x(bkg.get_grid_x()[0] + opts.imp_xbound_buffer());
+					imp.set_y(Random::get(static_cast<double>(bkg.get_y_min()), 
+						static_cast<double>(bkg.get_y_max())));
+					imp.set_z(Random::get(static_cast<double>
+						(opts.sep_x_bc_xp_z1()), 
+						static_cast<double>(opts.sep_x_bc_xp_z2())));
+				}
+
+				// Otherwise we crossed into the PFZ so count as absorbed.
+				return false;
+			}
+		}
+
         // Periodic y boundary
         if (imp.get_y() < bkg.get_grid_y()[0])
         {
             imp.set_y(bkg.get_grid_y().back() + (imp.get_y() 
 				- bkg.get_grid_y()[0]));
+			//std::cout << "Periodic: Min y\n";
         }
         else if (imp.get_y() > bkg.get_grid_y().back())
         {
             imp.set_y(bkg.get_grid_y()[0] + (imp.get_y() 
 				- bkg.get_grid_y().back()));
+			//std::cout << "Periodic: Max y\n";
         }
 
 		// Absorbing z boundary in SOL, periodic in core
 		if (imp.get_x() > opts.lcfs_x())
 		{
 			if (imp.get_z() < bkg.get_grid_z()[0] || 
-				imp.get_z() > bkg.get_grid_z().back()) return false;
+				imp.get_z() > bkg.get_grid_z().back()) 
+				{
+					//std::cout << "Absorbed: Min/max z\n";
+					return false;
+				}
 		}
 		else
 		{
@@ -448,11 +492,13 @@ namespace Impurity
 			{
 				imp.set_z(bkg.get_grid_z().back() + (imp.get_z() 
 					- bkg.get_grid_z()[0]));
+				//std::cout << "Periodic: Min z\n";
 			}
 			else if (imp.get_z() > bkg.get_grid_z().back())
 			{
 				imp.set_z(bkg.get_grid_z()[0] + (imp.get_z() 
 					- bkg.get_grid_z().back()));
+				//std::cout << "Periodic: Max z\n";
 			}
 		}
 
@@ -476,7 +522,11 @@ namespace Impurity
 		imp_stats.add_vels(tidx, xidx, yidx, zidx, 
 			static_cast<BkgFPType>(imp.get_vX()), 
 			static_cast<BkgFPType>(imp.get_vY()), 
-			static_cast<BkgFPType>(imp.get_vZ()), bkg);
+			static_cast<BkgFPType>(imp.get_vZ()), 
+			static_cast<BkgFPType>(imp.get_vx()), 
+			static_cast<BkgFPType>(imp.get_vy()), 
+			static_cast<BkgFPType>(imp.get_vz()), 
+			bkg);
 
 		// Add charge to the running sum for this location
 		imp_stats.add_charge(tidx, xidx, yidx, zidx, 
