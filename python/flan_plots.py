@@ -63,8 +63,8 @@ class FlanPlots:
 
 		Inputs:
 		 - data_name (str) : Variable name of data from netCDF file. 
-		 - frame (int)     : The time frame to plot data for. Ignored for 3D 
-		                       data.
+		 - frame (int)	   : The time frame to plot data for. Ignored for 3D 
+							   data.
 		
 		Outputs: 
 		  - A 3D numpy array of x,y,z dimensions.
@@ -89,6 +89,12 @@ class FlanPlots:
 		elif data_name == "v_R":
 			return self.calc_v_R()[frame]
 
+		# Radial/poloidal velocities (the poloidal frame directions)
+		elif data_name == "v_rad":
+			return self.calc_rad_pol_comp("actual", frame=frame)[0]
+		elif data_name == "v_pol":
+			return self.calc_rad_pol_comp("actual", frame=frame)[1]
+
 		# ExB drift components
 		elif data_name == "ExB_X":
 			return self.calc_exb_drift(frame=frame)[0]
@@ -96,6 +102,10 @@ class FlanPlots:
 			return self.calc_exb_drift(frame=frame)[1]
 		elif data_name == "ExB_Z":
 			return self.calc_exb_drift(frame=frame)[2]
+		elif data_name == "ExB_rad":
+			return self.calc_rad_pol_comp("ExB", frame=frame)[0]
+		elif data_name == "ExB_pol":
+			return self.calc_rad_pol_comp("ExB", frame=frame)[1]
 
 		# Grad-B drift components
 		elif data_name == "gradB_X":
@@ -127,7 +137,7 @@ class FlanPlots:
 
 		Inputs:
 		 - arr (np.array) : Array of values
-		 - val (float)    : Value to find nearest index for
+		 - val (float)	  : Value to find nearest index for
 
 		Outputs: Returns an int index of the closest value in arr.
 
@@ -178,14 +188,14 @@ class FlanPlots:
 
 		Inputs:
 		 - data_name (str) : Variable name of 4D data from netCDF file. 
-		 - frame (int)     : The time frame to plot data for.
-		 - z0 (float)      : The location where x, y data is plotted at.
+		 - frame (int)	   : The time frame to plot data for.
+		 - z0 (float)	   : The location where x, y data is plotted at.
 		 - showplot (bool) : Boolean to show a plot or not.
-		 - cmap (str)      : A matplotlib colormap name for the plot.
+		 - cmap (str)	   : A matplotlib colormap name for the plot.
 		 - norm_type (str) : The normalization of the colorbar. Options are
-		                      "linear" or "log".
+							  "linear" or "log".
 		 - charge (int)    : Charge of the impurity, used in calculating
-		                      grad-B drift.
+							  grad-B drift.
 
 		Outputs: Returns a tuple of the x and y grid and the data at each
 		 location.
@@ -263,12 +273,12 @@ class FlanPlots:
 
 		Inputs:
 		 - data_name (str) : Variable name of 4D data from netCDF file. 
-		 - frame (int)     : The time frame to plot data for.
-		 - z0 (float)      : The location where x, y data is plotted at.
+		 - frame (int)	   : The time frame to plot data for.
+		 - z0 (float)	   : The location where x, y data is plotted at.
 		 - showplot (bool) : Boolean to show a plot or not.
-		 - cmap (str)      : A matplotlib colormap name for the plot.
+		 - cmap (str)	   : A matplotlib colormap name for the plot.
 		 - norm_type (str) : The normalization of the colorbar. Options are
-		                      "linear" or "log".
+							  "linear" or "log".
 
 		Outputs: Returns a tuple of the x and y grid and the data at each
 		 location.
@@ -900,11 +910,93 @@ class FlanPlots:
 			ER[i] = dir_scalar * np.sqrt(np.square(EX[i]) + np.square(EY[i]))
 
 		return ER
-	
-	def calc_E_xyx(self):
+
+	# Refactor this to accept any general vector, make it lower level.
+	# As written this is a little messy.
+	def calc_rad_pol_comp(self, which, frame=None):
 		"""
-		Calculates the x,y,z (curvilinear) coordinates of the electric field.
-		In other words, the negative derivative of Vp on the curvilinear
-		grid.
+		which:	Which velocity to calculate radial/poloidal components
+				for. One of: 
+					ExB, 
+					gradB, 
+					polarization, 
+					curvature
+					actual. 
 		"""
-		pass
+
+		# Validate input
+		valid_which = ["actual", "exb", "gradb", "polarization", "curvature"]
+		if which.lower() not in valid_which:
+			print(f"Error! which = {which} not valid. Valid options: "
+				  + ", ".join(valid_which))
+			return None
+
+		# Geometry arrays (nx, ny, nz)
+		X = self.nc["geometry"]["X"][:].data
+		Y = self.nc["geometry"]["Y"][:].data
+		Z = self.nc["geometry"]["Z"][:].data
+		R = np.sqrt(X**2 + Y**2)
+
+		# Magnetic field arrays
+		if frame is None:
+			BX = self.nc["background"]["B_X"][:]   # (nt, nx, ny, nz)
+			BY = self.nc["background"]["B_Y"][:]
+			BZ = self.nc["background"]["B_Z"][:]
+		else:
+			BX = np.expand_dims(self.nc["background"]["B_X"][frame], axis=0)
+			BY = np.expand_dims(self.nc["background"]["B_Y"][frame], axis=0)
+			BZ = np.expand_dims(self.nc["background"]["B_Z"][frame], axis=0)
+
+		# Velocity components
+		if which.lower() == "actual":
+			if frame is None:
+				vX = self.nc["output"]["v_X"][:]   # (nt, nx, ny, nz)
+				vY = self.nc["output"]["v_Y"][:]
+				vZ = self.nc["output"]["v_Z"][:]
+			else:
+				vX = np.expand_dims(self.nc["output"]["v_X"][frame], axis=0)
+				vY = np.expand_dims(self.nc["output"]["v_Y"][frame], axis=0)
+				vZ = np.expand_dims(self.nc["output"]["v_Z"][frame], axis=0)
+
+		elif which.lower() == "exb":
+			vX, vY, vZ = calc_exb_drift(self, frame=frame)
+
+		# Stack into vector fields
+		B = np.stack([BX, BY, BZ], axis=-1)		 # (nt, nx, ny, nz, 3)
+		v = np.stack([vX, vY, vZ], axis=-1)
+
+		# Toroidal unit vector e_phi = (-y, x, 0) / R
+		e_phi = np.zeros(X.shape + (3,))
+		e_phi[..., 0] = -Y / R
+		e_phi[..., 1] =  X / R
+		e_phi[..., 2] =  0.0
+
+		# Normalize
+		e_phi /= np.linalg.norm(e_phi, axis=-1, keepdims=True)
+
+		# Broadcast e_phi to match time dimension. Broadcast requires the
+		# rightmost index match, which in this case is 3 for both arrays. Now
+		# e_phi behaves like an (nt, nx, ny, nz, 3) shaped array without 
+		# actually using any additional memory.
+		e_phi = np.broadcast_to(e_phi, B.shape)
+
+		# Poloidal direction = B × e_phi
+		e_pol = np.cross(B, e_phi)
+		e_pol /= np.linalg.norm(e_pol, axis=-1, keepdims=True)
+		
+		# Radial direction = e_phi × e_pol
+		e_r = np.cross(e_phi, e_pol)
+		e_r /= np.linalg.norm(e_r, axis=-1, keepdims=True)
+
+		# Project velocity onto radial and poloidal directions. This is just
+		# the dot product. v*e_r is the 3 terms in the dot product, then we
+		# sum them along the coordinate axes to finish the dot product.
+		v_rad = np.sum(v * e_r, axis=-1)
+		v_pol = np.sum(v * e_pol, axis=-1)
+
+		# If a single frame was requested, return 3D arrays
+		if frame is not None:
+			return v_rad[0], v_pol[0]
+
+		# Otherwise return full 4D arrays
+		return v_rad, v_pol		
