@@ -64,6 +64,20 @@ namespace Options
 	// just take up three times as much space.
 	void Options::set_case_name(std::string case_name) 
 		{m_case_name = case_name;}
+
+	// bkg_source
+	void Options::set_bkg_source(std::string bkg_source) 
+	{
+		if (check_input<std::string>("bkg_source", bkg_source,
+			{"test", "gkeyll"}))
+		{
+			m_bkg_source = bkg_source;
+		}
+
+		// Assign control integers
+		if (bkg_source == "test") m_bkg_source_int = 0;
+		else if (bkg_source == "gkeyll") m_bkg_source_int = 1;
+	}
 	
 	// gkyl_dir
 	void Options::set_gkyl_dir(std::string gkyl_dir) 
@@ -432,6 +446,8 @@ namespace Options
 	// Accessor definitions
 	const std::string& Options::case_name() const 
 		{return m_case_name;}
+	const std::string& Options::bkg_source() const 
+		{return m_bkg_source;}
 	const std::string& Options::gkyl_dir() const 
 		{return m_gkyl_dir;}
 	const std::string& Options::gkyl_casename() const 
@@ -555,6 +571,8 @@ namespace Options
 	}
 
 	// Accessors for internal control variables
+	const int Options::bkg_source_int() const
+		{return get_control_int("bkg_source", m_bkg_source_int);}
 	const int Options::imp_tstart_opt_int() const
 		{return get_control_int("imp_tstart_opt", m_imp_tstart_opt_int);}
 	const int Options::imp_xstart_opt_int() const

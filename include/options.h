@@ -34,6 +34,9 @@ namespace Options
 		// Meta options for the simulation
 		std::string m_case_name              {"undefined"};
 
+		// General background plasma options
+		std::string m_bkg_source                {"gkeyll"};
+
 		// Options related to reading in Gkeyll files
 		std::string m_gkyl_dir               {"undefined"};
 		std::string m_gkyl_casename          {"undefined"};
@@ -109,7 +112,8 @@ namespace Options
 		// use integers instead of comparing strings all the time. These are
 		// all set automatically within the corresponding setters.
 		// IMPORTANT: All control integers should be initialized below as -1,
-		// which the code recognizes as "not assigned yet". This allows
+		// which the code recognizes as "not assigned yet".
+		int m_bkg_source_int        {-1};
 		int m_imp_tstart_opt_int	{-1};
 		int m_imp_xstart_opt_int	{-1};
 		int m_imp_ystart_opt_int	{-1};
@@ -147,6 +151,7 @@ namespace Options
 
 		// Setter declarations
 		void set_case_name(std::string case_name);
+		void set_bkg_source(std::string bkg_source);
 		void set_gkyl_dir(std::string gkyl_dir);
 		void set_gkyl_casename(std::string gkyl_casename);
 		void set_gkyl_frame_start(int gkyl_frame_start);
@@ -203,6 +208,7 @@ namespace Options
 
 		// Accessor declarations
 		const std::string& case_name() const;
+		const std::string& bkg_source() const;
 		const std::string& gkyl_dir() const;
 		const std::string& gkyl_casename() const;
 		const int gkyl_frame_start() const;
@@ -263,6 +269,7 @@ namespace Options
 			const int control_int) const;
 
 		// Accessor declarations for internal control variables
+		const int bkg_source_int() const;
 		const int imp_tstart_opt_int() const;
 		const int imp_xstart_opt_int() const;
 		const int imp_ystart_opt_int() const;

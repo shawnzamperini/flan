@@ -37,6 +37,9 @@ include_directories(${CMAKE_BINARY_DIR})
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Require MPI. Most machines should have it, so not a big deal
+find_package(MPI REQUIRED)
+
 # Include all files in src
 file(GLOB SOURCES "src/*.cpp")
 
