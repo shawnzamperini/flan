@@ -1102,11 +1102,25 @@ namespace Impurity
 		Statistics imp_stats {bkg.get_dim1(), bkg.get_dim2(), 
 			bkg.get_dim3(), bkg.get_dim4()};
 
-		// Load OpenADAS data needed for ionization/recombination rates. 
-		OpenADAS::OpenADAS oa_ioniz {opts.openadas_root(), 
-			opts.openadas_year(), opts.imp_atom_num(), "scd"};
-		OpenADAS::OpenADAS oa_recomb {opts.openadas_root(), 
-			opts.openadas_year(), opts.imp_atom_num(), "acd"};
+		// Load OpenADAS data needed for ionization/recombination rates if
+		// ionization/recombination is on. Believe it or not, this is the
+		// preferred way to do this in C++.
+		OpenADAS::OpenADAS oa_ioniz = opts.imp_iz_recomb_int() == 1 
+			? OpenADAS::OpenADAS(opts.openadas_root(), opts.openadas_year(), 
+				opts.imp_atom_num(), "scd") : OpenADAS::OpenADAS();
+		OpenADAS::OpenADAS oa_recomb = opts.imp_iz_recomb_int() == 1 
+			? OpenADAS::OpenADAS(opts.openadas_root(), opts.openadas_year(), 
+				opts.imp_atom_num(), "acd") : OpenADAS::OpenADAS();
+
+		/*
+		if (opts.imp_iz_recomb_int() == 1)
+		{
+			oa_ioniz = opts.openadas_root(), 
+				opts.openadas_year(), opts.imp_atom_num(), "scd";
+			oa_recomb = opts.openadas_root(), 
+				opts.openadas_year(), opts.imp_atom_num(), "acd";
+		}
+		*/
 
 		// Execute main particle following loop.
 		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);

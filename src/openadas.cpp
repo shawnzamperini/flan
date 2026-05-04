@@ -23,6 +23,7 @@
 
 namespace OpenADAS
 {
+	OpenADAS::OpenADAS() {};
 
 	OpenADAS::OpenADAS(const std::string_view openadas_root, 
 		const int openadas_year, const int imp_atom_num, 
