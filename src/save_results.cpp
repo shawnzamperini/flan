@@ -256,6 +256,12 @@ namespace SaveResults
 		save_string(input_group, opts.case_name(), "case_name", dim_str, 
 			"case name");
 
+		// Background plasma source and test options	
+		save_string(input_group, opts.bkg_source(), "bkg_source", dim_str, 
+			"source of background plasma");
+		save_string(input_group, opts.test_opt(), "test_opt", dim_str, 
+			"test background plasma option");
+
 		// Options related to reading in Gkeyll files
 		save_string(input_group, opts.gkyl_dir(), "gkyl_dir", dim_str, 
 			"directory containing Gkeyll data");

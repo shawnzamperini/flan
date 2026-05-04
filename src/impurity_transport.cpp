@@ -100,6 +100,74 @@ namespace Impurity
 			bkg.get_z_min(), bkg.get_z_max());
 	}
 
+	std::array<double, 3> get_birth_vXYZ(const Background::Background& bkg, 
+		const Options::Options& opts, const double t_imp, const double x_imp, 
+		const double y_imp, const double z_imp)
+	{
+		// If we're running a test we will want to start at predetermined
+		// velocities to make sure things work correctly. Ideally there
+		// wouldn't be an if statement to favor vectorization, but seeing as
+		// this is only happens once per particle it's not a huge deal.
+		if (opts.bkg_source_int() == 0)
+		{
+			// Give particles an initial Y velocity to kick off gyration
+			if (opts.test_opt_int() == 0 || opts.test_opt_int() == 1
+				|| opts.test_opt_int() == 2 || opts.test_opt_int() == 3)
+			{
+				return {0.0, 25000.0, 0.0};
+			}
+
+			// Curvature drift test requires an initial velocity parallel to
+			// the field line, we set that to be 5000 m/s.
+			else if (opts.test_opt_int() == 4)
+			{
+
+			}
+		}
+
+		// Start at input temperature value
+		double start_temp {};
+		if (opts.imp_temp_start_opt_int() == 0)
+		{
+			start_temp = opts.imp_temp_start_val();
+		}
+
+		// Start at main ion temperature
+		else if (opts.imp_temp_start_opt_int() == 1)
+		{
+			// Need to get the starting cell indices so we can index the main
+			// ion temperature array.
+			int tidx {get_nearest_index(bkg.get_times(), 
+				static_cast<BkgFPType>(t_imp))};
+			int xidx = get_nearest_cell_index(bkg.get_grid_x(),     
+				static_cast<BkgFPType>(x_imp));
+			int yidx = get_nearest_cell_index(bkg.get_grid_y(),     
+				static_cast<BkgFPType>(y_imp));
+			int zidx = get_nearest_cell_index(bkg.get_grid_z(),     
+				static_cast<BkgFPType>(z_imp));
+			
+			start_temp = bkg.get_ti()(tidx, xidx, yidx, zidx);
+		}
+
+		// Sample from a Maxwellian with mu = sqrt(kT/m) and mean = 0 for an
+		// isotropic velocity distribution. Unfortunately throwing away a
+		// random number here. T [eV], m [kg]
+		const double mu {std::sqrt(start_temp * Constants::ev_to_j 
+			/ (opts.imp_mass_amu() * Constants::amu_to_kg))};  // m/s
+		std::cout << "mu = " << mu << '\n';
+
+		double vX {};
+		double vY {};
+		double vZ {};
+		std::tie(vX, vY) = Random::get_two_norm(0.0, mu);
+		std::tie(vZ, std::ignore) = Random::get_two_norm(0.0, mu);
+
+
+		return {vX, vY, vZ};
+
+	}
+
+
 	int get_birth_charge(const Options::Options& opts)
 	{
 		return opts.imp_init_charge();
@@ -120,24 +188,31 @@ namespace Impurity
 		double Y_imp {0.0};
 		double Z_imp {0.0};
 
-		// -- BEGIN HARDCODED TEST SUITE --
-		// Slab: Give particle initial Y velocity so it gyrates
-		//std::cout << "DEBUG: Starting at 2500 m/s!\n";
-		//double vY_imp {2500.0};
+		// Get starting X, Y, Z velocity
+		auto [vX_imp, vY_imp, vZ_imp] = get_birth_vXYZ(bkg, opts, t_imp, x_imp, 
+			y_imp, z_imp);
+		//std::cout << "vX, vY, vZ = " << vX_imp << "\t" << vY_imp << "\t" 
+		//	<< vZ_imp << '\n';
 
-		// Cylindrical: Assign parallel (toroidal) velocity for curvature drift.
-		//double vT_imp {5000.0};
-		//double tor_ang {z_imp};
-		//std::cout << "DEBUG: Starting at v_tor = " << vT_imp << " (" 
-		//	<< tor_ang << ")" << "\n";
-		//double vX_imp {-std::sin(tor_ang) * vT_imp};
-		//double vY_imp {std::cos(tor_ang) * vT_imp};
-		//double vZ_imp {2500.0};  // For gyrating
+		/*
+		// Test: Set to true if using a test background plasma
+		bool init_test {opts.bkg_source_int() == 0};
 
-		// Assume starting at rest, but if this ever changes do it here
-		double vX_imp {0.0};
-		double vY_imp {0.0};
-		double vZ_imp {0.0};
+		// Test: Slab geometry (x=X, y=Y, z=Z). Testing for gyration (0), 
+		// ExB (1) grad-B (2) or polarization (3) drifts, so give particle 
+		// initial Y (y) velocity of 2500 m/s to kick off the gyration.
+		bool init_slab {(unsigned) < 4u};
+		vY_imp = 2500.0 * init_slab * init_test;
+
+		// Test: Cylindrical geometry (x=R, y=Z, z=phi). Testing for curvature 
+		// drift (4), so give particle initial velocity of 5000 m/s along the 
+		// toroidal field line (the z direction) and 2500 m/s in the Z direction
+		// so it gyrates.
+		bool init_cyl {(unsigned)x == 4u};
+		double vX_imp {-std::sin(z_imp) * 5000.0 * init_cyl * init_test};
+		double vY_imp {std::cos(z_imp) * 5000.0 * init_cyl * init_test};
+		double vZ_imp {2500.0 * init_cyl * init_test};  // For gyrating
+		*/
 
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);

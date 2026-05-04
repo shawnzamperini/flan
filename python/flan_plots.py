@@ -915,6 +915,10 @@ class FlanPlots:
 	# As written this is a little messy.
 	def calc_rad_pol_comp(self, which, frame=None):
 		"""
+		Calculate the radial and poloidal components of a vector field. In
+		this context, radial is the cross-field direction and not the
+		cylindrical radial coordinate.
+
 		which:	Which velocity to calculate radial/poloidal components
 				for. One of: 
 					ExB, 
@@ -922,6 +926,10 @@ class FlanPlots:
 					polarization, 
 					curvature
 					actual. 
+
+		Returns both the radial and poloidal components as either a 4D (all
+		times, frame = None) or 3D (specific time, frame = integer) array. Slots
+		into the other functions easily.
 		"""
 
 		# Validate input
@@ -1000,3 +1008,80 @@ class FlanPlots:
 
 		# Otherwise return full 4D arrays
 		return v_rad, v_pol		
+	
+	def validate_test(self):
+		"""
+		Make a plots of the hardcoded tests cases within Flan that ensures the 
+		physics models within Flan are working correctly.
+		"""
+
+		# Constants for plotting
+		fontsize=16
+		figsize = (5, 4)
+
+		# Check that a test was indeed performed via bkg_source
+		if self.nc["input"]["bkg_source"][:] != "test":
+			print("Error! This is not a test simulation.")
+			return None
+
+		# Check which test was performed. For reference:
+		# 0 = Simple gyration test to show a particle gyrates in a constant
+		#     magnetic field
+		# 1 = Test to show a gyrating particle will ExB drift in a constant
+		#     electric and magnetic field
+		# 2 = Test to show a gyrating particle will grad-B drift in a magentic
+		#     field with a linear gradient
+		# 3 = Test to show a gyrating particle will have a polarization drift
+		#     in a time-varying electric field and constant magnetic field
+		# 4 = Test to show a gyrating particle will have a curvature drift
+		#     in a toroidal magnetic field
+		# 5 = Test to show that the fluid friction force manifests  from the
+		#     collision model
+		if self.nc["input"]["test_opt"] == 0:
+			pass
+
+		# Input file: tests/test_exb.cpp
+		# Background plasma is constant BZ = 1 and EY = 5000. Particles all
+		# start at same time and location.
+		elif self.nc["input"]["test_opt"][0] == "exb":
+			
+			# Hardcoded values that this test uses
+			vY0 = 25000
+			EY = 5000
+			BZ = 1.0
+
+			# Cyclotron period = qB / m
+			q = self.nc["input"]["imp_init_charge"][:] * (-elec)
+			m = self.nc["input"]["imp_mass_amu"][:]* amu_to_kg
+			omega = q * BZ / m
+			print(omega)
+
+			# Average vX of particle against time, ignoring cells without
+			# any counts
+			t = self.nc["geometry"]["time"][:]
+			vX_t_flan = np.zeros(len(t))
+			vX_t_anal = np.zeros(len(t))
+			for i in range(len(t)):
+
+				# Average value from Flan
+				with_counts = self.nc["output"]["Nz"][i] > 0
+				vX = self.nc["output"]["v_X"][i][with_counts]
+				vX_t_flan[i] = vX.mean()
+
+				# Analytic value from solving the ODE
+				vX_t_anal[i] = (-EY / BZ) * np.cos(omega * t[i]) + vY0 \
+					* np.sin(omega * t[i]) + EY / BZ
+
+			fig, ax1 = plt.subplots(figsize=figsize)
+			ax1.plot(t * 1e6, vX_t_flan, label="Flan")
+			ax1.plot(t * 1e6, vX_t_anal, label="Analytic")
+			ax1.legend(fontsize=fontsize-2)
+			ax1.set_xlabel("Time (us)", fontsize=fontsize)
+			ax1.set_ylabel(r"$\mathdefault{v_X}$ (m/s)", fontsize=fontsize)
+			fig.tight_layout()
+			fig.show()
+
+		else:
+			
+			print("Error: test_opt = {} not recognized" \
+				.format(self.nc["input"]["test_opt"][0]))

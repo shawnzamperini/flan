@@ -37,6 +37,9 @@ namespace Options
 		// General background plasma options
 		std::string m_bkg_source                {"gkeyll"};
 
+		// Internal test control options
+		std::string m_test_opt                  {"gyrate"};
+
 		// Options related to reading in Gkeyll files
 		std::string m_gkyl_dir               {"undefined"};
 		std::string m_gkyl_casename          {"undefined"};
@@ -54,8 +57,8 @@ namespace Options
 		double m_lcfs_x                              {0.0};
 		double m_imp_xbound_buffer                   {0.0};
 		std::string m_min_xbound_type        {"absorbing"};
-		double m_sep_x_bc_xp_z1                        {0.0};
-		double m_sep_x_bc_xp_z2                        {0.0};
+		double m_sep_x_bc_xp_z1                      {0.0};
+		double m_sep_x_bc_xp_z2                      {0.0};
 
 		// Impurity characteristics
 		int m_imp_atom_num                            {74};
@@ -80,6 +83,8 @@ namespace Options
 		double m_imp_zstart_val                      {0.0};
 		double m_imp_zrange_min                      {0.0};
 		double m_imp_zrange_max                      {0.0};
+		std::string m_imp_temp_start_opt      {"main_ion"};
+		double m_imp_temp_start_val                  {0.0};
 		std::string m_imp_collisions             {"nanbu"};
 		std::string m_imp_time_step_opt       {"constant"};
 		double m_imp_time_step                      {1e-8};
@@ -113,19 +118,21 @@ namespace Options
 		// all set automatically within the corresponding setters.
 		// IMPORTANT: All control integers should be initialized below as -1,
 		// which the code recognizes as "not assigned yet".
-		int m_bkg_source_int        {-1};
-		int m_imp_tstart_opt_int	{-1};
-		int m_imp_xstart_opt_int	{-1};
-		int m_imp_ystart_opt_int	{-1};
-		int m_imp_zstart_opt_int	{-1};
-		int m_imp_collisions_int	{-1};
-		int m_var_red_split_int		{-1};
-		int m_var_red_import_int	{-1};
-		int m_var_red_rusrol_int	{-1};
-		int m_imp_time_step_opt_int {-1};
-		int m_imp_iz_recomb_int		{-1};
-		int m_min_xbound_type_int	{-1};
-		int m_calc_grad_elec_int	{-1};
+		int m_bkg_source_int        	{-1};
+		int m_test_opt_int          	{-1};
+		int m_imp_tstart_opt_int		{-1};
+		int m_imp_xstart_opt_int		{-1};
+		int m_imp_ystart_opt_int		{-1};
+		int m_imp_zstart_opt_int		{-1};
+		int m_imp_temp_start_opt_int	{-1};
+		int m_imp_collisions_int		{-1};
+		int m_var_red_split_int			{-1};
+		int m_var_red_import_int		{-1};
+		int m_var_red_rusrol_int		{-1};
+		int m_imp_time_step_opt_int 	{-1};
+		int m_imp_iz_recomb_int			{-1};
+		int m_min_xbound_type_int		{-1};
+		int m_calc_grad_elec_int		{-1};
 
 		/**
 		* @brief Check input against a list of valid options
@@ -152,6 +159,7 @@ namespace Options
 		// Setter declarations
 		void set_case_name(std::string case_name);
 		void set_bkg_source(std::string bkg_source);
+		void set_test_opt(std::string test_opt);
 		void set_gkyl_dir(std::string gkyl_dir);
 		void set_gkyl_casename(std::string gkyl_casename);
 		void set_gkyl_frame_start(int gkyl_frame_start);
@@ -187,6 +195,8 @@ namespace Options
 		void set_imp_zstart_val(double imp_zstart_val);
 		void set_imp_zrange_min(double imp_zrange_min);
 		void set_imp_zrange_max(double imp_zrange_max);
+		void set_imp_temp_start_opt(std::string imp_temp_start_opt);
+		void set_imp_temp_start_val(double imp_temp_start_val);
 		void set_imp_collisions(std::string imp_collisions);
 		void set_var_red_split(std::string var_red_split);
 		void set_var_red_import(std::string var_red_import);
@@ -209,6 +219,7 @@ namespace Options
 		// Accessor declarations
 		const std::string& case_name() const;
 		const std::string& bkg_source() const;
+		const std::string& test_opt() const;
 		const std::string& gkyl_dir() const;
 		const std::string& gkyl_casename() const;
 		const int gkyl_frame_start() const;
@@ -244,6 +255,8 @@ namespace Options
 		const double imp_zstart_val() const;
 		const double imp_zrange_min() const;
 		const double imp_zrange_max() const;
+		const std::string& imp_temp_start_opt() const;
+		const double imp_temp_start_val() const;
 		const std::string& imp_collisions() const;
 		const std::string& var_red_split() const;
 		const std::string& var_red_import() const;
@@ -270,10 +283,12 @@ namespace Options
 
 		// Accessor declarations for internal control variables
 		const int bkg_source_int() const;
+		const int test_opt_int() const;
 		const int imp_tstart_opt_int() const;
 		const int imp_xstart_opt_int() const;
 		const int imp_ystart_opt_int() const;
 		const int imp_zstart_opt_int() const;
+		const int imp_temp_start_opt_int() const;
 		const int imp_collisions_int() const;
 		const int var_red_split_int() const;
 		const int var_red_import_int() const;

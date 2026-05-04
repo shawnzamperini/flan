@@ -145,6 +145,15 @@ namespace Utilities
 		err << "x value is outside the interpolation range: " << x;
 		throw std::out_of_range(err.str());
 	}
+
+	/**
+	* @brief Create vector of N equally spaced values between a and b
+	*
+	* @param a First value of vector
+	* @param b Last value of vector
+	* @param N Number of values in vector
+	*/
+	std::vector<double> linspace(double a, double b, std::size_t N);
 }
 
 #endif

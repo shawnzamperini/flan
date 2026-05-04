@@ -78,6 +78,23 @@ namespace Impurity
 		const Options::Options& opts);
 
 	/**
+	* @brief Get starting vX, vY, vZ for impurity ion
+	*
+	* Function that returns an array of 3 doubles of the starting impurity
+	* velocity based on the input options.
+	* 
+	* @param bkg Reference to the loaded Background object
+	* @param opts Reference to Options object
+	* @param t_imp Birth time of impurity
+	* @param x_imp Birth x position of impurity
+	* @param y_imp Birth y position of impurity
+	* @param z_imp Birth z position of impurity
+	*/
+	std::array<double, 3> get_birth_vXYZ(const Background::Background& bkg, 
+		const Options::Options& opts, const double t_imp, const double x_imp, 
+		const double y_imp, const double z_imp);
+
+	/**
 	* @brief Get starting charge to pass into an Impurity object
 	*
 	* Function to return the starting charge for an impurity ion. Right now

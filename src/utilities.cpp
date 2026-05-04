@@ -131,6 +131,28 @@ namespace Utilities
 
 		return idx + offset;
 	}
+	#include <vector>
+
+	// Create vector of N equally spaced values between a and b
+	std::vector<double> linspace(double a, double b, std::size_t N)
+	{
+		std::vector<double> v;
+		v.reserve(N);
+
+		if (N == 0) return v;
+		if (N == 1) {
+			v.push_back(a);
+			return v;
+		}
+
+		double step = (b - a) / (N - 1);
+
+		for (std::size_t i = 0; i < N; ++i)
+			v.push_back(a + i * step);
+
+		return v;
+	}
+
 }
 
 // Instatiate float and double templates since we separate the declaration
