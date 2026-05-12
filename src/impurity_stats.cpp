@@ -68,6 +68,41 @@ namespace Impurity
 	}
 
 	/**
+	* @brief Accessor for particle track time
+	*/
+	std::vector<float>& Statistics::get_track_t() {return m_track_t;}
+
+	/**
+	* @brief Accessor for particle track x position
+	*/
+	std::vector<float>& Statistics::get_track_x() {return m_track_x;}
+
+	/**
+	* @brief Accessor for particle track y position
+	*/
+	std::vector<float>& Statistics::get_track_y() {return m_track_y;}
+
+	/**
+	* @brief Accessor for particle track z position
+	*/
+	std::vector<float>& Statistics::get_track_z() {return m_track_z;}
+
+	/**
+	* @brief Accessor for particle track x velocity
+	*/
+	std::vector<float>& Statistics::get_track_vx() {return m_track_vx;}
+
+	/**
+	* @brief Accessor for particle track y velocity
+	*/
+	std::vector<float>& Statistics::get_track_vy() {return m_track_vy;}
+
+	/**
+	* @brief Accessor for particle track z velocity
+	*/
+	std::vector<float>& Statistics::get_track_vz() {return m_track_vz;}
+
+	/**
 	* @brief Accessor for counts data
 	* @return Vector4D<int>
 	* @sa add_counts()
@@ -186,6 +221,17 @@ namespace Impurity
 		ret_stats.m_vy = m_vy + other.m_vy;
 		ret_stats.m_vz = m_vz + other.m_vz;
 
+		// Right now we only track a single particle track, so we don't actually
+		// do anything here. This will mean the arrays are empty if there is
+		// more than one thread.
+		ret_stats.m_track_t = other.m_track_t;
+		ret_stats.m_track_x = other.m_track_x;
+		ret_stats.m_track_y = other.m_track_y;
+		ret_stats.m_track_z = other.m_track_z;
+		ret_stats.m_track_vx = other.m_track_vx;
+		ret_stats.m_track_vy = other.m_track_vy;
+		ret_stats.m_track_vz = other.m_track_vz;
+
 		return ret_stats;
 	}
 
@@ -250,6 +296,20 @@ namespace Impurity
 		const int yidx, const int zidx, const BkgFPType value)
 	{
 		m_charge(tidx, xidx, yidx, zidx) += value;
+	}
+
+	// Add impurity position to track vectors. This is mainly for testing
+	// that the path of a particle follows a particular route and showing that
+	// the physics is correct.
+	void Statistics::update_track(const Impurity& imp)
+	{
+		m_track_t.push_back(imp.get_t());
+		m_track_x.push_back(imp.get_x());
+		m_track_y.push_back(imp.get_y());
+		m_track_z.push_back(imp.get_z());
+		m_track_vx.push_back(imp.get_vx());
+		m_track_vy.push_back(imp.get_vy());
+		m_track_vz.push_back(imp.get_vz());
 	}
 
 	/**

@@ -28,7 +28,7 @@ namespace Test
 		std::vector<double> test_grid_z = {};
 
 		// Vectors to hold the cell center coordinates
-		auto test_t = Utilities::linspace(0.0, 5e-6, tdim);
+		auto test_t = Utilities::linspace(0.0, 100e-6, tdim);
 		std::vector<double> test_x = {};
 		std::vector<double> test_y = {};
 		std::vector<double> test_z = {};
@@ -44,6 +44,9 @@ namespace Test
 		Vectors::Vector3D<BkgFPType> test_dzdY {xdim, ydim, zdim};
 		Vectors::Vector3D<BkgFPType> test_dzdZ {xdim, ydim, zdim};
 		Vectors::Vector3D<BkgFPType> test_J {xdim, ydim, zdim};
+		Vectors::Vector3D<BkgFPType> test_X {xdim, ydim, zdim};
+		Vectors::Vector3D<BkgFPType> test_Y {xdim, ydim, zdim};
+		Vectors::Vector3D<BkgFPType> test_Z {xdim, ydim, zdim};
 
 		// Empty Vector4Ds to be manually filled out
 		//Vectors::Vector4D<BkgFPType> test_vp {tdim, xdim, ydim, zdim};
@@ -73,7 +76,7 @@ namespace Test
 		//     in a time-varying electric field and constant magnetic field
 		// 4 = Test to show a gyrating particle will have a curvature drift
 		//     in a toroidal magnetic field
-		// 5 = Test to show that the fluid friction force manifests  from the
+		// 5 = Test to show that the fluid friction force manifests from the
 		//     collision model
 
 		// Slab geometry options (includes tests for simple gyration, ExB, 
@@ -123,6 +126,11 @@ namespace Test
 
 				// Jacobian just 1.0 since x=X, y=Y and z=Z.
 				test_J.get_data()[idx] = 1.0;
+
+				// x=X, y=Y and z=Z for a slab geometry
+				test_X.get_data()[idx] = test_x[i];
+				test_Y.get_data()[idx] = test_y[i];
+				test_Z.get_data()[idx] = test_z[i];
 			}
 			}
 			}
@@ -135,7 +143,7 @@ namespace Test
 			// Normal cylindrical coordinates: x = R, y = Z, z = phi. 
 			// Dimension are x = [2.00, 2.05], y = [-0.025, 0.025] z = [0, pi/2]
 			test_grid_x = Utilities::linspace(2.00, 2.05, xdim+1);
-			test_grid_y = Utilities::linspace(-0.025, -0.025, ydim+1);
+			test_grid_y = Utilities::linspace(-0.025, 0.025, ydim+1);
 			test_grid_z = Utilities::linspace(0.00, 3.1415 / 2.0, zdim+1);
 
 			// The cell center values are equally spaced starting at one half 
@@ -143,11 +151,11 @@ namespace Test
 			const double xwidth {test_grid_x[1] - test_grid_x[0]};
 			const double ywidth {test_grid_y[1] - test_grid_y[0]};
 			const double zwidth {test_grid_z[1] - test_grid_z[0]};
-			test_x = Utilities::linspace(xwidth / 2.0, 
+			test_x = Utilities::linspace(test_grid_x.front() + xwidth / 2.0, 
 				test_grid_x.back() - xwidth / 2.0, xdim);	
-			test_y = Utilities::linspace(ywidth / 2.0, 
+			test_y = Utilities::linspace(test_grid_y.front() + ywidth / 2.0, 
 				test_grid_y.back() - ywidth / 2.0, ydim);	
-			test_z = Utilities::linspace(zwidth / 2.0, 
+			test_z = Utilities::linspace(test_grid_z.front() + zwidth / 2.0, 
 				test_grid_z.back() - zwidth / 2.0, zdim);	
 
 			#pragma omp parallel for
@@ -195,9 +203,9 @@ namespace Test
 			int idx {test_ne.calc_index(i,j,k,l)};
 
 			// All test cases use constant values for density and temperature
-			test_ne.get_data()[idx] = 1e20;
-			test_te.get_data()[idx] = 1;
-			test_ti.get_data()[idx] = 1;
+			test_ne.get_data()[idx] = 1e19;
+			test_te.get_data()[idx] = 10;
+			test_ti.get_data()[idx] = 10;
 			//test_vp.get_data()[idx] = 0.0; // Not needed
 
 			// Zero electric field in these tests
@@ -221,7 +229,7 @@ namespace Test
 			// decreases by 1 V every microsecond for polarization drift test
 			else if (opts.test_opt_int() == 3)
 			{
-				constexpr double slope {-1000000}; // 1000000 V/s or 1 V/us
+				constexpr double slope {-10000000}; // 1000000 V/s or 1 V/us
 				test_eY.get_data()[idx] = 5000.0 + slope 
 					* test_t[i];
 				test_emag.get_data()[idx] = test_eY.get_data()[idx];
@@ -241,6 +249,9 @@ namespace Test
 			// B_Z-gradient of 5 T/m in the Y direction for grad-B drift test
 			else if (opts.test_opt_int() == 2)
 			{
+				test_bX.get_data()[idx] = 0.0;
+				test_bY.get_data()[idx] = 0.0;
+
 				constexpr double slope {5.0}; // 5 T/m or 0.05 T/cm
 				test_bZ.get_data()[idx] = slope * test_y[k] + 1.0;
 				test_bmag.get_data()[idx] = test_bZ.get_data()[idx];
@@ -250,11 +261,23 @@ namespace Test
 			else if (opts.test_opt_int() == 4)
 			{
 				double phi = test_z[l]; // z = phi
-				double B0 = 1.0;
+				double B0 = 10.0;
 				test_bX.get_data()[idx] = -B0 * std::sin(phi);
 				test_bY.get_data()[idx] =  B0 * std::cos(phi);
 				test_bZ.get_data()[idx] =  0.0;
 				test_bmag.get_data()[idx] = B0;
+			}
+
+			// Friction force test uses a magnetic field in the x direction,
+			// the same direction of the flow since we're interested in the
+			// friction force as a parallel-to-B force
+			else if (opts.test_opt_int() == 5)
+			{
+				test_bX.get_data()[idx] = 1.0;
+				test_bY.get_data()[idx] = 0.0;
+				test_bZ.get_data()[idx] = 0.0;
+				test_bmag.get_data()[idx] = 1.0;
+
 			}
 			
 			// All drift tests have zero background flow
@@ -270,7 +293,7 @@ namespace Test
 			// Friction force has flow of 1,000 m/s in X direction
 			else if (opts.test_opt_int() == 5)
 			{
-				test_uX.get_data()[idx] = 1000.0;
+				test_uX.get_data()[idx] = 10000.0;
 				test_uY.get_data()[idx] = 0.0;
 				test_uZ.get_data()[idx] = 0.0;
 			}
@@ -319,6 +342,9 @@ namespace Test
 		bkg.move_into_dzdY(test_dzdY);
 		bkg.move_into_dzdZ(test_dzdZ);
 		bkg.move_into_J(test_J);
+		bkg.move_into_X(test_X);
+		bkg.move_into_Y(test_Y);
+		bkg.move_into_Z(test_Z);
 
 		// Tangent basis vectors
 		//bkg.move_into_dXdx(test_dXdx);

@@ -349,7 +349,7 @@ class FlanPlots:
 	def plot_frames_xy(self, data_name, frame_start, frame_end, z0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
 		vmin=None, vmax=None, save_path=None, xlabel="x (m)", ylabel="y (m)",
-		cbar_label=None, rsep=0.0, own_data=None):
+		cbar_label=None, rsep=0.0, aspect="auto", own_data=None):
 		"""
 		Combine multiple plots from plot_frame_xy into an animation.
 		"""
@@ -404,7 +404,7 @@ class FlanPlots:
 		mesh = ax1.pcolormesh(X-rsep, Y, data_xy.T, cmap=cmap, norm=norm)
 		cbar = fig.colorbar(mesh, cax=cax)
 		ax1.set_facecolor("grey")
-		ax1.set_aspect("equal")
+		ax1.set_aspect(aspect)
 		ax1.set_xlabel(xlabel, fontsize=g_fontsize)
 		ax1.set_ylabel(ylabel, fontsize=g_fontsize)
 		ax1.set_title("Frame {}".format(frame_start), fontsize=g_fontsize)
@@ -1009,20 +1009,21 @@ class FlanPlots:
 		# Otherwise return full 4D arrays
 		return v_rad, v_pol		
 	
-	def validate_test(self):
+	def validate_drift_test(self):
 		"""
-		Make a plots of the hardcoded tests cases within Flan that ensures the 
-		physics models within Flan are working correctly.
 		"""
-
-		# Constants for plotting
-		fontsize=16
-		figsize = (5, 4)
-
-		# Check that a test was indeed performed via bkg_source
-		if self.nc["input"]["bkg_source"][:] != "test":
-			print("Error! This is not a test simulation.")
+		
+		# Check that particle tracks were on
+		if self.nc["input"]["save_track"][:] != "on":
+			print("Error! Particle track was not saved. Rerun \
+			with save_track =\" on\"")
 			return None
+
+		# Load x,y,z versus t
+		t = self.nc["output"]["track_t"][:].data
+		x = self.nc["output"]["track_x"][:].data
+		y = self.nc["output"]["track_y"][:].data
+		z = self.nc["output"]["track_z"][:].data
 
 		# Check which test was performed. For reference:
 		# 0 = Simple gyration test to show a particle gyrates in a constant
@@ -1037,47 +1038,196 @@ class FlanPlots:
 		#     in a toroidal magnetic field
 		# 5 = Test to show that the fluid friction force manifests  from the
 		#     collision model
-		if self.nc["input"]["test_opt"] == 0:
+		if self.nc["input"]["test_opt"][0] == "gyrate":
 			pass
 
 		# Input file: tests/test_exb.cpp
-		# Background plasma is constant BZ = 1 and EY = 5000. Particles all
-		# start at same time and location.
+		# Background plasma is constant BZ = 1 and EY = 5000. Drift is in the
+		# x direction.
 		elif self.nc["input"]["test_opt"][0] == "exb":
 			
+			print("ExB drift test case detected")
+
 			# Hardcoded values that this test uses
+			vY0 = 25000
+			EY = 50000
+			BZ = 10.0
+
+			# Cyclotron period = qB / m
+			omega = q * BZ / m
+
+			# Calculate the analytic drift value
+			analytic_drift = EY / BZ
+
+			# Drift in x direction so we want to find those peaks
+			drift_coord = x
+			drift_ylabel = "x (m)"
+
+		# Input file: tests/test_gradb.cpp
+		elif self.nc["input"]["test_opt"][0] == "gradb":
+			
+			print("Grad-B drift test case detected")
+
+			# Hardcoded values that this test uses (see read_test.cpp)
+			vY0 = 25000
+			EY = 0
+			BZ = 1.0
+			dBZdy = 5.0  # 5 T/m
+			omega = q * BZ / m
+
+			# Analytic estimate of the Grad-B drift velocity
+			analytic_drift = -m * vY0**2 * dBZdy / (2 * q * BZ**2)	
+
+			# Drift in x direction so we want to find those peaks
+			drift_coord = x
+			drift_ylabel = "x (m)"
+
+		# Input file: tests/test_polarization.cpp
+		elif self.nc["input"]["test_opt"][0] == "polarization":
+
+			print("Polarization drift test case detected")
+
+			# Hardcoded values that this test uses (see read_test.cpp)
 			vY0 = 25000
 			EY = 5000
 			BZ = 1.0
-
-			# Cyclotron period = qB / m
-			q = self.nc["input"]["imp_init_charge"][:] * (-elec)
-			m = self.nc["input"]["imp_mass_amu"][:]* amu_to_kg
+			dEYdt = -10000000  # 1 V/us
 			omega = q * BZ / m
-			print(omega)
 
-			# Average vX of particle against time, ignoring cells without
-			# any counts
+			# Analytic estimate of the polarization drift velocity
+			analytic_drift = m * dEYdt / (q * BZ**2)
+
+			# Drift in y direction so we want to find those peaks
+			drift_coord = y
+			drift_ylabel = "y (m)"
+
+		# Input file: tests/test_curvature.cpp
+		elif self.nc["input"]["test_opt"][0] == "curvature":
+
+			print("Curvature drift test case detected")
+
+			# Hardcoded values that this test uses (see read_test.cpp)
+			B0 = 10.0
+			v_par = 5000
+
+			omega = q * B0 / m
+
+			# Drift in y=Z direction so we want to find those peaks
+			drift_coord = y
+			drift_ylabel = "Z (m)"
+
+			# Analytic estimate of the curvature drift velocity
+			analytic_drift = v_par**2 / omega / x.mean()
+
+		# Slope from linear fit to peaks is simulated drift
+		peaks, properties = find_peaks(drift_coord)
+		t_peaks = t[peaks]
+		drift_peaks = drift_coord[peaks]
+		v_drift, b = np.polyfit(t_peaks, drift_peaks, 1)
+		tfit = np.linspace(t.min(), t.max(), 100)
+		drift_fit = v_drift * tfit + b
+
+		fig, ax1 = plt.subplots(figsize=figsize)
+		ax1.set_xlabel("Time (s)", fontsize=fontsize)
+		ax1.set_ylabel(drift_ylabel, fontsize=fontsize)
+		ax1.plot(t, drift_coord, color="k", lw=3, label="Flan")
+		ax1.plot(tfit, drift_fit, color="k", lw=3, linestyle="--", 
+			label="Analytic")
+		ax1.legend()
+		fig.tight_layout()
+		fig.show()
+
+		# Print summary
+		abs_err = abs(v_drift - analytic_drift)
+		rel_err = abs_err / abs(analytic_drift)
+
+		print(
+			f"  Computed : {v_drift: .2f} m/s\n"
+			f"  Analytic : {analytic_drift: .2f} m/s\n"
+			f"  Abs. err : {abs_err: .3f} m/s\n"
+			f"  Rel. err : {rel_err: .2e}\n")
+	
+	def validate_coll_test(self):
+		"""
+		"""
+
+	
+	def validate_test(self):
+		"""
+		Make a plots of the hardcoded tests cases within Flan that ensures the 
+		physics models within Flan are working correctly.
+		"""
+
+		from scipy.signal import find_peaks
+
+		# Constants for plotting
+		fontsize = 16
+		figsize = (5, 4)
+
+		# Some simulation constants
+		q = self.nc["input"]["imp_init_charge"][0] * (-elec)
+		m_amu = self.nc["input"]["imp_mass_amu"][0]
+		m = m_amu * amu_to_kg
+
+		# Check that a test was indeed performed via bkg_source
+		if self.nc["input"]["bkg_source"][:] != "test":
+			print("Error! This is not a test simulation.")
+			return None
+
+		# Call drift test routine
+		if self.nc["input"]["test_opt"][0] in ["gyrate", "exb", "gradb",
+			"polarization", "curvature"]:
+			self.validate_drift_test()
+
+		# Input file: tests/test_friction_force.cpp
+		elif self.nc["input"]["test_opt"][0] == "friction_force":
+
+			# Hardcoded values that this test uses (see read_test.cpp)
+			BX = 1.0
+			uX = 10000
+			Ti = 10.0
+			mi = 2.014
+			ni = 1e19
+			ln_alpha = 15
+			#ln_alpha = 5
+			Z = self.nc["input"]["imp_init_charge"][0] # Ion/recomb is OFF
+
+			# Some additional values and arrays
 			t = self.nc["geometry"]["time"][:]
-			vX_t_flan = np.zeros(len(t))
-			vX_t_anal = np.zeros(len(t))
+			#t0 = t[0]
+			#vx = self.nc["output"]["track_vx"][:]
+
+			# Average velocity of particles that all start at the same
+			# time and place. Ignore non-zero locations.
+			vx = np.zeros(len(t))
 			for i in range(len(t)):
-
-				# Average value from Flan
 				with_counts = self.nc["output"]["Nz"][i] > 0
-				vX = self.nc["output"]["v_X"][i][with_counts]
-				vX_t_flan[i] = vX.mean()
+				vx[i] = self.nc["output"]["v_X"][i][with_counts].mean()
 
-				# Analytic value from solving the ODE
-				vX_t_anal[i] = (-EY / BZ) * np.cos(omega * t[i]) + vY0 \
-					* np.sin(omega * t[i]) + EY / BZ
+			# Running average window filter
+			dt = t[1] - t[0]
+			window = int(1e-6 / dt)
+			#window = 50
+			#vx_avg = np.convolve(vx, np.ones(window)/window, mode='same')
+			
+			# Stopping power time from Stangeby 6.35, in s
+			tau_s = 1.47e13 * m_amu * Ti * np.sqrt(Ti / mi) \
+				/ ((1 + mi / m_amu) * ni * Z**2 * ln_alpha)
+
+			# Friction force
+			#ff_avg = m * (uX - vz_t_avg) / tau_s
+			#ff_max = m * (uX - vz_t_max) / tau_s
+
+			# Simple first-order ODE to solve for vz from F=ma
+			vx_analytic = uX * (1 - np.exp(-t / tau_s))
 
 			fig, ax1 = plt.subplots(figsize=figsize)
-			ax1.plot(t * 1e6, vX_t_flan, label="Flan")
-			ax1.plot(t * 1e6, vX_t_anal, label="Analytic")
-			ax1.legend(fontsize=fontsize-2)
-			ax1.set_xlabel("Time (us)", fontsize=fontsize)
-			ax1.set_ylabel(r"$\mathdefault{v_X}$ (m/s)", fontsize=fontsize)
+			ax1.plot(t, vx, color="tab:red", lw=3, label="Flan")
+			#ax1.plot(t, vx_avg, color="tab:red", lw=3, label="Flan")
+			ax1.plot(t, vx_analytic, color="k", lw=3, linestyle="--", 
+				label="Analytic")
+			ax1.set_xlabel("Time (s)", fontsize=fontsize)
+			ax1.set_ylabel("vX (m/s)", fontsize=fontsize)
 			fig.tight_layout()
 			fig.show()
 
@@ -1085,3 +1235,4 @@ class FlanPlots:
 			
 			print("Error: test_opt = {} not recognized" \
 				.format(self.nc["input"]["test_opt"][0]))
+			return None

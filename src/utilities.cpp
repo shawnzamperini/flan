@@ -10,6 +10,7 @@
 #include <iostream>
 
 #include "utilities.h"
+#include "vectors.h"
 
 namespace Utilities
 {
@@ -153,12 +154,98 @@ namespace Utilities
 		return v;
 	}
 
+	std::pair<int, int> bracket_indices(const std::vector<double>& x, double x0)
+	{
+	/*
+		// Get iterator of the first value that is >= t0
+		auto it = std::lower_bound(x.begin(), x.end(), x0);
+
+		// Convert to an index
+		int i = it - x.begin();
+
+		// If x0 > x[-1], we will return x[-2] and x[-1]. Or, if x0 < x[0], we 
+		// will return x[0] and x[1]
+		int hi = std::min((int)x.size() - 1, i);
+		int lo = std::max(0, hi - 1);
+
+		// Return as pair
+		return {lo, hi};
+	*/
+
+		auto it = std::lower_bound(x.begin(), x.end(), x0);
+		int i = it - x.begin();
+		int N = x.size();
+
+		// hi_raw = clamp(i, 0, N-1)
+		int hi_raw = std::min(i, N - 1);
+
+		// lo_raw = clamp(hi_raw - 1, 0, N-2)
+		int lo_raw = std::max(0, hi_raw - 1);
+
+		// mask = 1 if i == 0, else 0
+		int mask = (i == 0);
+
+		// Blend:
+		//   if i == 0 → lo=0, hi=1
+		//   else      → lo=lo_raw, hi=hi_raw
+		int lo = lo_raw * (1 - mask) + 0 * mask;
+		int hi = hi_raw * (1 - mask) + 1 * mask;
+
+		return {lo, hi};
+	}
+
+	template <typename T>
+	double interp_vec4d(const Vectors::Vector4D<T>& vec4d, 
+		const std::vector<double> t, const std::vector<double> x,
+		const std::vector<double> y, const std::vector<double> z,
+		const double t0, const double x0, const double y0, const double z0)
+	{
+		// First find the bracketing indices for each dimension
+		auto [it0, it1] = bracket_indices(t, t0);
+		auto [ix0, ix1] = bracket_indices(x, x0);
+		auto [iy0, iy1] = bracket_indices(y, y0);
+		auto [iz0, iz1] = bracket_indices(z, z0);
+
+		// Then perform trilinear interpolation in x,y,z dimensions at each
+		// time location
+		double interp_val0 {trilinear_interpolate(
+			x[ix0], y[iy0], z[iz0], 
+			x[ix1], y[iy1], z[iz1], 
+			vec4d(it0, ix0, iy0, iz0), vec4d(it0, ix1, iy0, iz0), // v000, v100
+			vec4d(it0, ix0, iy1, iz0), vec4d(it0, ix1, iy1, iz0), // v010, v110
+			vec4d(it0, ix0, iy0, iz1), vec4d(it0, ix1, iy0, iz1), // v001, v101
+			vec4d(it0, ix0, iy1, iz1), vec4d(it0, ix1, iy1, iz1), // v011, v111
+			x0, y0, z0)};
+		double interp_val1 {trilinear_interpolate(
+			x[ix0], y[iy0], z[iz0], 
+			x[ix1], y[iy1], z[iz1], 
+			vec4d(it1, ix0, iy0, iz0), vec4d(it1, ix1, iy0, iz0), // v000, v100
+			vec4d(it1, ix0, iy1, iz0), vec4d(it1, ix1, iy1, iz0), // v010, v110
+			vec4d(it1, ix0, iy0, iz1), vec4d(it1, ix1, iy0, iz1), // v001, v101
+			vec4d(it1, ix0, iy1, iz1), vec4d(it1, ix1, iy1, iz1), // v011, v111
+			x0, y0, z0)};
+
+		// Then linearly interpolate in the t dimension with just point-slope
+		// and return the value.
+		double m {(interp_val1 - interp_val0) / (t[it1] - t[it0])};
+		return m * (t0 - t[it1]) + interp_val1; 
+	}
 }
 
-// Instatiate float and double templates since we separate the declaration
+// Instantiate float and double templates since we separate the declaration
 // and definition
 template int Utilities::get_neighbor_index<float>(
     double, const std::vector<float>&, int);
 template int Utilities::get_neighbor_index<double>(
     double, const std::vector<double>&, int);
 
+template double Utilities::interp_vec4d<float>(
+	const Vectors::Vector4D<float>& vec4d, 
+	const std::vector<double> t, const std::vector<double> x,
+	const std::vector<double> y, const std::vector<double> z,
+	const double t0, const double x0, const double y0, const double z0);
+template double Utilities::interp_vec4d<double>(
+	const Vectors::Vector4D<double>& vec4d, 
+	const std::vector<double> t, const std::vector<double> x,
+	const std::vector<double> y, const std::vector<double> z,
+	const double t0, const double x0, const double y0, const double z0);

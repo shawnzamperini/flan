@@ -25,6 +25,13 @@ namespace Impurity
 		int m_dim3 {};
 		int m_dim4 {};
 		int m_size {};
+		std::vector<float> m_track_t {};
+		std::vector<float> m_track_x {};
+		std::vector<float> m_track_y {};
+		std::vector<float> m_track_z {};
+		std::vector<float> m_track_vx {};
+		std::vector<float> m_track_vy {};
+		std::vector<float> m_track_vz {};
 		Vectors::Vector4D<int> m_counts {};
 		Vectors::Vector4D<BkgFPType> m_weights {};
 		Vectors::Vector4D<BkgFPType> m_density {};
@@ -43,6 +50,13 @@ namespace Impurity
 			const int dim4);
 
 		// Accessors
+		std::vector<float>& get_track_t();
+		std::vector<float>& get_track_x();
+		std::vector<float>& get_track_y();
+		std::vector<float>& get_track_z();
+		std::vector<float>& get_track_vx();
+		std::vector<float>& get_track_vy();
+		std::vector<float>& get_track_vz();
 		Vectors::Vector4D<int>& get_counts();
 		Vectors::Vector4D<BkgFPType>& get_weights();
 		Vectors::Vector4D<BkgFPType>& get_density();
@@ -76,6 +90,9 @@ namespace Impurity
 		// Function to increase charge
 		void add_charge(const int tidx, const int xidx, const int yidx, 
 			const int zidx, const BkgFPType value);
+
+		// Update particle track.
+		void update_track(const Impurity& imp);
 
 		// Calculate the impurity density using the data stored in counts and 
 		// weights.

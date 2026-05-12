@@ -39,6 +39,7 @@ namespace Options
 
 		// Internal test control options
 		std::string m_test_opt                  {"gyrate"};
+		std::string m_save_track                   {"off"};
 
 		// Options related to reading in Gkeyll files
 		std::string m_gkyl_dir               {"undefined"};
@@ -120,6 +121,7 @@ namespace Options
 		// which the code recognizes as "not assigned yet".
 		int m_bkg_source_int        	{-1};
 		int m_test_opt_int          	{-1};
+		int m_save_track_int          	{-1};
 		int m_imp_tstart_opt_int		{-1};
 		int m_imp_xstart_opt_int		{-1};
 		int m_imp_ystart_opt_int		{-1};
@@ -160,6 +162,7 @@ namespace Options
 		void set_case_name(std::string case_name);
 		void set_bkg_source(std::string bkg_source);
 		void set_test_opt(std::string test_opt);
+		void set_save_track(std::string save_track);
 		void set_gkyl_dir(std::string gkyl_dir);
 		void set_gkyl_casename(std::string gkyl_casename);
 		void set_gkyl_frame_start(int gkyl_frame_start);
@@ -220,6 +223,7 @@ namespace Options
 		const std::string& case_name() const;
 		const std::string& bkg_source() const;
 		const std::string& test_opt() const;
+		const std::string& save_track() const;
 		const std::string& gkyl_dir() const;
 		const std::string& gkyl_casename() const;
 		const int gkyl_frame_start() const;
@@ -284,6 +288,7 @@ namespace Options
 		// Accessor declarations for internal control variables
 		const int bkg_source_int() const;
 		const int test_opt_int() const;
+		const int save_track_int() const;
 		const int imp_tstart_opt_int() const;
 		const int imp_xstart_opt_int() const;
 		const int imp_ystart_opt_int() const;

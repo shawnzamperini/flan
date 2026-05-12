@@ -64,6 +64,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "save_track") 
+			{
+				auto set_func = std::bind(&Options::set_save_track, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "gkyl_dir") 
 			{
 				auto set_func = std::bind(&Options::set_gkyl_dir, &opts, 

@@ -118,10 +118,21 @@ namespace Impurity
 			}
 
 			// Curvature drift test requires an initial velocity parallel to
-			// the field line, we set that to be 5000 m/s.
+			// the field line, we set that to be 5000 m/s. In this geometry
+			// x = R, y = Z and z = phi
 			else if (opts.test_opt_int() == 4)
 			{
+				constexpr double v_par = 5000;
+				double v_X {- v_par * std::sin(z_imp)};
+				double v_Y {v_par * std::cos(z_imp)};
+				return {v_X, v_Y, 0.0};
+			}
 
+			// Friction force test case we start at rest so it can accelerate 
+			// up to the background velocity
+			else if (opts.test_opt_int() == 5)
+			{
+				return {0.0, 0.0, 0.0};
 			}
 		}
 
@@ -154,7 +165,6 @@ namespace Impurity
 		// random number here. T [eV], m [kg]
 		const double mu {std::sqrt(start_temp * Constants::ev_to_j 
 			/ (opts.imp_mass_amu() * Constants::amu_to_kg))};  // m/s
-		std::cout << "mu = " << mu << '\n';
 
 		double vX {};
 		double vY {};
@@ -162,9 +172,7 @@ namespace Impurity
 		std::tie(vX, vY) = Random::get_two_norm(0.0, mu);
 		std::tie(vZ, std::ignore) = Random::get_two_norm(0.0, mu);
 
-
 		return {vX, vY, vZ};
-
 	}
 
 
@@ -581,8 +589,9 @@ namespace Impurity
 	}
 
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
-		const Background::Background& bkg, const int tidx, const int xidx, 
-		const int yidx, const int zidx, const double imp_time_step)
+		const Background::Background& bkg, const Options::Options& opts, 
+		const int tidx, const int xidx, const int yidx, const int zidx, 
+		const double imp_time_step)
 	{
 		// Add one to counts to this location	
 		imp_stats.add_counts(tidx, xidx, yidx, zidx, 1);
@@ -606,6 +615,13 @@ namespace Impurity
 		// Add charge to the running sum for this location
 		imp_stats.add_charge(tidx, xidx, yidx, zidx, 
 			static_cast<BkgFPType>(imp.get_charge()));
+
+		// Optionally update particle track. This can take a solid chunk of
+		// memory so it should only be used with a single particle. It is 
+		// mainly used with the test cases so we can show that single particle
+		// will have the right ExB drift or that the collision model works,
+		// things like that.
+		if (opts.save_track_int() == 1) imp_stats.update_track(imp);
 	}
 
 	void find_containing_cell(Impurity& imp, 
@@ -626,31 +642,15 @@ namespace Impurity
 		std::vector<Impurity>& imps, const std::vector<int>& var_red_counts, 
 		Statistics& imp_stats)
 	{
-		// Comment needs updating
-		// See if (inelastic) collision should create a split secondary
-		// particle or not. This is only checked if the particle splitting 
-		// scheme is based on inelastic collisions (var_red_split_int == 2). 
-		/*
-		bool split_particle {false};
-		if (opts.var_red_split_int() == 2)
-		{
-			split_particle = VarianceReduction::check_split_particle(imp, tidx, 
-				xidx, yidx, zidx, opts, var_red_counts, imp_stats);
-		}
-		*/
-
-		// Local plasma properties
-		//double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
-		//double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
-		//double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
-
 		// Update impurity velocity based on Nanbu collision model. Impurity
 		// is modified within function. First call is for ions (the false) and
 		// second call is for electrons (the true).
 		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, false, 
 			imp_time_step);
-		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
-			imp_time_step);
+
+		// Turning off electron collisions just to debug something
+		//Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
+		//	imp_time_step);
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
@@ -691,7 +691,7 @@ namespace Impurity
 			yidx, zidx);
 
 		// Record starting position in statistics arrays
-		record_stats(imp_stats, imp, bkg, tidx, xidx, yidx, zidx, 
+		record_stats(imp_stats, imp, bkg, opts, tidx, xidx, yidx, zidx, 
 			imp_time_step);
 
 		// For debugging purposes (only works with one thread)
@@ -814,8 +814,8 @@ namespace Impurity
 			// figure out how much of the particle's step was in each cell and 
 			// divide the weight up accordingly. Forgoing this for now, but 
 			// it's a future consideration.
-			if (continue_following) record_stats(imp_stats, imp, bkg, tidx, 
-				xidx, yidx, zidx, imp_time_step);
+			if (continue_following) record_stats(imp_stats, imp, bkg, opts, 
+				tidx, xidx, yidx, zidx, imp_time_step);
 		}
 	}
 
@@ -861,6 +861,18 @@ namespace Impurity
 			std::cout << "Warning! Impurity time step set to variable, but "
 				<< "collisions are off. Changing to constant time step.\n";
 			opts.set_imp_time_step_opt("constant");
+		}
+
+		// As a safeguard, only save particle tracks if a single particle is
+		// used. Otherwise it can easily use way too much memory and blow up
+		// the output file.
+		if (opts.save_track_int() == 1 && opts.imp_num() > 1)
+		{
+			std::cout << "Warning! save_track = \"on\" and more than "
+				<< "a single particle is tracked (imp_num = " 
+				<< opts.imp_num() << "). Only one particle is supported, so "
+				<< "imp_num is being decreased to 1.\n";
+			opts.set_imp_num(1);
 		}
 
 		// Vector of counts at each frame, below which is considered a 
@@ -949,84 +961,6 @@ namespace Impurity
 			// Create starting impurity ion
 			Impurity primary_imp = create_primary_imp(bkg, opts);
 
-			/*
-			// ----- START DEBUG -----
-			std::cout << "DEBUG: Assigning velocity!\n";
-			primary_imp.set_vx(0.0);
-			primary_imp.set_vy(2500.0);
-			//primary_imp.set_vz(5000.0);
-			primary_imp.set_vz(0.0);
-			// Need to assign vX, vY and vZ
-			// Use mapc2p to calculate the tangent basis vector components
-			constexpr double eps {1e-8};
-			double X0 {};
-			double Y0 {};
-			double Z0 {};
-			double X1 {};
-			double Y1 {};
-			double Z1 {};
-			
-			// e_1
-			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x()-eps, primary_imp.get_y(), 
-				primary_imp.get_z());
-			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x()+eps, primary_imp.get_y(), 
-				primary_imp.get_z());
-			double dXdx {(X1 - X0) / (2 * eps)};
-			double dYdx {(Y1 - Y0) / (2 * eps)};
-			double dZdx {(Z1 - Z0) / (2 * eps)};
-			std::array<double, 3> e_1 {dXdx, dYdx, dZdx};
-
-			// e_2
-			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y()-eps, 
-				primary_imp.get_z());
-			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y()+eps, 
-				primary_imp.get_z());
-			double dXdy {(X1 - X0) / (2 * eps)};
-			double dYdy {(Y1 - Y0) / (2 * eps)};
-			double dZdy {(Z1 - Z0) / (2 * eps)};
-			std::array<double, 3> e_2 {dXdy, dYdy, dZdy};
-			
-			// e_3
-			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y(), 
-				primary_imp.get_z()-eps);
-			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y(), 
-				primary_imp.get_z()+eps);
-			double dXdz {(X1 - X0) / (2 * eps)};
-			double dYdz {(Y1 - Y0) / (2 * eps)};
-			double dZdz {(Z1 - Z0) / (2 * eps)};
-			std::array<double, 3> e_3 {dXdz, dYdz, dZdz};
-		
-			// Scalar triple product (Jacobian)
-			double J {Utilities::dot_product(e_1,	
-				Utilities::cross_product(e_2, e_3))};
-
-			// Calculate reciprocal basis vector
-			std::array<double, 3> e1 {Utilities::cross_product(e_2, e_3)}; // dxdX, dxdY, dxdZ
-			std::array<double, 3> e2 {Utilities::cross_product(e_3, e_1)}; // dydX, dydY, dydZ
-			std::array<double, 3> e3 {Utilities::cross_product(e_1, e_2)}; // dzdX, dzdY, dzdZ
-			for (int i {}; i < 3; ++i)
-			{
-				e1[i] = e1[i] / J;
-				e2[i] = e2[i] / J;
-				e3[i] = e3[i] / J;
-			}
-
-			// Update Cartesian components with new values
-			double primary_imp_vmag0 {std::sqrt(primary_imp.get_vX()*primary_imp.get_vX() 
-				+ primary_imp.get_vY()*primary_imp.get_vY() + primary_imp.get_vZ()*primary_imp.get_vZ())};
-
-			// This update is NOT energy conserving! So we need to rescale it to
-			// make sure the magnitude does not change.
-			primary_imp.set_vX(primary_imp.get_vx() * e_1[0] + primary_imp.get_vy() * e_2[0] 
-				+ primary_imp.get_vz() * e_3[0]);
-			primary_imp.set_vY(primary_imp.get_vx() * e_1[1] + primary_imp.get_vy() * e_2[1] 
-				+ primary_imp.get_vz() * e_3[1]);
-			primary_imp.set_vZ(primary_imp.get_vx() * e_1[2] + primary_imp.get_vy() * e_2[2] 
-				+ primary_imp.get_vz() * e_3[2]);
-
-			*/
-			// ----- END DEBUG -----
-			
 			// Each thread starts with one impurity ion, but it may end up 
 			// following more than that because that ion may split off another
 			// one, which may split off another one, so the thread will
@@ -1123,6 +1057,8 @@ namespace Impurity
 		*/
 
 		// Execute main particle following loop.
+		std::cout << "WARNING: Fixing flow velocity in collision\n";
+		std::cout << "WARNING: Electron collisions are off\n";
 		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);
 	
 		// Convert the statistics into meaningful quantities. We are scaling

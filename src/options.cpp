@@ -100,6 +100,20 @@ namespace Options
 		else if (test_opt == "curvature") m_test_opt_int = 4;
 		else if (test_opt == "friction_force") m_test_opt_int = 5;
 	}
+
+	// save_track
+	void Options::set_save_track(std::string save_track) 
+	{
+		if (check_input<std::string>("save_track", save_track,
+			{"off", "on"}))
+		{
+			m_save_track = save_track;
+		}
+
+		// Assign control integers
+		if (save_track == "off") m_save_track_int = 0;
+		else if (save_track == "on") m_save_track_int = 1;
+	}
 	
 	// gkyl_dir
 	void Options::set_gkyl_dir(std::string gkyl_dir) 
@@ -493,6 +507,8 @@ namespace Options
 		{return m_bkg_source;}
 	const std::string& Options::test_opt() const 
 		{return m_test_opt;}
+	const std::string& Options::save_track() const 
+		{return m_save_track;}
 	const std::string& Options::gkyl_dir() const 
 		{return m_gkyl_dir;}
 	const std::string& Options::gkyl_casename() const 
@@ -624,6 +640,8 @@ namespace Options
 		{return get_control_int("bkg_source", m_bkg_source_int);}
 	const int Options::test_opt_int() const
 		{return get_control_int("test_opt", m_test_opt_int);}
+	const int Options::save_track_int() const
+		{return get_control_int("save_track", m_save_track_int);}
 	const int Options::imp_tstart_opt_int() const
 		{return get_control_int("imp_tstart_opt", m_imp_tstart_opt_int);}
 	const int Options::imp_xstart_opt_int() const

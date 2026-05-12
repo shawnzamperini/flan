@@ -9,6 +9,8 @@
 
 #include "background.h"
 #include "flan_types.h"
+#include "impurity.h"
+#include "utilities.h"
 #include "vectors.h"
 
 namespace Background
@@ -562,6 +564,72 @@ namespace Background
 	void Background::move_into_b_z(Vectors::Vector3D<BkgFPType>& b_z) 
 	{
 		m_b_z.move_into_data(b_z);
+	}
+
+	// Interpolate 4D Background data at a given t,x,y,z.
+	const BkgFPType Background::interp_4d(
+		const Vectors::Vector4D<BkgFPType>& vec4d, const double t0, 
+		const double x0, const double y0, const double z0) const
+	{
+		// This is really just a convienent wrapper to handle passing in
+		// times and the x, y, z vectors.
+		return Utilities::interp_vec4d(vec4d, m_times, m_x, m_y, m_z, t0, 
+			x0, y0, z0);
+	}
+
+	// Interpolate Te at a given t,x,y,z
+	const BkgFPType Background::interp_te(const double t0, const double x0, 
+		const double y0, const double z0) const
+	{
+		return interp_4d(m_te, t0, x0, y0, z0);
+	}
+
+	// Interpolate Te at Impurity location
+	const BkgFPType Background::interp_te_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_te, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate Ti at Impurity location
+	const BkgFPType Background::interp_ti_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_ti, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate ne at Impurity location
+	const BkgFPType Background::interp_ne_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_ne, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate uX at Impurity location
+	const BkgFPType Background::interp_uX_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_uX, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate uY at Impurity location
+	const BkgFPType Background::interp_uY_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_uY, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate uZ at Impurity location
+	const BkgFPType Background::interp_uZ_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_uZ, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
 	}
 }
 

@@ -25,16 +25,22 @@ namespace Collisions
 			(ne * Constants::charge_e * Constants::charge_e)); 
 	}
 
+	//std::tuple<double, double, double> sample_bkg_velocity(
+	//	const Background::Background& bkg, const int tidx, const int xidx, 
+	//	const int yidx, const int zidx, const double T, const double m)
 	std::tuple<double, double, double> sample_bkg_velocity(
-		const Background::Background& bkg, const int tidx, const int xidx, 
-		const int yidx, const int zidx, const double T, const double m)
+		const Background::Background& bkg, Impurity::Impurity& imp, 
+		const double T, const double m)
 	{
 		// Get mean parallel flow, which is the drifting term in a drifting
 		// Maxwellian. This is the ion velocity, which is assumed to be the
 		// plasma velocity (so same for both ions and electrons). 
-		double uX {bkg.get_uX()(tidx, xidx, yidx, zidx)};
-		double uY {bkg.get_uY()(tidx, xidx, yidx, zidx)};
-		double uZ {bkg.get_uZ()(tidx, xidx, yidx, zidx)};
+		//double uX {bkg.get_uX()(tidx, xidx, yidx, zidx)};
+		//double uY {bkg.get_uY()(tidx, xidx, yidx, zidx)};
+		//double uZ {bkg.get_uZ()(tidx, xidx, yidx, zidx)};
+		double uX {bkg.interp_uX_at_imp(imp)};
+		double uY {bkg.interp_uY_at_imp(imp)};
+		double uZ {bkg.interp_uZ_at_imp(imp)};
 
 		// Sampling from a drifting Maxwellian, which can be done by just
 		// sampling from a normally distributed number with mean = drift and
@@ -49,20 +55,22 @@ namespace Collisions
 		std::tie(vZ, std::ignore) = Random::get_two_norm(uZ, mu);
 
 		// Return as tuple
-		return std::make_tuple(vX, vY, vZ);
+		//return std::make_tuple(vX, vY, vZ);
+		return std::make_tuple(uX, uY, uZ);
 	}
 
 	// Calculate s term in Nanbu collision model
 	std::tuple<double, double, double, double> nanbu_calc_s(
 		Impurity::Impurity& imp, const Background::Background& bkg, 
-		const int tidx, const int xidx, const int yidx, const int zidx, 
 		const double imp_time_step, const double T, const double mass_kg, 
 		const double Te, const double ne, const double imp_vX_n, 
 		const double imp_vY_n, const double imp_vZ_n)
 	{
 		// Take random sample of background species being collided with
-		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, tidx, xidx, 
-			yidx, zidx, T, mass_kg);
+		//auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, tidx, xidx, 
+		//	yidx, zidx, T, mass_kg);
+		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, imp, T, 
+			mass_kg);
 
 		// Relative velocity, g. Limit to a sufficiently small number to avoid
 		// overflows that can occur in std::exp and std::sinh.
@@ -110,6 +118,33 @@ namespace Collisions
 			* Constants::charge_e / (Constants::eps0 * mu_ab)};
 		double s {ln_alpha / (4.0 * Constants::pi) * square_term * square_term
 			* ne / (g*g*g) * imp_time_step};
+			
+		/*
+		std::cout << "  imp.get_mass() = " << imp.get_mass()<< '\n';
+		std::cout << "  mu_ab = " << mu_ab << '\n';
+		std::cout << "  T = " << T << '\n';
+		std::cout << "  Te = " << Te << '\n';
+		std::cout << "  bkg_vX = " << bkg_vX << '\n';
+		std::cout << "  bkg_vY = " << bkg_vY << '\n';
+		std::cout << "  bkg_vZ = " << bkg_vZ << '\n';
+		std::cout << "  imp_vX_n = " << imp_vX_n << '\n';
+		std::cout << "  imp_vY_n = " << imp_vY_n << '\n';
+		std::cout << "  imp_vZ_n = " << imp_vZ_n << '\n';
+		std::cout << "  imp_vX = " << imp.get_vX() << '\n';
+		std::cout << "  imp_vY = " << imp.get_vY() << '\n';
+		std::cout << "  imp_vZ = " << imp.get_vZ() << '\n';
+		std::cout << "  g = " << g << '\n';
+		std::cout << "  gX = " << gX << '\n';
+		std::cout << "  gY = " << gY << '\n';
+		std::cout << "  gZ = " << gZ << '\n';
+		std::cout << "  expect_g_sq = " << expect_g_sq << '\n';
+		std::cout << "  ne = " << ne << '\n';
+		std::cout << "  charge = " << imp.get_charge() << '\n';
+		std::cout << "  debye_length = " << debye_length << '\n';
+		std::cout << "  expect_b0 = " << expect_b0 << '\n';
+		std::cout << "  ln_alpha = " << ln_alpha << '\n';
+		std::cout << "  s = " << s << '\n';
+		*/
 
 		// I believe this should be avoided now, but I leave this error message
 		// since you never know.
@@ -126,7 +161,13 @@ namespace Collisions
 				std::cerr << "  imp_vX_n = " << imp_vX_n << '\n';
 				std::cerr << "  imp_vY_n = " << imp_vY_n << '\n';
 				std::cerr << "  imp_vZ_n = " << imp_vZ_n << '\n';
+				std::cerr << "  imp_vX = " << imp.get_vX() << '\n';
+				std::cerr << "  imp_vY = " << imp.get_vY() << '\n';
+				std::cerr << "  imp_vZ = " << imp.get_vZ() << '\n';
 				std::cerr << "  g = " << g << '\n';
+				std::cerr << "  gX = " << gX << '\n';
+				std::cerr << "  gY = " << gY << '\n';
+				std::cerr << "  gZ = " << gZ << '\n';
 				std::cerr << "  expect_g_sq = " << expect_g_sq << '\n';
 				std::cerr << "  ne = " << ne << '\n';
 				std::cerr << "  charge = " << imp.get_charge() << '\n';
@@ -202,10 +243,25 @@ namespace Collisions
 		double cos_eps {std::cos(eps)};
 		double sin_eps {std::sin(eps)};
 
-		// Calculate the h components
-		double hX {g_perp * cos_eps};
-		double hY {-(gY * gX * cos_eps + g * gZ * sin_eps) / g_perp};
-		double hZ {-(gZ * gX * cos_eps - g * gY * sin_eps) / g_perp};
+		// Calculate the h components. If g_perp = 0 then g is
+		// parallel to X and can cause NaNs/infs when we divide by g_perp, so
+		// we handle accordingly.
+		double hX {};
+		double hY {};
+		double hZ {};
+		if (g_perp < Constants::small)
+		{
+			hX = 0.0;
+			hY = g * cos_eps;
+			hZ = g * sin_eps;
+		}
+		else
+		{
+			hX = g_perp * cos_eps;
+			hY = -(gY * gX * cos_eps + g * gZ * sin_eps) / g_perp;
+			hZ = -(gZ * gX * cos_eps - g * gY * sin_eps) / g_perp;
+		}
+
 
 		// Calculate post collision velocities
 		double mu {mass_b / (mass_a + mass_b)};
@@ -244,8 +300,10 @@ namespace Collisions
 		// Will always need electron temperature/density. Trilinearly
 		// interpolate in space and then linearly interpolate in time.
 		// To-do
-		double Te {bkg.get_te()(tidx, xidx, yidx, zidx)};
-		double ne {bkg.get_ne()(tidx, xidx, yidx, zidx)};
+		//double Te {bkg.get_te()(tidx, xidx, yidx, zidx)};
+		//double ne {bkg.get_ne()(tidx, xidx, yidx, zidx)};
+		double Te {bkg.interp_te_at_imp(imp)};
+		double ne {bkg.interp_ne_at_imp(imp)};
 
 		// Load some reusable variables based on which species. If elec = true,
 		// then electrons and ions if not. 
@@ -259,7 +317,8 @@ namespace Collisions
 		else
 		{
 			mass_kg = opts.gkyl_ion_mass_amu() * Constants::amu_to_kg;	
-			T = bkg.get_ti()(tidx, xidx, yidx, zidx);
+			//T = bkg.get_ti()(tidx, xidx, yidx, zidx);
+			T = bkg.interp_ti_at_imp(imp);
 		}
 
 		// Subtlety! Impurity velocity is defined at half time steps, but the collision
@@ -282,11 +341,12 @@ namespace Collisions
 
 		// Calculate s (Eq. 19), making sure to pass in the full time step
 		// velocities.
-		auto [s, gX, gY, gZ] = nanbu_calc_s(imp, bkg, tidx, xidx, yidx, zidx, 
-			imp_time_step, T, mass_kg, Te, ne, imp_vX_n, imp_vY_n, imp_vZ_n);
+		auto [s, gX, gY, gZ] = nanbu_calc_s(imp, bkg, imp_time_step, T, 
+			mass_kg, Te, ne, imp_vX_n, imp_vY_n, imp_vZ_n);
 
 		// Calcluate A (Eq. 13)
 		double A {nanbu_calc_A(s)};
+		//std::cout << "A = " << A << '\n';
 
 		// Calculate deflection angle, chi (Eq. 17)
 		double chi {nanbu_calc_chi(s, A)};
