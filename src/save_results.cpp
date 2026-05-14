@@ -626,6 +626,11 @@ namespace SaveResults
 		save_vector_4d(out_group, imp_stats.get_charge(), "qz", 
 			dim1, dim2, dim3, dim4, "average impurity charge", "()");
 
+		// Nanbu impurity-ion collisionality strength factor
+		save_vector_4d(out_group, imp_stats.get_s(), "nanbu_s", 
+			dim1, dim2, dim3, dim4, "average Nanbu imp-ion collisionality strength", 
+			"()");
+
 		// Impurity track
 		if (opts.save_track_int() == 1)
 		{

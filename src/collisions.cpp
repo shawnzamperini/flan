@@ -11,6 +11,7 @@
 #include "background.h"
 #include "constants.h"
 #include "impurity.h"
+#include "impurity_stats.h"
 #include "nanbu_s_a.h"
 #include "options.h"
 #include "random.h"
@@ -30,7 +31,8 @@ namespace Collisions
 	//	const int yidx, const int zidx, const double T, const double m)
 	std::tuple<double, double, double> sample_bkg_velocity(
 		const Background::Background& bkg, Impurity::Impurity& imp, 
-		const double T, const double m)
+		const double T, const double uX, const double uY, const double uZ,
+		const double m)
 	{
 		// Get mean parallel flow, which is the drifting term in a drifting
 		// Maxwellian. This is the ion velocity, which is assumed to be the
@@ -38,9 +40,9 @@ namespace Collisions
 		//double uX {bkg.get_uX()(tidx, xidx, yidx, zidx)};
 		//double uY {bkg.get_uY()(tidx, xidx, yidx, zidx)};
 		//double uZ {bkg.get_uZ()(tidx, xidx, yidx, zidx)};
-		double uX {bkg.interp_uX_at_imp(imp)};
-		double uY {bkg.interp_uY_at_imp(imp)};
-		double uZ {bkg.interp_uZ_at_imp(imp)};
+		//double uX {bkg.interp_uX_at_imp(imp)};
+		//double uY {bkg.interp_uY_at_imp(imp)};
+		//double uZ {bkg.interp_uZ_at_imp(imp)};
 
 		// Sampling from a drifting Maxwellian, which can be done by just
 		// sampling from a normally distributed number with mean = drift and
@@ -55,8 +57,7 @@ namespace Collisions
 		std::tie(vZ, std::ignore) = Random::get_two_norm(uZ, mu);
 
 		// Return as tuple
-		//return std::make_tuple(vX, vY, vZ);
-		return std::make_tuple(uX, uY, uZ);
+		return std::make_tuple(vX, vY, vZ);
 	}
 
 	// Calculate s term in Nanbu collision model
@@ -66,22 +67,73 @@ namespace Collisions
 		const double Te, const double ne, const double imp_vX_n, 
 		const double imp_vY_n, const double imp_vZ_n)
 	{
-		// Take random sample of background species being collided with
-		//auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, tidx, xidx, 
-		//	yidx, zidx, T, mass_kg);
-		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, imp, T, 
-			mass_kg);
+		// There is an insanely subtle thing to comment on here that has real
+		// effects. The Nanbu algorithm uses the instantaneous g to calcuate
+		// s. This means that particle velocities far from the background
+		// velocity get disaproportionally large kicks since s ~ g-3. This
+		// can cause the average many-particle velocity to actually overshoot
+		// the mean flow as they accelerate up to it from rest, ignoring all
+		// other collisional phenomena. This is technically incorrect and 
+		// unphysical, so we modify the algorithm as such:
+		//   - Sample the background velocity including thermal sampling,
+		//     vX, vY, vZ. This determines the X,Y,Z direction of g and allows
+		//     random collisions with randomly directed background particles
+		//	   to stay part of the algorithm. We call these the instantaneous
+		//     relative velocities.
+		//   - Enforce |g| to be that from using the flow velocity, no thermal
+		//     sampling, and rescale gX, gY, gZ. This prevents overshooting 
+		//     the mean flow. We call this the mean relative velocity.
 
-		// Relative velocity, g. Limit to a sufficiently small number to avoid
-		// overflows that can occur in std::exp and std::sinh.
-		double gX {imp.get_vX() - bkg_vX};
-		double gY {imp.get_vY() - bkg_vY};
-		double gZ {imp.get_vZ() - bkg_vZ};
+		// Background flow at impurity location
+		double uX {bkg.interp_uX_at_imp(imp)};
+		double uY {bkg.interp_uY_at_imp(imp)};
+		double uZ {bkg.interp_uZ_at_imp(imp)};
+
+		// Random sample of background species instantanoues velocity 
+		// (flow + thermal sampling) that particle is colliding with.
+		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, imp, T, uX, 
+			uY, uZ, mass_kg);
+		//double bkg_vX {uX};
+		//double bkg_vY {uY};
+		//double bkg_vZ {uZ};
+
+		// XYZ components of instantaneous relative velocity
+		double inst_gX {imp.get_vX() - bkg_vX};
+		double inst_gY {imp.get_vY() - bkg_vY};
+		double inst_gZ {imp.get_vZ() - bkg_vZ};
+
+		// XYZ components of mean relative velocity
+		double mean_gX {imp.get_vX() - uX};
+		double mean_gY {imp.get_vY() - uY};
+		double mean_gZ {imp.get_vZ() - uZ};
+
+		// Ignore this method
+		//double mean_gX {inst_gX};
+		//double mean_gY {inst_gY};
+		//double mean_gZ {inst_gZ};
+
+
 		//double gX {imp_vX_n - bkg_vX};
 		//double gY {imp_vY_n - bkg_vY};
 		//double gZ {imp_vZ_n - bkg_vZ};
-		double g {std::sqrt(gX*gX + gY*gY + gZ*gZ)};
-		if (g < Constants::small) g = 0.001;
+		//double g {std::sqrt(gX*gX + gY*gY + gZ*gZ)};
+		//if (g < Constants::small) g = 0.001;
+
+		// Magnitude of instantaneous and mean relative velocities.
+		double mean_g {std::sqrt(mean_gX*mean_gX + mean_gY*mean_gY 
+			+ mean_gZ*mean_gZ)};
+		double inst_g {std::sqrt(inst_gX*inst_gX + inst_gY*inst_gY 
+			+ inst_gZ*inst_gZ)};
+
+		// Limit to a sufficiently small number to avoid overflows that can 
+		// occur in std::exp and std::sinh later on.
+		mean_g = std::max(mean_g, 0.001);
+		inst_g = std::max(inst_g, 0.001);
+
+		// Scale the instantanous velocity magnitude to equal the mean
+		inst_gX = inst_gX * mean_g / inst_g;
+		inst_gY = inst_gY * mean_g / inst_g;
+		inst_gZ = inst_gZ * mean_g / inst_g;
 
 		// Reduced mass of impurity and species colliding with
 		double mu_ab {imp.get_mass() * mass_kg / (imp.get_mass() + mass_kg)};
@@ -99,6 +151,12 @@ namespace Collisions
 		// Debye length and Coulumb logarithm
 		double debye_length {calc_debye_length(Te, ne)};
 		double ln_alpha {std::log(debye_length / expect_b0)};
+
+		// We can't let debye_length < b0, this can mess up the Nanbu model
+		// because it makes ln_alpha < 0. In real plasmas it shouldn't go 
+		// below 1, so clamp it.
+		ln_alpha = std::max(ln_alpha, 1.0);
+
 		if (std::isnan(ln_alpha))
 		{
 			#pragma omp critical
@@ -113,37 +171,41 @@ namespace Collisions
 			}
 		}
 
-		// Calculate s (Eq. 19). Assume ni=ne and singly charge background
+		// Calculate s (Eq. 19). Assume ni=ne and singly charge background.
 		double square_term {imp.get_charge() * Constants::charge_e 
 			* Constants::charge_e / (Constants::eps0 * mu_ab)};
+		//double s {ln_alpha / (4.0 * Constants::pi) * square_term * square_term
+		//	* ne / (g*g*g) * imp_time_step};
 		double s {ln_alpha / (4.0 * Constants::pi) * square_term * square_term
-			* ne / (g*g*g) * imp_time_step};
+			* ne / (inst_g*inst_g*inst_g) * imp_time_step};
 			
 		/*
-		std::cout << "  imp.get_mass() = " << imp.get_mass()<< '\n';
-		std::cout << "  mu_ab = " << mu_ab << '\n';
+		std::cout << "  s = " << s << '\n';
 		std::cout << "  T = " << T << '\n';
 		std::cout << "  Te = " << Te << '\n';
 		std::cout << "  bkg_vX = " << bkg_vX << '\n';
 		std::cout << "  bkg_vY = " << bkg_vY << '\n';
 		std::cout << "  bkg_vZ = " << bkg_vZ << '\n';
-		std::cout << "  imp_vX_n = " << imp_vX_n << '\n';
-		std::cout << "  imp_vY_n = " << imp_vY_n << '\n';
-		std::cout << "  imp_vZ_n = " << imp_vZ_n << '\n';
+		std::cout << "  bkg_uX = " << uX << '\n';
+		std::cout << "  bkg_uY = " << uY << '\n';
+		std::cout << "  bkg_uZ = " << uZ << '\n';
 		std::cout << "  imp_vX = " << imp.get_vX() << '\n';
 		std::cout << "  imp_vY = " << imp.get_vY() << '\n';
 		std::cout << "  imp_vZ = " << imp.get_vZ() << '\n';
-		std::cout << "  g = " << g << '\n';
-		std::cout << "  gX = " << gX << '\n';
-		std::cout << "  gY = " << gY << '\n';
-		std::cout << "  gZ = " << gZ << '\n';
+		std::cout << "  inst_g = " << inst_g << '\n';
+		std::cout << "  inst_gX = " << inst_gX << '\n';
+		std::cout << "  inst_gY = " << inst_gY << '\n';
+		std::cout << "  inst_gZ = " << inst_gZ << '\n';
+		std::cout << "  mean_g = " << mean_g << '\n';
+		std::cout << "  mean_gX = " << mean_gX << '\n';
+		std::cout << "  mean_gY = " << mean_gY << '\n';
+		std::cout << "  mean_gZ = " << mean_gZ << '\n';
 		std::cout << "  expect_g_sq = " << expect_g_sq << '\n';
 		std::cout << "  ne = " << ne << '\n';
 		std::cout << "  charge = " << imp.get_charge() << '\n';
 		std::cout << "  debye_length = " << debye_length << '\n';
 		std::cout << "  expect_b0 = " << expect_b0 << '\n';
 		std::cout << "  ln_alpha = " << ln_alpha << '\n';
-		std::cout << "  s = " << s << '\n';
 		*/
 
 		// I believe this should be avoided now, but I leave this error message
@@ -164,10 +226,14 @@ namespace Collisions
 				std::cerr << "  imp_vX = " << imp.get_vX() << '\n';
 				std::cerr << "  imp_vY = " << imp.get_vY() << '\n';
 				std::cerr << "  imp_vZ = " << imp.get_vZ() << '\n';
-				std::cerr << "  g = " << g << '\n';
-				std::cerr << "  gX = " << gX << '\n';
-				std::cerr << "  gY = " << gY << '\n';
-				std::cerr << "  gZ = " << gZ << '\n';
+				std::cerr << "  inst_g = " << inst_g << '\n';
+				std::cerr << "  inst_gX = " << inst_gX << '\n';
+				std::cerr << "  inst_gY = " << inst_gY << '\n';
+				std::cerr << "  inst_gZ = " << inst_gZ << '\n';
+				std::cerr << "  mean_g = " << mean_g << '\n';
+				std::cerr << "  mean_gX = " << mean_gX << '\n';
+				std::cerr << "  mean_gY = " << mean_gY << '\n';
+				std::cerr << "  mean_gZ = " << mean_gZ << '\n';
 				std::cerr << "  expect_g_sq = " << expect_g_sq << '\n';
 				std::cerr << "  ne = " << ne << '\n';
 				std::cerr << "  charge = " << imp.get_charge() << '\n';
@@ -177,22 +243,26 @@ namespace Collisions
 			}
 		}
 
-		return std::make_tuple(s, gX, gY, gZ);
+		//return std::make_tuple(s, gX, gY, gZ);
+		return std::make_tuple(s, inst_gX, inst_gY, inst_gZ);
 	}
 
 	// Calculate A term in Nanbu collision model
 	double nanbu_calc_A(const double s)
 	{
-		// We apply the approximation from Nanbu that generally covers outside
-		// the range of applicability.
+		// Not very collisional approximation
 		if (s < 0.01)
 		{
 			return 1.0 / s;
 		}
+
+		// Very collisional approximation
 		else if (s > 5.0)
 		{
 			return 3.0 * std::exp(-s);
 		}
+
+		// Little bit of collisional, little bit of not collisional
 		else
 		{
 			// Use interpolation function to find A value from precomputed 
@@ -212,16 +282,24 @@ namespace Collisions
 		// Calculate and return chi. If A is too large we can get an exponential
 		// overflow. So in that case we apply the approximation. 
 		double cos_chi {};
-		if (A > 50.0)
+		//if (A > 50.0)
+		if (s < 0.02)  // A ~ 50
 		{
 			cos_chi = 1.0 + s * std::log(U);
 		}
+
+		// For large values of s (very small A), then we can get nan's from
+		// sinh(A) below. Nanbu handles this by pointing out scattering is
+		// essentially isotropic, so we can just assign cos_chi to a random
+		// number between -1 and 1.
+		else if (s > 6) cos_chi = 2.0 * U - 1;
+
 		else
 		{
 			// If A is too small, then sinh can return nan. Physically, this
 			// means the plasma is too collisionless, so there is no real
 			// deflection, so we return 0 if that happens. 
-			if (A < 1e-5) return 0.0;
+			//if (A < 1e-5) return 0.0;
 
 			// Normal calculation
 			cos_chi = 1.0 / A * std::log(std::exp(-A) + 2.0 * U * std::sinh(A));
@@ -262,17 +340,35 @@ namespace Collisions
 			hZ = -(gZ * gX * cos_eps - g * gY * sin_eps) / g_perp;
 		}
 
-
 		// Calculate post collision velocities
 		double mu {mass_b / (mass_a + mass_b)};
 		double cos_chi {std::cos(chi)};
 		double sin_chi {std::sin(chi)};
+		
+		// From Nanbu paper, assuming self-consistent particle interaction
 		double vX_post {imp.get_vX() - mu * (gX * (1.0 - cos_chi) 
 			+ hX * sin_chi)};
 		double vY_post {imp.get_vY() - mu * (gY * (1.0 - cos_chi) 
 			+ hY * sin_chi)};
 		double vZ_post {imp.get_vZ() - mu * (gZ * (1.0 - cos_chi) 
 			+ hZ * sin_chi)};
+
+		// AI suggested the sign in front of the h term was wrong
+		//double vX_post {imp.get_vX() - mu * (gX * (1.0 - cos_chi) 
+		//	- hX * sin_chi)};
+		//double vY_post {imp.get_vY() - mu * (gY * (1.0 - cos_chi) 
+		//	- hY * sin_chi)};
+		//double vZ_post {imp.get_vZ() - mu * (gZ * (1.0 - cos_chi) 
+		//	- hZ * sin_chi)};
+
+		// From AI. It suggested that a) the sign infront of the h term was
+		// wrong and b) that since we are in the test particle limit we don't
+		// want mu and gave this derivation instead.
+		//double vX_post {imp.get_vX() + gX * (cos_chi - 1.0) + hX * sin_chi};
+		//double vY_post {imp.get_vY() + gY * (cos_chi - 1.0) + hY * sin_chi};
+		//double vZ_post {imp.get_vZ() + gZ * (cos_chi - 1.0) + hZ * sin_chi};
+
+		// Full time step option, unsure if needed...
 		//double vX_post {imp_vX_n - mu * (gX * (1.0 - cos_chi) 
 		//	+ hX * sin_chi)};
 		//double vY_post {imp_vY_n - mu * (gY * (1.0 - cos_chi) 
@@ -286,7 +382,8 @@ namespace Collisions
 
 	void nanbu_coll(Impurity::Impurity& imp, const Background::Background& bkg,
 		const int tidx, const int xidx, const int yidx, const int zidx,
-		const Options::Options& opts, bool elec, const double imp_time_step)
+		const Options::Options& opts, bool elec, const double imp_time_step,
+		Impurity::Statistics& imp_stats)
 	{
 		// Derivation and steps taken from:
 		// Nanbu, K. Theory of cumulative small-angle collisions in plasmas. 
@@ -299,7 +396,6 @@ namespace Collisions
 
 		// Will always need electron temperature/density. Trilinearly
 		// interpolate in space and then linearly interpolate in time.
-		// To-do
 		//double Te {bkg.get_te()(tidx, xidx, yidx, zidx)};
 		//double ne {bkg.get_ne()(tidx, xidx, yidx, zidx)};
 		double Te {bkg.interp_te_at_imp(imp)};
@@ -339,14 +435,31 @@ namespace Collisions
 		constexpr double imp_vY_n {0.0};
 		constexpr double imp_vZ_n {0.0};
 
+		// The Nanbu model has three main variables in it:
+		// s:    How collisional is this step?
+		// A(s): What is the shape of the scattering distribution? A(s) is
+		//       the PDF.
+		// chi:  What is the actual deflection angle this time? It is calculated
+		//       via direct inversion from the CDF formed from our PDF (A(s)). 
+
 		// Calculate s (Eq. 19), making sure to pass in the full time step
 		// velocities.
 		auto [s, gX, gY, gZ] = nanbu_calc_s(imp, bkg, imp_time_step, T, 
 			mass_kg, Te, ne, imp_vX_n, imp_vY_n, imp_vZ_n);
 
+		// Add to running sum of s values in each cell so we can do an average
+		// later. Only consider for ions since they are the dominant collision
+		// but no reason this can't be expanded for electrons as well. 
+		// Generally leave this commented out unless you are investigating the 
+		// collision model.
+		if (!elec)
+		{
+			imp_stats.add_s(tidx, xidx, yidx, zidx, static_cast<BkgFPType>(s));
+		}
+
 		// Calcluate A (Eq. 13)
 		double A {nanbu_calc_A(s)};
-		//std::cout << "A = " << A << '\n';
+		//std::cout << "s = " << s << "\tA = " << A << '\n';
 
 		// Calculate deflection angle, chi (Eq. 17)
 		double chi {nanbu_calc_chi(s, A)};

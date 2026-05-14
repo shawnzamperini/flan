@@ -1184,11 +1184,11 @@ class FlanPlots:
 
 			# Hardcoded values that this test uses (see read_test.cpp)
 			BX = 1.0
-			uX = 10000
-			Ti = 10.0
+			uX = 1000
+			Ti = 1
 			mi = 2.014
-			ni = 1e19
-			ln_alpha = 15
+			ni = 1e18
+			ln_alpha = 10
 			#ln_alpha = 5
 			Z = self.nc["input"]["imp_init_charge"][0] # Ion/recomb is OFF
 
@@ -1200,9 +1200,35 @@ class FlanPlots:
 			# Average velocity of particles that all start at the same
 			# time and place. Ignore non-zero locations.
 			vx = np.zeros(len(t))
+			vx_std = np.zeros(len(t))
+			s = np.zeros(len(t))
 			for i in range(len(t)):
 				with_counts = self.nc["output"]["Nz"][i] > 0
 				vx[i] = self.nc["output"]["v_X"][i][with_counts].mean()
+				vx_std[i] = self.nc["output"]["v_X"][i][with_counts].std()
+				s[i] = self.nc["output"]["nanbu_s"][i][with_counts].mean()
+
+			# Remove NaN data
+			notnan = ~np.isnan(vx)
+			t = t[notnan]
+			vx = vx[notnan]
+			vx_std = vx_std[notnan]
+			s = s[notnan]
+
+			from scipy.optimize import curve_fit
+
+			def vx_model(t, nu):
+				return uX * (1 - np.exp(-nu * t))
+
+			# --- 3. Fit ν_eff ---
+			popt, pcov = curve_fit(vx_model, t, vx, p0=[1e4])
+			nu_eff = popt[0]
+
+			print("Fitted ν_eff =", nu_eff)
+
+			# --- 4. Plot to verify ---
+			t_fit = np.linspace(t.min(), t.max(), 500)
+			vx_fit = vx_model(t_fit, nu_eff)
 
 			# Running average window filter
 			dt = t[1] - t[0]
@@ -1213,6 +1239,9 @@ class FlanPlots:
 			# Stopping power time from Stangeby 6.35, in s
 			tau_s = 1.47e13 * m_amu * Ti * np.sqrt(Ti / mi) \
 				/ ((1 + mi / m_amu) * ni * Z**2 * ln_alpha)
+			print(f"tau_s = {tau_s:.2e} s")
+			print(f"nu_s = {1/tau_s:.2e} s")
+			print(f"nanbu_s = {s.mean():.2f}")
 
 			# Friction force
 			#ff_avg = m * (uX - vz_t_avg) / tau_s
@@ -1221,13 +1250,29 @@ class FlanPlots:
 			# Simple first-order ODE to solve for vz from F=ma
 			vx_analytic = uX * (1 - np.exp(-t / tau_s))
 
+			for i in range(len(t)):
+				t_i = t[i]
+				vx_i = vx[i]
+				vxa_i = vx_analytic[i]
+				print(f"{t_i:.2e}  {vx_i:.2e} {vxa_i:.2e}") 
+
 			fig, ax1 = plt.subplots(figsize=figsize)
+			ax1.fill_between(t, vx-vx_std, vx+vx_std, color="tab:red", alpha=0.3)
 			ax1.plot(t, vx, color="tab:red", lw=3, label="Flan")
+			ax1.plot(t_fit, vx_fit, color="k", lw=3)
+			ax1.plot(t_fit, vx_fit, color="tab:red", lw=2)
 			#ax1.plot(t, vx_avg, color="tab:red", lw=3, label="Flan")
 			ax1.plot(t, vx_analytic, color="k", lw=3, linestyle="--", 
 				label="Analytic")
 			ax1.set_xlabel("Time (s)", fontsize=fontsize)
-			ax1.set_ylabel("vX (m/s)", fontsize=fontsize)
+			ax1.set_ylabel("vX (m/s)", fontsize=fontsize, color="tab:red")
+
+			ax11 = ax1.twinx()
+			ax11.plot(t, s, lw=3, color="k")
+			ax11.plot(t, s, lw=2, color="tab:purple")
+			ax11.set_ylabel("Nanbu - s", fontsize=fontsize, color="tab:purple")
+			ax11.set_ylim([0, 40])
+
 			fig.tight_layout()
 			fig.show()
 

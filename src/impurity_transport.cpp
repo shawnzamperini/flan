@@ -646,11 +646,15 @@ namespace Impurity
 		// is modified within function. First call is for ions (the false) and
 		// second call is for electrons (the true).
 		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, false, 
-			imp_time_step);
+			imp_time_step, imp_stats);
 
-		// Turning off electron collisions just to debug something
-		//Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
-		//	imp_time_step);
+		// friction_force test case only considers ion collisions to compare
+		// against expected flow
+		if (opts.test_opt_int() != 5)
+		{
+			Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
+				imp_time_step, imp_stats);
+		}
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
@@ -1071,6 +1075,8 @@ namespace Impurity
 		imp_stats.calc_vels();
 		std::cout << "  Charge...\n";
 		imp_stats.calc_charge();
+		std::cout << "  Nanbu - s...\n";
+		imp_stats.calc_s();
 		
 		return imp_stats;
 

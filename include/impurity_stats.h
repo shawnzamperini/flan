@@ -42,6 +42,7 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType> m_vy {};
 		Vectors::Vector4D<BkgFPType> m_vz {};
 		Vectors::Vector4D<BkgFPType> m_charge {};
+		Vectors::Vector4D<BkgFPType> m_s {};
 
 	public:
 		
@@ -67,6 +68,7 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType>& get_vy();
 		Vectors::Vector4D<BkgFPType>& get_vz();
 		Vectors::Vector4D<BkgFPType>& get_charge();
+		Vectors::Vector4D<BkgFPType>& get_s();
 
 		// Overload of + to add counts and weights together, returned as a 
 		// new Statistics object.
@@ -91,6 +93,10 @@ namespace Impurity
 		void add_charge(const int tidx, const int xidx, const int yidx, 
 			const int zidx, const BkgFPType value);
 
+		// Function to increase s
+		void add_s(const int tidx, const int xidx, const int yidx, 
+			const int zidx, const BkgFPType value);
+
 		// Update particle track.
 		void update_track(const Impurity& imp);
 
@@ -104,6 +110,9 @@ namespace Impurity
 
 		// Calculate the average charge. 
 		void calc_charge();
+
+		// Calculate the average Nanbu collisionality strength. 
+		void calc_s();
 	};
 
 }

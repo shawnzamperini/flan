@@ -28,7 +28,7 @@ namespace Test
 		std::vector<double> test_grid_z = {};
 
 		// Vectors to hold the cell center coordinates
-		auto test_t = Utilities::linspace(0.0, 100e-6, tdim);
+		auto test_t = Utilities::linspace(0.0, 50e-6, tdim);
 		std::vector<double> test_x = {};
 		std::vector<double> test_y = {};
 		std::vector<double> test_z = {};
@@ -203,9 +203,9 @@ namespace Test
 			int idx {test_ne.calc_index(i,j,k,l)};
 
 			// All test cases use constant values for density and temperature
-			test_ne.get_data()[idx] = 1e19;
-			test_te.get_data()[idx] = 10;
-			test_ti.get_data()[idx] = 10;
+			test_ne.get_data()[idx] = 1e18;
+			test_te.get_data()[idx] = 1;
+			test_ti.get_data()[idx] = 1;
 			//test_vp.get_data()[idx] = 0.0; // Not needed
 
 			// Zero electric field in these tests
@@ -293,7 +293,7 @@ namespace Test
 			// Friction force has flow of 1,000 m/s in X direction
 			else if (opts.test_opt_int() == 5)
 			{
-				test_uX.get_data()[idx] = 10000.0;
+				test_uX.get_data()[idx] = 1000.0;
 				test_uY.get_data()[idx] = 0.0;
 				test_uZ.get_data()[idx] = 0.0;
 			}

@@ -65,6 +65,10 @@ namespace Impurity
 			dim4});
 		m_vz.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
 			dim4});
+
+		// Collisionality strength from Nanbu model
+		m_s.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
+			dim4});
 	}
 
 	/**
@@ -201,6 +205,16 @@ namespace Impurity
 	Vectors::Vector4D<BkgFPType>& Statistics::get_charge() {return m_charge;}
 
 	/**
+	* @brief Accessor for Nanbu collisionality data
+	* @return Vector4D<BkgFPType>
+	* @sa calc_s()
+	*
+	* calc_s() is used to turn the aggregated data into average
+	* s values at each location.
+	*/
+	Vectors::Vector4D<BkgFPType>& Statistics::get_s() {return m_s;}
+
+	/**
 	* @brief Overload + to add two Statistics together
 	* @param other A Statistics object
 	* @return Statistics object with the summed data
@@ -214,6 +228,7 @@ namespace Impurity
 		ret_stats.m_counts = m_counts + other.m_counts;
 		ret_stats.m_weights = m_weights + other.m_weights;
 		ret_stats.m_charge = m_charge + other.m_charge;
+		ret_stats.m_s = m_s + other.m_s;
 		ret_stats.m_vX = m_vX + other.m_vX;
 		ret_stats.m_vY = m_vY + other.m_vY;
 		ret_stats.m_vZ = m_vZ + other.m_vZ;
@@ -296,6 +311,20 @@ namespace Impurity
 		const int yidx, const int zidx, const BkgFPType value)
 	{
 		m_charge(tidx, xidx, yidx, zidx) += value;
+	}
+
+	/**
+	* @brief Increment Nanbu collisionality strength at the specified indices
+	* @param tidx Time index
+	* @param xidx x index
+	* @param yidx y index
+	* @param zidx z index
+	* @param value s to add to the cell
+	*/
+	void Statistics::add_s(const int tidx, const int xidx, 
+		const int yidx, const int zidx, const BkgFPType value)
+	{
+		m_s(tidx, xidx, yidx, zidx) += value;
 	}
 
 	// Add impurity position to track vectors. This is mainly for testing
@@ -425,6 +454,36 @@ namespace Impurity
 			else
 			{
 				m_charge(i,j,k,l) = 0.0;
+			}
+		}
+		}
+		}	
+		}
+	}
+
+	/**
+	* @brief Calculate the average s at each cell location
+	*/
+	void Statistics::calc_s()
+	{
+		// Average s is just the running sum divided by the number of
+		// counts in the cell.
+		for (int i {}; i < m_dim1; ++i)
+		{
+		for (int j {}; j < m_dim2; ++j)
+		{
+		for (int k {}; k < m_dim3; ++k)
+		{
+		for (int l {}; l < m_dim4; ++l)
+		{
+			int counts {m_counts(i,j,k,l)};
+			if (counts > 0)
+			{
+				m_s(i,j,k,l) /= counts;
+			}
+			else
+			{
+				m_s(i,j,k,l) = 0.0;
 			}
 		}
 		}
