@@ -349,7 +349,7 @@ class FlanPlots:
 	def plot_frames_xy(self, data_name, frame_start, frame_end, z0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
 		vmin=None, vmax=None, save_path=None, xlabel="x (m)", ylabel="y (m)",
-		cbar_label=None, rsep=0.0, own_data=None):
+		cbar_label=None, rsep=0.0, aspect="auto", own_data=None):
 		"""
 		Combine multiple plots from plot_frame_xy into an animation.
 		"""
@@ -404,7 +404,7 @@ class FlanPlots:
 		mesh = ax1.pcolormesh(X-rsep, Y, data_xy.T, cmap=cmap, norm=norm)
 		cbar = fig.colorbar(mesh, cax=cax)
 		ax1.set_facecolor("grey")
-		ax1.set_aspect("equal")
+		ax1.set_aspect(aspect)
 		ax1.set_xlabel(xlabel, fontsize=g_fontsize)
 		ax1.set_ylabel(ylabel, fontsize=g_fontsize)
 		ax1.set_title("Frame {}".format(frame_start), fontsize=g_fontsize)
