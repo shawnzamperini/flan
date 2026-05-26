@@ -25,6 +25,13 @@ namespace Impurity
 		int m_dim3 {};
 		int m_dim4 {};
 		int m_size {};
+		std::vector<float> m_track_t {};
+		std::vector<float> m_track_x {};
+		std::vector<float> m_track_y {};
+		std::vector<float> m_track_z {};
+		std::vector<float> m_track_vx {};
+		std::vector<float> m_track_vy {};
+		std::vector<float> m_track_vz {};
 		Vectors::Vector4D<int> m_counts {};
 		Vectors::Vector4D<BkgFPType> m_weights {};
 		Vectors::Vector4D<BkgFPType> m_density {};
@@ -35,6 +42,7 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType> m_vy {};
 		Vectors::Vector4D<BkgFPType> m_vz {};
 		Vectors::Vector4D<BkgFPType> m_charge {};
+		Vectors::Vector4D<BkgFPType> m_s {};
 
 	public:
 		
@@ -43,6 +51,13 @@ namespace Impurity
 			const int dim4);
 
 		// Accessors
+		std::vector<float>& get_track_t();
+		std::vector<float>& get_track_x();
+		std::vector<float>& get_track_y();
+		std::vector<float>& get_track_z();
+		std::vector<float>& get_track_vx();
+		std::vector<float>& get_track_vy();
+		std::vector<float>& get_track_vz();
 		Vectors::Vector4D<int>& get_counts();
 		Vectors::Vector4D<BkgFPType>& get_weights();
 		Vectors::Vector4D<BkgFPType>& get_density();
@@ -53,6 +68,7 @@ namespace Impurity
 		Vectors::Vector4D<BkgFPType>& get_vy();
 		Vectors::Vector4D<BkgFPType>& get_vz();
 		Vectors::Vector4D<BkgFPType>& get_charge();
+		Vectors::Vector4D<BkgFPType>& get_s();
 
 		// Overload of + to add counts and weights together, returned as a 
 		// new Statistics object.
@@ -77,6 +93,13 @@ namespace Impurity
 		void add_charge(const int tidx, const int xidx, const int yidx, 
 			const int zidx, const BkgFPType value);
 
+		// Function to increase s
+		void add_s(const int tidx, const int xidx, const int yidx, 
+			const int zidx, const BkgFPType value);
+
+		// Update particle track.
+		void update_track(const Impurity& imp);
+
 		// Calculate the impurity density using the data stored in counts and 
 		// weights.
 		void calc_density(const Background::Background& bkg, 
@@ -87,6 +110,9 @@ namespace Impurity
 
 		// Calculate the average charge. 
 		void calc_charge();
+
+		// Calculate the average Nanbu collisionality strength. 
+		void calc_s();
 	};
 
 }

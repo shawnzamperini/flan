@@ -35,6 +35,11 @@ namespace OpenADAS
 	public:
 		
 		/**
+		* @brief Empty constructor
+		*/
+		OpenADAS();
+
+		/**
 		* @brief Constructor
 		*
 		* @param openadas_root Full path to the directory containing OpenADAS 

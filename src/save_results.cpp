@@ -256,6 +256,14 @@ namespace SaveResults
 		save_string(input_group, opts.case_name(), "case_name", dim_str, 
 			"case name");
 
+		// Background plasma source and test options	
+		save_string(input_group, opts.bkg_source(), "bkg_source", dim_str, 
+			"source of background plasma");
+		save_string(input_group, opts.test_opt(), "test_opt", dim_str, 
+			"test background plasma option");
+		save_string(input_group, opts.save_track(), "save_track", dim_str, 
+			"save particle t,x,y,z track option");
+
 		// Options related to reading in Gkeyll files
 		save_string(input_group, opts.gkyl_dir(), "gkyl_dir", dim_str, 
 			"directory containing Gkeyll data");
@@ -617,6 +625,31 @@ namespace SaveResults
 		// Impurity charge
 		save_vector_4d(out_group, imp_stats.get_charge(), "qz", 
 			dim1, dim2, dim3, dim4, "average impurity charge", "()");
+
+		// Nanbu impurity-ion collisionality strength factor
+		save_vector_4d(out_group, imp_stats.get_s(), "nanbu_s", 
+			dim1, dim2, dim3, dim4, "average Nanbu imp-ion collisionality strength", 
+			"()");
+
+		// Impurity track
+		if (opts.save_track_int() == 1)
+		{
+			netCDF::NcDim track_dim {nc_file.getDim("track")};
+			save_vector_1d(out_group, imp_stats.get_track_t(), "track_t", 
+				track_dim, "t particle track", "(?)");
+			save_vector_1d(out_group, imp_stats.get_track_x(), "track_x", 
+				track_dim, "x particle track", "(?)");
+			save_vector_1d(out_group, imp_stats.get_track_y(), "track_y", 
+				track_dim, "y particle track", "(?)");
+			save_vector_1d(out_group, imp_stats.get_track_z(), "track_z", 
+				track_dim, "z particle track", "(?)");
+			save_vector_1d(out_group, imp_stats.get_track_vx(), "track_vx", 
+				track_dim, "x particle track velocity", "(?)");
+			save_vector_1d(out_group, imp_stats.get_track_vy(), "track_vy", 
+				track_dim, "y particle track velocity", "(?)");
+			save_vector_1d(out_group, imp_stats.get_track_vz(), "track_vz", 
+				track_dim, "z particle track velocity", "(?)");
+		}
 	}
 
 	void save_netcdf(const Background::Background& bkg, 
@@ -662,6 +695,10 @@ namespace SaveResults
 		netCDF::NcDim grid_dim2 {nc_file.addDim("grid x", bkg.get_dim2() + 1)};
 		netCDF::NcDim grid_dim3 {nc_file.addDim("grid y", bkg.get_dim3() + 1)};
 		netCDF::NcDim grid_dim4 {nc_file.addDim("grid z", bkg.get_dim4() + 1)};
+
+		// Dimensions for the particle track
+		netCDF::NcDim track_dim {nc_file.addDim("track", 
+			imp_stats.get_track_x().size())};
 
 		// Details about the simulation (system, time run, time spent, etc.)
 		// To-do

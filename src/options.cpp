@@ -45,10 +45,14 @@ namespace Options
 		// this bug is avoided by accessing the control integers via
 		// get_control_int, which will tell you if a control integer hasn't
 		// been correctly initalized (by not including it here).
+		set_bkg_source(m_bkg_source);
+		set_test_opt(m_test_opt);
+		set_save_track(m_save_track);
 		set_imp_tstart_opt(m_imp_tstart_opt);
 		set_imp_xstart_opt(m_imp_xstart_opt);
 		set_imp_ystart_opt(m_imp_ystart_opt);
 		set_imp_zstart_opt(m_imp_zstart_opt);
+		set_imp_temp_start_opt(m_imp_temp_start_opt);
 		set_imp_collisions(m_imp_collisions);
 		set_var_red_split(m_var_red_split);
 		set_var_red_import(m_var_red_import);
@@ -77,6 +81,39 @@ namespace Options
 		// Assign control integers
 		if (bkg_source == "test") m_bkg_source_int = 0;
 		else if (bkg_source == "gkeyll") m_bkg_source_int = 1;
+	}
+
+	// test_opt
+	void Options::set_test_opt(std::string test_opt) 
+	{
+		if (check_input<std::string>("test_opt", test_opt,
+			{"gyrate", "exb", "gradb", "polarization", "curvature", 
+			"friction_force"}))
+		{
+			m_test_opt = test_opt;
+		}
+
+		// Assign control integers
+		if (test_opt == "gyrate") m_test_opt_int = 0;
+		else if (test_opt == "exb") m_test_opt_int = 1;
+		else if (test_opt == "gradb") m_test_opt_int = 2;
+		else if (test_opt == "polarization") m_test_opt_int = 3;
+		else if (test_opt == "curvature") m_test_opt_int = 4;
+		else if (test_opt == "friction_force") m_test_opt_int = 5;
+	}
+
+	// save_track
+	void Options::set_save_track(std::string save_track) 
+	{
+		if (check_input<std::string>("save_track", save_track,
+			{"off", "on"}))
+		{
+			m_save_track = save_track;
+		}
+
+		// Assign control integers
+		if (save_track == "off") m_save_track_int = 0;
+		else if (save_track == "on") m_save_track_int = 1;
 	}
 	
 	// gkyl_dir
@@ -302,6 +339,27 @@ namespace Options
 	void Options::set_imp_zrange_max(double imp_zrange_max) 
 		{m_imp_zrange_max = imp_zrange_max;}
 	
+	// imp_temp_start_opt
+	void Options::set_imp_temp_start_opt(std::string imp_temp_start_opt) 
+	{
+		// Only assign if valid option, leaving as default if not
+		if (check_input<std::string>("imp_temp_start_opt", 
+			imp_temp_start_opt, {"single_value", "main_ion"}))
+		{
+			m_imp_temp_start_opt = imp_temp_start_opt;
+		}
+
+		// Assign control integers
+		if (imp_temp_start_opt == "single_value") 
+			m_imp_temp_start_opt_int = 0;
+		else if (imp_temp_start_opt == "main_ion") 
+			m_imp_temp_start_opt_int = 1;
+	}
+	
+	// imp_temp_start_val
+	void Options::set_imp_temp_start_val(double imp_temp_start_val) 
+		{m_imp_temp_start_val = imp_temp_start_val;}
+
 	// imp_collisions
 	void Options::set_imp_collisions(std::string imp_collisions) 
 		{
@@ -448,6 +506,10 @@ namespace Options
 		{return m_case_name;}
 	const std::string& Options::bkg_source() const 
 		{return m_bkg_source;}
+	const std::string& Options::test_opt() const 
+		{return m_test_opt;}
+	const std::string& Options::save_track() const 
+		{return m_save_track;}
 	const std::string& Options::gkyl_dir() const 
 		{return m_gkyl_dir;}
 	const std::string& Options::gkyl_casename() const 
@@ -516,6 +578,10 @@ namespace Options
 		{return m_imp_zrange_min;}
 	const double Options::imp_zrange_max() const 
 		{return m_imp_zrange_max;}
+	const std::string& Options::imp_temp_start_opt() const 
+		{return m_imp_temp_start_opt;}
+	const double Options::imp_temp_start_val() const 
+		{return m_imp_temp_start_val;}
 	const std::string& Options::imp_collisions() const 
 		{return m_imp_collisions;}
 	const std::string& Options::var_red_split() const 
@@ -573,6 +639,10 @@ namespace Options
 	// Accessors for internal control variables
 	const int Options::bkg_source_int() const
 		{return get_control_int("bkg_source", m_bkg_source_int);}
+	const int Options::test_opt_int() const
+		{return get_control_int("test_opt", m_test_opt_int);}
+	const int Options::save_track_int() const
+		{return get_control_int("save_track", m_save_track_int);}
 	const int Options::imp_tstart_opt_int() const
 		{return get_control_int("imp_tstart_opt", m_imp_tstart_opt_int);}
 	const int Options::imp_xstart_opt_int() const
@@ -581,6 +651,8 @@ namespace Options
 		{return get_control_int("imp_ystart_opt", m_imp_ystart_opt_int);}
 	const int Options::imp_zstart_opt_int() const
 		{return get_control_int("imp_zstart_opt", m_imp_zstart_opt_int);}
+	const int Options::imp_temp_start_opt_int() const
+		{return get_control_int("imp_temp_start_opt", m_imp_temp_start_opt_int);}
 	const int Options::imp_collisions_int() const
 		{return get_control_int("imp_collisions", m_imp_collisions_int);}
 	const int Options::var_red_split_int() const

@@ -45,12 +45,12 @@ void flan(const Inputs& inpts)
 	if (opts.bkg_source_int() == 0)
 	{
 		// Load in hardcoded plasma background for testing
-		Background::Background bkg {Test::read_test(opts)};
+		bkg = Test::read_test(opts);
 	}
 	else if (opts.bkg_source_int() == 1)
 	{
 		// Load in a Gkeyll background
-		Background::Background bkg {Gkyl::read_gkyl(opts)};
+		bkg = Gkyl::read_gkyl(opts);
 	}
 	else
 	{

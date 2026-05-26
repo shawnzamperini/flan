@@ -9,6 +9,8 @@
 #include <vector>
 #include <sstream>
 
+#include "vectors.h"
+
 namespace Utilities
 {
 	/**
@@ -108,6 +110,52 @@ namespace Utilities
 		const std::vector<T>& cell_centers, const int idx);
 
 	/**
+	* @brief Create vector of N equally spaced values between a and b
+	*
+	* @param a First value of vector
+	* @param b Last value of vector
+	* @param N Number of values in vector
+	*/
+	std::vector<double> linspace(double a, double b, std::size_t N);
+
+	/**
+	* @brief Interpolate a Vector4D (t,x,y,z) at (t0,x0,y0,z0)
+	*
+	* @param vec4d Vector4D of shape (t,x,y,z) containing values to interpolate
+	*        between.
+	* @param t Array of coordinate for the first dimension
+	* @param x Array of coordinate for the second dimension
+	* @param y Array of coordinate for the third dimension
+	* @param z Array of coordinate for the fourth dimension
+	* @param t0 Coordinate to interpolate at
+	* @param x0 Coordinate to interpolate at
+	* @param y0 Coordinate to interpolate at
+	* @param z0 Coordinate to interpolate at
+	*
+	* @return Interpolated value at (t0,x0,y0,z0) as a double
+	*/
+	template <typename T>
+	double interp_vec4d(const Vectors::Vector4D<T>& vec4d, 
+		const std::vector<double> t, const std::vector<double> x,
+		const std::vector<double> y, const std::vector<double> z,
+		const double t0, const double x0, const double y0, const double z0);
+
+	/**
+	* @brief Get the two bracketing indices in the sorted x array surrounding 
+	* x0.
+	*
+	* If x0 is less than x[0] then 0 and 1 are returned. Likewise if it
+	* is larger than x[-1] then the last two indices are returned.
+	*
+	* @param x Sorted array of values to search in
+	* @param x0 Value to find bracketing values for
+	*
+	* @return Returns the two bracketing indices as a pair.
+	*/
+	std::pair<int, int> bracket_indices(const std::vector<double>& x, 
+		double x0);
+
+	/**
 	* @brief Return value at x in set of (xarr, yarr) values using linear
 	* interpolation.
 	* @param xarr Array of x values
@@ -145,6 +193,7 @@ namespace Utilities
 		err << "x value is outside the interpolation range: " << x;
 		throw std::out_of_range(err.str());
 	}
+
 }
 
 #endif

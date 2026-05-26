@@ -1,6 +1,6 @@
 # This version is likely a bit too strict, it is just the one I built this with
 cmake_minimum_required(VERSION 3.26)
-project(flan VERSION 0.9.0)
+project(flan VERSION 0.11.0)
 
 # Load options from when the dependencies were built. Contains FLANSOFT
 # and FLANROOT
@@ -39,6 +39,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Require MPI. Most machines should have it, so not a big deal
 find_package(MPI REQUIRED)
+find_package(OpenMP REQUIRED)
 
 # Include all files in src
 file(GLOB SOURCES "src/*.cpp")
@@ -68,7 +69,14 @@ add_library(flan SHARED ${SOURCES})
 target_compile_options(flan PRIVATE -Wall -O3 -fopenmp -march=native)
 
 # Specify the libraries to link against
-target_link_libraries(flan PRIVATE -fopenmp netcdf netcdf-cxx4)
+#target_link_libraries(flan PRIVATE -fopenmp netcdf netcdf-cxx4 MPI::MPI_CXX)
+target_link_libraries(flan 
+	PRIVATE 
+		netcdf 
+		netcdf-cxx4 
+		OpenMP::OpenMP_CXX 
+		MPI::MPI_CXX
+)
 
 # Set the rpath so we can find the netCDF shared library
 set_target_properties(flan PROPERTIES

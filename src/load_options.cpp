@@ -50,6 +50,27 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "bkg_source") 
+			{
+				auto set_func = std::bind(&Options::set_bkg_source, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "test_opt") 
+			{
+				auto set_func = std::bind(&Options::set_test_opt, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "save_track") 
+			{
+				auto set_func = std::bind(&Options::set_save_track, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "gkyl_dir") 
 			{
 				auto set_func = std::bind(&Options::set_gkyl_dir, &opts, 
@@ -292,6 +313,20 @@ namespace Options
 			{
 				auto set_func = std::bind(&Options::set_imp_zrange_max, &opts, 
 					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_temp_start_opt") 
+			{
+				auto set_func = std::bind(&Options::set_imp_temp_start_opt, 
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+			
+			else if (key == "imp_temp_start_val") 
+			{
+				auto set_func = std::bind(&Options::set_imp_temp_start_val, 
+					&opts, std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}
 			
