@@ -47,6 +47,7 @@ namespace Options
 		// been correctly initalized (by not including it here).
 		set_bkg_source(m_bkg_source);
 		set_test_opt(m_test_opt);
+		set_save_track(m_save_track);
 		set_imp_tstart_opt(m_imp_tstart_opt);
 		set_imp_xstart_opt(m_imp_xstart_opt);
 		set_imp_ystart_opt(m_imp_ystart_opt);

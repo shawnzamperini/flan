@@ -114,7 +114,7 @@ namespace Impurity
 			if (opts.test_opt_int() == 0 || opts.test_opt_int() == 1
 				|| opts.test_opt_int() == 2 || opts.test_opt_int() == 3)
 			{
-				return {0.0, 25000.0, 0.0};
+				return {0.0, 10000.0, 0.0};
 			}
 
 			// Curvature drift test requires an initial velocity parallel to
@@ -122,7 +122,7 @@ namespace Impurity
 			// x = R, y = Z and z = phi
 			else if (opts.test_opt_int() == 4)
 			{
-				constexpr double v_par = 5000;
+				constexpr double v_par = 30000;
 				double v_X {- v_par * std::sin(z_imp)};
 				double v_Y {v_par * std::cos(z_imp)};
 				return {v_X, v_Y, 0.0};
@@ -1061,8 +1061,6 @@ namespace Impurity
 		*/
 
 		// Execute main particle following loop.
-		std::cout << "WARNING: Fixing flow velocity in collision\n";
-		std::cout << "WARNING: Electron collisions are off\n";
 		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);
 	
 		// Convert the statistics into meaningful quantities. We are scaling

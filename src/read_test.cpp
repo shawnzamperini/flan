@@ -29,6 +29,7 @@ namespace Test
 
 		// Vectors to hold the cell center coordinates
 		auto test_t = Utilities::linspace(0.0, 50e-6, tdim);
+		//auto test_t = Utilities::linspace(0.0, 2e-7, tdim);
 		std::vector<double> test_x = {};
 		std::vector<double> test_y = {};
 		std::vector<double> test_z = {};
@@ -203,7 +204,7 @@ namespace Test
 			int idx {test_ne.calc_index(i,j,k,l)};
 
 			// All test cases use constant values for density and temperature
-			test_ne.get_data()[idx] = 1e18;
+			test_ne.get_data()[idx] = 1e20;
 			test_te.get_data()[idx] = 1;
 			test_ti.get_data()[idx] = 1;
 			//test_vp.get_data()[idx] = 0.0; // Not needed
@@ -221,8 +222,10 @@ namespace Test
 			// Constant electric field of E_Y = 5000 V/m for ExB drift test
 			else if (opts.test_opt_int() == 1)
 			{
-				test_eY.get_data()[idx] = 5000.0;
-				test_emag.get_data()[idx] = 5000.0;
+				//test_eY.get_data()[idx] = 5000.0;
+				//test_emag.get_data()[idx] = 5000.0;
+				test_eY.get_data()[idx] = 500.0;
+				test_emag.get_data()[idx] = 500.0;
 			}
 
 			// Time-varying electric field that starts at E_Y = 5000 V/m and
