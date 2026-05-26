@@ -180,7 +180,7 @@ class FlanPlots:
 	def plot_frame_xy(self, data_name, frame, z0, showplot=True, 
 		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
 		xlabel="x (m)", ylabel="y (m)", cbar_label=None, rsep=0.0,
-		own_data=None, charge=1):
+		own_data=None, charge=1, xscale=1.0, yscale=1.0):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -237,7 +237,7 @@ class FlanPlots:
 			vmax = data_xy.max()
 
 		# Grid the x, y data
-		X, Y = np.meshgrid(x, y)
+		X, Y = np.meshgrid(x*xscale, y*yscale)
 		
 		# Optionally plot the data.
 		if showplot:
@@ -1013,6 +1013,8 @@ class FlanPlots:
 		"""
 		"""
 		
+		from scipy.signal import find_peaks
+
 		# Check that particle tracks were on
 		if self.nc["input"]["save_track"][:] != "on":
 			print("Error! Particle track was not saved. Rerun \
@@ -1024,6 +1026,15 @@ class FlanPlots:
 		x = self.nc["output"]["track_x"][:].data
 		y = self.nc["output"]["track_y"][:].data
 		z = self.nc["output"]["track_z"][:].data
+
+		# Load particle traits
+		q = self.nc["input"]["imp_init_charge"][0] * (-elec)
+		m_amu = self.nc["input"]["imp_mass_amu"][0]
+		m = m_amu * amu_to_kg
+
+		# Constants for plotting
+		fontsize = 16
+		figsize = (5, 4)
 
 		# Check which test was performed. For reference:
 		# 0 = Simple gyration test to show a particle gyrates in a constant
@@ -1109,6 +1120,8 @@ class FlanPlots:
 			# Hardcoded values that this test uses (see read_test.cpp)
 			B0 = 10.0
 			v_par = 5000
+			R = x.mean()
+			dt = self.nc["input"]["imp_time_step"][:].data[0]
 
 			omega = q * B0 / m
 
@@ -1117,7 +1130,37 @@ class FlanPlots:
 			drift_ylabel = "Z (m)"
 
 			# Analytic estimate of the curvature drift velocity
-			analytic_drift = v_par**2 / omega / x.mean()
+			analytic_drift = v_par**2 / omega / R
+
+			# This test gets an additional plot to demonstrate the numerical
+			# radial drift that can appear in curved geometries
+			numerical_drift = -v_par**2 * dt / R
+
+			peaks, properties = find_peaks(x)
+			t_peaks = t[peaks]
+			drift_peaks = x[peaks]
+			v_drift, b = np.polyfit(t_peaks, drift_peaks, 1)
+			tfit = np.linspace(t.min(), t.max(), 100)
+			drift_fit = v_drift * tfit + b
+
+			fig2, ax2 = plt.subplots(figsize=figsize)
+			ax2.set_title("Numerical Drift", fontsize=fontsize)
+			ax2.set_xlabel("Time (s)", fontsize=fontsize)
+			ax2.set_ylabel("R (m)", fontsize=fontsize)
+			ax2.plot(t, x, color="k", lw=3, label="Flan")
+			ax2.plot(tfit, drift_fit, color="k", lw=3, linestyle="--", 
+				label="Analytic")
+			ax2.legend()
+			fig2.tight_layout()
+			fig2.show()
+
+			abs_err = abs(v_drift - numerical_drift)
+			rel_err = abs_err / abs(numerical_drift)
+			print(f"Cartesian Numerical Drift\n"
+				f"  Computed : {v_drift: .2f} m/s\n"
+				f"  Analytic : {analytic_drift: .2f} m/s\n"
+				f"  Abs. err : {abs_err: .3f} m/s\n"
+				f"  Rel. err : {rel_err: .2e}\n")
 
 		# Slope from linear fit to peaks is simulated drift
 		peaks, properties = find_peaks(drift_coord)
@@ -1141,7 +1184,7 @@ class FlanPlots:
 		abs_err = abs(v_drift - analytic_drift)
 		rel_err = abs_err / abs(analytic_drift)
 
-		print(
+		print(f"\n"
 			f"  Computed : {v_drift: .2f} m/s\n"
 			f"  Analytic : {analytic_drift: .2f} m/s\n"
 			f"  Abs. err : {abs_err: .3f} m/s\n"
@@ -1152,7 +1195,7 @@ class FlanPlots:
 		"""
 
 	
-	def validate_test(self):
+	def validate_test(self, show_nanbu_s=True):
 		"""
 		Make a plots of the hardcoded tests cases within Flan that ensures the 
 		physics models within Flan are working correctly.
@@ -1187,9 +1230,9 @@ class FlanPlots:
 			uX = 1000
 			Ti = 1
 			mi = 2.014
-			ni = 1e18
-			ln_alpha = 10
-			#ln_alpha = 5
+			ni = 1e20
+			#ln_alpha = 10
+			ln_alpha = 3.5 # n=1e20, T=1, u=1000
 			Z = self.nc["input"]["imp_init_charge"][0] # Ion/recomb is OFF
 
 			# Some additional values and arrays
@@ -1206,7 +1249,8 @@ class FlanPlots:
 				with_counts = self.nc["output"]["Nz"][i] > 0
 				vx[i] = self.nc["output"]["v_X"][i][with_counts].mean()
 				vx_std[i] = self.nc["output"]["v_X"][i][with_counts].std()
-				s[i] = self.nc["output"]["nanbu_s"][i][with_counts].mean()
+				if show_nanbu_s:
+					s[i] = self.nc["output"]["nanbu_s"][i][with_counts].mean()
 
 			# Remove NaN data
 			notnan = ~np.isnan(vx)
@@ -1253,8 +1297,9 @@ class FlanPlots:
 			for i in range(len(t)):
 				t_i = t[i]
 				vx_i = vx[i]
+				vx_std_i = vx_std[i]
 				vxa_i = vx_analytic[i]
-				print(f"{t_i:.2e}  {vx_i:.2e} {vxa_i:.2e}") 
+				print(f"{t_i:.2e} {vx_i:.2e} {vx_std_i:.2e} {vxa_i:.2e}") 
 
 			fig, ax1 = plt.subplots(figsize=figsize)
 			ax1.fill_between(t, vx-vx_std, vx+vx_std, color="tab:red", alpha=0.3)
@@ -1267,11 +1312,13 @@ class FlanPlots:
 			ax1.set_xlabel("Time (s)", fontsize=fontsize)
 			ax1.set_ylabel("vX (m/s)", fontsize=fontsize, color="tab:red")
 
-			ax11 = ax1.twinx()
-			ax11.plot(t, s, lw=3, color="k")
-			ax11.plot(t, s, lw=2, color="tab:purple")
-			ax11.set_ylabel("Nanbu - s", fontsize=fontsize, color="tab:purple")
-			ax11.set_ylim([0, 40])
+			if show_nanbu_s:
+				ax11 = ax1.twinx()
+				ax11.plot(t, s, lw=3, color="k")
+				ax11.plot(t, s, lw=2, color="tab:purple")
+				ax11.set_ylabel("Nanbu - s", fontsize=fontsize, 
+					color="tab:purple")
+				ax11.set_ylim([0, 40])
 
 			fig.tight_layout()
 			fig.show()
