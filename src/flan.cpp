@@ -93,8 +93,6 @@ R"(
 	// rank 0 returns a meaningful result here.
 	Impurity::Statistics global_stats {Impurity::reduce_stats(imp_stats)};
 
-	// Reduce timer from each rank
-
 	// Convert the statistics into meaningful quantities.
 	if (rank == 0)
 	{	
@@ -118,7 +116,11 @@ R"(
 		SaveResults::save_results(bkg, global_stats, opts);
 		timer.end_save_timer();
 
-		// End timer, print summary
+		// End timer, print summary. Even though this is really just rank 0's
+		// time summary, it should be about the same for every other rank 
+		// (excluding the rank 0 specific tasks). It's still good for telling
+		// you how long the program took in each section. It's essentially
+		// the wall time.
 		timer.end_total_timer();
 		timer.print_summary();
 	}
