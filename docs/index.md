@@ -1,3 +1,10 @@
+<div class="container">
+<div class="sidebar-container">
+{% include_relative _sidebar.md %}
+</div>
+
+<div class="content-container">
+
 # Flan: Turbulent Trace Impurity Transport Code
 
 Welcome to the documentation for **Flan**, a lightweight impurity and neutral
@@ -23,3 +30,7 @@ This site contains:
 ---
 
 Flan is developed and maintained by Shawn Zamperini.
+
+</div>
+</div>
+
