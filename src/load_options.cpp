@@ -24,8 +24,6 @@ namespace Options
 
 	void load_input(Options& opts, const Inputs& inpts)
 	{
-		std::cout << "Loading input...\n";
-		
 		// Loop through every input option. key is a string of the option, and
 		// var stands for "variant", which is a type that can contain multiple
 		// types. We dissect var into the underlying type within assign_option.

@@ -18,6 +18,8 @@
 #include <tuple>
 #include <vector>
 
+#include "mpi.h"
+#include "utilities.h"
 #include "vectors.h"
 
 namespace Vectors
@@ -152,6 +154,19 @@ namespace Vectors
 		m_dim1 = dim1;
 		m_dim2 = dim2;
 		m_dim3 = dim3;
+	}
+
+	template <typename T>
+	void Vector3D<T>::broadcast(MPI_Comm comm)
+	{
+		// Broadcast dimensions
+		MPI_Bcast(&m_dim1, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_dim2, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_dim3, 1, MPI_INT, 0, comm);
+
+		// Broadcast underlying 1D data from root (assumed to be rank 0) to 
+		// other ranks
+		Utilities::mpi_broadcast_vector(m_data, 0, comm);
 	}
 	
 	// ************************
@@ -454,6 +469,20 @@ namespace Vectors
 		m_dim2 = dim2;
 		m_dim3 = dim3;
 		m_dim4 = dim4;
+	}
+
+	template <typename T>
+	void Vector4D<T>::broadcast(MPI_Comm comm)
+	{
+		// Broadcast dimensions
+		MPI_Bcast(&m_dim1, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_dim2, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_dim3, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_dim4, 1, MPI_INT, 0, comm);
+
+		// Broadcast underlying 1D data from root (assumed to be rank 0) to 
+		// other ranks
+		Utilities::mpi_broadcast_vector(m_data, 0, comm);
 	}
 }
 

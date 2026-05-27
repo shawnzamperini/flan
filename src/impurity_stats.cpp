@@ -18,6 +18,47 @@
 
 namespace Impurity
 {
+	/**
+	* @brief Helper function to reduce a Statistic object across MPI ranks
+	*/
+	Statistics reduce_stats(const Statistics& local_stats)
+	{
+
+		// MPI rank
+		int rank {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+		// Send and recieve buffers
+		std::vector<double> sendbuf;
+		std::vector<double> recvbuf;
+
+		// Pack up stats local to this rank and resize the recieve buffer to
+		// match
+		local_stats.pack(sendbuf);
+		recvbuf.resize(sendbuf.size());
+
+		// Call reduce to add all the Vector4Ds in Statistics together, putting
+		// the result in recvbuf. 
+		MPI_Reduce(sendbuf.data(), recvbuf.data(), sendbuf.size(), 
+			MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+		// Create object to store the summed results and unpack into it
+		// Only rank 0 returns a meaningful object
+		if (rank == 0) {
+			Statistics global_stats {local_stats.get_dim1(), 
+				local_stats.get_dim2(), local_stats.get_dim3(), 
+				local_stats.get_dim4()};
+			global_stats.unpack(recvbuf);
+			return global_stats;
+		}
+
+		// Other ranks return a dummy object
+		return Statistics(local_stats.get_dim1(),
+						  local_stats.get_dim2(),
+						  local_stats.get_dim3(),
+						  local_stats.get_dim4());
+	}
+
 	/** 
 	* @class Statistics
 	* @brief Impurity transport statistics class
@@ -25,6 +66,8 @@ namespace Impurity
 	* Class to hold all the vectors related to tracking the statistics of
 	* an impurity transport simulation.
 	*/
+
+	Statistics::Statistics() {};
 
 	/**
 	* @brief Constructor
@@ -70,6 +113,14 @@ namespace Impurity
 		m_s.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
 			dim4});
 	}
+
+	/**
+	* @brief Accessor for dim1
+	*/
+	const int Statistics::get_dim1() const {return m_dim1;}
+	const int Statistics::get_dim2() const {return m_dim2;}
+	const int Statistics::get_dim3() const {return m_dim3;}
+	const int Statistics::get_dim4() const {return m_dim4;}
 
 	/**
 	* @brief Accessor for particle track time
@@ -340,6 +391,75 @@ namespace Impurity
 		m_track_vy.push_back(imp.get_vy());
 		m_track_vz.push_back(imp.get_vz());
 	}
+
+	/**
+	* @brief Pack all the arrays into a single buffer that can be sent across
+	*        MPI processes
+	*
+	* @param buf The buffer that will contain all the Vector4Ds in Statistics
+	*/
+	void Statistics::pack(std::vector<double>& buf) const
+	{
+		// Clear buffer and reserve enough space for all the Vector4Ds
+		buf.clear();
+		buf.reserve(m_dim1 * m_dim2 * m_dim3 * m_dim4 * 9); // 9 fields
+
+		// Define a lambda function that breaks down a Vector4D and appends
+		// it to our buffer.
+		auto append = [&](auto& v4d) {
+			for (int i = 0; i < m_dim1; i++)
+			for (int j = 0; j < m_dim2; j++)
+			for (int k = 0; k < m_dim3; k++)
+			for (int l = 0; l < m_dim4; l++)
+				buf.push_back(v4d(i,j,k,l));
+		};
+
+		// Append each Vector4D to buffer
+		append(m_counts);   // convert int → double automatically
+		append(m_weights);
+		append(m_charge);
+		append(m_s);
+		append(m_vX);
+		append(m_vY);
+		append(m_vZ);
+		append(m_vx);
+		append(m_vy);
+		append(m_vz);
+	}
+
+	/**
+	* @brief Unpack all the arrays that were packed via pack
+	*
+	* @param buf The buffer that contains all the Vector4Ds in Statistics
+	*/
+	void Statistics::unpack(const std::vector<double>& buf)
+	{
+		// Index in the 1D buffer
+		size_t idx = 0;
+
+		// Define a lambda function to take element in the buffer and put them
+		// into a Vector4D.
+		auto extract = [&](auto& v4d) {
+			for (int i = 0; i < m_dim1; i++)
+			for (int j = 0; j < m_dim2; j++)
+			for (int k = 0; k < m_dim3; k++)
+			for (int l = 0; l < m_dim4; l++)
+				v4d(i,j,k,l) = buf[idx++];
+		};
+
+		// Extract Vector4D's from buffer. Order must match that in pack!!!
+		extract(m_counts);
+		extract(m_weights);
+		extract(m_charge);
+		extract(m_s);
+		extract(m_vX);
+		extract(m_vY);
+		extract(m_vZ);
+		extract(m_vx);
+		extract(m_vy);
+		extract(m_vz);
+	}
+
 
 	/**
 	* @brief Calculate impurity density from data stored in counts and weights

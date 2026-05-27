@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <iostream>
 
+#include "flan_types.h"
+#include "mpi.h"
 #include "utilities.h"
 #include "vectors.h"
 
@@ -230,6 +232,32 @@ namespace Utilities
 		double m {(interp_val1 - interp_val0) / (t[it1] - t[it0])};
 		return m * (t0 - t[it1]) + interp_val1; 
 	}
+
+	// Function to broadcast a 1D vector to the other processes
+	template <typename T> 
+	void mpi_broadcast_vector(std::vector<T>& v, int root, MPI_Comm comm)
+	{
+		// Get rank
+	    int rank {};
+		MPI_Comm_rank(comm, &rank);
+
+		// Root sets size since it has the vector on it
+		int size {};
+		if (rank == root)
+			size = static_cast<int>(v.size());
+
+		// Broadcast vector size
+		MPI_Bcast(&size, 1, MPI_INT, root, comm);
+
+		// Resize vector to prepare it to recieve data from root
+		if (v.size() != (size_t)size)
+			v.resize(size);
+
+		// Broadcast data to other ranks. See include/flan_types.h for an
+		// explanation as to what is going on with this "mpi_type" thing, if
+		// you care.
+		MPI_Bcast(v.data(), size, mpi_type<T>::type, root, comm);
+	}
 }
 
 // Instantiate float and double templates since we separate the declaration
@@ -249,3 +277,10 @@ template double Utilities::interp_vec4d<double>(
 	const std::vector<double> t, const std::vector<double> x,
 	const std::vector<double> y, const std::vector<double> z,
 	const double t0, const double x0, const double y0, const double z0);
+
+template void Utilities::mpi_broadcast_vector(std::vector<int>&, int, 
+	MPI_Comm);
+template void Utilities::mpi_broadcast_vector(std::vector<float>&, int, 
+	MPI_Comm);
+template void Utilities::mpi_broadcast_vector(std::vector<double>&, int, 
+	MPI_Comm);

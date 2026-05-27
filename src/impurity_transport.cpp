@@ -847,9 +847,16 @@ namespace Impurity
 		const OpenADAS::OpenADAS& oa_recomb, 
 		Options::Options& opts, Timer::Timer& timer)
 	{
+		// Rank and number of processes
+		int rank {};
+		int nprocs {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
 		// Variance reduction based on ionization/recombination requires 
 		// ionization/recombination to be on (duh)
-		if (opts.var_red_split_int() == 1 && opts.imp_iz_recomb_int() == 0)
+		if (opts.var_red_split_int() == 1 && opts.imp_iz_recomb_int() == 0
+			&& rank == 0)
 		{
 			std::cout << "Warning! Particle splitting based on "
 				<< "ionization/recombination requires imp_ioniz_recomb be set"
@@ -860,7 +867,7 @@ namespace Impurity
 		// Variable time step is based on collisions, so those must be on.
 		// If not, default to constant time step and alert user.
 		if (opts.imp_time_step_opt_int() == 1 
-			&& opts.imp_collisions_int() == 0)
+			&& opts.imp_collisions_int() == 0 && rank == 0)
 		{
 			std::cout << "Warning! Impurity time step set to variable, but "
 				<< "collisions are off. Changing to constant time step.\n";
@@ -870,7 +877,7 @@ namespace Impurity
 		// As a safeguard, only save particle tracks if a single particle is
 		// used. Otherwise it can easily use way too much memory and blow up
 		// the output file.
-		if (opts.save_track_int() == 1 && opts.imp_num() > 1)
+		if (opts.save_track_int() == 1 && opts.imp_num() > 1 && rank == 0)
 		{
 			std::cout << "Warning! save_track = \"on\" and more than "
 				<< "a single particle is tracked (imp_num = " 
@@ -896,19 +903,14 @@ namespace Impurity
 			omp_out = omp_out + omp_in) \
 			initializer(omp_priv(omp_orig))
 
-		// Startup message. Create parallel region to see how many threads it
-		// will generate in the following loop.
-		std::cout << "Starting particle following...\n";
-		#pragma omp parallel
-		{
-			if (omp_get_thread_num() == 0) std::cout << " Number of threads: " 
-				<< omp_get_num_threads() << '\n';
-		}
-
 		// Print progress this many times
-		//constexpr int prog_interval {10};
 		const int prog_interval {opts.print_interval()};
-	
+
+		// Determine number of impurities to follow for this rank with 
+		// integer division. Remainder is given to rank 0.
+		int rank_imp_num {opts.imp_num() / nprocs};
+		if (rank == 0) rank_imp_num += opts.imp_num() % nprocs;
+
 		// Loop through one impurity at a time, tracking it from its birth
 		// time/location to the end. Dynamic scheduling likely the best here 
 		// since the loop times can vary widely. Declaring bkg, oa_ioniz and
@@ -924,7 +926,7 @@ namespace Impurity
 			firstprivate(var_red_control) \
 			shared(bkg, oa_ioniz, oa_recomb) \
 			reduction(+: imp_stats, ioniz_warnings, recomb_warnings, timer)
-		for (int i = 0; i < opts.imp_num(); ++i)
+		for (int i = 0; i < rank_imp_num; ++i)
 		{
 			// Variance reduction: median mode (var_red_import_int == 0). Based 
 			// on seeing if the particle is in a "low count" region, which is 
@@ -999,26 +1001,36 @@ namespace Impurity
 			// this is such a quick block of code that it should have very
 			// little impact on the overall simulation time considering all
 			// the calculation time is spent following impurities. 
-			#pragma omp critical
+			if (rank == 0)
 			{
-				// Increment shared counter
-				++prim_imp_count;
-				
-				if (opts.imp_num() > prog_interval)
+				#pragma omp critical
 				{
-					if ((prim_imp_count % (opts.imp_num() / prog_interval)) 
-						== 0 && prim_imp_count > 0)
+					// Increment shared counter
+					++prim_imp_count;
+					
+					if (rank_imp_num > prog_interval)
 					{
-						double perc_complete {static_cast<double>(
-							prim_imp_count) / opts.imp_num() * 100};
-						std::cout << "Followed " << prim_imp_count << "/" 
-							<< opts.imp_num() << " primary impurities (" 
-							<< static_cast<int>(perc_complete) << "%)\n";
+						//if ((prim_imp_count % (opts.imp_num() / prog_interval)) 
+						//	== 0 && prim_imp_count > 0)
+						if ((prim_imp_count % (rank_imp_num / prog_interval)) 
+							== 0 && prim_imp_count > 0)
+						{
+							double perc_complete {static_cast<double>(
+								prim_imp_count) / rank_imp_num * 100};
 
-						// Give user an update on secondary impurities, since
-						// most the time can actually be spent following these.
-						std::cout << "  Secondary impurities followed: " 
-							<< tot_imp_count - prim_imp_count << '\n';
+							// As an estimate report prim_imp_count * nprocs,
+							// which is just to assume each MPI rank progresses
+							// at about the same pace.
+							std::cout << "Followed " << prim_imp_count * nprocs 
+								<< "/" << opts.imp_num() 
+								<< " primary impurities (" 
+								<< static_cast<int>(perc_complete) << "%)\n";
+
+							// Give user an update on secondary impurities, since
+							// most the time can actually be spent following these.
+							std::cout << "  Secondary impurities followed: " 
+								<< tot_imp_count - prim_imp_count << '\n';
+						}
 					}
 				}
 			}
@@ -1034,6 +1046,12 @@ namespace Impurity
 	Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer)
 	{
+		// Rank and number of processes
+		int rank {};
+		int nprocs {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
 		// Initialize particle statistics vectors, all contained within a
 		// Statistics object. Option to control if the three velocity arrays
 		// are allocated (to save memory).
@@ -1043,28 +1061,35 @@ namespace Impurity
 		// Load OpenADAS data needed for ionization/recombination rates if
 		// ionization/recombination is on. Believe it or not, this is the
 		// preferred way to do this in C++.
-		OpenADAS::OpenADAS oa_ioniz = opts.imp_iz_recomb_int() == 1 
-			? OpenADAS::OpenADAS(opts.openadas_root(), opts.openadas_year(), 
-				opts.imp_atom_num(), "scd") : OpenADAS::OpenADAS();
-		OpenADAS::OpenADAS oa_recomb = opts.imp_iz_recomb_int() == 1 
-			? OpenADAS::OpenADAS(opts.openadas_root(), opts.openadas_year(), 
-				opts.imp_atom_num(), "acd") : OpenADAS::OpenADAS();
-
-		/*
-		if (opts.imp_iz_recomb_int() == 1)
+		// We only want one MPI process to do this at a time since it involves
+		// reading the ADAS files, and having different processes all reading
+		// the same file could cause slow downs. Really minor impact though.
+		OpenADAS::OpenADAS oa_ioniz {};
+		OpenADAS::OpenADAS oa_recomb {};
+		for (int r {}; r < nprocs; r++)
 		{
-			oa_ioniz = opts.openadas_root(), 
-				opts.openadas_year(), opts.imp_atom_num(), "scd";
-			oa_recomb = opts.openadas_root(), 
-				opts.openadas_year(), opts.imp_atom_num(), "acd";
+			if (rank == r)
+			{
+				oa_ioniz = opts.imp_iz_recomb_int() == 1 
+					? OpenADAS::OpenADAS(opts.openadas_root(), 
+					opts.openadas_year(), opts.imp_atom_num(), "scd") 
+					: OpenADAS::OpenADAS();
+				oa_recomb = opts.imp_iz_recomb_int() == 1 
+					? OpenADAS::OpenADAS(opts.openadas_root(), 
+					opts.openadas_year(), opts.imp_atom_num(), "acd") 
+					: OpenADAS::OpenADAS();
+			}
+
+			// Everyone waits before next rank runs
+			MPI_Barrier(MPI_COMM_WORLD);
 		}
-		*/
 
 		// Execute main particle following loop.
 		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);
 	
 		// Convert the statistics into meaningful quantities. We are scaling
 		// the density by the scale factor.
+		/*
 		std::cout << "Calculating derived quantities...\n";
 		std::cout << "  Density...\n";
 		imp_stats.calc_density(bkg, opts.imp_num(), 
@@ -1075,6 +1100,7 @@ namespace Impurity
 		imp_stats.calc_charge();
 		std::cout << "  Nanbu - s...\n";
 		imp_stats.calc_s();
+		*/
 		
 		return imp_stats;
 

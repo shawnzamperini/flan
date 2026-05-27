@@ -1311,6 +1311,7 @@ class FlanPlots:
 				label="Analytic")
 			ax1.set_xlabel("Time (s)", fontsize=fontsize)
 			ax1.set_ylabel("vX (m/s)", fontsize=fontsize, color="tab:red")
+			ax1.set_ylim([0, 2000])
 
 			if show_nanbu_s:
 				ax11 = ax1.twinx()

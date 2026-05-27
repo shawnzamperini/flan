@@ -17,6 +17,7 @@
 
 namespace Impurity
 {
+
 	class Statistics
 	{
 	private:
@@ -47,10 +48,15 @@ namespace Impurity
 	public:
 		
 		// Constructor
+		Statistics();
 		Statistics(const int dim1, const int dim2, const int dim3, 
 			const int dim4);
 
 		// Accessors
+		const int get_dim1() const;
+		const int get_dim2() const;
+		const int get_dim3() const;
+		const int get_dim4() const;
 		std::vector<float>& get_track_t();
 		std::vector<float>& get_track_x();
 		std::vector<float>& get_track_y();
@@ -99,6 +105,13 @@ namespace Impurity
 
 		// Update particle track.
 		void update_track(const Impurity& imp);
+ 
+		// Pack all the arrays into a single buffer that can be sent across
+		// MPI processes
+		void pack(std::vector<double>& buf) const;
+
+		// Unpack all the arrays that were packed via pack
+		void unpack(const std::vector<double>& buf);
 
 		// Calculate the impurity density using the data stored in counts and 
 		// weights.
@@ -114,6 +127,10 @@ namespace Impurity
 		// Calculate the average Nanbu collisionality strength. 
 		void calc_s();
 	};
+
+	// Helper function to reduce a Statistic object across MPI ranks
+	Statistics reduce_stats(const Statistics& local_stats);
+
 
 }
 

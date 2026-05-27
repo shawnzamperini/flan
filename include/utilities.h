@@ -9,6 +9,8 @@
 #include <vector>
 #include <sstream>
 
+#include "flan_types.h"
+#include "mpi.h"
 #include "vectors.h"
 
 namespace Utilities
@@ -139,6 +141,16 @@ namespace Utilities
 		const std::vector<double> t, const std::vector<double> x,
 		const std::vector<double> y, const std::vector<double> z,
 		const double t0, const double x0, const double y0, const double z0);
+
+	/**
+	* @brief Function to broadcast a 1D vector to the other processes
+	*
+	* @param v The vector data to be broadcast
+	* @param root The root process rank containing data to send
+	* @param comm The MPI communicator group
+	*/
+	template <typename T>
+	void mpi_broadcast_vector(std::vector<T>& v, int root, MPI_Comm comm);
 
 	/**
 	* @brief Get the two bracketing indices in the sorted x array surrounding 
