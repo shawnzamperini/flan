@@ -23,7 +23,7 @@ This site contains:
 
 ## Quick Links
 
-- [Getting Started](getting-started.md)
+- [Getting Started](getting-started.html)
 - [Installation](installation.md)
 - [Running FLAN](running-flan.md)
 - [Physics Models](physics/impurity-transport.md)
