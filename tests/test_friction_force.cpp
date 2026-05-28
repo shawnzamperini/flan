@@ -1,0 +1,94 @@
+#include <cmath>
+#include <iostream>
+#include <tuple>
+
+#include "flan.h"
+#include "flan_types.h"
+#include "mpi.h"
+
+
+// mapc2p (slated for depreciation)
+std::tuple<double, double, double> mapc2p(double xc, double yc, double zc)
+{
+	std::cout << "Don't use me!\n";
+	return {0, 0 ,0};
+}
+
+Inputs create_inputs()
+{
+	Inputs inpts;
+	
+	// Setup the ExB drift test
+	inpts["bkg_source"] = "test";
+	inpts["case_name"] = "friction_force";
+	inpts["test_opt"] = "friction_force";
+
+	// Impurity and transport options
+	inpts["imp_num"] = 1000;
+
+	/*
+	   |  Z |  Mass  |
+	He |  2 |   4.00 |
+	Li |  3 |   6.94 |
+	B  |  5 |  10.81 |
+	C  |  6 |  12.01 |
+	Ne | 10 |  20.18 |
+	Fe | 26 |  55.85 |
+	Mo | 42 |  95.95 |
+	W  | 74 | 183.84 |
+	*/
+	inpts["imp_atom_num"] = 74;
+	inpts["imp_mass_amu"] = 183.84;
+	inpts["imp_init_charge"] = 25;
+	inpts["imp_time_step_opt"] = "constant";
+	inpts["imp_time_step"] = 1e-10;
+	inpts["imp_time_step_min"] = 1e-12;
+	inpts["imp_collisions"] = "nanbu";
+
+	// Starting location options. We want to start particles at the same time
+	// and place so we can track their motion as one single particle. This is
+	// good because if there was numerical noise we'd see it in the videos if
+	// the particles didn't stay mostly together.
+	inpts["imp_tstart_opt"] = "single_value";
+	inpts["imp_tstart_val"] = 0.0;
+	inpts["imp_xstart_opt"] = "single_value";
+	inpts["imp_xstart_val"] = 0.01;
+	inpts["imp_ystart_opt"] = "single_value";
+	inpts["imp_ystart_val"] = 0.0;
+	inpts["imp_zstart_opt"] = "single_value";
+	inpts["imp_zstart_val"] = 0.0;
+
+	// These get overwritten in the test, just leaving here to make this note
+	inpts["imp_temp_start_opt"] = "single_value";
+	inpts["imp_temp_start_val"] = 0.0;
+
+	// Atomic physics, want this off
+	inpts["imp_iz_recomb"] = "off";
+	inpts["openadas_root"] = "/home/zamp/flandir/openadas";
+	inpts["openadas_year"] = 50;
+
+	// Miscellanous
+	inpts["print_interval"] = 10;
+
+	// Pointers to functions go here
+	Mapc2p_ptr mapc2p_ptr {&mapc2p};
+
+	// Function pointer input options go here
+	inpts["mapc2p"] = mapc2p_ptr;
+
+	return inpts;
+}
+
+
+int main(int argc, char* argv[])
+{
+	// Initialize MPI
+	MPI_Init(&argc, &argv);
+
+	// Bundle up inputs and run Flan
+	Inputs inpts {create_inputs()};
+	flan(inpts);
+
+	// Finalize MPI
+	MPI_Finalize();
+}
