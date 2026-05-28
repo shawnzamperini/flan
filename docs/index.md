@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="assets/style.css">
+
 <div class="container">
 <div class="sidebar-container">
 {% include_relative _sidebar.md %}
