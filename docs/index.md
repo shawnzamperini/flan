@@ -15,9 +15,9 @@ numerical experimentation.
 
 This site contains:
 
-- **User documentation** for running Flan
-- **Physics notes** describing the models implemented
-- **Developer documentation** for contributing or extending the code
+- **User documentation** for running Flan  
+- **Physics notes** describing the models implemented  
+- **Developer documentation** for contributing or extending the code  
 
 ---
 
@@ -35,4 +35,3 @@ Flan is developed and maintained by Shawn Zamperini.
 
 </div>
 </div>
-
