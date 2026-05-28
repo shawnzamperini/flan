@@ -6,6 +6,10 @@
 </div>
 
 <div class="content-container">
+</div> <!-- CLOSE content-container so Markdown renders normally -->
+</div> <!-- CLOSE container -->
+
+<div class="content-container"> <!-- REOPEN for page content -->
 
 # Flan: Turbulent Trace Impurity Transport Code
 
@@ -24,14 +28,13 @@ This site contains:
 ## Quick Links
 
 - [Getting Started](getting-started.html)
-- [Installation](installation.md)
-- [Running FLAN](running-flan.md)
-- [Physics Models](physics/impurity-transport.md)
-- [Developer Guide](developer/code-structure.md)
+- [Installation](installation.html)
+- [Running FLAN](running-flan.html)
+- [Physics Models](physics/impurity-transport.html)
+- [Developer Guide](developer/code-structure.html)
 
 ---
 
 Flan is developed and maintained by Shawn Zamperini.
 
-</div>
 </div>
