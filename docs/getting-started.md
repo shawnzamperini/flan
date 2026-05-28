@@ -1,3 +1,11 @@
+<div class="container">
+<div class="sidebar-container">
+{% include_relative _sidebar.md %}
+</div>
+
+<div class="content-container">
+
+
 # Getting Started
 
 This guide walks you through the basics of downloading, compiling, and running FLAN.
@@ -15,3 +23,7 @@ This guide walks you through the basics of downloading, compiling, and running F
 ```bash
 git clone https://github.com/shawnzamperini/flan.git
 cd flan
+
+</div>
+</div>
+
