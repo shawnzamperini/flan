@@ -22,3 +22,5 @@ docs/latex*
 Doxyfile.bak
 lib/cmake/*
 scripts/flan_setup.sh*
+build/*
+!build/.gitkeep
