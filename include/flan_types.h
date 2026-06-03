@@ -12,6 +12,8 @@
 #include <tuple>
 #include <variant>
 
+#include "mpi.h"
+
 
 /**
 * @brief Alias for function pointer to mapc2p function.
@@ -43,5 +45,14 @@ using Inputs = std::map<std::string, std::variant<int, double, std::string,
 */
 //using BkgFPType = float;
 using BkgFPType = double;
+
+// Templates to make sure the correct MPI type is select when we need to base
+// it on BkgFPType. Can have it return the correct type by calling
+// mpi_type<BkgFPType>::type 
+template <typename T> struct mpi_type;
+template <> struct mpi_type<int>  { static constexpr MPI_Datatype type = MPI_INT; };
+template <> struct mpi_type<float>  { static constexpr MPI_Datatype type = MPI_FLOAT; };
+template <> struct mpi_type<double> { static constexpr MPI_Datatype type = MPI_DOUBLE; };
+
 
 #endif

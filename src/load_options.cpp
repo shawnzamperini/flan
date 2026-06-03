@@ -24,8 +24,6 @@ namespace Options
 
 	void load_input(Options& opts, const Inputs& inpts)
 	{
-		std::cout << "Loading input...\n";
-		
 		// Loop through every input option. key is a string of the option, and
 		// var stands for "variant", which is a type that can contain multiple
 		// types. We dissect var into the underlying type within assign_option.
@@ -46,6 +44,27 @@ namespace Options
 			if (key == "case_name") 
 			{
 				auto set_func = std::bind(&Options::set_case_name, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "bkg_source") 
+			{
+				auto set_func = std::bind(&Options::set_bkg_source, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "test_opt") 
+			{
+				auto set_func = std::bind(&Options::set_test_opt, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "save_track") 
+			{
+				auto set_func = std::bind(&Options::set_save_track, &opts, 
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
@@ -292,6 +311,20 @@ namespace Options
 			{
 				auto set_func = std::bind(&Options::set_imp_zrange_max, &opts, 
 					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_temp_start_opt") 
+			{
+				auto set_func = std::bind(&Options::set_imp_temp_start_opt, 
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+			
+			else if (key == "imp_temp_start_val") 
+			{
+				auto set_func = std::bind(&Options::set_imp_temp_start_val, 
+					&opts, std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}
 			

@@ -9,11 +9,13 @@
 
 #include "background.h"
 #include "flan_types.h"
+#include "impurity.h"
+#include "mpi.h"
+#include "utilities.h"
 #include "vectors.h"
 
 namespace Background
 {
-
 	// Accessors... I'll get around doxygen commenting these one day...
 	const std::vector<BkgFPType>& Background::get_times() const {return m_times;}
 	const std::vector<BkgFPType>& Background::get_x() const {return m_x;}
@@ -562,6 +564,145 @@ namespace Background
 	void Background::move_into_b_z(Vectors::Vector3D<BkgFPType>& b_z) 
 	{
 		m_b_z.move_into_data(b_z);
+	}
+
+	// Interpolate 4D Background data at a given t,x,y,z.
+	const BkgFPType Background::interp_4d(
+		const Vectors::Vector4D<BkgFPType>& vec4d, const double t0, 
+		const double x0, const double y0, const double z0) const
+	{
+		// This is really just a convienent wrapper to handle passing in
+		// times and the x, y, z vectors.
+		return Utilities::interp_vec4d(vec4d, m_times, m_x, m_y, m_z, t0, 
+			x0, y0, z0);
+	}
+
+	// Interpolate Te at a given t,x,y,z
+	const BkgFPType Background::interp_te(const double t0, const double x0, 
+		const double y0, const double z0) const
+	{
+		return interp_4d(m_te, t0, x0, y0, z0);
+	}
+
+	// Interpolate Te at Impurity location
+	const BkgFPType Background::interp_te_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_te, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate Ti at Impurity location
+	const BkgFPType Background::interp_ti_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_ti, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate ne at Impurity location
+	const BkgFPType Background::interp_ne_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_ne, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate uX at Impurity location
+	const BkgFPType Background::interp_uX_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_uX, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate uY at Impurity location
+	const BkgFPType Background::interp_uY_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_uY, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	// Interpolate uZ at Impurity location
+	const BkgFPType Background::interp_uZ_at_imp(const Impurity::Impurity& imp) 
+		const
+	{
+		return interp_4d(m_uZ, imp.get_t(), imp.get_x(), imp.get_y(), 
+			imp.get_z());
+	}
+
+	void Background::broadcast(MPI_Comm comm)
+	{
+		// Broadcast scalars
+		MPI_Bcast(&m_dim1, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_dim2, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_dim3, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_dim4, 1, MPI_INT, 0, comm);
+
+		// Broadcast 1D vectors
+		Utilities::mpi_broadcast_vector(m_times, 0, comm);
+		Utilities::mpi_broadcast_vector(m_x, 0, comm);
+		Utilities::mpi_broadcast_vector(m_y, 0, comm);
+		Utilities::mpi_broadcast_vector(m_z, 0, comm);
+		Utilities::mpi_broadcast_vector(m_grid_x, 0, comm);
+		Utilities::mpi_broadcast_vector(m_grid_y, 0, comm);
+		Utilities::mpi_broadcast_vector(m_grid_z, 0, comm);
+
+		// Broadcast Vector3Ds
+		m_X.broadcast(comm);
+		m_Y.broadcast(comm);
+		m_Z.broadcast(comm);
+		m_grid_X.broadcast(comm);
+		m_grid_Y.broadcast(comm);
+		m_grid_Z.broadcast(comm);
+		m_J.broadcast(comm);
+		m_gij_00.broadcast(comm);
+		m_gij_01.broadcast(comm);
+		m_gij_02.broadcast(comm);
+		m_gij_11.broadcast(comm);
+		m_gij_12.broadcast(comm);
+		m_gij_22.broadcast(comm);
+		m_dxdX.broadcast(comm);
+		m_dxdY.broadcast(comm);
+		m_dxdZ.broadcast(comm);
+		m_dydX.broadcast(comm);
+		m_dydY.broadcast(comm);
+		m_dydZ.broadcast(comm);
+		m_dzdX.broadcast(comm);
+		m_dzdY.broadcast(comm);
+		m_dzdZ.broadcast(comm);
+		m_dXdx.broadcast(comm);
+		m_dYdx.broadcast(comm);
+		m_dZdx.broadcast(comm);
+		m_dXdy.broadcast(comm);
+		m_dYdy.broadcast(comm);
+		m_dZdy.broadcast(comm);
+		m_dXdz.broadcast(comm);
+		m_dYdz.broadcast(comm);
+		m_dZdz.broadcast(comm);
+
+		// Broadcast Vector4Ds
+		m_ne.broadcast(comm);
+		m_te.broadcast(comm);
+		m_ti.broadcast(comm);
+		m_vp.broadcast(comm);
+		m_bX.broadcast(comm);
+		m_bY.broadcast(comm);
+		m_bZ.broadcast(comm);
+		m_bmag.broadcast(comm);
+		m_gradbX.broadcast(comm);
+		m_gradbY.broadcast(comm);
+		m_gradbZ.broadcast(comm);
+		m_eX.broadcast(comm);
+		m_eY.broadcast(comm);
+		m_eZ.broadcast(comm);
+		m_emag.broadcast(comm);
+		m_uX.broadcast(comm);
+		m_uY.broadcast(comm);
+		m_uZ.broadcast(comm);
+
+
 	}
 }
 

@@ -23,6 +23,7 @@
 
 namespace OpenADAS
 {
+	OpenADAS::OpenADAS() {};
 
 	OpenADAS::OpenADAS(const std::string_view openadas_root, 
 		const int openadas_year, const int imp_atom_num, 
@@ -333,7 +334,6 @@ namespace OpenADAS
 		// Do a bilinear interpolation. In this case, x=Te, y=ne
 		return Utilities::bilinear_interpolate(te0, ne0, rate0, te1, ne1, 
 			rate1, te, ne);
-			
 	}
 
 	std::pair<double, double> calc_ioniz_recomb_probs(
@@ -345,44 +345,36 @@ namespace OpenADAS
 		// We use ne and te more than once here, so to avoid indexing
 		// multiple times it is cheaper to just do it once and save it in
 		// a local variable.
-		double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
-		double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
+		//double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
+		//double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
+		double local_ne {bkg.interp_ne_at_imp(imp)};
+		double local_te {bkg.interp_te_at_imp(imp)};
 		
+		const int q {imp.get_charge()};
+		const int Z {imp.get_atom_num()};
+
+		// Branchless masks
+		const bool can_ionize {q < Z};	
+		const bool can_recomb {q > 0};	
+
 		// Ionization rate coefficients are indexed by charge. This is 
 		// because the zeroeth charge index in the underlying rate data is
 		// for neutral ionization (charge = 0), W0 --> W1+.
-		double ioniz_rate {};
-		if (imp.get_charge() < imp.get_atom_num())
-		{
-			ioniz_rate = oa_ioniz.get_rate_coeff(imp.get_charge(), 
-				local_ne, local_te);
-		}
+		const double ioniz_rate {can_ionize ? 
+			oa_ioniz.get_rate_coeff(q, local_ne, local_te) : 0.0};
 
 		// Recombination rate coefficients are indexed by charge-1. This is
 		// because this zeroeth entry is for W1+ --> W0. So if we want that
 		// rate coefficient for, say, W1+, we need to pass it charge-1 so it
 		// chooses that zeroeth index.
-		double recomb_rate {};
-		if (imp.get_charge() > 0)
-		{
-			recomb_rate = oa_recomb.get_rate_coeff(imp.get_charge()-1, 
-				local_ne, local_te);
-		}
-
-		/*
-		std::cout << "-------------------------------\n";
-		std::cout << "te = " << bkg.get_te()(tidx, xidx, yidx, zidx) << '\n';
-		std::cout << "ne = " << bkg.get_ne()(tidx, xidx, yidx, zidx) << '\n';
-		std::cout << "charge = " << imp.get_charge() << '\n';
-		std::cout << "ioniz_rate =  " << ioniz_rate << '\n';
-		std::cout << "recomb_rate = " << recomb_rate << '\n';
-		std::cout << "-------------------------------\n";
-		*/
+		const double recomb_rate {can_recomb ? 
+			oa_recomb.get_rate_coeff(q-1, local_ne, local_te) : 0.0};
 
 		// The probability of either ionization or recombination occuring is:
 		//   prob = rate [m3/s] * ne [m-3] * dt [s]
-		double ioniz_prob {ioniz_rate * local_ne * imp_time_step};
-		double recomb_prob {recomb_rate * local_ne * imp_time_step};
+		const double ne_dt {local_ne * imp_time_step};
+		double ioniz_prob {ioniz_rate * ne_dt};
+		double recomb_prob {recomb_rate * ne_dt};
 
 		return std::make_pair(ioniz_prob, recomb_prob);
 	}
@@ -400,12 +392,22 @@ namespace OpenADAS
 		// Track number of times the probabilities are greater than 1. This
 		// indicates that a smaller timestep should be used if there are a
 		// significant number of warnings. 
-		if (ioniz_prob > 1.0) ioniz_warnings += 1;
-		if (recomb_prob > 1.0) recomb_warnings += 1;
+		ioniz_warnings += (ioniz_prob  > 1.0);
+		recomb_warnings += (recomb_prob > 1.0);
 
 		// For each process, pull a random number. If that number is less than
 		// prob, then that event occurs. If both events occur, then they just 
 		// cancel each other out and there's no change.
+		const double r1 = Random::get(0.0, 1.0);
+		const double r2 = Random::get(0.0, 1.0);
+		const int ionize  = (r1 < ioniz_prob);
+		const int recomb  = (r2 < recomb_prob);
+
+		// Clever branchless way to adjust the charge
+		const int dq = ionize - recomb;
+		imp.set_charge(imp.get_charge() + dq);
+
+		/*
 		if (Random::get(0.0, 1.0) < ioniz_prob)
 		{
 			imp.set_charge(imp.get_charge() + 1);
@@ -414,6 +416,7 @@ namespace OpenADAS
 		{
 			imp.set_charge(imp.get_charge() - 1);
 		}
+		*/
 	}
 }
 

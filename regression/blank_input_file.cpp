@@ -3,6 +3,7 @@
 
 #include "flan.h"
 #include "flan_types.h"
+#include "mpi.h"
 
 
 // Function definitions go here (don't forget to make a pointer below)
@@ -42,9 +43,15 @@ Inputs create_inputs()
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
-	// Run Flan
+	// Initialize MPI
+	MPI_Init(&argc, &argv);
+
+	// Bundle up inputs and run Flan
 	Inputs inpts {create_inputs()};
 	flan(inpts);
+
+	// Finalize MPI
+	MPI_Finalize();
 }

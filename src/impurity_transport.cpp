@@ -100,6 +100,82 @@ namespace Impurity
 			bkg.get_z_min(), bkg.get_z_max());
 	}
 
+	std::array<double, 3> get_birth_vXYZ(const Background::Background& bkg, 
+		const Options::Options& opts, const double t_imp, const double x_imp, 
+		const double y_imp, const double z_imp)
+	{
+		// If we're running a test we will want to start at predetermined
+		// velocities to make sure things work correctly. Ideally there
+		// wouldn't be an if statement to favor vectorization, but seeing as
+		// this is only happens once per particle it's not a huge deal.
+		if (opts.bkg_source_int() == 0)
+		{
+			// Give particles an initial Y velocity to kick off gyration
+			if (opts.test_opt_int() == 0 || opts.test_opt_int() == 1
+				|| opts.test_opt_int() == 2 || opts.test_opt_int() == 3)
+			{
+				return {0.0, 10000.0, 0.0};
+			}
+
+			// Curvature drift test requires an initial velocity parallel to
+			// the field line, we set that to be 5000 m/s. In this geometry
+			// x = R, y = Z and z = phi
+			else if (opts.test_opt_int() == 4)
+			{
+				constexpr double v_par = 30000;
+				double v_X {- v_par * std::sin(z_imp)};
+				double v_Y {v_par * std::cos(z_imp)};
+				return {v_X, v_Y, 0.0};
+			}
+
+			// Friction force test case we start at rest so it can accelerate 
+			// up to the background velocity
+			else if (opts.test_opt_int() == 5)
+			{
+				return {0.0, 0.0, 0.0};
+			}
+		}
+
+		// Start at input temperature value
+		double start_temp {};
+		if (opts.imp_temp_start_opt_int() == 0)
+		{
+			start_temp = opts.imp_temp_start_val();
+		}
+
+		// Start at main ion temperature
+		else if (opts.imp_temp_start_opt_int() == 1)
+		{
+			// Need to get the starting cell indices so we can index the main
+			// ion temperature array.
+			int tidx {get_nearest_index(bkg.get_times(), 
+				static_cast<BkgFPType>(t_imp))};
+			int xidx = get_nearest_cell_index(bkg.get_grid_x(),     
+				static_cast<BkgFPType>(x_imp));
+			int yidx = get_nearest_cell_index(bkg.get_grid_y(),     
+				static_cast<BkgFPType>(y_imp));
+			int zidx = get_nearest_cell_index(bkg.get_grid_z(),     
+				static_cast<BkgFPType>(z_imp));
+			
+			start_temp = bkg.get_ti()(tidx, xidx, yidx, zidx);
+		}
+
+		// Sample from a Maxwellian with mu = sqrt(kT/m) and mean = 0 for an
+		// isotropic velocity distribution. Unfortunately throwing away a
+		// random number here. T [eV], m [kg]
+		const double mu {std::sqrt(start_temp * Constants::ev_to_j 
+			/ (opts.imp_mass_amu() * Constants::amu_to_kg))};  // m/s
+
+		double vX {};
+		double vY {};
+		double vZ {};
+		std::tie(vX, vY) = Random::get_two_norm(0.0, mu);
+		std::tie(vZ, std::ignore) = Random::get_two_norm(0.0, mu);
+
+		return {vX, vY, vZ};
+	}
+
+
 	int get_birth_charge(const Options::Options& opts)
 	{
 		return opts.imp_init_charge();
@@ -120,24 +196,31 @@ namespace Impurity
 		double Y_imp {0.0};
 		double Z_imp {0.0};
 
-		// -- BEGIN HARDCODED TEST SUITE --
-		// Slab: Give particle initial Y velocity so it gyrates
-		//std::cout << "DEBUG: Starting at 2500 m/s!\n";
-		//double vY_imp {2500.0};
+		// Get starting X, Y, Z velocity
+		auto [vX_imp, vY_imp, vZ_imp] = get_birth_vXYZ(bkg, opts, t_imp, x_imp, 
+			y_imp, z_imp);
+		//std::cout << "vX, vY, vZ = " << vX_imp << "\t" << vY_imp << "\t" 
+		//	<< vZ_imp << '\n';
 
-		// Cylindrical: Assign parallel (toroidal) velocity for curvature drift.
-		//double vT_imp {5000.0};
-		//double tor_ang {z_imp};
-		//std::cout << "DEBUG: Starting at v_tor = " << vT_imp << " (" 
-		//	<< tor_ang << ")" << "\n";
-		//double vX_imp {-std::sin(tor_ang) * vT_imp};
-		//double vY_imp {std::cos(tor_ang) * vT_imp};
-		//double vZ_imp {2500.0};  // For gyrating
+		/*
+		// Test: Set to true if using a test background plasma
+		bool init_test {opts.bkg_source_int() == 0};
 
-		// Assume starting at rest, but if this ever changes do it here
-		double vX_imp {0.0};
-		double vY_imp {0.0};
-		double vZ_imp {0.0};
+		// Test: Slab geometry (x=X, y=Y, z=Z). Testing for gyration (0), 
+		// ExB (1) grad-B (2) or polarization (3) drifts, so give particle 
+		// initial Y (y) velocity of 2500 m/s to kick off the gyration.
+		bool init_slab {(unsigned) < 4u};
+		vY_imp = 2500.0 * init_slab * init_test;
+
+		// Test: Cylindrical geometry (x=R, y=Z, z=phi). Testing for curvature 
+		// drift (4), so give particle initial velocity of 5000 m/s along the 
+		// toroidal field line (the z direction) and 2500 m/s in the Z direction
+		// so it gyrates.
+		bool init_cyl {(unsigned)x == 4u};
+		double vX_imp {-std::sin(z_imp) * 5000.0 * init_cyl * init_test};
+		double vY_imp {std::cos(z_imp) * 5000.0 * init_cyl * init_test};
+		double vZ_imp {2500.0 * init_cyl * init_test};  // For gyrating
+		*/
 
 		// Impurity starting charge
 		int charge_imp = get_birth_charge(opts);
@@ -506,8 +589,9 @@ namespace Impurity
 	}
 
 	void record_stats(Statistics& imp_stats, const Impurity& imp, 
-		const Background::Background& bkg, const int tidx, const int xidx, 
-		const int yidx, const int zidx, const double imp_time_step)
+		const Background::Background& bkg, const Options::Options& opts, 
+		const int tidx, const int xidx, const int yidx, const int zidx, 
+		const double imp_time_step)
 	{
 		// Add one to counts to this location	
 		imp_stats.add_counts(tidx, xidx, yidx, zidx, 1);
@@ -531,6 +615,13 @@ namespace Impurity
 		// Add charge to the running sum for this location
 		imp_stats.add_charge(tidx, xidx, yidx, zidx, 
 			static_cast<BkgFPType>(imp.get_charge()));
+
+		// Optionally update particle track. This can take a solid chunk of
+		// memory so it should only be used with a single particle. It is 
+		// mainly used with the test cases so we can show that single particle
+		// will have the right ExB drift or that the collision model works,
+		// things like that.
+		if (opts.save_track_int() == 1) imp_stats.update_track(imp);
 	}
 
 	void find_containing_cell(Impurity& imp, 
@@ -551,31 +642,19 @@ namespace Impurity
 		std::vector<Impurity>& imps, const std::vector<int>& var_red_counts, 
 		Statistics& imp_stats)
 	{
-		// Comment needs updating
-		// See if (inelastic) collision should create a split secondary
-		// particle or not. This is only checked if the particle splitting 
-		// scheme is based on inelastic collisions (var_red_split_int == 2). 
-		/*
-		bool split_particle {false};
-		if (opts.var_red_split_int() == 2)
-		{
-			split_particle = VarianceReduction::check_split_particle(imp, tidx, 
-				xidx, yidx, zidx, opts, var_red_counts, imp_stats);
-		}
-		*/
-
-		// Local plasma properties
-		//double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
-		//double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
-		//double local_ti = bkg.get_ti()(tidx, xidx, yidx, zidx);
-
 		// Update impurity velocity based on Nanbu collision model. Impurity
 		// is modified within function. First call is for ions (the false) and
 		// second call is for electrons (the true).
 		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, false, 
-			imp_time_step);
-		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
-			imp_time_step);
+			imp_time_step, imp_stats);
+
+		// friction_force test case only considers ion collisions to compare
+		// against expected flow
+		if (opts.test_opt_int() != 5)
+		{
+			Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
+				imp_time_step, imp_stats);
+		}
 	}
 
 	void follow_impurity(Impurity& imp, const Background::Background& bkg, 
@@ -616,7 +695,7 @@ namespace Impurity
 			yidx, zidx);
 
 		// Record starting position in statistics arrays
-		record_stats(imp_stats, imp, bkg, tidx, xidx, yidx, zidx, 
+		record_stats(imp_stats, imp, bkg, opts, tidx, xidx, yidx, zidx, 
 			imp_time_step);
 
 		// For debugging purposes (only works with one thread)
@@ -739,8 +818,8 @@ namespace Impurity
 			// figure out how much of the particle's step was in each cell and 
 			// divide the weight up accordingly. Forgoing this for now, but 
 			// it's a future consideration.
-			if (continue_following) record_stats(imp_stats, imp, bkg, tidx, 
-				xidx, yidx, zidx, imp_time_step);
+			if (continue_following) record_stats(imp_stats, imp, bkg, opts, 
+				tidx, xidx, yidx, zidx, imp_time_step);
 		}
 	}
 
@@ -768,9 +847,16 @@ namespace Impurity
 		const OpenADAS::OpenADAS& oa_recomb, 
 		Options::Options& opts, Timer::Timer& timer)
 	{
+		// Rank and number of processes
+		int rank {};
+		int nprocs {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
 		// Variance reduction based on ionization/recombination requires 
 		// ionization/recombination to be on (duh)
-		if (opts.var_red_split_int() == 1 && opts.imp_iz_recomb_int() == 0)
+		if (opts.var_red_split_int() == 1 && opts.imp_iz_recomb_int() == 0
+			&& rank == 0)
 		{
 			std::cout << "Warning! Particle splitting based on "
 				<< "ionization/recombination requires imp_ioniz_recomb be set"
@@ -781,11 +867,23 @@ namespace Impurity
 		// Variable time step is based on collisions, so those must be on.
 		// If not, default to constant time step and alert user.
 		if (opts.imp_time_step_opt_int() == 1 
-			&& opts.imp_collisions_int() == 0)
+			&& opts.imp_collisions_int() == 0 && rank == 0)
 		{
 			std::cout << "Warning! Impurity time step set to variable, but "
 				<< "collisions are off. Changing to constant time step.\n";
 			opts.set_imp_time_step_opt("constant");
+		}
+
+		// As a safeguard, only save particle tracks if a single particle is
+		// used. Otherwise it can easily use way too much memory and blow up
+		// the output file.
+		if (opts.save_track_int() == 1 && opts.imp_num() > 1 && rank == 0)
+		{
+			std::cout << "Warning! save_track = \"on\" and more than "
+				<< "a single particle is tracked (imp_num = " 
+				<< opts.imp_num() << "). Only one particle is supported, so "
+				<< "imp_num is being decreased to 1.\n";
+			opts.set_imp_num(1);
 		}
 
 		// Vector of counts at each frame, below which is considered a 
@@ -805,19 +903,14 @@ namespace Impurity
 			omp_out = omp_out + omp_in) \
 			initializer(omp_priv(omp_orig))
 
-		// Startup message. Create parallel region to see how many threads it
-		// will generate in the following loop.
-		std::cout << "Starting particle following...\n";
-		#pragma omp parallel
-		{
-			if (omp_get_thread_num() == 0) std::cout << " Number of threads: " 
-				<< omp_get_num_threads() << '\n';
-		}
-
 		// Print progress this many times
-		//constexpr int prog_interval {10};
 		const int prog_interval {opts.print_interval()};
-	
+
+		// Determine number of impurities to follow for this rank with 
+		// integer division. Remainder is given to rank 0.
+		int rank_imp_num {opts.imp_num() / nprocs};
+		if (rank == 0) rank_imp_num += opts.imp_num() % nprocs;
+
 		// Loop through one impurity at a time, tracking it from its birth
 		// time/location to the end. Dynamic scheduling likely the best here 
 		// since the loop times can vary widely. Declaring bkg, oa_ioniz and
@@ -833,7 +926,7 @@ namespace Impurity
 			firstprivate(var_red_control) \
 			shared(bkg, oa_ioniz, oa_recomb) \
 			reduction(+: imp_stats, ioniz_warnings, recomb_warnings, timer)
-		for (int i = 0; i < opts.imp_num(); ++i)
+		for (int i = 0; i < rank_imp_num; ++i)
 		{
 			// Variance reduction: median mode (var_red_import_int == 0). Based 
 			// on seeing if the particle is in a "low count" region, which is 
@@ -874,84 +967,6 @@ namespace Impurity
 			// Create starting impurity ion
 			Impurity primary_imp = create_primary_imp(bkg, opts);
 
-			/*
-			// ----- START DEBUG -----
-			std::cout << "DEBUG: Assigning velocity!\n";
-			primary_imp.set_vx(0.0);
-			primary_imp.set_vy(2500.0);
-			//primary_imp.set_vz(5000.0);
-			primary_imp.set_vz(0.0);
-			// Need to assign vX, vY and vZ
-			// Use mapc2p to calculate the tangent basis vector components
-			constexpr double eps {1e-8};
-			double X0 {};
-			double Y0 {};
-			double Z0 {};
-			double X1 {};
-			double Y1 {};
-			double Z1 {};
-			
-			// e_1
-			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x()-eps, primary_imp.get_y(), 
-				primary_imp.get_z());
-			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x()+eps, primary_imp.get_y(), 
-				primary_imp.get_z());
-			double dXdx {(X1 - X0) / (2 * eps)};
-			double dYdx {(Y1 - Y0) / (2 * eps)};
-			double dZdx {(Z1 - Z0) / (2 * eps)};
-			std::array<double, 3> e_1 {dXdx, dYdx, dZdx};
-
-			// e_2
-			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y()-eps, 
-				primary_imp.get_z());
-			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y()+eps, 
-				primary_imp.get_z());
-			double dXdy {(X1 - X0) / (2 * eps)};
-			double dYdy {(Y1 - Y0) / (2 * eps)};
-			double dZdy {(Z1 - Z0) / (2 * eps)};
-			std::array<double, 3> e_2 {dXdy, dYdy, dZdy};
-			
-			// e_3
-			std::tie(X0, Y0, Z0) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y(), 
-				primary_imp.get_z()-eps);
-			std::tie(X1, Y1, Z1) = opts.mapc2p()(primary_imp.get_x(), primary_imp.get_y(), 
-				primary_imp.get_z()+eps);
-			double dXdz {(X1 - X0) / (2 * eps)};
-			double dYdz {(Y1 - Y0) / (2 * eps)};
-			double dZdz {(Z1 - Z0) / (2 * eps)};
-			std::array<double, 3> e_3 {dXdz, dYdz, dZdz};
-		
-			// Scalar triple product (Jacobian)
-			double J {Utilities::dot_product(e_1,	
-				Utilities::cross_product(e_2, e_3))};
-
-			// Calculate reciprocal basis vector
-			std::array<double, 3> e1 {Utilities::cross_product(e_2, e_3)}; // dxdX, dxdY, dxdZ
-			std::array<double, 3> e2 {Utilities::cross_product(e_3, e_1)}; // dydX, dydY, dydZ
-			std::array<double, 3> e3 {Utilities::cross_product(e_1, e_2)}; // dzdX, dzdY, dzdZ
-			for (int i {}; i < 3; ++i)
-			{
-				e1[i] = e1[i] / J;
-				e2[i] = e2[i] / J;
-				e3[i] = e3[i] / J;
-			}
-
-			// Update Cartesian components with new values
-			double primary_imp_vmag0 {std::sqrt(primary_imp.get_vX()*primary_imp.get_vX() 
-				+ primary_imp.get_vY()*primary_imp.get_vY() + primary_imp.get_vZ()*primary_imp.get_vZ())};
-
-			// This update is NOT energy conserving! So we need to rescale it to
-			// make sure the magnitude does not change.
-			primary_imp.set_vX(primary_imp.get_vx() * e_1[0] + primary_imp.get_vy() * e_2[0] 
-				+ primary_imp.get_vz() * e_3[0]);
-			primary_imp.set_vY(primary_imp.get_vx() * e_1[1] + primary_imp.get_vy() * e_2[1] 
-				+ primary_imp.get_vz() * e_3[1]);
-			primary_imp.set_vZ(primary_imp.get_vx() * e_1[2] + primary_imp.get_vy() * e_2[2] 
-				+ primary_imp.get_vz() * e_3[2]);
-
-			*/
-			// ----- END DEBUG -----
-			
 			// Each thread starts with one impurity ion, but it may end up 
 			// following more than that because that ion may split off another
 			// one, which may split off another one, so the thread will
@@ -986,26 +1001,36 @@ namespace Impurity
 			// this is such a quick block of code that it should have very
 			// little impact on the overall simulation time considering all
 			// the calculation time is spent following impurities. 
-			#pragma omp critical
+			if (rank == 0)
 			{
-				// Increment shared counter
-				++prim_imp_count;
-				
-				if (opts.imp_num() > prog_interval)
+				#pragma omp critical
 				{
-					if ((prim_imp_count % (opts.imp_num() / prog_interval)) 
-						== 0 && prim_imp_count > 0)
+					// Increment shared counter
+					++prim_imp_count;
+					
+					if (rank_imp_num > prog_interval)
 					{
-						double perc_complete {static_cast<double>(
-							prim_imp_count) / opts.imp_num() * 100};
-						std::cout << "Followed " << prim_imp_count << "/" 
-							<< opts.imp_num() << " primary impurities (" 
-							<< static_cast<int>(perc_complete) << "%)\n";
+						//if ((prim_imp_count % (opts.imp_num() / prog_interval)) 
+						//	== 0 && prim_imp_count > 0)
+						if ((prim_imp_count % (rank_imp_num / prog_interval)) 
+							== 0 && prim_imp_count > 0)
+						{
+							double perc_complete {static_cast<double>(
+								prim_imp_count) / rank_imp_num * 100};
 
-						// Give user an update on secondary impurities, since
-						// most the time can actually be spent following these.
-						std::cout << "  Secondary impurities followed: " 
-							<< tot_imp_count - prim_imp_count << '\n';
+							// As an estimate report prim_imp_count * nprocs,
+							// which is just to assume each MPI rank progresses
+							// at about the same pace.
+							std::cout << "Followed " << prim_imp_count * nprocs 
+								<< "/" << opts.imp_num() 
+								<< " primary impurities (" 
+								<< static_cast<int>(perc_complete) << "%)\n";
+
+							// Give user an update on secondary impurities, since
+							// most the time can actually be spent following these.
+							std::cout << "  Secondary impurities followed: " 
+								<< tot_imp_count - prim_imp_count << '\n';
+						}
 					}
 				}
 			}
@@ -1021,23 +1046,50 @@ namespace Impurity
 	Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer)
 	{
+		// Rank and number of processes
+		int rank {};
+		int nprocs {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
 		// Initialize particle statistics vectors, all contained within a
 		// Statistics object. Option to control if the three velocity arrays
 		// are allocated (to save memory).
 		Statistics imp_stats {bkg.get_dim1(), bkg.get_dim2(), 
 			bkg.get_dim3(), bkg.get_dim4()};
 
-		// Load OpenADAS data needed for ionization/recombination rates. 
-		OpenADAS::OpenADAS oa_ioniz {opts.openadas_root(), 
-			opts.openadas_year(), opts.imp_atom_num(), "scd"};
-		OpenADAS::OpenADAS oa_recomb {opts.openadas_root(), 
-			opts.openadas_year(), opts.imp_atom_num(), "acd"};
+		// Load OpenADAS data needed for ionization/recombination rates if
+		// ionization/recombination is on. Believe it or not, this is the
+		// preferred way to do this in C++.
+		// We only want one MPI process to do this at a time since it involves
+		// reading the ADAS files, and having different processes all reading
+		// the same file could cause slow downs. Really minor impact though.
+		OpenADAS::OpenADAS oa_ioniz {};
+		OpenADAS::OpenADAS oa_recomb {};
+		for (int r {}; r < nprocs; r++)
+		{
+			if (rank == r)
+			{
+				oa_ioniz = opts.imp_iz_recomb_int() == 1 
+					? OpenADAS::OpenADAS(opts.openadas_root(), 
+					opts.openadas_year(), opts.imp_atom_num(), "scd") 
+					: OpenADAS::OpenADAS();
+				oa_recomb = opts.imp_iz_recomb_int() == 1 
+					? OpenADAS::OpenADAS(opts.openadas_root(), 
+					opts.openadas_year(), opts.imp_atom_num(), "acd") 
+					: OpenADAS::OpenADAS();
+			}
+
+			// Everyone waits before next rank runs
+			MPI_Barrier(MPI_COMM_WORLD);
+		}
 
 		// Execute main particle following loop.
 		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);
 	
 		// Convert the statistics into meaningful quantities. We are scaling
 		// the density by the scale factor.
+		/*
 		std::cout << "Calculating derived quantities...\n";
 		std::cout << "  Density...\n";
 		imp_stats.calc_density(bkg, opts.imp_num(), 
@@ -1046,6 +1098,9 @@ namespace Impurity
 		imp_stats.calc_vels();
 		std::cout << "  Charge...\n";
 		imp_stats.calc_charge();
+		std::cout << "  Nanbu - s...\n";
+		imp_stats.calc_s();
+		*/
 		
 		return imp_stats;
 

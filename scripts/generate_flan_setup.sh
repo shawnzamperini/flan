@@ -36,9 +36,13 @@ cat <<EOF > CMakeLists.txt
 cmake_minimum_required(VERSION 3.26)
 project(\$1 LANGUAGES CXX)
 find_package(flan REQUIRED HINTS "$1/lib/cmake")
+find_package(MPI REQUIRED)
 add_executable(\$1 \$1.cpp)
 include_directories("$1/include")
-target_link_libraries(\$1 PRIVATE flan)
+target_link_libraries(\$1 
+	PRIVATE 
+		flan
+		MPI::MPI_CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 EOF

@@ -6,9 +6,11 @@
 #ifndef VECTORS_H
 #define VECTORS_H
 
-#include <vector>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <vector>
+
+#include "mpi.h"
 
 namespace Vectors
 {
@@ -159,6 +161,11 @@ namespace Vectors
 		* This function takes care of that to prevent that accident.
 		*/
 		void resize(const int dim1, const int dim2, const int dim3);
+
+		/**
+		* @brief Broadcast Vector3D to other processes
+		*/
+		void broadcast(MPI_Comm comm);
 	};
 
 	/**
@@ -339,6 +346,11 @@ namespace Vectors
 
         void resize(const int dim1, const int dim2, const int dim3,
             const int dim4);
+
+		/**
+		* @brief Broadcast Vector4D to other processes
+		*/
+		void broadcast(MPI_Comm comm);
 	};
 }
 

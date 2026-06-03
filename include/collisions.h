@@ -4,6 +4,7 @@
 */
 
 #include "impurity.h"
+#include "impurity_stats.h"
 #include "options.h"
 #include "background.h"
 
@@ -15,6 +16,7 @@ namespace Collisions
 	*/
 	void nanbu_coll(Impurity::Impurity& imp, const Background::Background& bkg,
 		const int tidx, const int xidx, const int yidx, const int zidx,
-		const Options::Options& opts, bool elec, const double imp_time_step);
+		const Options::Options& opts, bool elec, const double imp_time_step,
+		Impurity::Statistics& imp_stats);
 
 }
