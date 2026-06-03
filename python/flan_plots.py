@@ -180,7 +180,7 @@ class FlanPlots:
 	def plot_frame_xy(self, data_name, frame, z0, showplot=True, 
 		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
 		xlabel="x (m)", ylabel="y (m)", cbar_label=None, rsep=0.0,
-		own_data=None, charge=1, xscale=1.0, yscale=1.0):
+		own_data=None, charge=1, xscale=1.0, yscale=1.0, aspect="auto"):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -249,7 +249,7 @@ class FlanPlots:
 			
 			cbar = fig.colorbar(mesh, ax=ax1)
 			ax1.set_facecolor("grey")
-			ax1.set_aspect("equal")
+			ax1.set_aspect(aspect)
 			ax1.set_title("{:.2f} us".format(time * 1e6))
 			ax1.set_xlabel(xlabel, fontsize=g_fontsize)
 			ax1.set_ylabel(ylabel, fontsize=g_fontsize)
@@ -265,7 +265,8 @@ class FlanPlots:
 
 	def plot_frame_xz(self, data_name, frame, y0, showplot=True, 
 		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
-		xlabel="x (m)", ylabel="z (m)", cbar_label=None, own_data=None):
+		xlabel="x (m)", ylabel="z (m)", cbar_label=None, own_data=None,
+		aspect="auto"):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -332,7 +333,7 @@ class FlanPlots:
 			
 			cbar = fig.colorbar(mesh, ax=ax1)
 			ax1.set_facecolor("grey")
-			#ax1.set_aspect("equal")
+			ax1.set_aspect(aspect)
 			ax1.set_title("{:.2f} us".format(time * 1e6))
 			ax1.set_xlabel(xlabel, fontsize=g_fontsize)
 			ax1.set_ylabel(ylabel, fontsize=g_fontsize)
@@ -468,7 +469,7 @@ class FlanPlots:
 	def plot_frames_xz(self, data_name, frame_start, frame_end, y0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
 		vmin=None, vmax=None, save_path=None, xlabel="x (m)", ylabel="z (m)",
-		cbar_label=None, rsep=0.0, own_data=None):
+		cbar_label=None, rsep=0.0, own_data=None, aspect="auto"):
 		"""
 		Combine multiple plots from plot_frame_xz into an animation.
 		"""
@@ -523,7 +524,7 @@ class FlanPlots:
 		mesh = ax1.pcolormesh(X, Z, data_xz.T, cmap=cmap, norm=norm)
 		cbar = fig.colorbar(mesh, cax=cax)
 		ax1.set_facecolor("grey")
-		#ax1.set_aspect("equal")
+		ax1.set_aspect(aspect)
 		ax1.set_xlabel(xlabel, fontsize=g_fontsize)
 		ax1.set_ylabel(ylabel, fontsize=g_fontsize)
 		ax1.set_title("Frame {}".format(frame_start), fontsize=g_fontsize)

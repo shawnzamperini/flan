@@ -352,8 +352,8 @@ namespace Collisions
 
 		// Need to account for this better, just putting it here for now so I
 		// can get this paper submitted :(
-		if (ne < 1e16) ne = 1e16;
-		if (Te < 0.1) ne = 0.1;
+		Te = std::max(0.1, Te);
+		ne = std::max(1e16, ne);
 
 		// Load some reusable variables based on which species. If elec = true,
 		// then electrons and ions if not. 
@@ -369,6 +369,7 @@ namespace Collisions
 			mass_kg = opts.gkyl_ion_mass_amu() * Constants::amu_to_kg;	
 			//T = bkg.get_ti()(tidx, xidx, yidx, zidx);
 			T = bkg.interp_ti_at_imp(imp);
+			T = std::max(0.1, T);
 		}
 
 		// Subtlety! Impurity velocity is defined at half time steps, but the collision
