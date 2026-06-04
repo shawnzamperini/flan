@@ -1054,7 +1054,7 @@ class FlanPlots:
 			pass
 
 		# Input file: tests/test_exb.cpp
-		# Background plasma is constant BZ = 1 and EY = 5000. Drift is in the
+		# Background plasma is constant BZ = 1 and EY = 500. Drift is in the
 		# x direction.
 		elif self.nc["input"]["test_opt"][0] == "exb":
 			
@@ -1062,8 +1062,8 @@ class FlanPlots:
 
 			# Hardcoded values that this test uses
 			vY0 = 25000
-			EY = 50000
-			BZ = 10.0
+			EY = 500
+			BZ = 1.0
 
 			# Cyclotron period = qB / m
 			omega = q * BZ / m

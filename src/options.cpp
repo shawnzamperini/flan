@@ -59,6 +59,7 @@ namespace Options
 		set_var_red_rusrol(m_var_red_rusrol);
 		set_imp_time_step_opt(m_imp_time_step_opt);
 		set_imp_iz_recomb(m_imp_iz_recomb);
+		set_tbound_type(m_tbound_type);
 		set_min_xbound_type(m_min_xbound_type);
 		set_calc_grad_elec(m_calc_grad_elec);
 	}
@@ -182,6 +183,21 @@ namespace Options
 			if (calc_grad_elec == "off") m_calc_grad_elec_int = 0;
 			else if (calc_grad_elec == "on") m_calc_grad_elec_int = 1;
 		}
+
+	// tbound_type
+	void Options::set_tbound_type(std::string tbound_type) 
+	{
+		// Only assign if valid option, leaving as default if not
+		if (check_input<std::string>("tbound_type", tbound_type,
+			{"absorbing", "periodic"}))
+		{
+			m_tbound_type = tbound_type;
+		}
+
+		// Assign control integers
+		if (tbound_type == "absorbing") m_tbound_type_int = 0;
+		else if (tbound_type == "periodic") m_tbound_type_int = 1;
+	}
 
 	// min_xbound_type
 	void Options::set_min_xbound_type(std::string min_xbound_type) 
@@ -665,6 +681,8 @@ namespace Options
 		{return get_control_int("imp_time_step_opt", m_imp_time_step_opt_int);}
 	const int Options::imp_iz_recomb_int() const
 		{return get_control_int("imp_iz_recomb", m_imp_iz_recomb_int);}
+	const int Options::tbound_type_int() const
+		{return get_control_int("tbound_type", m_tbound_type_int);}
 	const int Options::min_xbound_type_int() const
 		{return get_control_int("min_xbound_type", m_min_xbound_type_int);}
 	const int Options::calc_grad_elec_int() const

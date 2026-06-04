@@ -26,7 +26,12 @@ namespace Impurity
 
 		// MPI rank
 		int rank {};
+		int nprocs {};
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+		// No reduction needed with a single process, return as-is
+		if (nprocs == 1) return local_stats;
 
 		// Send and recieve buffers
 		std::vector<double> sendbuf;

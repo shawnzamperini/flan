@@ -303,44 +303,6 @@ namespace Impurity
 		else return index - 1;
 	}
 
-	/*
-	std::tuple<double, double, double> lorentz_forces(Impurity& imp, 
-		const Background::Background& bkg, const int tidx, const int xidx, 
-		const int yidx, const int zidx)
-	{
-		// Impurity's charge
-		double imp_q {imp.get_charge() * -Constants::charge_e};
-
-		// Electric and magnetic field components
-		double eX {bkg.get_eX()(tidx, xidx, yidx, zidx)};
-		double eY {bkg.get_eY()(tidx, xidx, yidx, zidx)};
-		double eZ {bkg.get_eZ()(tidx, xidx, yidx, zidx)};
-		double bX {bkg.get_bX()(tidx, xidx, yidx, zidx)};
-		double bY {bkg.get_bY()(tidx, xidx, yidx, zidx)};
-		double bZ {bkg.get_bZ()(tidx, xidx, yidx, zidx)};
-
-		// Impurity velocity components
-		double vX {imp.get_vX()};
-		double vY {imp.get_vY()};
-		double vZ {imp.get_vZ()};
-
-		//std::cout << "  Ex, Ey, Ez = " << eX << ", " << eY << ", " << eZ 
-		//	<< "\n";
-		//std::cout << "  Bx, By, Bz, B = " << bX << ", " << bY << ", " << bZ 
-		//	<< ", " << std::sqrt(bX*bX + bY*bY + bZ*bZ) << "\n";
-		//std::cout << "  vX, vY, vZ = " << vX << ", " << vY << ", " << vZ 
-		//	<< "\n";
-
-		// Each component of the Lorentz force in physical space
-		double fX {imp_q * (eX + vY * bZ - vZ * bY)};
-		double fY {imp_q * (eY + vZ * bX - vX * bZ)};
-		double fZ {imp_q * (eZ + vX * bY - vY * bX)};
-
-		// Return as tuple
-		return std::make_tuple(fX, fY, fZ);
-	}
-	*/
-
 	// Interpolate the reciprocal basis functions at the impurity location
 	std::array<double, 9> interp_recp(const Impurity& imp, 
 		const Background::Background& bkg, const int xidx, const int yidx, 
@@ -409,10 +371,10 @@ namespace Impurity
 		// If we've run past the time range covered by the background plasma
 		// then we're done
 		imp.set_t(imp.get_t() + imp_time_step);
-		if (imp.get_t() > bkg.get_t_max())
-		{
-			return false;
-		}
+		//if (imp.get_t() > bkg.get_t_max())
+		//{
+		//	return false;
+		//}
 
 		// Step in physical space
         //double dX {imp.get_X() - imp.get_prevX()};
@@ -477,6 +439,36 @@ namespace Impurity
         imp.set_z(imp.get_z() + imp.get_vz() * imp_time_step);
 
         // Bound checking (move to separate function). 
+
+		// Time boundary. This one feels weird but it isn't if you just think
+		// of t as a normal spatial dimension. It can be absorbing, which is
+		// typically what you think of as running out of time, or it can be
+		// periodic. A perioidic boundary condition just loops the particle 
+		// back to the start time. Conceptually, this just assumes the
+		// background is long enough to capture the full statistics of the
+		// turbulence, so a background twice as long is approximately the
+		// same thing as the same background twice. 
+
+		// Absorbing boundary condition
+		if (opts.tbound_type_int() == 0)
+		{
+			std::cout << imp.get_t() << '\t' << bkg.get_t_max() << '\n';
+			if (imp.get_t() > bkg.get_t_max())
+			{
+				return false;
+			}
+		}
+
+		// Periodic boundary condition
+		else if (opts.tbound_type_int() == 1)
+		{
+			if (imp.get_t() > bkg.get_t_max())
+			{
+				imp.set_t(bkg.get_t_min() + (imp.get_t() - bkg.get_t_max()));
+				//std::cout << "Periodic: Max t\n";
+			}
+		}
+
 		// Absorbing at maximum x. xbound_buffer move the BC off the x bound
 		// by that much to help avoid some common issues in the background
 		// that can happen there, causing impurities to "stick" to the 
