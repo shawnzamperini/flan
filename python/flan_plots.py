@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
 from matplotlib.colors import Normalize, LogNorm
+from matplotlib.collections import PolyCollection
 from matplotlib import animation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.animation import PillowWriter
@@ -1330,3 +1331,173 @@ class FlanPlots:
 			print("Error: test_opt = {} not recognized" \
 				.format(self.nc["input"]["test_opt"][0]))
 			return None
+	
+	def plot_frame_RZ(self, data_name, frame, nodes_path, charge=1, 
+		gfile_path=None, cmap="inferno", norm_type="linear", 
+		show_pol_ang=True, vmin=None, vmax=None):
+		"""
+		Plot toroidally averaged data in R, Z frame.
+		"""
+		pass
+
+		# Needed to read nodes file. Built into flan conda environment.
+		import postgkyl as pg
+
+		# Pull out some arrays for easy access
+		x = self.nc["geometry"]["x"][:]  # psi
+		y = self.nc["geometry"]["y"][:]  # alpha
+		z = self.nc["geometry"]["z"][:]  # poloidal theta, I think!
+
+		# Average over y because we treat y as the toroidal coordinate, so this
+		# is a toroidal average.
+		data_yavg = self.load_data_frame(data_name, frame, charge).mean(axis=1)
+
+		# Load gfile. This is just used to plot the flux surfaces and is not 
+		# required (but obviously very useful)
+		include_gfile = False
+		if gfile_path is not None:
+			
+			from read_gfile import read_gfile
+
+			gfile = read_gfile(gfile_path)
+			rgrid = gfile["rgrid"]
+			zgrid = gfile["zgrid"]
+			psigrid = gfile["psi_grid"]
+			psirz = gfile["psirz"].T  # Indexing Fortran --> C (which is assumed in numpy)
+			R_axis = gfile["rmaxis"]
+			Z_axis = gfile["zmaxis"]
+			psi_axis = gfile["simag"]
+			psi_lcfs = gfile["sibry"]
+			qpsi = gfile["qpsi"]
+			rlim = gfile["rlim"]
+			zlim = gfile["zlim"]
+
+			# Set flag so plot options execute
+			include_gfile = True
+
+		# Load nodes file.
+		nodes_gdata = pg.GData(nodes_path)
+		nodes = nodes_gdata.get_values()  # shape (x+1, y+1, z+1, 3)
+
+		# nodes contains the R,Z,phi coordinates of the nodes, which are the 0,1,2
+		# index of the last dimension, respectively. We average over the y 
+		# (toroidal) index for the average coordinates in the R, Z plane.
+		R_nodes = nodes[:, :, :, 0].mean(axis=1)
+		Z_nodes = nodes[:, :, :, 1].mean(axis=1)
+
+		# x and z node coordinates and cell centers
+		x_nodes = nodes_gdata.get_grid()[0]
+		z_nodes = nodes_gdata.get_grid()[2]
+		x_centers = 0.5 * (x_nodes[:-1] + x_nodes[1:])
+		z_centers = 0.5 * (z_nodes[:-1] + z_nodes[1:])
+
+		Nx = len(x_nodes) - 1  # number of cells in x
+		Nz = len(z_nodes) - 1  # number of cells in z
+
+		# R_nodes and Z_nodes are already shape (Nx, Nz) = cell centers from y-averaging
+		# But we need node positions at the node grid, not cell centers.
+		# Use the raw nodes array directly (before averaging over y):
+		# nodes shape is (Nx, Ny, Nz, 3), take y=0 (all y are identical as we confirmed)
+		R_node_grid = nodes[:, 0, :, 0]  # shape (Nx, Nz) - but these are NODE positions
+		Z_node_grid = nodes[:, 0, :, 1]  # shape (Nx, Nz)
+
+		# So nodes gives R,Z at the LOW corner of each cell, not at all 4 
+		# corners. We need to construct the 4 corners from adjacent cells.
+
+		# Build quads: for each cell (i,j), the 4 corners in (R,Z) are:
+		# (i,j), (i+1,j), (i+1,j+1), (i,j+1)
+		# We need R,Z at all node indices including the last row/col.
+		# Extend R_node_grid to (Nx+1, Nz+1) by extrapolating the boundary:
+
+		def extend_node_grid(G):
+			"""
+			Extend a (Nx, Nz) node grid to (Nx+1, Nz+1) by linear extrapolation.
+			"""
+
+			# Add one row at the end (x direction)
+			last_row = 2 * G[-1, :] - G[-2, :]
+			G = np.vstack([G, last_row[np.newaxis, :]])
+
+			# Add one column at the end (z direction)
+			last_col = 2 * G[:, -1] - G[:, -2]
+			G = np.hstack([G, last_col[:, np.newaxis]])
+			return G
+
+		R_ext = extend_node_grid(R_node_grid)  # shape (Nx+1, Nz+1)
+		Z_ext = extend_node_grid(Z_node_grid)  # shape (Nx+1, Nz+1)
+
+		# Now build the polygon list
+		verts = []
+		colors = []
+		for i in range(Nx):
+			for j in range(Nz-1):  # I think -1 is needed here
+
+				# 4 corners, ordered as a closed polygon
+				quad = np.array([
+					[R_ext[i,   j  ], Z_ext[i,   j  ]],
+					[R_ext[i+1, j  ], Z_ext[i+1, j  ]],
+					[R_ext[i+1, j+1], Z_ext[i+1, j+1]],
+					[R_ext[i,   j+1], Z_ext[i,   j+1]],
+				])
+				verts.append(quad)
+
+				# The nodes are not necessarily on the same grid that the
+				# simulation is carried out on, so we need to grab the nearest 
+				# value. This is because a higher resolution grid allows us to
+				# better resolves the shape of the flux surface in plots. So
+				# we need to find nearest simulation indices to each center
+				# from the nodes file.
+				i_sim = np.argmin(np.abs(x - x_centers[i]))
+				j_sim = np.argmin(np.abs(z - z_centers[j]))
+				colors.append(data_yavg[i_sim, j_sim])
+
+		colors = np.array(colors)
+
+		# Mask out non-positive values for log scale
+		if norm_type == "log":
+			valid = colors > 0
+			verts_valid = [v for v, ok in zip(verts, valid) if ok]
+			colors_valid = colors[valid]
+		else:
+			verts_valid = verts
+			colors_valid = colors
+
+		# Assign vmix/vamx
+		if vmin is None and norm_type == "log":
+			vmin = np.nanmin(colors_valid)	
+		if vmax is None and norm_type == "log":
+			vmax = np.nanmax(colors_valid)	
+
+		# Create plot and add polygons to plot
+		fig, ax = plt.subplots(figsize=(8, 8))
+		norm = self.get_norm(data_yavg, norm_type, vmin=vmin, vmax=vmax)
+		coll = PolyCollection(verts_valid, array=colors_valid, cmap=cmap,
+			norm=norm, edgecolors=None)
+		ax.add_collection(coll)
+
+		# Plot LCFS
+		if include_gfile:
+			ax.contour(rgrid, zgrid, psirz, levels=[psi_lcfs], colors="k")
+			ax.plot(rlim, zlim, color="k", lw=3)
+			#ax.plot([2.1, 2.6], [Zdiv, Zdiv], linestyle="--", color="k")
+
+		# Plot of the poloidal angle to help when referring where particles
+		# are. Requires gfile to define where the magnetic axis is.
+		if show_pol_ang and include_gfile:
+			nang = 8
+			line_len = 1.0
+			for i in range(nang):
+				angle = 2.0 * np.pi * i / nang  
+
+				# End point of line
+				R1 = R_axis + line_len * np.cos(angle)
+				Z1 = Z_axis + line_len * np.sin(angle)
+
+				ax.plot([R_axis, R1], [Z_axis, Z1], color="k", linestyle="--")
+
+		# Add colorbar, show plot
+		cbar = fig.colorbar(coll, ax=ax)
+		cbar.set_label(data_name)
+		ax.axis('equal')
+		ax.autoscale_view()
+		fig.show()

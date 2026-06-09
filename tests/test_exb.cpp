@@ -1,9 +1,10 @@
-#include <iostream>
 #include <cmath>
+#include <iostream>
 #include <tuple>
 
 #include "flan.h"
 #include "flan_types.h"
+#include "mpi.h"
 
 
 // mapc2p (slated for depreciation)
@@ -49,6 +50,7 @@ Inputs create_inputs()
 	// and place so we can track their motion as one single particle. This is
 	// good because if there was numerical noise we'd see it in the videos if
 	// the particles didn't stay mostly together.
+	inpts["tbound_type"] = "periodic";
 	inpts["imp_tstart_opt"] = "single_value";
 	inpts["imp_tstart_val"] = 0.0;
 	inpts["imp_xstart_opt"] = "single_value";
@@ -78,9 +80,15 @@ Inputs create_inputs()
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
-	// Run Flan
+	// Initialize MPI
+	MPI_Init(&argc, &argv);
+
+	// Bundle up inputs and run Flan
 	Inputs inpts {create_inputs()};
 	flan(inpts);
+
+	// Finalize MPI
+	MPI_Finalize();
 }
