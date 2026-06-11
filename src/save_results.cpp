@@ -442,7 +442,6 @@ namespace SaveResults
 			dim3, dim4, "Jacobian", "()");
 
 		// Metric coefficients
-		/*
 		save_vector_3d(geo_group, bkg.get_gij_00(), "gij_00", dim2, 
 			dim3, dim4, "metric coefficient (00)", "(?)");
 		save_vector_3d(geo_group, bkg.get_gij_01(), "gij_01", dim2, 
@@ -455,7 +454,6 @@ namespace SaveResults
 			dim3, dim4, "metric coefficient (12)", "(?)");
 		save_vector_3d(geo_group, bkg.get_gij_22(), "gij_22", dim2, 
 			dim3, dim4, "metric coefficient (22)", "(?)");
-		*/
 
 		// Tangent basis vector components
 		save_vector_3d(geo_group, bkg.get_dXdx(), "dXdx", dim2, 

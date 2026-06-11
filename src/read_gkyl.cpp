@@ -165,9 +165,8 @@ namespace Gkyl
 		std::cout << "  - Jacobian\n";
 		read_jacobian(grid_data, gkyl_J, opts);
 
-		// Read in metric coefficients. Each has its own vector. Commented
-		// out since it isn't used anymore, but uncomment if needed again.
-		/*
+		// Read in metric coefficients. Each has its own vector. Not actually
+		// used in Flan but it can be useful in post-analysis.
 		std::cout << "  - Metric coefficients\n";
 		read_gij(grid_data, gkyl_gij_00, opts, "00");
 		read_gij(grid_data, gkyl_gij_01, opts, "01");
@@ -175,7 +174,6 @@ namespace Gkyl
 		read_gij(grid_data, gkyl_gij_11, opts, "11");
 		read_gij(grid_data, gkyl_gij_12, opts, "12");
 		read_gij(grid_data, gkyl_gij_22, opts, "22");
-		*/
 
 		// Read in tangent (covariant) basis vectors (dX/dz). We don't 
 		// actually need these, but they're included here for completeness

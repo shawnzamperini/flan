@@ -1039,6 +1039,26 @@ class FlanPlots:
 		# Otherwise return full 4D arrays
 		return v_rad, v_pol		
 	
+	def calc_Dr_vp(self):
+		"""
+
+		"""
+
+		# Pull out needed arrays
+		x = self.nc["geometry"]["x"][:]
+		nz = self.nc["output"]["nz"][:]
+
+		# Calculate radial velocity
+
+		# Calculate radial density gradient, dnz / dpsi
+		dnz_dx = np.gradient(nz, x, axis=1)		
+
+		# dnz / dr = dnz / dpsi * |grad(psi)|, where |grad(psi)| == g^xx
+
+		# Define radial flux equation, with Dr and vp as fit parameters
+
+		# Fit to extract Dr and vp
+	
 	def validate_drift_test(self):
 		"""
 		"""
