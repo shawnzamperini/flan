@@ -141,6 +141,9 @@ class FlanPlots:
 		elif data_name == "pol_X":
 			return self.calc_polarization_drift(charge=charge, frame=frame)[0]
 
+		# Radial diffusion coefficient
+		elif data_name == "Dr":
+			return self.calc_Dr(frame=frame)
 
 		# 4D vector, index frame. Just loop through the groups until we find
 		# the correct one.
@@ -1039,25 +1042,66 @@ class FlanPlots:
 		# Otherwise return full 4D arrays
 		return v_rad, v_pol		
 	
-	def calc_Dr_vp(self):
+	def calc_Dr(self, frame=None):
+		"""
+		Assumes radial coordinate is x
 		"""
 
+		# Pull out needed arrays
+		x = self.nc["geometry"]["x"][:]
+		gxx = self.nc["geometry"]["gij_00"][:]  # g^xx
+
+		if frame is None:
+			nz = self.nc["output"]["nz"][:]
+			vx = self.nc["output"]["v_x"][:]  # Units of [x units] / s
+			dnz_dx = np.gradient(nz, x, axis=1)		
+		else:
+			nz = self.nc["output"]["nz"][frame]
+			vx = self.nc["output"]["v_x"][frame]  # Units of [x units] / s
+			dnz_dx = np.gradient(nz, x, axis=0)		
+
+
+		# Calculate radial density gradient, dnz / dpsi, and radial flux
+		gamma_x = nz * vx
+
+		# D in flux coordinates, x direction
+		Dx = - gamma_x / dnz_dx
+
+		# Convert to real space, m^2/s, by recognizing 
+		# Dx = Dr * (dx / dr)^2 = Dr * g^xx --> Dr = Dx / g^xx
+		Dr = Dx / gxx
+		return Dr
+
+	def calc_Dr_vp(self):
+		"""
+		ISSUE: This problem is ill-formed sort of. I'd need to add on some
+		approximation to reduce the dimensionality by one, which is doable
+		but has questions...
+
+
+		Assumes radial coordinate is x
 		"""
 
 		# Pull out needed arrays
 		x = self.nc["geometry"]["x"][:]
 		nz = self.nc["output"]["nz"][:]
+		gxx = self.nc["geometry"]["gij_00"][:]  # g^xx
+		vx = self.nc["output"]["v_x"][:]  # Units of [x units] / s
 
-		# Calculate radial velocity
-
-		# Calculate radial density gradient, dnz / dpsi
+		# Calculate radial density gradient, dnz / dpsi, and radial flux
 		dnz_dx = np.gradient(nz, x, axis=1)		
+		gamma = nz * vx
 
-		# dnz / dr = dnz / dpsi * |grad(psi)|, where |grad(psi)| == g^xx
+		# dnz / dr = dnz / dpsi * |grad(psi)|, where |grad(psi)| == sqrt(g^xx)
+		#dnz_dr = np.zeros_like(dnz_dx)
+		#for t in range(0, len(dnz_dr)):
+		#	dnz_dr[i] = dnz_dx * np.sqrt(gxx)
 
-		# Define radial flux equation, with Dr and vp as fit parameters
+		# Define radial flux equation, with Dr and vp as fit parameters. 
 
-		# Fit to extract Dr and vp
+		# Fit to extract Dr and vp. This is done in flux coordinates, so the 
+		# units are not m^2/s and m/s yet, respectively.
+
 	
 	def validate_drift_test(self):
 		"""
