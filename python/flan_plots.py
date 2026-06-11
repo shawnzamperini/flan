@@ -5,7 +5,9 @@ from matplotlib.colors import Normalize, LogNorm
 from matplotlib.collections import PolyCollection
 from matplotlib import animation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.animation import PillowWriter
+from matplotlib.animation import PillowWriter, FFMpegWriter, ImageMagickWriter
+import postgkyl as pg
+	
 
 # Some global variables
 g_fontsize = 14
@@ -42,14 +44,31 @@ class FlanPlots:
 		Helper function to return the x, y, z cell centers. These are the 
 		coordinates used to plot most data.
 
-		Inputs: None
+		Parameters
+		----------
+		None
+		a : float
+			Description of the first input. Include units or constraints if relevant.
+		b : array_like
+			Description of the second input. Mention shape expectations.
+		method : {"fast", "accurate"}, optional
+			Allowed values and what they mean. Defaults to "fast".
 
-		Outputs:
-		 - x, y, z cell centers
+		Returns
+		-------
+		result : array, array, array
+			Returns cell center x, y, z arrays
 
-		Example Usage:
-		 fp = flan_plots.FlanPlots("file.nc")
-		 x, y, z = fp.load_cell_centers()
+		Raises
+		------
+
+		Notes
+		-----
+
+		Examples
+		--------
+		fp = flan_plots.FlanPlots("file.nc")
+		x, y, z = fp.load_cell_centers()
 		"""
 
 		x = self.nc["geometry"]["x"][:].data
@@ -66,6 +85,8 @@ class FlanPlots:
 		 - data_name (str) : Variable name of data from netCDF file. 
 		 - frame (int)	   : The time frame to plot data for. Ignored for 3D 
 							   data.
+		 - charge (int)    : Charge to use in drift calculations, when those
+		                       options are chosen.
 		
 		Outputs: 
 		  - A 3D numpy array of x,y,z dimensions.
@@ -267,7 +288,7 @@ class FlanPlots:
 	def plot_frame_xz(self, data_name, frame, y0, showplot=True, 
 		cmap="inferno", norm_type="linear", vmin=None, vmax=None, 
 		xlabel="x (m)", ylabel="z (m)", cbar_label=None, own_data=None,
-		aspect="auto"):
+		aspect="auto", avg_y=False):
 		"""
 		Plot data for a given frame at z=z0 in the x, y plane. data_name is
 		chosen from the netCDF file, and must be 4D data (t, x, y, z). If z=z0
@@ -281,6 +302,8 @@ class FlanPlots:
 		 - cmap (str)	   : A matplotlib colormap name for the plot.
 		 - norm_type (str) : The normalization of the colorbar. Options are
 							  "linear" or "log".
+		 - avg_y (bool)    : If True, average along the y dimension. y0 is
+		                       ignored in this case.
 
 		Outputs: Returns a tuple of the x and y grid and the data at each
 		 location.
@@ -309,11 +332,16 @@ class FlanPlots:
 		time = self.nc["geometry"]["time"][frame] \
 			- self.nc["geometry"]["time"][0]
 
-		# Find closest z index to input z value
-		y_idx = self.closest_index(y, y0) 
+		# Optionally average along the y coordinate.
+		if avg_y:
+			data_xz = data[:,:,:].mean(axis=1)
+		else:
 
-		# Index data at this z location.
-		data_xz = data[:,y_idx,:]
+			# Find closest z index to input z value
+			y_idx = self.closest_index(y, y0) 
+
+			# Index data at this z location.
+			data_xz = data[:,y_idx,:]
 
 		# Determine colorbar limits.
 		if vmin is None: 
@@ -470,7 +498,7 @@ class FlanPlots:
 	def plot_frames_xz(self, data_name, frame_start, frame_end, y0, 
 		showplot=True, cmap="inferno", norm_type="linear", animate_cbar=False,
 		vmin=None, vmax=None, save_path=None, xlabel="x (m)", ylabel="z (m)",
-		cbar_label=None, rsep=0.0, own_data=None, aspect="auto"):
+		cbar_label=None, rsep=0.0, own_data=None, aspect="auto", avg_y=False):
 		"""
 		Combine multiple plots from plot_frame_xz into an animation.
 		"""
@@ -484,7 +512,7 @@ class FlanPlots:
 				
 				try:
 					X, Z, data_xz = self.plot_frame_xz(data_name, f, y0, 
-						showplot=False, own_data=own_data)
+						showplot=False, own_data=own_data, avg_y=avg_y)
 
 				# TypeError will happen if we put in an invalid option for
 				# data_name.
@@ -1337,8 +1365,54 @@ class FlanPlots:
 		show_pol_ang=True, vmin=None, vmax=None):
 		"""
 		Plot toroidally averaged data in R, Z frame.
+
+		Parameters
+		----------
+		None
+		data_name : str
+			The name of the data in the NetCDF file to plot
+		frame : int
+			Frame to plot
+		nodes_path : str
+			Path to the nodes.gkyl file used to construct the flux surfaces
+		charge : int
+			Charge to use in drfit calculations, if applicable
+		gfile_path : str, optional
+			Path to EQDSK file. Optional, but required if you want flux
+			surfaces included on the plot.
+		cmap : str
+			matplotlib colormap to use
+		norm_type : {"linear", "log"}
+			Normalization to apply to the colormap. Log requires vmin,vmax > 0.
+		show_pol_ang : bool
+			Draw the poloidal angle on the plot, using the magnetic axis as the
+			center. Useful for determining where z corresponds to. Requires
+			gfile_path. 
+		vmin : float
+			Minimum value for colormap
+		vmax : float
+			Maximum value for colormap
+
+		Returns
+		-------
+		None
+
+		Raises
+		------
+
+		Notes
+		-----
+		The nodes file does not need to be the one from the underlying Gkeyll
+		simulation. Typically a Gkeyll simulation with much higher resolution
+		will be initilaized to make a nodes file. The higher resolution nodes
+		file is then used here, giving better resolution and allowing the
+		data when mapped to the R,Z plane to better conform to the flux 
+		surfaces.
+
+		Examples
+		--------
+	
 		"""
-		pass
 
 		# Needed to read nodes file. Built into flan conda environment.
 		import postgkyl as pg
@@ -1357,13 +1431,13 @@ class FlanPlots:
 		include_gfile = False
 		if gfile_path is not None:
 			
+			# Included in flan/python directory
 			from read_gfile import read_gfile
 
 			gfile = read_gfile(gfile_path)
 			rgrid = gfile["rgrid"]
 			zgrid = gfile["zgrid"]
 			psigrid = gfile["psi_grid"]
-			psirz = gfile["psirz"].T  # Indexing Fortran --> C (which is assumed in numpy)
 			R_axis = gfile["rmaxis"]
 			Z_axis = gfile["zmaxis"]
 			psi_axis = gfile["simag"]
@@ -1372,6 +1446,9 @@ class FlanPlots:
 			rlim = gfile["rlim"]
 			zlim = gfile["zlim"]
 
+			# Indexing Fortran --> C (which is assumed in numpy)
+			psirz = gfile["psirz"].T  
+
 			# Set flag so plot options execute
 			include_gfile = True
 
@@ -1379,9 +1456,9 @@ class FlanPlots:
 		nodes_gdata = pg.GData(nodes_path)
 		nodes = nodes_gdata.get_values()  # shape (x+1, y+1, z+1, 3)
 
-		# nodes contains the R,Z,phi coordinates of the nodes, which are the 0,1,2
-		# index of the last dimension, respectively. We average over the y 
-		# (toroidal) index for the average coordinates in the R, Z plane.
+		# nodes contains the R,Z,phi coordinates of the nodes, which are the
+		# 0,1,2 index of the last dimension, respectively. We average over the
+		# y (toroidal) index for the average coordinates in the R, Z plane.
 		R_nodes = nodes[:, :, :, 0].mean(axis=1)
 		Z_nodes = nodes[:, :, :, 1].mean(axis=1)
 
@@ -1495,9 +1572,257 @@ class FlanPlots:
 
 				ax.plot([R_axis, R1], [Z_axis, Z1], color="k", linestyle="--")
 
+		# Time at frame, starting it at zero
+		time = self.nc["geometry"]["time"][frame] \
+			- self.nc["geometry"]["time"][0]
+		ax.set_title("{:.2f} us".format(time * 1e6))
+
 		# Add colorbar, show plot
 		cbar = fig.colorbar(coll, ax=ax)
 		cbar.set_label(data_name)
 		ax.axis('equal')
 		ax.autoscale_view()
 		fig.show()
+
+
+	def _draw_single_RZ_frame(self, ax, data_name, frame, nodes_path, charge,
+		gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax):
+		"""
+		Draw a single R–Z frame onto an existing Axes.
+		"""
+
+		from read_gfile import read_gfile
+
+		# Pull out some arrays for easy access
+		x = self.nc["geometry"]["x"][:]  # psi
+		y = self.nc["geometry"]["y"][:]  # alpha
+		z = self.nc["geometry"]["z"][:]  # poloidal theta
+
+		# Toroidal average
+		data_yavg = self.load_data_frame(data_name, frame, charge).mean(axis=1)
+
+		# Load gfile if provided
+		include_gfile = False
+		if gfile_path is not None:
+			gfile = read_gfile(gfile_path)
+			rgrid = gfile["rgrid"]
+			zgrid = gfile["zgrid"]
+			psirz = gfile["psirz"].T
+			psi_lcfs = gfile["sibry"]
+			rlim = gfile["rlim"]
+			zlim = gfile["zlim"]
+			R_axis = gfile["rmaxis"]
+			Z_axis = gfile["zmaxis"]
+			include_gfile = True
+
+		# Load nodes file
+		nodes_gdata = pg.GData(nodes_path)
+		nodes = nodes_gdata.get_values()
+
+		# R, Z, phi coordinates stored in last dimension
+		R_nodes = nodes[:, :, :, 0].mean(axis=1)
+		Z_nodes = nodes[:, :, :, 1].mean(axis=1)
+		#phi_nodes = nodes[:, :, :, 2].mean(axis=1)
+
+		# Get the grid this nodes file used (which does not have to be the
+		# grid the simulation used)
+		x_nodes = nodes_gdata.get_grid()[0]
+		z_nodes = nodes_gdata.get_grid()[2]
+		x_centers = 0.5 * (x_nodes[:-1] + x_nodes[1:])
+		z_centers = 0.5 * (z_nodes[:-1] + z_nodes[1:])
+
+		Nx = len(x_nodes) - 1
+		Nz = len(z_nodes) - 1
+
+		R_node_grid = nodes[:, 0, :, 0]
+		Z_node_grid = nodes[:, 0, :, 1]
+
+		# Needed to like extend to the outermost cells in each dimesnion or
+		# something
+		def extend_node_grid(G):
+			last_row = 2 * G[-1, :] - G[-2, :]
+			G = np.vstack([G, last_row[np.newaxis, :]])
+			last_col = 2 * G[:, -1] - G[:, -2]
+			G = np.hstack([G, last_col[:, np.newaxis]])
+			return G
+
+		R_ext = extend_node_grid(R_node_grid)
+		Z_ext = extend_node_grid(Z_node_grid)
+
+		# Create vertices of each cell that are used to make the polygons later
+		# Essentially making an irregular grid one cell at a time.
+		verts = []
+		colors = []
+		for i in range(Nx):
+			for j in range(Nz - 1):
+				quad = np.array([
+					[R_ext[i, j], Z_ext[i, j]],
+					[R_ext[i+1, j], Z_ext[i+1, j]],
+					[R_ext[i+1, j+1], Z_ext[i+1, j+1]],
+					[R_ext[i, j+1], Z_ext[i, j+1]],
+				])
+				verts.append(quad)
+
+				# Grab the nearest Flan simulation value to this cell. Store
+				# it as the color value.
+				i_sim = np.argmin(np.abs(x - x_centers[i]))
+				j_sim = np.argmin(np.abs(z - z_centers[j]))
+				colors.append(data_yavg[i_sim, j_sim])
+
+		colors = np.array(colors)
+
+		# Remove <= 0 values if log scale selected by setting them to nan
+		if norm_type == "log":
+			valid = colors > 0
+			verts_valid = [v for v, ok in zip(verts, valid) if ok]
+			colors_valid = colors[valid]
+		else:
+			verts_valid = verts
+			colors_valid = colors
+
+		if vmin is None and norm_type == "log":
+			vmin = np.nanmin(colors_valid)
+		if vmax is None and norm_type == "log":
+			vmax = np.nanmax(colors_valid)
+
+		# Get normalization, then assemble PolyCollection of our irregular
+		# grid that we just assembled one poloygon at a time. Put on plot.
+		norm = self.get_norm(data_yavg, norm_type, vmin=vmin, vmax=vmax)
+		coll = PolyCollection(verts_valid, array=colors_valid, cmap=cmap,
+							  norm=norm, edgecolors=None)
+		ax.add_collection(coll)
+
+		# Optionally plot separatrix
+		if include_gfile:
+			ax.contour(rgrid, zgrid, psirz, levels=[psi_lcfs], colors="k")
+			ax.plot(rlim, zlim, color="k", lw=3)
+
+		# Optionally show poloidal angle from the magnetic axis
+		if show_pol_ang and include_gfile:
+			nang = 8
+			line_len = 1.0
+			for i in range(nang):
+				angle = 2 * np.pi * i / nang
+				R1 = R_axis + line_len * np.cos(angle)
+				Z1 = Z_axis + line_len * np.sin(angle)
+				ax.plot([R_axis, R1], [Z_axis, Z1], color="k", linestyle="--")
+
+		# Time at frame, starting it at zero
+		time = self.nc["geometry"]["time"][frame] \
+			- self.nc["geometry"]["time"][0]
+		ax.set_title("{:.2f} us".format(time * 1e6))
+
+		ax.axis("equal")
+		ax.autoscale_view()
+
+		return coll
+
+
+	def plot_frames_RZ(self, data_name, frame=None, nodes_path=None, charge=1,
+		gfile_path=None, cmap="inferno", norm_type="linear", show_pol_ang=True,
+		vmin=None, vmax=None, *, frame_start=None, frame_end=None, 
+		output_video=None, fps=10):
+		"""
+		Plot toroidally averaged data in R,Z or generate a video over a 
+		frame range. A video is made only if output_video is supplied.
+
+		Parameters
+		----------
+		data_name : str
+			Name of the data in the NetCDF file to plot.
+		frame : int
+			Frame to plot (ignored if output_video is set).
+		nodes_path : str
+			Path to nodes.gkyl file.
+		charge : int
+			Charge for drfit calculations.
+		gfile_path : str, optional
+			Path to EQDSK file for flux surfaces.
+		cmap : str
+			Matplotlib colormap.
+		norm_type : {"linear", "log"}
+			Colormap normalization.
+		show_pol_ang : bool
+			Whether to draw poloidal angle lines.
+		vmin, vmax : float
+			Colormap limits.
+
+		Video Parameters
+		----------------
+		frame_start, frame_end : int
+			Range of frames to include in video.
+		output_video : str
+			Output filename (e.g. "movie.gif"). If None, plot a single frame.
+		fps : int
+			Frames per second for video.
+
+		Notes
+		-----
+		AI obviously helped me write this one, so it is different from the 
+		other video functions. 
+
+		Returns
+		-------
+		None
+
+		Examples
+		--------
+
+		# Plot impurity density at the last frame
+		fp.plot_frames_RZ("nz", -1, "/path/to/gkyl-nodes.gkyl", 
+			gfile_path="/path/to/gfile.geqdsk", norm_type="log", 
+			show_pol_ang=True, vmin=1e-7, vmax=1e-4)
+
+		# Video of impurity density from frames 0-50
+		fp.plot_frames_RZ("nz", -1, "/path/to/gkyl-nodes.gkyl", 
+			gfile_path="/path/to/gfile.geqdsk", norm_type="log", 
+			show_pol_ang=True, vmin=1e-7, vmax=1e-4, frame_start=0, 
+			frame_end=50, output_video="flan_nz.gif")
+		"""
+
+		# ----------------------------------------------------------------------
+		# VIDEO MODE
+		# ----------------------------------------------------------------------
+		if output_video is not None:
+			if frame_start is None or frame_end is None:
+				raise ValueError("Must specify frame_start and frame_end " + 
+					"when output_video is set.")
+
+			fig, ax = plt.subplots(figsize=(8, 8))
+
+			# Create a dummy collection so we can create the colorbar once
+			dummy = ax.scatter([], [], c=[], cmap=cmap)
+			cbar = fig.colorbar(dummy, ax=ax)
+			cbar.set_label(data_name)
+
+			# Codec is tricky...
+			#writer = ImageMagickWriter(fps=fps)
+			writer = FFMpegWriter(fps=fps, codec="vp8")
+			with writer.saving(fig, output_video, dpi=150):
+				for fr in range(frame_start, frame_end + 1):
+					ax.clear()
+
+					# Redraw frame
+					coll = self._draw_single_RZ_frame(
+						ax, data_name, fr, nodes_path, charge,
+						gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax
+					)
+
+					# Update colorbar limits
+					cbar.mappable.set_clim(vmin, vmax)
+
+					writer.grab_frame()
+
+			plt.close(fig)
+			return
+
+		# ----------------------------------------------------------------------
+		# SINGLE FRAME MODE
+		# ----------------------------------------------------------------------
+		fig, ax = plt.subplots(figsize=(8, 8))
+		self._draw_single_RZ_frame(ax, data_name, frame, nodes_path, charge,
+			gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax)
+		fig.show()
+
+
+

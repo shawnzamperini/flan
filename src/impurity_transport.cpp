@@ -452,7 +452,6 @@ namespace Impurity
 		// Absorbing boundary condition
 		if (opts.tbound_type_int() == 0)
 		{
-			std::cout << imp.get_t() << '\t' << bkg.get_t_max() << '\n';
 			if (imp.get_t() > bkg.get_t_max())
 			{
 				return false;
