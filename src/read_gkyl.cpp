@@ -313,7 +313,6 @@ namespace Gkyl
 		bkg.move_into_J(gkyl_J_3D);
 
 		// Likewise for the 6 metric coefficient arrays
-		/*
 		Vectors::Vector3D gkyl_gij_00_3D {gkyl_gij_00.slice_dim1(0)};
 		bkg.move_into_gij_00(gkyl_gij_00_3D);
 		Vectors::Vector3D gkyl_gij_01_3D {gkyl_gij_01.slice_dim1(0)};
@@ -326,7 +325,6 @@ namespace Gkyl
 		bkg.move_into_gij_12(gkyl_gij_12_3D);
 		Vectors::Vector3D gkyl_gij_22_3D {gkyl_gij_22.slice_dim1(0)};
 		bkg.move_into_gij_22(gkyl_gij_22_3D);
-		*/
 
 		// Likewise for the reciprocal basis vectors. Tangent basis vectors
 		// not needed, so not saved.
