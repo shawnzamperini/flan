@@ -76,7 +76,91 @@ class FlanPlots:
 		z = self.nc["geometry"]["z"][:].data
 		return x, y, z
 	
-	def load_data_frame(self, data_name, frame, charge=1):
+	def load_data_frame(self, data_name, frame, charge=1, avg_t=False, avg_y=False):
+		"""
+		Load data_name at a given frame, or time-averaged across all frames.
+		Output is always (nx, ny, nz) or (nx, nz) if avg_y=True.
+
+		Parameters
+		----------
+		data_name : str
+			Variable name from the netCDF file.
+		frame : int
+			Time frame to load. Ignored when avg_t=True.
+		charge : int
+			Charge used in drift calculations.
+		avg_t : bool
+			If True, return the time-average over all frames instead.
+		avg_y : bool
+			If True, average over the y dimension. Applied after avg_t/frame
+			selection, so the gradient (if any) is computed on smoothed data.
+
+		Returns
+		-------
+		np.ndarray
+			Shape (nx, ny, nz) normally, (nx, nz) if avg_y=True.
+		"""
+
+		def _reduce(arr):
+			"""
+			Collapse time axis then optionally y axis.
+			Input shape: (nt, nx, ny, nz) → output: (nx, ny, nz) or (nx, nz).
+			"""
+			data = arr[:].mean(axis=0) if avg_t else arr[frame]  # (nx, ny, nz)
+			return data.mean(axis=1) if avg_y else data           # (nx, nz) or (nx, ny, nz)
+
+		# --- Geometry: no time axis, but y axis may still be averaged ---
+		geo_vars = {"b_x", "b_y", "b_z", "J",
+					"dXdx", "dYdx", "dZdx",
+					"dXdy", "dYdy", "dZdy",
+					"dXdz", "dYdz", "dZdz",
+					"X", "Y", "Z"}
+		if data_name in geo_vars:
+			data = self.nc["geometry"][data_name][:].data   # (nx, ny, nz)
+			return data.mean(axis=1) if avg_y else data
+
+		# --- Derived quantities returning full (nt, nx, ny, nz) arrays ---
+		derived = {
+			"cyclotron_frequency": lambda: self.calc_cyclo_freq(),
+			"v_R":                 lambda: self.calc_v_R(),
+			"gradB_X":             lambda: self.calc_gradb_drift(charge)[0],
+			"gradB_Y":             lambda: self.calc_gradb_drift(charge)[1],
+			"gradB_Z":             lambda: self.calc_gradb_drift(charge)[2],
+		}
+		if data_name in derived:
+			return _reduce(derived[data_name]())
+
+		# --- Dr: delegates avg_t and avg_y internally ---
+		if data_name == "Dr":
+			return self.calc_Dr(frame=frame, avg_t=avg_t, avg_y=avg_y)
+
+		# --- Derived quantities that only support a single frame ---
+		frame_only = {
+			"v_rad":   lambda: self.calc_rad_pol_comp("actual", frame=frame)[0],
+			"v_pol":   lambda: self.calc_rad_pol_comp("actual", frame=frame)[1],
+			"ExB_X":   lambda: self.calc_exb_drift(frame=frame)[0],
+			"ExB_Y":   lambda: self.calc_exb_drift(frame=frame)[1],
+			"ExB_Z":   lambda: self.calc_exb_drift(frame=frame)[2],
+			"ExB_rad": lambda: self.calc_rad_pol_comp("ExB", frame=frame)[0],
+			"ExB_pol": lambda: self.calc_rad_pol_comp("ExB", frame=frame)[1],
+			"pol_X":   lambda: self.calc_polarization_drift(charge=charge, frame=frame)[0],
+		}
+		if data_name in frame_only:
+			if avg_t:
+				print(f"Warning: avg_t not implemented for '{data_name}', "
+					  f"returning frame {frame}.")
+			data = frame_only[data_name]()                 # (nx, ny, nz)
+			return data.mean(axis=1) if avg_y else data
+
+		# --- Raw netCDF groups ---
+		for group in ("input", "output", "background"):
+			if data_name in self.nc[group].variables:
+				return _reduce(self.nc[group][data_name])
+
+		print(f"Error! Cannot find variable: {data_name}")
+		return None
+
+	#def load_data_frame(self, data_name, frame, charge=1, avg_t=False):
 		"""
 		Helper function to load data_name at a given frame (if applicable, 3D
 		data is returned ignoring frame).
@@ -87,6 +171,8 @@ class FlanPlots:
 							   data.
 		 - charge (int)    : Charge to use in drift calculations, when those
 		                       options are chosen.
+		 - avg_t (bool)    : Option to time average all data. This obviously
+		                       will ignore whatever frame is
 		
 		Outputs: 
 		  - A 3D numpy array of x,y,z dimensions.
@@ -95,6 +181,11 @@ class FlanPlots:
 			# Load impurity density at frame 10
 			nz = fp.load_data_frame("imp_dens", 10)
 		"""
+
+		"""
+		# TO-DO
+		# Clean up avg_t. We can probabaly standardize the data and consilidate
+		# it into a single mean at the end.
 
 		# Load data, correctly selecting the netCDF group it lives in
 		# Geometry data are 3D vectors and don't have a time index
@@ -105,56 +196,83 @@ class FlanPlots:
 
 		# Cyclotron frequency
 		elif data_name == "cyclotron_frequency":
-			return self.calc_cyclo_freq()[frame]
+			if avg_t:
+				return self.calc_cyclo_freq().mean(axis=0)
+			else:
+				return self.calc_cyclo_freq()[frame]
 
 		# Radial velocity
 		elif data_name == "v_R":
-			return self.calc_v_R()[frame]
+			if avg_t:
+				return self.calc_v_R().mean(axis=0)
+			else:
+				return self.calc_v_R()[frame]
 
 		# Radial/poloidal velocities (the poloidal frame directions)
 		elif data_name == "v_rad":
+			if avg_t: print("Error! avg_t not implemented for {} yet!".format(data_name))
 			return self.calc_rad_pol_comp("actual", frame=frame)[0]
 		elif data_name == "v_pol":
+			if avg_t: print("Error! avg_t not implemented for {} yet!".format(data_name))
 			return self.calc_rad_pol_comp("actual", frame=frame)[1]
 
 		# ExB drift components
 		elif data_name == "ExB_X":
+			if avg_t: print("Error! avg_t not implemented for {} yet!".format(data_name))
 			return self.calc_exb_drift(frame=frame)[0]
 		elif data_name == "ExB_Y":
+			if avg_t: print("Error! avg_t not implemented for {} yet!".format(data_name))
 			return self.calc_exb_drift(frame=frame)[1]
 		elif data_name == "ExB_Z":
+			if avg_t: print("Error! avg_t not implemented for {} yet!".format(data_name))
 			return self.calc_exb_drift(frame=frame)[2]
 		elif data_name == "ExB_rad":
+			if avg_t: print("Error! avg_t not implemented for {} yet!".format(data_name))
 			return self.calc_rad_pol_comp("ExB", frame=frame)[0]
 		elif data_name == "ExB_pol":
+			if avg_t: print("Error! avg_t not implemented for {} yet!".format(data_name))
 			return self.calc_rad_pol_comp("ExB", frame=frame)[1]
 
 		# Grad-B drift components
 		elif data_name == "gradB_X":
-			return self.calc_gradb_drift(charge)[0][frame]
+			if avg_t:
+				return self.calc_gradb_drift(charge)[0].mean(axis=0)
+			else:
+				return self.calc_gradb_drift(charge)[0][frame]
 		elif data_name == "gradB_Y":
-			return self.calc_gradb_drift(charge)[1][frame]
+			if avg_t:
+				return self.calc_gradb_drift(charge)[1].mean(axis=0)
+			else:
+				return self.calc_gradb_drift(charge)[1][frame]
 		elif data_name == "gradB_Z":
-			return self.calc_gradb_drift(charge)[2][frame]
+			if avg_t:
+				return self.calc_gradb_drift(charge)[2].mean(axis=0)
+			else:
+				return self.calc_gradb_drift(charge)[2][frame]
 
 		# Polarization drift components
 		elif data_name == "pol_X":
+			if avg_t: print("Error! avg_t not implemented for {} yet!".format(data_name))
 			return self.calc_polarization_drift(charge=charge, frame=frame)[0]
 
 		# Radial diffusion coefficient
 		elif data_name == "Dr":
-			return self.calc_Dr(frame=frame)
+			return self.calc_Dr(frame=frame, avg_t=avg_t)
 
 		# 4D vector, index frame. Just loop through the groups until we find
 		# the correct one.
 		else:
 			for group in ["input", "output", "background"]:
 				if data_name in self.nc[group].variables.keys():
-					return self.nc[group][data_name][frame].data
+					if avg_t:
+						return self.nc[group][data_name][frame].data.mean(axis=0)
+					else:
+						return self.nc[group][data_name][frame].data
 
 		# If we hit here then we couldn't find the variable
 		print("Error! Cannot find variable: {}".format(data_name))
 		return None
+		"""
 
 	def closest_index(self, arr, val):
 		"""
@@ -1041,35 +1159,83 @@ class FlanPlots:
 
 		# Otherwise return full 4D arrays
 		return v_rad, v_pol		
+		
 	
-	def calc_Dr(self, frame=None):
+	def calc_Dr(self, frame=None, avg_t=False, avg_y=False, fit_exp=False):
 		"""
-		Assumes radial coordinate is x
+		Calculate radial diffusion coefficient Dr. Assumes radial coordinate is x.
+
+		Averaging (avg_t, avg_y) is applied to nz and vx before the gradient is
+		computed, so that dnz_dx is the gradient of the smoothed density.
+
+		Parameters
+		----------
+		frame : int, optional
+			Time frame to use. Ignored when avg_t=True.
+		avg_t : bool
+			Average nz and vx over time (excluding zero-density cells) before
+			computing the gradient.
+		avg_y : bool
+			Average nz and vx over the y dimension before computing the gradient.
+		fit_exp : bool
+			Fit to an exponential to estimate the gradient. Only makes sense
+			in the right context.
+
+		Returns
+		-------
+		Dr : np.ndarray
+			Radial diffusion coefficient in m^2/s.
 		"""
 
-		# Pull out needed arrays
-		x = self.nc["geometry"]["x"][:]
-		gxx = self.nc["geometry"]["gij_00"][:]  # g^xx
+		x   = self.nc["geometry"]["x"][:]
+		gxx = self.nc["geometry"]["gij_00"][:]  # g^xx, shape (nx, ny, nz)
 
-		if frame is None:
-			nz = self.nc["output"]["nz"][:]
-			vx = self.nc["output"]["v_x"][:]  # Units of [x units] / s
-			dnz_dx = np.gradient(nz, x, axis=1)		
+		# ------------------------------------------------------------------
+		# 1. Load raw arrays
+		# ------------------------------------------------------------------
+		if avg_t or frame is None:
+			nz_raw = self.nc["output"]["nz"][:]   # (nt, nx, ny, nz)
+			vx_raw = self.nc["output"]["v_x"][:]
 		else:
-			nz = self.nc["output"]["nz"][frame]
-			vx = self.nc["output"]["v_x"][frame]  # Units of [x units] / s
-			dnz_dx = np.gradient(nz, x, axis=0)		
+			nz_raw = self.nc["output"]["nz"][frame]   # (nx, ny, nz)
+			vx_raw = self.nc["output"]["v_x"][frame]
 
+		# ------------------------------------------------------------------
+		# 2. Average over t (masked mean, excluding zero-density cells)
+		# ------------------------------------------------------------------
+		if avg_t:
+			mask          = nz_raw > 0
+			count         = np.sum(mask, axis=0)                          # (nx, ny, nz)
+			safe          = count > 0
+			nz = np.divide(np.sum(nz_raw, axis=0), count,
+						   out=np.zeros_like(count, dtype=float), where=safe)
+			vx = np.divide(np.sum(vx_raw, axis=0), count,
+						   out=np.zeros_like(count, dtype=float), where=safe)
+		else:
+			nz, vx = nz_raw, vx_raw   # (nx, ny, nz) — already sliced if frame given
 
-		# Calculate radial density gradient, dnz / dpsi, and radial flux
+		# ------------------------------------------------------------------
+		# 3. Average over y
+		# ------------------------------------------------------------------
+		if avg_y:
+			nz  = nz.mean(axis=1)    # (nx, nz)  [t-axis already gone by here]
+			vx  = vx.mean(axis=1)
+			gxx = gxx.mean(axis=1)
+
+		# ------------------------------------------------------------------
+		# 4. Gradient on the (possibly averaged) quantities
+		#    x is the radial axis, which is always axis 0 after the above
+		#    reductions (t gone via avg_t/frame, y gone via avg_y).
+		# ------------------------------------------------------------------
+		dnz_dx = np.gradient(nz, x, axis=0)
+
+		# ------------------------------------------------------------------
+		# 5. Dr calculation
+		# ------------------------------------------------------------------
 		gamma_x = nz * vx
+		Dx      = -gamma_x / dnz_dx
+		Dr      = Dx / gxx
 
-		# D in flux coordinates, x direction
-		Dx = - gamma_x / dnz_dx
-
-		# Convert to real space, m^2/s, by recognizing 
-		# Dx = Dr * (dx / dr)^2 = Dr * g^xx --> Dr = Dx / g^xx
-		Dr = Dx / gxx
 		return Dr
 
 	def calc_Dr_vp(self):
@@ -1426,7 +1592,7 @@ class FlanPlots:
 	
 	def plot_frame_RZ(self, data_name, frame, nodes_path, charge=1, 
 		gfile_path=None, cmap="inferno", norm_type="linear", 
-		show_pol_ang=True, vmin=None, vmax=None):
+		show_pol_ang=True, vmin=None, vmax=None, avg_t=False):
 		"""
 		Plot toroidally averaged data in R, Z frame.
 
@@ -1488,7 +1654,8 @@ class FlanPlots:
 
 		# Average over y because we treat y as the toroidal coordinate, so this
 		# is a toroidal average.
-		data_yavg = self.load_data_frame(data_name, frame, charge).mean(axis=1)
+		data_yavg = self.load_data_frame(data_name, frame, charge,	
+			avg_t=avg_t, avg_y=True)
 
 		# Load gfile. This is just used to plot the flux surfaces and is not 
 		# required (but obviously very useful)
@@ -1614,6 +1781,8 @@ class FlanPlots:
 		norm = self.get_norm(data_yavg, norm_type, vmin=vmin, vmax=vmax)
 		coll = PolyCollection(verts_valid, array=colors_valid, cmap=cmap,
 			norm=norm, edgecolors=None)
+		coll.set_array(colors_valid)
+
 		ax.add_collection(coll)
 
 		# Plot LCFS
@@ -1871,6 +2040,8 @@ class FlanPlots:
 						ax, data_name, fr, nodes_path, charge,
 						gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax
 					)
+					cbar = fig.colorbar(coll, ax=ax)
+					cbar.set_label(data_name)
 
 					# Update colorbar limits
 					cbar.mappable.set_clim(vmin, vmax)
@@ -1884,8 +2055,10 @@ class FlanPlots:
 		# SINGLE FRAME MODE
 		# ----------------------------------------------------------------------
 		fig, ax = plt.subplots(figsize=(8, 8))
-		self._draw_single_RZ_frame(ax, data_name, frame, nodes_path, charge,
+		coll = self._draw_single_RZ_frame(ax, data_name, frame, nodes_path, charge,
 			gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax)
+		cbar = fig.colorbar(coll, ax=ax)
+		cbar.set_label(data_name)
 		fig.show()
 
 
