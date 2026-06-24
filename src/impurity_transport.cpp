@@ -1078,21 +1078,6 @@ namespace Impurity
 		// Execute main particle following loop.
 		main_loop(bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);
 	
-		// Convert the statistics into meaningful quantities. We are scaling
-		// the density by the scale factor.
-		/*
-		std::cout << "Calculating derived quantities...\n";
-		std::cout << "  Density...\n";
-		imp_stats.calc_density(bkg, opts.imp_num(), 
-			opts.imp_source_scale_fact());
-		std::cout << "  Velocity...\n";
-		imp_stats.calc_vels();
-		std::cout << "  Charge...\n";
-		imp_stats.calc_charge();
-		std::cout << "  Nanbu - s...\n";
-		imp_stats.calc_s();
-		*/
-		
 		return imp_stats;
 
 	}

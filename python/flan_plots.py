@@ -138,6 +138,8 @@ class FlanPlots:
 		frame_only = {
 			"v_rad":   lambda: self.calc_rad_pol_comp("actual", frame=frame)[0],
 			"v_pol":   lambda: self.calc_rad_pol_comp("actual", frame=frame)[1],
+			"vi_rad":   lambda: self.calc_rad_pol_comp("vi", frame=frame)[0],
+			"vi_pol":   lambda: self.calc_rad_pol_comp("vi", frame=frame)[1],
 			"ExB_X":   lambda: self.calc_exb_drift(frame=frame)[0],
 			"ExB_Y":   lambda: self.calc_exb_drift(frame=frame)[1],
 			"ExB_Z":   lambda: self.calc_exb_drift(frame=frame)[2],
@@ -1120,6 +1122,16 @@ class FlanPlots:
 		elif which.lower() == "exb":
 			vX, vY, vZ = calc_exb_drift(self, frame=frame)
 
+		elif which.lower() == "vi":
+			if frame is None:
+				vX = self.nc["background"]["Ui_X"][:]   # (nt, nx, ny, nz)
+				vY = self.nc["background"]["Ui_Y"][:]
+				vZ = self.nc["background"]["Ui_Z"][:]
+			else:
+				vX = np.expand_dims(self.nc["background"]["Ui_X"][frame], axis=0)
+				vY = np.expand_dims(self.nc["background"]["Ui_Y"][frame], axis=0)
+				vZ = np.expand_dims(self.nc["background"]["Ui_Z"][frame], axis=0)
+
 		# Stack into vector fields
 		B = np.stack([BX, BY, BZ], axis=-1)		 # (nt, nx, ny, nz, 3)
 		v = np.stack([vX, vY, vZ], axis=-1)
@@ -1161,7 +1173,7 @@ class FlanPlots:
 		return v_rad, v_pol		
 		
 	
-	def calc_Dr(self, frame=None, avg_t=False, avg_y=False, fit_exp=False):
+	def calc_Dr(self, frame=None, avg_t=False, avg_y=False):
 		"""
 		Calculate radial diffusion coefficient Dr. Assumes radial coordinate is x.
 
@@ -1177,9 +1189,6 @@ class FlanPlots:
 			computing the gradient.
 		avg_y : bool
 			Average nz and vx over the y dimension before computing the gradient.
-		fit_exp : bool
-			Fit to an exponential to estimate the gradient. Only makes sense
-			in the right context.
 
 		Returns
 		-------
