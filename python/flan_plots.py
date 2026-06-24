@@ -1819,7 +1819,7 @@ class FlanPlots:
 
 
 	def _draw_single_RZ_frame(self, ax, data_name, frame, nodes_path, charge,
-		gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax):
+		gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax, own_data=None):
 		"""
 		Draw a single R–Z frame onto an existing Axes.
 		"""
@@ -1831,8 +1831,32 @@ class FlanPlots:
 		y = self.nc["geometry"]["y"][:]  # alpha
 		z = self.nc["geometry"]["z"][:]  # poloidal theta
 
-		# Toroidal average
-		data_yavg = self.load_data_frame(data_name, frame, charge).mean(axis=1)
+		if own_data is None:
+
+			# Toroidal average
+			data_yavg = self.load_data_frame(data_name, frame, 
+				charge).mean(axis=1)
+
+		else:
+
+			# Check that own_data is the correct shape
+			if len(own_data.shape) != 2:
+				print("Error! own_data must be 2D (x, z) data.")
+				return None
+			if own_data.shape[0] != x.shape[0]:
+				print("Error! Dimension 1 of own_data must match x dimension.")
+				print("own_data.shape = {}".format(own_data.shape))
+				print("x.shape = {}".format(x.shape))
+				return None
+			if own_data.shape[1] != z.shape[0]:
+				print("Error! Dimension 2 of own_data must match z dimension.")
+				print("own_data.shape = {}".format(own_data.shape))
+				print("z.shape = {}".format(z.shape))
+				return None
+
+			# Doesn't have to be y averaged I guess? It's weird thinking about
+			# what non y-averaged data would look like here.
+			data_yavg = own_data
 
 		# Load gfile if provided
 		include_gfile = False
@@ -1954,7 +1978,7 @@ class FlanPlots:
 	def plot_frames_RZ(self, data_name, frame=None, nodes_path=None, charge=1,
 		gfile_path=None, cmap="inferno", norm_type="linear", show_pol_ang=True,
 		vmin=None, vmax=None, *, frame_start=None, frame_end=None, 
-		output_video=None, fps=10):
+		output_video=None, fps=10, own_data=None):
 		"""
 		Plot toroidally averaged data in R,Z or generate a video over a 
 		frame range. A video is made only if output_video is supplied.
@@ -2021,6 +2045,12 @@ class FlanPlots:
 				raise ValueError("Must specify frame_start and frame_end " + 
 					"when output_video is set.")
 
+			# Check own_data has a time dimension, which we assume means it
+			# will be shaped (t, x, z).
+			if own_data is not None and len(own_data.shape) != 3:
+				print("Error! own_data in video mode must be shape (t,x,z).")
+				print("own_data.shape = {}".format(own_data.shape))
+
 			fig, ax = plt.subplots(figsize=(8, 8))
 
 			# Create a dummy collection so we can create the colorbar once
@@ -2035,11 +2065,13 @@ class FlanPlots:
 				for fr in range(frame_start, frame_end + 1):
 					ax.clear()
 
-					# Redraw frame
-					coll = self._draw_single_RZ_frame(
-						ax, data_name, fr, nodes_path, charge,
-						gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax
-					)
+					# Redraw frame. Need to be careful with own_data here. If
+					# you're going to use it in video mode you need to provide
+					# it with a time dimension matching the number of requested
+					# frames for the movie.
+					coll = self._draw_single_RZ_frame(ax, data_name, fr, 
+						nodes_path, charge, gfile_path, cmap, norm_type, 
+						show_pol_ang, vmin, vmax, own_data[fr])
 					cbar = fig.colorbar(coll, ax=ax)
 					cbar.set_label(data_name)
 
@@ -2056,7 +2088,7 @@ class FlanPlots:
 		# ----------------------------------------------------------------------
 		fig, ax = plt.subplots(figsize=(8, 8))
 		coll = self._draw_single_RZ_frame(ax, data_name, frame, nodes_path, charge,
-			gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax)
+			gfile_path, cmap, norm_type, show_pol_ang, vmin, vmax, own_data=own_data)
 		cbar = fig.colorbar(coll, ax=ax)
 		cbar.set_label(data_name)
 		fig.show()
