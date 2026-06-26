@@ -20,9 +20,10 @@ A publication detailing Flan is anticipated in 2025.
 
 ## Upcoming Changes
 
-- Incorporate MPI to spread computation across multiple nodes (Funding requested)
-- Investigate if GPUs can be used to speed up transport calculations (Funding requested)
-- Couple to CGYRO or XGC (Funding requested)
+
+- Restructure impurity transport routines to use SoA for efficient GPU implementation (ongoing)
+- Couple to CGYRO and/or SOLEDGE3X (starting late 2026)
+- ~~Incorporate MPI to spread computation across multiple nodes~~ Merged to main 6/3/26
 - ~~Add time profiling~~ Merged to main 7/31/25
 - ~~Upgrade to Nanbu collision model~~ Merged to main 7/23/25
 - ~~Expand code to non-Cartesian geometries (e.g., tokamak coordinates)~~ Merged to main 5/30/25
