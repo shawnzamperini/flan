@@ -85,7 +85,7 @@ R"(
 
 	// Begin main particle following loop.
 	timer.start_imp_timer();
-	Impurity::Statistics imp_stats {Impurity::follow_impurities(bkg, opts, 
+	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
 		timer)};
 	timer.end_imp_timer();
 

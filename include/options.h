@@ -33,6 +33,7 @@ namespace Options
 
 		// Meta options for the simulation
 		std::string m_case_name              {"undefined"};
+		std::string m_use_gpu					   {"off"};
 
 		// General background plasma options
 		std::string m_bkg_source                {"gkeyll"};
@@ -120,6 +121,7 @@ namespace Options
 		// all set automatically within the corresponding setters.
 		// IMPORTANT: All control integers should be initialized below as -1,
 		// which the code recognizes as "not assigned yet".
+		int m_use_gpu_int	        	{-1};
 		int m_bkg_source_int        	{-1};
 		int m_test_opt_int          	{-1};
 		int m_save_track_int          	{-1};
@@ -161,6 +163,7 @@ namespace Options
 		void initialize_control_ints();
 
 		// Setter declarations
+		void set_use_gpu(std::string use_gpu);
 		void set_case_name(std::string case_name);
 		void set_bkg_source(std::string bkg_source);
 		void set_test_opt(std::string test_opt);
@@ -224,6 +227,7 @@ namespace Options
 
 		// Accessor declarations
 		const std::string& case_name() const;
+		const std::string& use_gpu() const;
 		const std::string& bkg_source() const;
 		const std::string& test_opt() const;
 		const std::string& save_track() const;
@@ -290,6 +294,7 @@ namespace Options
 			const int control_int) const;
 
 		// Accessor declarations for internal control variables
+		const int use_gpu_int() const;
 		const int bkg_source_int() const;
 		const int test_opt_int() const;
 		const int save_track_int() const;

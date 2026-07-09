@@ -48,6 +48,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "use_gpu") 
+			{
+				auto set_func = std::bind(&Options::set_use_gpu, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "bkg_source") 
 			{
 				auto set_func = std::bind(&Options::set_bkg_source, &opts, 

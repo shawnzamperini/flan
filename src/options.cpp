@@ -45,6 +45,7 @@ namespace Options
 		// this bug is avoided by accessing the control integers via
 		// get_control_int, which will tell you if a control integer hasn't
 		// been correctly initalized (by not including it here).
+		set_use_gpu(m_use_gpu);
 		set_bkg_source(m_bkg_source);
 		set_test_opt(m_test_opt);
 		set_save_track(m_save_track);
@@ -69,6 +70,20 @@ namespace Options
 	// just take up three times as much space.
 	void Options::set_case_name(std::string case_name) 
 		{m_case_name = case_name;}
+
+	// use_gpu
+	void Options::set_use_gpu(std::string use_gpu) 
+	{
+		if (check_input<std::string>("use_gpu", use_gpu,
+			{"off", "cuda"}))
+		{
+			m_use_gpu = use_gpu;
+		}
+
+		// Assign control integers
+		if (use_gpu == "off") m_use_gpu_int = 0;
+		else if (use_gpu == "cuda") m_use_gpu_int = 1;
+	}
 
 	// bkg_source
 	void Options::set_bkg_source(std::string bkg_source) 
@@ -520,6 +535,8 @@ namespace Options
 	// Accessor definitions
 	const std::string& Options::case_name() const 
 		{return m_case_name;}
+	const std::string& Options::use_gpu() const 
+		{return m_use_gpu;}
 	const std::string& Options::bkg_source() const 
 		{return m_bkg_source;}
 	const std::string& Options::test_opt() const 
@@ -653,6 +670,8 @@ namespace Options
 	}
 
 	// Accessors for internal control variables
+	const int Options::use_gpu_int() const
+		{return get_control_int("use_gpu", m_use_gpu_int);}
 	const int Options::bkg_source_int() const
 		{return get_control_int("bkg_source", m_bkg_source_int);}
 	const int Options::test_opt_int() const

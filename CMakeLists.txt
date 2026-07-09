@@ -1,110 +1,122 @@
-# This version is likely a bit too strict, it is just the one I built this with
 cmake_minimum_required(VERSION 3.26)
-project(flan VERSION 0.11.0)
+project(flan VERSION 0.12.0)
 
-# Load options from when the dependencies were built. Contains FLANSOFT
-# and FLANROOT
+# Load options from when the dependencies were built. Contains FLANSOFT and FLANROOT
 set(INSTALL_DEPS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/install-deps")
-#include(${CMAKE_CURRENT_SOURCE_DIR}/install-deps/build-opts.cmake REQUIRED)
 include("${INSTALL_DEPS_PATH}/build-opts.cmake" REQUIRED)
 
-# User must specify where the dependencies are stored via the FLANSOFT variable
-#if(NOT DEFINED FLANSOFT)
-#	set(FLANSOFT $ENV{HOME}/flansoft)
-#endif()
 message(STATUS "FLANSOFT set to ${FLANSOFT}")
 message(STATUS "FLANROOT set to ${FLANROOT}")
 
-# Load the git commit hash into a variable. It is then used in the config file
-# when configure_file is used below.
+# Load git commit hash
 execute_process(
-	COMMAND git log -1 --format=%h
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	OUTPUT_VARIABLE GIT_COMMIT_HASH
-	OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND git log -1 --format=%h
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 message(STATUS "Commit: ${GIT_COMMIT_HASH}")
 
-# Print out version and make configuration header file so version is accessible
-# within flan
+# Version header
 message(STATUS "Flan version: ${flan_VERSION}")
 configure_file(config.h.in config.h)
-
-# Include directory where config.h is generated
 include_directories(${CMAKE_BINARY_DIR})
 
-# Enforce a relatively modern standard
+# Modern C++
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Require MPI. Most machines should have it, so not a big deal
+# Optional GPU support
+option(ENABLE_CUDA "Enable CUDA GPU acceleration" OFF)
+
+if(ENABLE_CUDA)
+    enable_language(CUDA)
+    find_package(CUDAToolkit REQUIRED)
+    message(STATUS "GPU support enabled")
+else()
+    message(STATUS "GPU support disabled")
+endif()
+
+# MPI + OpenMP
 find_package(MPI REQUIRED)
 find_package(OpenMP REQUIRED)
 
-# Include all files in src
-file(GLOB SOURCES "src/*.cpp")
+# Source files
+file(GLOB CPU_SOURCES "src/*.cpp")
 
-# Add include directories for flan and the netcdf dependencies
+if(ENABLE_CUDA)
+    file(GLOB CUDA_SOURCES "src/*.cu")
+endif()
+
+set(SOURCES ${CPU_SOURCES} ${CUDA_SOURCES})
+
+# Include directories
 include_directories(
     include
     ${FLANSOFT}/netcdf-cxx4/include
     ${FLANSOFT}/netcdf-c/include
 )
 
-# Link to the directories with each library
+# Link directories
 link_directories(
-	${FLANSOFT}/netcdf-cxx4/lib	
-	${FLANSOFT}/netcdf-cxx4/lib64
-	${FLANSOFT}/netcdf-c/lib
+    ${FLANSOFT}/netcdf-cxx4/lib
+    ${FLANSOFT}/netcdf-cxx4/lib64
+    ${FLANSOFT}/netcdf-c/lib
 )
 
-if(UNIX AND NOT APPLE) # This applies to Linux platforms
+# Linux shared library flags
+if(UNIX AND NOT APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
 endif()
 
-# Add a shared library
+# Build library
 add_library(flan SHARED ${SOURCES})
 
-# Compilation flags
+# CPU compile flags
 target_compile_options(flan PRIVATE -Wall -O3 -fopenmp -march=native)
 
-# Specify the libraries to link against
-#target_link_libraries(flan PRIVATE -fopenmp netcdf netcdf-cxx4 MPI::MPI_CXX)
-target_link_libraries(flan 
-	PRIVATE 
-		netcdf 
-		netcdf-cxx4 
-		OpenMP::OpenMP_CXX 
-		MPI::MPI_CXX
+# GPU compile flags
+if(ENABLE_CUDA)
+    target_compile_definitions(flan PRIVATE USE_CUDA)
+    target_link_libraries(flan PRIVATE CUDA::cudart)
+    target_compile_options(flan PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_86>)
+    set_target_properties(flan PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+endif()
+
+# Link libraries
+target_link_libraries(flan
+    PRIVATE
+        netcdf
+        netcdf-cxx4
+        OpenMP::OpenMP_CXX
+        MPI::MPI_CXX
 )
 
-# Set the rpath so we can find the netCDF shared library
+# RPATH for netCDF
 set_target_properties(flan PROPERTIES
     BUILD_WITH_INSTALL_RPATH TRUE
     INSTALL_RPATH "${FLANSOFT}/netcdf-c/lib;${FLANSOFT}/netcdf-cxx4/lib;${FLANSOFT}/netcdf-cxx4/lib64"
 )
 
-# Install the library itself
+# Install library
 install(TARGETS flan
     EXPORT flan_targets
     LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/lib
-	PUBLIC_HEADER DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC_HEADER DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Export the library's target configuration
+# Export config
 install(EXPORT flan_targets
     FILE flanConfig.cmake
     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/flan
 )
 
-# Generate the flan_setup.sh script that helps a user setup a simulation. 
-# script_output.txt here isn't actually anything, just a placeholder so we 
-# can execute the generate script as part of the build process.
+# Generate flan_setup.sh
 add_custom_command(
-	OUTPUT script_output.txt
-	#COMMAND bash ${FLANROOT}/scripts/generate_flan_setup.sh ${FLANROOT} ${FLANSOFT}
-	COMMAND bash ${FLANROOT}/scripts/generate_flan_setup.sh ${FLANROOT} "${INSTALL_DEPS_PATH}/build-opts.sh"
-	WORKING_DIRECTORY ${FLANROOT}/scripts
-	COMMENT "Generating flan_setup.sh"
+    OUTPUT script_output.txt
+    COMMAND bash ${FLANROOT}/scripts/generate_flan_setup.sh ${FLANROOT} "${INSTALL_DEPS_PATH}/build-opts.sh"
+    WORKING_DIRECTORY ${FLANROOT}/scripts
+    COMMENT "Generating flan_setup.sh"
 )
 add_custom_target(flan_setup ALL DEPENDS script_output.txt)
+
