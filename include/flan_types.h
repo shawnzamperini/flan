@@ -1,3 +1,8 @@
+
+// CUDA cannot handle STL types, so we make sure it doesn't try to compile
+// them in when they sneak in through other compilation units.
+#ifndef __CUDACC__
+
 #ifndef FLAN_TYPES_H
 #define FLAN_TYPES_H
 /**
@@ -55,4 +60,5 @@ template <> struct mpi_type<float>  { static constexpr MPI_Datatype type = MPI_F
 template <> struct mpi_type<double> { static constexpr MPI_Datatype type = MPI_DOUBLE; };
 
 
-#endif
+#endif  // FLAN_TYPES_H
+#endif  // __CUDACC__

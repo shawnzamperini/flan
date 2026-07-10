@@ -4,6 +4,7 @@
 /**
 * @file options.h
 */
+#include <string>
 #include <tuple>
 
 #include "flan_types.h"

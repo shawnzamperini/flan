@@ -26,6 +26,11 @@ include_directories(${CMAKE_BINARY_DIR})
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# CUDA standard. As of this writing, CUDA 13.x doesn't fully support anything
+# higher than C++17. And that's what I'm using at the moment. Not a big deal.
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
 # Optional GPU support
 option(ENABLE_CUDA "Enable CUDA GPU acceleration" OFF)
 
@@ -45,17 +50,25 @@ find_package(OpenMP REQUIRED)
 file(GLOB CPU_SOURCES "src/*.cpp")
 
 if(ENABLE_CUDA)
-    file(GLOB CUDA_SOURCES "src/*.cu")
+    file(GLOB CUDA_SOURCES "src/cuda/*.cu")
 endif()
 
 set(SOURCES ${CPU_SOURCES} ${CUDA_SOURCES})
 
 # Include directories
 include_directories(
-    include
-    ${FLANSOFT}/netcdf-cxx4/include
-    ${FLANSOFT}/netcdf-c/include
-)
+	include
+	${FLANSOFT}/netcdf-cxx4/include
+	${FLANSOFT}/netcdf-c/include
+	)
+
+if(ENABLE_CUDA)
+	include_directories(
+		include/cuda
+		${FLANSOFT}/netcdf-cxx4/include
+		${FLANSOFT}/netcdf-c/include
+	)
+endif()
 
 # Link directories
 link_directories(
@@ -91,6 +104,7 @@ target_link_libraries(flan
         OpenMP::OpenMP_CXX
         MPI::MPI_CXX
 )
+
 
 # RPATH for netCDF
 set_target_properties(flan PROPERTIES
