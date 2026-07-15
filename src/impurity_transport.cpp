@@ -6,11 +6,6 @@
 #include <tuple>
 #include <vector>
 
-#ifdef USE_CUDA
-#include <cuda_runtime.h>
-#include "particle_slots.cuh"
-#endif
-
 #include "background.h"
 #include "boris.h"
 #include "collisions.h"
@@ -21,48 +16,248 @@
 #include "impurity_transport.h"
 #include "openadas.h"
 #include "options.h"
-#include "particle_slots.h"
 #include "random.h"
+#include "slots.h"
 #include "timer.h"
 #include "utilities.h"
 #include "variance_reduction.h"
 #include "vectors.h"
 
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
+#include "impurity_stats.cuh"
+#include "impurity_transport.cuh"
+#include "slots.cuh"
+#endif
 
 
 namespace ImpurityTransport
 {
 
+	template <typename T>
+	int get_nearest_index_cpu(const std::vector<T>& vec, const T value)
+	{
+		auto lower = std::lower_bound(vec.begin(), vec.end(), value);
+    
+		if (lower == vec.begin()) 
+		{
+			return 0;
+		}
+		if (lower == vec.end()) 
+		{
+			return vec.size() - 1;
+		}
+		
+		auto prev = lower - 1;
+		if (std::fabs(*lower - value) < std::fabs(*prev - value)) 
+		{
+			return lower - vec.begin();
+		} 
+		else 
+		{
+			return prev - vec.begin();
+		}
+	}
 
+	template <typename T>
+	int get_nearest_cell_index_cpu(const std::vector<T>& grid_edges, 
+		const T value)
+	{
+		// Get the index of the first value in grid_edges that is larger
+		// than value.
+		auto lower = std::lower_bound(grid_edges.begin(), grid_edges.end(), 
+			value);
 
+		// Realize that one minus the index represented by lower is the value
+		// we're after in the vectors with values at the cell centers.
+		//  ____________
+		//  |_0_|_1_|_2_|  <-- cell center indices
+		//  0   1   2   3  <-- grid_edges indices
+		//          ^
+		//        lower
+		//
+		// In this example, we want 1 returned, so we return 2 - 1 = 1. If
+		// value is outside the range, return the index of the respective end
+		// of the vector.
+		int index = std::distance(grid_edges.begin(), lower);
+
+		// If less than everything, return the first cell.
+		if (lower == grid_edges.begin()) return 0;
+
+		// If larger than everything, return the last cell. Note end() is the
+		// iterator that points past the last element of a vector, so to return
+		// the cell we need to subtract by 2. 
+		else if (lower == grid_edges.end()) 
+		{
+			return index - 2;
+		}
+
+		//else return lower - grid_edges.begin() - 1;
+		else return index - 1;
+	}
+
+	void find_containing_cell_cpu(Slots::Slots& slots, 
+		const Background::Background& bkg)
+	{
+		// Variables for each grid to avoid repeatedly calling in the loop
+		const auto& times = bkg.get_times();
+		const auto& grid_x = bkg.get_grid_x();
+		const auto& grid_y = bkg.get_grid_y();
+		const auto& grid_z = bkg.get_grid_z();
+
+		// Loop through each slot
+		#pragma omp parallel for
+		for (int i = 0; i < slots.N(); i++)
+		{
+			// We don't have a "time grid" since time is stored at 
+			// "time centers", if that helps think about it. So we just find
+			// the nearest index for it. The spatial coordinates have a grid
+			// so we use that.
+			int tidx {get_nearest_index_cpu(times, slots.t()[i])};
+
+			// Find nearest cell using the grid (unlike time, which uses
+			// cell "centers"). 
+			int xidx {get_nearest_cell_index_cpu(grid_x, slots.x()[i])};
+			int yidx {get_nearest_cell_index_cpu(grid_y, slots.y()[i])};
+			int zidx {get_nearest_cell_index_cpu(grid_z, slots.z()[i])};
+
+			slots.set_tidx(i, tidx);
+			slots.set_xidx(i, xidx);
+			slots.set_yidx(i, yidx);
+			slots.set_zidx(i, zidx);
+		}
+	}
+
+	// Wrapper to choose CPU or GPU implementation for finding containing cell
+	// for each particle in a slot
+	void find_containing_cell_wrapper(Slots::Slots& slots, 
+		const Background::Background& bkg, const Options::Options& opts)
+	{
+#ifdef USE_CUDA
+		if (opts.use_gpu_int() > 0)
+		{
+			// Defined in impurity_transport.cu
+			//find_containing_cell_gpu();
+		}
+#endif
+		find_containing_cell_cpu(slots, bkg);
+
+	}
+
+	// Wrapper to choose CPU or GPU implementation for recording particle
+	// statistics in the underlying statistics arrays.
+	void record_stats_wrapper(Impurity::Statistics& imp_stats, 
+		ImpurityStats::StatisticsDevice& imp_stats_d, 
+		const Slots::Slots& slots, const Slots::SlotsDevice& slots_d, 
+		const Options::Options& opts, const double imp_time_step)
+	{
+
+#ifdef USE_CUDA
+		if (opts.use_gpu_int() > 0)
+		{
+			// Defined in cuda/impurity_transport.cu
+			ImpurityStats::record_stats_gpu(imp_stats_d, slots_d, imp_time_step);
+			return;
+		}
+#endif
+		// Defined in impurity_stats.cpp
+		record_stats_cpu(imp_stats, slots, opts, imp_time_step);
+	}
+
+	void fill_slots_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
+		int& rem_parts, Options::Options& opts)
+	{
+#ifdef USE_CUDA
+		// Defined in cuda/slots.cu
+		if (opts.use_gpu_int() > 0) 
+		{
+			Slots::fill_slots_gpu(slots_d, rem_parts);
+			return;
+		}
+#endif
+		// Defined in slots.cpp
+		Slots::fill_slots_cpu(slots, rem_parts);
+	}
 	
-	void main_loop(ParticleSlots::Slots& slots, 
+	void main_loop(Slots::Slots& slots, 
+		Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
-		Impurity::Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz, 
+		Impurity::Statistics& imp_stats, 
+		ImpurityStats::StatisticsDevice& imp_stats_d,
+		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, Options::Options& opts, 
 		Timer::Timer& timer)
 	{
-		// Tracker for number of remaining particles to follow
-		int rem_parts {opts.imp_num()};
-		
-		// Initial fill of slots with particles. 
-		ParticleSlots::fill_slots(slots, rem_parts);
 
+		// Rank and number of processes
+		int rank {};
+		int nprocs {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+		// Tracker for number of remaining particles to follow. We divide them
+		// evenly between the number of MPI tasks/GPUs
+		//int rem_parts {opts.imp_num()};
+		int parts_per_rank {opts.imp_num() / nprocs};
+
+		// Give last process the remainder.
+		if (rank == nprocs - 1) parts_per_rank += opts.imp_num() % nprocs;
+
+		// Assign to remaining particles
+		int rem_parts {parts_per_rank};
+		
+#ifdef USE_CUDA
+
+		if (opts.use_gpu_int() > 0)
+		{
+			// Now subdivide among GPUs on this rank
+			int num_gpus {};
+			cudaGetDeviceCount(&num_gpus);
+
+			int parts_per_gpu {rem_parts / num_gpus};
+			int extra {rem_parts % num_gpus};
+
+			// Evenly split between GPUs, assigning remainder to first one. I 
+			// read somewhere that the first GPU is often the least loaded, but 
+			// end of the day not a huge deal where the remainder goes since 
+			// the number of GPUs isn't ever that large.
+			if (slots_d.device_id == 0) 
+				rem_parts = parts_per_gpu + extra;
+			else rem_parts = parts_per_gpu;
+		}
+#endif
+
+		// Initial fill of slots with particles. 
+		std::cout << "pre-fill: rem_parts = " << rem_parts << '\n';
+		fill_slots_wrapper(slots, slots_d, rem_parts, opts);
+		std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
+		
+		// To-do: Transport steps
+
+		// Find starting grid index
+		//find_containing_cell(slots, bkg);
+
+		// Boris half-step backwards
+
+		// Record starting position in statistics arrays
+		record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
+			opts.imp_time_step());
 	
 	}
 
 #ifdef USE_CUDA
 
 	// Function to enable each thread to control each GPU independently to 
-	// allow them to run concurrently.
-	void gpu_worker(ParticleSlots::Slots& slots, 
-		const Background::Background& bkg,
-        Impurity::Statistics& imp_stats, const OpenADAS::OpenADAS& oa_ioniz,
-        const OpenADAS::OpenADAS& oa_recomb, Options::Options& opts,
-        Timer::Timer& timer)
+	// allow them to run concurrently. Used when multiple GPUs are available.
+	void gpu_worker(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
+		const Background::Background& bkg, Impurity::Statistics& imp_stats, 
+		ImpurityStats::StatisticsDevice imp_stats_d,
+		const OpenADAS::OpenADAS& oa_ioniz, const OpenADAS::OpenADAS& oa_recomb, 
+		Options::Options& opts, Timer::Timer& timer)
 	{
-		cudaSetDevice(slots.device_id);   // THIS THREAD USES THIS GPU
-		main_loop(slots, bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);
+		cudaSetDevice(slots_d.device_id);   // THIS THREAD USES THIS GPU
+		main_loop(slots, slots_d, bkg, imp_stats, imp_stats_d, oa_ioniz, 
+			oa_recomb, opts, timer);
 	}
 
 #endif
@@ -77,8 +272,7 @@ namespace ImpurityTransport
 		MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
 		// Initialize particle statistics vectors, all contained within a
-		// Statistics object. Option to control if the three velocity arrays
-		// are allocated (to save memory).
+		// Statistics object. 
 		Impurity::Statistics imp_stats {bkg.get_dim1(), bkg.get_dim2(), 
 			bkg.get_dim3(), bkg.get_dim4()};
 
@@ -114,59 +308,101 @@ namespace ImpurityTransport
 		// millions or billions of particles, and allocating them all at once
 		// is wasteful and could cause you to run out of memory.
 		constexpr int slot_cap = 131072;
+		Slots::Slots slots {slot_cap};
+
+		// Debug while setting things up, set all to dead to test filling
+		std::cout << "setting all to dead and weight 1\n";
+		for (int i {}; i < slots.N(); ++i)
+		{
+			slots.set_state(i, 1);
+		}
 
 #ifdef USE_CUDA
 
 		// Get number of GPUs
 		int num_gpus {};
-		cudaGetDeviceCount(&num_gpus);
-		std::cout << "Using " << num_gpus << " GPU(s)\n";
-
-		// Create slots to hold particles on each GPU
-		std::vector<ParticleSlots::Slots> gpu_slots;
-		for (int dev = 0; dev < num_gpus; dev++) 
+		if (opts.use_gpu_int() > 0)
 		{
-			gpu_slots.push_back(ParticleSlots::create_slots(slot_cap, opts.use_gpu_int(), dev));
+			cudaGetDeviceCount(&num_gpus);
+			std::cout << "Using " << num_gpus << " GPU(s)\n";
 		}
-
-		// Spawn threads to launch main_loop on each available GPU
-		std::vector<std::thread> threads;
-		for (int dev = 0; dev < num_gpus; dev++) 
+		else
 		{
-			// Start a GPU worker on each thread. std::ref is used here 
-			// because std::thread copies by default, which isn't necessary
-			// or desirable for these larger objects.
-			threads.emplace_back(gpu_worker, std::ref(gpu_slots[dev]),
-				std::ref(bkg), std::ref(imp_stats), std::ref(oa_ioniz),
-				std::ref(oa_recomb), std::ref(opts), std::ref(timer));
+			std::cout << "GPU acceleration is off. Turn on with "
+				<< "use_gpu = \"cuda\"\n";
 		}
-
-		// Wait for all threads to finish
-		for (auto& t : threads) {
-			t.join();
-		}
-
-		// Free memory
-		for (auto& s : gpu_slots) {
-			ParticleSlots::free_slots(s, s.device_id);
-		}
-	
 #else
-		// CPUs don't need all the mumbo jumbo that GPUs need to utilize
-		// multiple of them. With CPUs it's handled by appropriately assigning
-		// one MPI task per CPU and then setting the correct number of OpenMP
-		// tasks per CPU. That's used in main_loop when running on CPUs.
-		ParticleSlots::Slots slots {ParticleSlots::create_slots(slot_cap, opts.use_gpu_int())};
-		main_loop(slots, bkg, imp_stats, oa_ioniz, oa_recomb, opts, timer);
 
-		// Free memory
-		ParticleSlots::free_slots(slots);
+		// Turn off GPU option if it was turned on for a CPU-only build.
+		if (opts.use_gpu_int() > 0)
+		{
+			std::cout << "GPU acceleration requested (use_gpu = " 
+				<< opts.use_gpu() << ") but Flan was built without GPU "
+				"support. Turning off.";
+			opts.set_use_gpu("off");
+		}
+
+#endif
+		
+#ifdef USE_CUDA
+
+		if (opts.use_gpu_int() > 0)
+		{
+
+			// Create slots to hold particles on each GPU if using GPUs
+			std::vector<Slots::SlotsDevice> gpu_slots;
+			std::vector<ImpurityStats::StatisticsDevice> gpu_stats;
+			for (int dev = 0; dev < num_gpus; dev++) 
+			{
+				// Create slots and get a POD struct that contains the GPU-side
+				// memory arrays.
+				gpu_slots.push_back(slots.to_device(dev));
+				gpu_stats.push_back(imp_stats.to_device(dev));
+			}
+
+			// Spawn threads to launch main_loop on each available GPU
+			std::vector<std::thread> threads;
+			for (int dev = 0; dev < num_gpus; dev++) 
+			{
+				// Start a GPU worker on each thread. std::ref is used here 
+				// because std::thread copies by default, which isn't necessary
+				// or desirable for these larger objects.
+				threads.emplace_back(gpu_worker, std::ref(slots), 
+					std::ref(gpu_slots[dev]), std::ref(bkg), 
+					std::ref(imp_stats), std::ref(gpu_stats[dev]), 
+					std::ref(oa_ioniz), std::ref(oa_recomb), std::ref(opts), 
+					std::ref(timer));
+			}
+
+			// Wait for all threads to finish
+			for (auto& t : threads) {
+				t.join();
+			}
+
+			for (int dev = 0; dev < num_gpus; dev++) 
+			{
+				// Reduce GPU stats
+				std::cout << "Reducing stats...\n";
+				imp_stats.add_stats_device(gpu_stats[dev], dev);
+
+				// Free memory
+				Slots::free_slots(gpu_slots[dev], dev);
+				Impurity::free_stats(gpu_stats[dev], dev);
+			}
+
+			return imp_stats;
+		}
+
 #endif
 
+		// Dummy SlotsDevice and StatsDevice. They're not used in CPU-only
+		// simulations.
+		Slots::SlotsDevice slots_d {};
+		ImpurityStats::StatisticsDevice imp_stats_d {};
 
+		main_loop(slots, slots_d, bkg, imp_stats, imp_stats_d, oa_ioniz, 
+			oa_recomb, opts, timer);
 
-
-	
 		return imp_stats;
 	}
 }

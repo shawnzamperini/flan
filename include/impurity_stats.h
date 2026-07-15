@@ -4,8 +4,7 @@
 * @brief Header file for impurity_stats.cpp
 */
 
-#ifndef IMPURITY_STATS_H
-#define IMPURITY_STATS_H
+#pragma once
 
 #include <numeric>
 #include <vector>
@@ -13,10 +12,19 @@
 #include "background.h"
 #include "flan_types.h"
 #include "impurity.h"
+#include "impurity_stats_device.h"
+#include "options.h"
+#include "slots.h"
 #include "vectors.h"
+
+#ifdef USE_CUDA
+#include <cuda_runtime.h> 
+#endif
 
 namespace Impurity
 {
+
+	void free_stats_d(ImpurityStats::StatisticsDevice& stats_d, int device_id);
 
 	class Statistics
 	{
@@ -126,12 +134,23 @@ namespace Impurity
 
 		// Calculate the average Nanbu collisionality strength. 
 		void calc_s();
+
+		// GPU transfer
+		ImpurityStats::StatisticsDevice to_device(int device_id);
+
+		// Reduce GPU statistics into host-side clas
+		void add_stats_device(ImpurityStats::StatisticsDevice& stats_d, 
+			int device_id);
 	};
 
 	// Helper function to reduce a Statistic object across MPI ranks
 	Statistics reduce_stats(const Statistics& local_stats);
 
+	// Free GPU memory
+	void free_stats(ImpurityStats::StatisticsDevice& stats_d, int device_id);
+
+	// Record stats using particle values in slots.
+	void record_stats_cpu(Statistics& imp_stats, const Slots::Slots& slots, 
+		const Options::Options& opts, const double imp_time_step);
 
 }
-
-#endif

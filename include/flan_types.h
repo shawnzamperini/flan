@@ -1,3 +1,14 @@
+/**
+* @brief Floating point type used in most of the simulation.
+*
+* This determines the precision used in the vectors within Background and
+* Statistics classes. This is just to reduce memory overhead, since a
+* Statistics object is copied for each thread, so the memory can balloon 
+* quickly. Only double and float are valid, but others could be added if
+* there is a good reason.
+*/
+//using BkgFPType = float;
+using BkgFPType = double;
 
 // CUDA cannot handle STL types, so we make sure it doesn't try to compile
 // them in when they sneak in through other compilation units.
@@ -39,17 +50,6 @@ using Mapc2p_ptr = std::function<std::tuple<double, double, double>
 using Inputs = std::map<std::string, std::variant<int, double, std::string, 
 	Mapc2p_ptr>>;
 
-/**
-* @brief Floating point type used in most of the simulation.
-*
-* This determines the precision used in the vectors within Background and
-* Statistics classes. This is just to reduce memory overhead, since a
-* Statistics object is copied for each thread, so the memory can balloon 
-* quickly. Only double and float are valid, but others could be added if
-* there is a good reason.
-*/
-//using BkgFPType = float;
-using BkgFPType = double;
 
 // Templates to make sure the correct MPI type is select when we need to base
 // it on BkgFPType. Can have it return the correct type by calling

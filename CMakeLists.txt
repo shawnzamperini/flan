@@ -37,6 +37,10 @@ option(ENABLE_CUDA "Enable CUDA GPU acceleration" OFF)
 if(ENABLE_CUDA)
     enable_language(CUDA)
     find_package(CUDAToolkit REQUIRED)
+
+	# This is primarily needed for atomicAdd(double* double)
+	set(CMAKE_CUDA_ARCHITECTURES 60 70 80 86)
+
     message(STATUS "GPU support enabled")
 else()
     message(STATUS "GPU support disabled")
@@ -132,5 +136,16 @@ add_custom_command(
     WORKING_DIRECTORY ${FLANROOT}/scripts
     COMMENT "Generating flan_setup.sh"
 )
-add_custom_target(flan_setup ALL DEPENDS script_output.txt)
+
+# Copy flan_setup.sh into the build directory
+add_custom_command(
+    OUTPUT flan_setup_copied
+    DEPENDS script_output.txt
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${FLANROOT}/scripts/flan_setup.sh
+            ${CMAKE_BINARY_DIR}/flan_setup.sh
+    COMMENT "Copying flan_setup.sh to build directory"
+)
+
+add_custom_target(flan_setup ALL DEPENDS flan_setup_copied)
 
