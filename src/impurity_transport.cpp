@@ -131,17 +131,19 @@ namespace ImpurityTransport
 	// Wrapper to choose CPU or GPU implementation for finding containing cell
 	// for each particle in a slot
 	void find_containing_cell_wrapper(Slots::Slots& slots, 
-		const Background::Background& bkg, const Options::Options& opts)
+		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
+		const Background::BackgroundDevice& bkg_d, const Options::Options& opts)
 	{
+
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0)
 		{
 			// Defined in impurity_transport.cu
-			//find_containing_cell_gpu();
+			find_containing_cell_gpu(slots_d, bkg_d);
+			return;
 		}
 #endif
 		find_containing_cell_cpu(slots, bkg);
-
 	}
 
 	// Wrapper to choose CPU or GPU implementation for recording particle
@@ -167,10 +169,11 @@ namespace ImpurityTransport
 	void fill_slots_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		int& rem_parts, Options::Options& opts)
 	{
+
 #ifdef USE_CUDA
-		// Defined in cuda/slots.cu
 		if (opts.use_gpu_int() > 0) 
 		{
+			// Defined in cuda/slots.cu
 			Slots::fill_slots_gpu(slots_d, rem_parts);
 			return;
 		}
@@ -178,10 +181,28 @@ namespace ImpurityTransport
 		// Defined in slots.cpp
 		Slots::fill_slots_cpu(slots, rem_parts);
 	}
+
+	void boris_wrapper(Slots::Slots& slots, 
+		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
+		const Background::BackgroundDevice& bkg_d, const Options::Options& opts)
+	{
+
+#ifdef USE_CUDA
+		if (opts.use_gpu_int() > 0) 
+		{
+			// Boris::update_velocity_gpu
+			return;
+		}
+
+		// Boris::update_velocity_cpu
+#endif
+
+	}
 	
 	void main_loop(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
+		const Background::BackgroundDevice& bkg_d, 
 		Impurity::Statistics& imp_stats, 
 		ImpurityStats::StatisticsDevice& imp_stats_d,
 		const OpenADAS::OpenADAS& oa_ioniz, 
@@ -235,7 +256,7 @@ namespace ImpurityTransport
 		// To-do: Transport steps
 
 		// Find starting grid index
-		//find_containing_cell(slots, bkg);
+		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
 
 		// Boris half-step backwards
 
@@ -250,13 +271,15 @@ namespace ImpurityTransport
 	// Function to enable each thread to control each GPU independently to 
 	// allow them to run concurrently. Used when multiple GPUs are available.
 	void gpu_worker(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
-		const Background::Background& bkg, Impurity::Statistics& imp_stats, 
+		const Background::Background& bkg, 
+		const Background::BackgroundDevice& bkg_d,
+		Impurity::Statistics& imp_stats, 
 		ImpurityStats::StatisticsDevice imp_stats_d,
 		const OpenADAS::OpenADAS& oa_ioniz, const OpenADAS::OpenADAS& oa_recomb, 
 		Options::Options& opts, Timer::Timer& timer)
 	{
 		cudaSetDevice(slots_d.device_id);   // THIS THREAD USES THIS GPU
-		main_loop(slots, slots_d, bkg, imp_stats, imp_stats_d, oa_ioniz, 
+		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_recomb, opts, timer);
 	}
 
@@ -349,15 +372,15 @@ namespace ImpurityTransport
 		if (opts.use_gpu_int() > 0)
 		{
 
-			// Create slots to hold particles on each GPU if using GPUs
+			// Create device-side structs on each GPU if using GPUs
 			std::vector<Slots::SlotsDevice> gpu_slots;
 			std::vector<ImpurityStats::StatisticsDevice> gpu_stats;
+			std::vector<Background::BackgroundDevice> gpu_bkgs;
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
-				// Create slots and get a POD struct that contains the GPU-side
-				// memory arrays.
 				gpu_slots.push_back(slots.to_device(dev));
 				gpu_stats.push_back(imp_stats.to_device(dev));
+				gpu_bkgs.push_back(bkg.to_device(dev));
 			}
 
 			// Spawn threads to launch main_loop on each available GPU
@@ -369,9 +392,9 @@ namespace ImpurityTransport
 				// or desirable for these larger objects.
 				threads.emplace_back(gpu_worker, std::ref(slots), 
 					std::ref(gpu_slots[dev]), std::ref(bkg), 
-					std::ref(imp_stats), std::ref(gpu_stats[dev]), 
-					std::ref(oa_ioniz), std::ref(oa_recomb), std::ref(opts), 
-					std::ref(timer));
+					std::ref(gpu_bkgs[dev]), std::ref(imp_stats), 
+					std::ref(gpu_stats[dev]), std::ref(oa_ioniz), 
+					std::ref(oa_recomb), std::ref(opts), std::ref(timer));
 			}
 
 			// Wait for all threads to finish
@@ -385,9 +408,10 @@ namespace ImpurityTransport
 				std::cout << "Reducing stats...\n";
 				imp_stats.add_stats_device(gpu_stats[dev], dev);
 
-				// Free memory
+				// Free memory of device-side structs
 				Slots::free_slots(gpu_slots[dev], dev);
 				Impurity::free_stats(gpu_stats[dev], dev);
+				Background::free_bkg(gpu_bkgs[dev], dev);
 			}
 
 			return imp_stats;
@@ -395,12 +419,13 @@ namespace ImpurityTransport
 
 #endif
 
-		// Dummy SlotsDevice and StatsDevice. They're not used in CPU-only
-		// simulations.
+		// Dummy SlotsDevice, StatsDevice and BackgroundDevice. They're not 
+		// used in CPU-only simulations.
 		Slots::SlotsDevice slots_d {};
 		ImpurityStats::StatisticsDevice imp_stats_d {};
+		Background::BackgroundDevice bkg_d {};
 
-		main_loop(slots, slots_d, bkg, imp_stats, imp_stats_d, oa_ioniz, 
+		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_recomb, opts, timer);
 
 		return imp_stats;

@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "background_device.h"
 #include "flan_types.h"
 #include "impurity.h"
 #include "mpi.h"
@@ -375,8 +376,18 @@ namespace Background
 		*/
 		void broadcast(MPI_Comm comm);
 
+		/**
+		* @brief Copy background data to device
+		*/
+		BackgroundDevice to_device(int device_id);
+
 		BkgFPType interp_te();
 	};
+
+	/**
+	* @brief Free memory in BackgroundDevice object
+	*/
+	void free_bkg(BackgroundDevice& bkg_d, int device_id);
 }
 
 #endif

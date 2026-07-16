@@ -8,6 +8,9 @@
 * there is a good reason.
 */
 //using BkgFPType = float;
+
+// With CUDA I've assumed everything is double. I don't know/think it will
+// work if this is float, so this variable should be removed.
 using BkgFPType = double;
 
 // CUDA cannot handle STL types, so we make sure it doesn't try to compile
