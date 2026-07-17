@@ -128,6 +128,46 @@ namespace ImpurityTransport
 		}
 	}
 
+	void check_bounds_cpu(Slots::Slots& slots, 
+		const Background::Background& bkg, const Options::Options& opts)
+	{
+		// Loop through each slot
+		#pragma omp parallel for
+		for (int i = 0; i < slots.N(); i++)
+		{
+			// Skip dead particles
+			if (slots.state()[i] > 0) continue;
+
+			// --------------------
+			// Time boundary
+			// --------------------
+
+			// Absorbing boundary condition
+			if (opts.tbound_type_int() == 0)
+			{
+				if (slots.t()[i] > bkg.get_t_max())
+				{
+					// Assign as dead
+					slots.set_state(i, 1);
+				}
+			}
+
+			// Periodic boundary condition
+			else if (opts.tbound_type_int() == 1)
+			{
+				if (slots.t()[i] > bkg.get_t_max())
+				{
+					slots.set_t(i, (bkg.get_t_min() + (slots.t()[i] 
+						- bkg.get_t_max())));
+				}
+			}
+
+		} // slot loop
+		
+
+	}
+
+
 	// Wrapper to choose CPU or GPU implementation for finding containing cell
 	// for each particle in a slot
 	void find_containing_cell_wrapper(Slots::Slots& slots, 
@@ -143,8 +183,10 @@ namespace ImpurityTransport
 			return;
 		}
 #endif
+
 		find_containing_cell_cpu(slots, bkg);
 	}
+
 
 	// Wrapper to choose CPU or GPU implementation for recording particle
 	// statistics in the underlying statistics arrays.
@@ -162,9 +204,11 @@ namespace ImpurityTransport
 			return;
 		}
 #endif
+
 		// Defined in impurity_stats.cpp
 		record_stats_cpu(imp_stats, slots, opts, imp_time_step);
 	}
+
 
 	void fill_slots_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		int& rem_parts, Options::Options& opts)
@@ -178,13 +222,16 @@ namespace ImpurityTransport
 			return;
 		}
 #endif
+
 		// Defined in slots.cpp
 		Slots::fill_slots_cpu(slots, rem_parts);
 	}
 
+
 	void boris_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
-		const Background::BackgroundDevice& bkg_d, const Options::Options& opts)
+		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
+		const double dt)
 	{
 
 #ifdef USE_CUDA
@@ -193,11 +240,49 @@ namespace ImpurityTransport
 			// Boris::update_velocity_gpu
 			return;
 		}
-
-		// Boris::update_velocity_cpu
 #endif
 
+		Boris::update_velocity_cpu(slots, slots_d, bkg, bkg_d, opts, dt);
+
 	}
+
+
+	bool all_dead_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
+		const Options::Options& opts, int rem_parts)
+	{
+		// Still particles remaining to be placed into slots, not done yet.
+		if (rem_parts > 0) return false;
+
+#ifdef USE_CUDA
+		if (opts.use_gpu_int() > 0) 
+		{
+			// Need to call a kernel here since the memory lives on the GPU
+			return Slots::all_dead_gpu(slots_d);
+		}
+#endif
+
+		// For CPU this is just a one-liner. If every entry is not equal
+		// to zero (i.e., alive) then they're all dead.
+		return std::all_of(slots.state().begin(), slots.state().end(),
+			[](int s){return s != 0;});
+
+	}
+
+	void check_bounds_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
+		const Background::Background& bkg, const Options::Options& opts)
+	{
+
+#ifdef USE_CUDA
+		if (opts.use_gpu_int() > 0) 
+		{
+			//ImpurityTransport::check_bounds_gpu();
+		}
+#endif
+
+		//check_bounds_cpu();
+
+	}
+
 	
 	void main_loop(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d,
@@ -253,16 +338,60 @@ namespace ImpurityTransport
 		fill_slots_wrapper(slots, slots_d, rem_parts, opts);
 		std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
 		
-		// To-do: Transport steps
-
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
 
-		// Boris half-step backwards
+		// Boris algorithm: The velocity stored in the Slots objects
+		// will actually be the velocity at a half timestep earlier, i.e.,
+		// at t - dt/2. So we still need to push the particle velocity
+		// back by half a time step.
+		boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
+			-opts.imp_time_step() / 2.0);
 
 		// Record starting position in statistics arrays
 		record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
 			opts.imp_time_step());
+
+		// Begin loop
+		bool all_dead {false};
+		while (!all_dead)
+		{
+
+			// Check for ionization/recombination
+			// To-do
+
+			// Variance reduction
+			// To-do
+
+			// Collision update
+
+			// Update velocity (Boris)
+			boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
+				opts.imp_time_step());
+
+			// Perform particle step
+
+			// Bounds checking
+
+			// Update particle indices
+			find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
+
+			// Record statistics
+			record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
+				opts.imp_time_step());
+
+			// Replace dead particles
+			std::cout << "pre-fill: rem_parts = " << rem_parts << '\n';
+			fill_slots_wrapper(slots, slots_d, rem_parts, opts);
+			std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
+
+			// Check if all the particles in slots are dead. If this happens
+			// after fill_slots, it means there were no more alive particles
+			// to swap in and all the remaining ones are dead. So we're done.
+			all_dead = all_dead_wrapper(slots, slots_d, opts, rem_parts);
+
+		}  // while (!all_dead)
+	
 	
 	}
 
@@ -333,8 +462,11 @@ namespace ImpurityTransport
 		constexpr int slot_cap = 131072;
 		Slots::Slots slots {slot_cap};
 
+		// All particles assumed to have same mass.
+		slots.set_mass(opts.imp_mass_amu() * Constants::amu_to_kg);
+
 		// Debug while setting things up, set all to dead to test filling
-		std::cout << "setting all to dead and weight 1\n";
+		std::cout << "setting all to dead\n";
 		for (int i {}; i < slots.N(); ++i)
 		{
 			slots.set_state(i, 1);

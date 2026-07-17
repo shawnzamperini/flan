@@ -22,10 +22,21 @@ namespace Slots
 		int tidx, xidx, yidx, zidx, q, state;
 	};
 
+	/**
+	* Impurity particle class. Contains:
+	*   t: Time of the particle
+	*   x,y,z: Coordinates of the particle in computational space
+	*   X,Y,Z: Coordinates of the particle in Cartesian space
+	*   vX,vY,vZ: Velocity components of the particle in Cartesian space
+	*   weight: The Monte Carlo weight of the particle
+	*   q: Current charge of the particle
+	*   mass: The mass of the particle (kg)
+	*/
     class Slots
     {
     private:
         int m_N;
+		double m_mass;
 
         std::vector<double> m_t;
         std::vector<double> m_x;
@@ -54,6 +65,7 @@ namespace Slots
 
         // Accessors
         int N() const noexcept;
+		double mass() const noexcept;
         const std::vector<double>& t() const noexcept;
         const std::vector<double>& x() const noexcept;
         const std::vector<double>& y() const noexcept;
@@ -71,6 +83,9 @@ namespace Slots
         const std::vector<double>& weight() const noexcept;
         const std::vector<int>& q() const noexcept;
         const std::vector<int>& state() const noexcept;
+
+		// Assume all particles share the same mass
+		void set_mass(double mass);
 
         // Element-level setters
         void set_t(int i, double val);

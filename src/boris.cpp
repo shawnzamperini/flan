@@ -2,6 +2,8 @@
 #include <iostream>
 
 #include "background.h"
+#include "boris.h"
+#include "constants.h"
 #include "options.h"
 #include "slots.h"
 #include "slots_device.h"
@@ -75,7 +77,8 @@ namespace Boris
 
 	void update_velocity_cpu(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
-		const Background::BackgroundDevice& bkg_d, const Options::Options& opts)
+		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
+		const double dt)
 	{
 
 		#pragma omp parallel for
@@ -264,7 +267,7 @@ namespace Boris
 			// Normal Boris algorithm continues
 
 			// Store in local variables for conveinence
-			double q_m {slots.q()[i] * -Constants::charge_e / imp.get_mass()};
+			double q_m {slots.q()[i] * -Constants::charge_e / slots.mass()};
 			std::array<double, 3> v {slots.vX()[i], slots.vY()[i], slots.vZ()[i]};
 
 			// t vector
@@ -302,8 +305,9 @@ namespace Boris
 			slots.set_vZ(i, vplus[2] + q_m * E_local[2] * 0.5 * dt);
 
 			// Interpolate reciprocal and tangent basis vector at impurity location
-			std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
-				yidx, zidx)};
+			//std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
+			//	yidx, zidx)};
+
 			//std::array<double, 9> int_tan_bas {interp_tang(imp, bkg, xidx, 
 			//	yidx, zidx)};
 
@@ -374,12 +378,12 @@ namespace Boris
 			// interpolated reciprocal basis vector. Not used right now since it's
 			// redundant/not needed in the particle update step, but leaving since
 			// it's an interesting idea.
-			imp.set_vx(int_rec_bas[0] * imp.get_vX() 
-				+ int_rec_bas[1] * imp.get_vY() + int_rec_bas[2] * imp.get_vZ());
-			imp.set_vy(int_rec_bas[3] * imp.get_vX() 
-				+ int_rec_bas[4] * imp.get_vY() + int_rec_bas[5] * imp.get_vZ());
-			imp.set_vz(int_rec_bas[6] * imp.get_vX() 
-				+ int_rec_bas[7] * imp.get_vY() + int_rec_bas[8] * imp.get_vZ());
+			//imp.set_vx(int_rec_bas[0] * imp.get_vX() 
+			//	+ int_rec_bas[1] * imp.get_vY() + int_rec_bas[2] * imp.get_vZ());
+			//imp.set_vy(int_rec_bas[3] * imp.get_vX() 
+			//	+ int_rec_bas[4] * imp.get_vY() + int_rec_bas[5] * imp.get_vZ());
+			//imp.set_vz(int_rec_bas[6] * imp.get_vX() 
+			//	+ int_rec_bas[7] * imp.get_vY() + int_rec_bas[8] * imp.get_vZ());
 
 
 		}  // i loop, omp parallel for

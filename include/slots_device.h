@@ -7,6 +7,7 @@ namespace Slots
     {
 		int device_id;
         int N;
+		double mass;
         double* t;
         double* x;
         double* y;
@@ -24,5 +25,6 @@ namespace Slots
         double* weight;
         int* q;
         int* state;
+		bool* all_dead;
     };
 }

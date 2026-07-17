@@ -40,6 +40,7 @@ namespace Slots
 	
 	// Accessors
 	int Slots::N() const noexcept {return m_N;}
+	double Slots::mass() const noexcept {return m_mass;}
 	const std::vector<double>& Slots::t() const noexcept {return m_t;}
 	const std::vector<double>& Slots::x() const noexcept {return m_x;}
 	const std::vector<double>& Slots::y() const noexcept {return m_y;}
@@ -57,6 +58,8 @@ namespace Slots
 	const std::vector<double>& Slots::weight() const noexcept {return m_weight;}
 	const std::vector<int>& Slots::q() const noexcept {return m_q;}
 	const std::vector<int>& Slots::state() const noexcept {return m_state;}
+
+	void Slots::set_mass(double mass) {m_mass = mass;}
 
 	// Element level setters
 	void Slots::set_t(int i, double val) {m_t[i] = val;}
@@ -88,6 +91,7 @@ namespace Slots
 
 		slots_d.device_id = device_id;
 		slots_d.N = m_N;
+		slots_d.mass = m_mass;
 
 		// GPU allocation
 		cudaSetDevice(device_id);
@@ -109,6 +113,7 @@ namespace Slots
 		cudaMalloc(&slots_d.weight, m_N * sizeof(double));
 		cudaMalloc(&slots_d.q, m_N * sizeof(int));
 		cudaMalloc(&slots_d.state, m_N * sizeof(int));
+		cudaMalloc(&slots_d.all_dead, sizeof(bool));
 
 		// Copy to device
 		cudaMemcpy(slots_d.t, m_t.data(), m_N * sizeof(double), 
@@ -146,6 +151,12 @@ namespace Slots
 		cudaMemcpy(slots_d.state,  m_state.data(), m_N * sizeof(int),
 			cudaMemcpyHostToDevice);
 
+		// Initialize all_dead to false
+		bool init = false;
+		cudaMemcpy(slots_d.all_dead, &init, sizeof(bool), 
+			cudaMemcpyHostToDevice);
+
+
 #else
 		std::cerr << "Error! Slots.to_device() was called but GPU support"
 			<< " was not compiled in.\n";
@@ -180,6 +191,7 @@ namespace Slots
 		cudaFree(slots_d.weight);
 		cudaFree(slots_d.q);
 		cudaFree(slots_d.state);
+		cudaFree(slots_d.all_dead);
 
 		slots_d.t = nullptr;
 		slots_d.x = nullptr;
@@ -198,6 +210,7 @@ namespace Slots
 		slots_d.weight = nullptr;
 		slots_d.q = nullptr;
 		slots_d.state = nullptr;
+		slots_d.all_dead = nullptr;
 #endif
 		return;
 	}
