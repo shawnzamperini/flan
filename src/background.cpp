@@ -709,18 +709,16 @@ namespace Background
 		m_uY.broadcast(comm);
 		m_uZ.broadcast(comm);
 	}
-/*
+
+	// Copy background data to device, returning a BackgroundDevice object with
+	// pointers to memory location on device.
 	BackgroundDevice Background::to_device(int device_id)
 	{
-		// Create struct to hold device-side memory locations
 		BackgroundDevice bkg_d {};
 
-#ifdef USE_CUDA
-
+	#ifdef USE_CUDA
 		bkg_d.device_id = device_id;
 
-		// Dimensions. I've decided that calling these txyz makes more sense 
-		// than dim1234.
 		bkg_d.tdim = m_dim1;
 		bkg_d.xdim = m_dim2;
 		bkg_d.ydim = m_dim3;
@@ -729,8 +727,11 @@ namespace Background
 		int N_3D {m_dim2 * m_dim3 * m_dim4};
 		int N_4D {m_dim1 * m_dim2 * m_dim3 * m_dim4};
 
-		// GPU allocation
 		cudaSetDevice(device_id);
+
+		// -----------------------------------
+		// Constant memory copies
+		// -----------------------------------
 
 		// These arrays are great candidates for putting in GPU constant
 		// memory since they are small. Arrays in constant memory can be read
@@ -738,13 +739,6 @@ namespace Background
 		// very often. We declare them as constant in in 
 		// cuda/device_constants.cuh, and use cudaMemcpyToSymbol to copy them 
 		// into constant memory.
-		//cudaMalloc(&bkg_d.times, m_dim1 * sizeof(double));
-		//cudaMalloc(&bkg_d.x, m_dim2 * sizeof(double));
-		//cudaMalloc(&bkg_d.y, m_dim3 * sizeof(double));
-		//cudaMalloc(&bkg_d.z, m_dim4 * sizeof(double));
-		//cudaMalloc(&bkg_d.grid_x, (m_dim2 + 1) * sizeof(double));
-		//cudaMalloc(&bkg_d.grid_y, (m_dim3 + 1) * sizeof(double));
-		//cudaMalloc(&bkg_d.grid_z, (m_dim4 + 1) * sizeof(double));
 		cudaMemcpyToSymbol(d_t, m_times.data(), m_dim1 * sizeof(double));
 		cudaMemcpyToSymbol(d_x, m_x.data(), m_dim2 * sizeof(double));
 		cudaMemcpyToSymbol(d_y, m_y.data(), m_dim3 * sizeof(double));
@@ -756,50 +750,14 @@ namespace Background
 		cudaMemcpyToSymbol(d_grid_z, m_grid_z.data(), (m_dim4+1) 
 			* sizeof(double));
 
-		cudaMalloc(&bkg_d.ne, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.te, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.ti, N_4D * sizeof(double));
-		//cudaMalloc(&bkg_d.vp, N_4D * sizeof(double));  // Not used
+		// Copying scalars to constant memory is a little tricker since they
+		// are not treated the same way as arrays. So we use this overload
+		// of cudaMemcpyToSymbol which handles it.
+		const double t_min {m_times.front()};
+		const double t_max {m_times.back()};
+		cudaMemcpyToSymbol("Background::d_t_min", &t_min, sizeof(double));
+		cudaMemcpyToSymbol("Background::d_t_max", &t_max, sizeof(double));
 
-		cudaMalloc(&bkg_d.bX, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.bY, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.bZ, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.bmag, N_4D * sizeof(double));
-
-		// Not used
-		//cudaMalloc(&bkg_d.gradbX, N_4D * sizeof(double));
-		//cudaMalloc(&bkg_d.gradbY, N_4D * sizeof(double));
-		//cudaMalloc(&bkg_d.gradbZ, N_4D * sizeof(double));
-
-		cudaMalloc(&bkg_d.eX, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.eY, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.eZ, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.emag, N_4D * sizeof(double));
-
-		cudaMalloc(&bkg_d.uX, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.uY, N_4D * sizeof(double));
-		cudaMalloc(&bkg_d.uZ, N_4D * sizeof(double));
-
-		// Not used in GPU routines
-		//cudaMalloc(&bkg_d.X, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.Y, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.Z, N_3D * sizeof(double));
-
-		//cudaMalloc(&bkg_d.grid_X, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.grid_Y, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.grid_Z, N_3D * sizeof(double));
-
-		//cudaMalloc(&bkg_d.J, N_3D * sizeof(double));
-
-		//cudaMalloc(&bkg_d.gij_00, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.gij_01, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.gij_02, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.gij_11, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.gij_12, N_3D * sizeof(double));
-		//cudaMalloc(&bkg_d.gij_22, N_3D * sizeof(double));
-
-		// Similar to times/x/y/z, these are great candidates for putting into
-		// constant memory. We declare them in cuda/device_constants.cuh.
 		cudaMemcpyToSymbol(d_dxdX, m_dxdX.get_data().data(), N_3D 
 			* sizeof(double));
 		cudaMemcpyToSymbol(d_dxdY, m_dxdY.get_data().data(), N_3D 
@@ -821,173 +779,110 @@ namespace Background
 		cudaMemcpyToSymbol(d_dzdZ, m_dzdZ.get_data().data(), N_3D 
 			* sizeof(double));
 
+		// -----------------------------------
+		// Global memory allocation and copies
+		// -----------------------------------
+
+		cudaMalloc(&bkg_d.ne, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.ne, m_ne.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.te, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.te, m_te.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.ti, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.ti, m_ti.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.bX, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.bX, m_bX.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.bY, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.bY, m_bY.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.bZ, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.bZ, m_bZ.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.bmag, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.bmag, m_bmag.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.eX, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.eX, m_eX.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.eY, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.eY, m_eY.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.eZ, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.eZ, m_eZ.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.emag, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.emag, m_emag.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.uX, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.uX, m_uX.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.uY, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.uY, m_uY.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		cudaMalloc(&bkg_d.uZ, N_4D * sizeof(double));
+		cudaMemcpy(bkg_d.uZ, m_uZ.get_data().data(), N_4D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		// 3D arrays
 		cudaMalloc(&bkg_d.dXdx, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dXdx, m_dXdx.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
 		cudaMalloc(&bkg_d.dYdx, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dYdx, m_dYdx.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
 		cudaMalloc(&bkg_d.dZdx, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dZdx, m_dZdx.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
 
 		cudaMalloc(&bkg_d.dXdy, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dXdy, m_dXdy.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
 		cudaMalloc(&bkg_d.dYdy, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dYdy, m_dYdy.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
 		cudaMalloc(&bkg_d.dZdy, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dZdy, m_dZdy.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
 
 		cudaMalloc(&bkg_d.dXdz, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dXdz, m_dXdz.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
 		cudaMalloc(&bkg_d.dYdz, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dYdz, m_dYdz.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
 		cudaMalloc(&bkg_d.dZdz, N_3D * sizeof(double));
+		cudaMemcpy(bkg_d.dZdz, m_dZdz.get_data().data(), N_3D * sizeof(double), 
+			cudaMemcpyHostToDevice);
 
 		return bkg_d;
 
 #else
 		std::cerr << "Error! Background.to_device() was called but GPU support"
-			<< " was not compiled in.\n";
+				  << " was not compiled in.\n";
 #endif
-
-	}
-*/
-
-BackgroundDevice Background::to_device(int device_id)
-{
-    BackgroundDevice bkg_d {};
-
-#ifdef USE_CUDA
-    bkg_d.device_id = device_id;
-
-    bkg_d.tdim = m_dim1;
-    bkg_d.xdim = m_dim2;
-    bkg_d.ydim = m_dim3;
-    bkg_d.zdim = m_dim4;
-
-    int N_3D {m_dim2 * m_dim3 * m_dim4};
-    int N_4D {m_dim1 * m_dim2 * m_dim3 * m_dim4};
-
-    cudaSetDevice(device_id);
-
-	// -----------------------------------
-    // Constant memory copies
-	// -----------------------------------
-
-    cudaMemcpyToSymbol(d_t, m_times.data(), m_dim1 * sizeof(double));
-    cudaMemcpyToSymbol(d_x, m_x.data(), m_dim2 * sizeof(double));
-    cudaMemcpyToSymbol(d_y, m_y.data(), m_dim3 * sizeof(double));
-    cudaMemcpyToSymbol(d_z, m_z.data(), m_dim4 * sizeof(double));
-    cudaMemcpyToSymbol(d_grid_x, m_grid_x.data(), (m_dim2+1) * sizeof(double));
-    cudaMemcpyToSymbol(d_grid_y, m_grid_y.data(), (m_dim3+1) * sizeof(double));
-    cudaMemcpyToSymbol(d_grid_z, m_grid_z.data(), (m_dim4+1) * sizeof(double));
-
-    cudaMemcpyToSymbol(d_dxdX, m_dxdX.get_data().data(), N_3D * sizeof(double));
-    cudaMemcpyToSymbol(d_dxdY, m_dxdY.get_data().data(), N_3D * sizeof(double));
-    cudaMemcpyToSymbol(d_dxdZ, m_dxdZ.get_data().data(), N_3D * sizeof(double));
-
-    cudaMemcpyToSymbol(d_dydX, m_dydX.get_data().data(), N_3D * sizeof(double));
-    cudaMemcpyToSymbol(d_dydY, m_dydY.get_data().data(), N_3D * sizeof(double));
-    cudaMemcpyToSymbol(d_dydZ, m_dydZ.get_data().data(), N_3D * sizeof(double));
-
-    cudaMemcpyToSymbol(d_dzdX, m_dzdX.get_data().data(), N_3D * sizeof(double));
-    cudaMemcpyToSymbol(d_dzdY, m_dzdY.get_data().data(), N_3D * sizeof(double));
-    cudaMemcpyToSymbol(d_dzdZ, m_dzdZ.get_data().data(), N_3D * sizeof(double));
-
-	// -----------------------------------
-    // Global memory allocation and copies
-	// -----------------------------------
-
-    cudaMalloc(&bkg_d.ne, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.ne, m_ne.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.te, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.te, m_te.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.ti, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.ti, m_ti.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.bX, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.bX, m_bX.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.bY, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.bY, m_bY.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.bZ, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.bZ, m_bZ.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-	cudaMalloc(&bkg_d.bmag, N_4D * sizeof(double));
-	cudaMemcpy(bkg_d.bmag, m_bmag.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-	cudaMalloc(&bkg_d.eX, N_4D * sizeof(double));
-	cudaMemcpy(bkg_d.eX, m_eX.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-	cudaMalloc(&bkg_d.eY, N_4D * sizeof(double));
-	cudaMemcpy(bkg_d.eY, m_eY.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-	cudaMalloc(&bkg_d.eZ, N_4D * sizeof(double));
-	cudaMemcpy(bkg_d.eZ, m_eZ.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-	cudaMalloc(&bkg_d.emag, N_4D * sizeof(double));
-	cudaMemcpy(bkg_d.emag, m_emag.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-	cudaMalloc(&bkg_d.uX, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.uX, m_uX.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.uY, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.uY, m_uY.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.uZ, N_4D * sizeof(double));
-    cudaMemcpy(bkg_d.uZ, m_uZ.get_data().data(), N_4D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    // 3D arrays
-    cudaMalloc(&bkg_d.dXdx, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dXdx, m_dXdx.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.dYdx, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dYdx, m_dYdx.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.dZdx, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dZdx, m_dZdx.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.dXdy, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dXdy, m_dXdy.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.dYdy, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dYdy, m_dYdy.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.dZdy, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dZdy, m_dZdy.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.dXdz, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dXdz, m_dXdz.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.dYdz, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dYdz, m_dYdz.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    cudaMalloc(&bkg_d.dZdz, N_3D * sizeof(double));
-    cudaMemcpy(bkg_d.dZdz, m_dZdz.get_data().data(), N_3D * sizeof(double), 
-		cudaMemcpyHostToDevice);
-
-    return bkg_d;
-
-#else
-    std::cerr << "Error! Background.to_device() was called but GPU support"
-              << " was not compiled in.\n";
-#endif
-}
+	}  // to_device
 
 
 	// Free up memory from device-side BackgroundDevice object

@@ -131,6 +131,7 @@ namespace ImpurityTransport
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts)
 	{
+
 		// Loop through each slot
 		#pragma omp parallel for
 		for (int i = 0; i < slots.N(); i++)
@@ -142,17 +143,18 @@ namespace ImpurityTransport
 			// Time boundary
 			// --------------------
 
-			// Absorbing boundary condition
+			// Maximum t: Absorbing boundary
 			if (opts.tbound_type_int() == 0)
 			{
 				if (slots.t()[i] > bkg.get_t_max())
 				{
 					// Assign as dead
 					slots.set_state(i, 1);
+					continue;
 				}
 			}
 
-			// Periodic boundary condition
+			// Maximum t: Periodic boundary
 			else if (opts.tbound_type_int() == 1)
 			{
 				if (slots.t()[i] > bkg.get_t_max())
@@ -162,10 +164,145 @@ namespace ImpurityTransport
 				}
 			}
 
-		} // slot loop
+			// --------------------
+			// x boundary
+			// --------------------
 		
+			// Absorbing at maximum x. xbound_buffer move the BC off the x bound
+			// by that much to help avoid some common issues in the background
+			// that can happen there, causing impurities to "stick" to the 
+			// boundary instead of a proper BC being applied 
+			if ((slots.x()[i] + opts.imp_xbound_buffer()) 
+				> bkg.get_grid_x().back()) 
+			{
+				// Assign as dead
+				slots.set_state(i, 1);
+				continue;
+			}
 
-	}
+			// Minimum x: Absorbing boundary (0)
+			if (opts.min_xbound_type_int() == 0)
+			{
+				if ((slots.x()[i] - opts.imp_xbound_buffer()) 
+					< bkg.get_grid_x()[0]) 
+				{
+					// Assign as dead
+					slots.set_state(i, 1);
+					continue;
+				}
+			}
+
+			// Minimum x: Core boundary (1)
+			else if (opts.min_xbound_type_int() == 1)
+			{
+				// At minimum x move the particle to a random y,z cell. This is
+				// a rough approximation to entering the core and leaving it 
+				// somewhere else.
+				if ((slots.x()[i] - opts.imp_xbound_buffer()) 
+					< bkg.get_grid_x()[0])
+				{
+					//std::cout << "Core BC applied\n";
+
+					slots.set_x(i, bkg.get_grid_x()[0] 
+						+ opts.imp_xbound_buffer());
+					slots.set_y(i, Random::get(
+						static_cast<double>(bkg.get_y_min()), 
+						static_cast<double>(bkg.get_y_max())));
+					slots.set_z(i, Random::get(
+						static_cast<double>(bkg.get_z_min()), 
+						static_cast<double>(bkg.get_z_max())));
+				}
+			}
+
+			// Minimum x: Separatrix boundary
+			// Separatrix boundary condition. There are two associated values with
+			// this option that define the z locations of the X-points. Between
+			// those z coordinates a core BC is applied, and outside of them we
+			// use an absorbing BC to mimic particle loss to the PFZ. 
+			// This is a weird one, not sure if it's gonna hang around too long.
+			else if (opts.min_xbound_type_int() == 2)
+			{
+				if ((slots.x()[i] - opts.imp_xbound_buffer()) 
+					< bkg.get_grid_x()[0])
+				{
+					// Check if between z extents of X-point (core BC)
+					if (slots.z()[i] > opts.sep_x_bc_xp_z1() && 
+						slots.z()[i] < opts.sep_x_bc_xp_z2())
+					{
+						// Move particle to a random x, y, where z remains in the
+						// core range between the X-point z coordinates.
+						slots.set_x(i, bkg.get_grid_x()[0] 
+							+ opts.imp_xbound_buffer());
+						slots.set_y(i, Random::get(
+							static_cast<double>(bkg.get_y_min()), 
+							static_cast<double>(bkg.get_y_max())));
+						slots.set_z(i, Random::get(
+							static_cast<double>(opts.sep_x_bc_xp_z1()), 
+							static_cast<double>(opts.sep_x_bc_xp_z2())));
+					}
+
+					// Otherwise we crossed into the PFZ so count as absorbed.
+					slots.set_state(i, 1);
+					continue;
+				}
+			}  // min_xbound_type_int = 2
+
+			// --------------------
+			// y boundary
+			// --------------------
+
+			// Minimum y: Periodic y boundary
+			if (slots.y()[i] < bkg.get_grid_y()[0])
+			{
+				slots.set_y(i, bkg.get_grid_y().back() + (slots.y()[i] 
+					- bkg.get_grid_y()[0]));
+			}
+			else if (slots.y()[i] > bkg.get_grid_y().back())
+			{
+				slots.set_y(i, bkg.get_grid_y()[0] + (slots.y()[i]
+					- bkg.get_grid_y().back()));
+			}
+
+			// --------------------
+			// z boundary
+			// --------------------
+
+			// Absorbing z boundary in SOL, periodic in core
+			// Problem: This assume x increases with distance from the core,
+			// this is not always true! E.g., it could depend on how psi is
+			// defined. 
+			if (slots.x()[i] > opts.lcfs_x())
+			{
+				// Minimum/maximum z: Absorbing boundary in SOL
+				if (slots.z()[i] < bkg.get_grid_z()[0] || 
+					slots.z()[i] > bkg.get_grid_z().back()) 
+					{
+						//std::cout << "Absorbed: Min/max z\n";
+						slots.set_state(i, 1);
+						continue;
+					}
+			}
+			else
+			{
+				// Minimum z: Periodic boundary
+				if (slots.z()[i] < bkg.get_grid_z()[0])
+				{
+					slots.set_z(i, bkg.get_grid_z().back() + (slots.z()[i] 
+						- bkg.get_grid_z()[0]));
+					//std::cout << "Periodic: Min z\n";
+				}
+				
+				// Maximum z: Periodic boundary
+				else if (slots.z()[i] > bkg.get_grid_z().back())
+				{
+					slots.set_z(i, bkg.get_grid_z()[0] + (slots.z()[i] 
+						- bkg.get_grid_z().back()));
+					//std::cout << "Periodic: Max z\n";
+				}
+			}
+
+		} // slot loop
+	}  // check_bounds_cpu
 
 
 	// Wrapper to choose CPU or GPU implementation for finding containing cell
@@ -246,7 +383,7 @@ namespace ImpurityTransport
 
 	}
 
-
+	// Check if all particles in slots are dead
 	bool all_dead_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Options::Options& opts, int rem_parts)
 	{
@@ -268,19 +405,26 @@ namespace ImpurityTransport
 
 	}
 
+
+	// Check if time or spatial bounds have been exceeded and handle 
+	// appropriately
 	void check_bounds_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
-		const Background::Background& bkg, const Options::Options& opts)
+		const Background::Background& bkg, 
+		const Background::BackgroundDevice& bkg_d, 
+		const Options::Options& opts)
 	{
 
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
-			//ImpurityTransport::check_bounds_gpu();
+			ImpurityTransport::check_bounds_gpu(slots_d, bkg_d, 
+				opts.tbound_type_int(), opts.imp_xbound_buffer(), 
+				opts.min_xbound_type_int(), opts.lcfs_x());
+			return;
 		}
 #endif
 
-		//check_bounds_cpu();
-
+		check_bounds_cpu(slots, bkg, opts);
 	}
 
 	
@@ -370,8 +514,14 @@ namespace ImpurityTransport
 				opts.imp_time_step());
 
 			// Perform particle step
+			// Temporary just to debug
+			for (int i=0; i < slots.N(); ++i)
+			{
+				slots.set_t(i, slots.t()[i] + opts.imp_time_step());
+			}
 
 			// Bounds checking
+			check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts);
 
 			// Update particle indices
 			find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
@@ -385,10 +535,15 @@ namespace ImpurityTransport
 			fill_slots_wrapper(slots, slots_d, rem_parts, opts);
 			std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
 
+			// User feedback
+
 			// Check if all the particles in slots are dead. If this happens
 			// after fill_slots, it means there were no more alive particles
 			// to swap in and all the remaining ones are dead. So we're done.
 			all_dead = all_dead_wrapper(slots, slots_d, opts, rem_parts);
+
+			// Intermittent save
+			// To-do
 
 		}  // while (!all_dead)
 	

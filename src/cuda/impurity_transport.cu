@@ -100,6 +100,8 @@ namespace ImpurityTransport
 
 		// Global index
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+		// Don't try and access beyond the number of slots (segfault)
 		if (i >= slots_d.N) return;
 
 		// d_t in constant memory, included from cuda/device_constants.cuh and
@@ -122,7 +124,8 @@ namespace ImpurityTransport
 		slots_d.zidx[i] = zidx;
 	}
 
-	// Rewrite in GPU friendly format
+	// Find what cell all the particles in slots_d are in, updating the
+	// indices accordingly (GPU)
 	void find_containing_cell_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d)
 	{
@@ -133,6 +136,67 @@ namespace ImpurityTransport
 
 		// Call kernel to update indices (tidx, xidx, ...) in slots_d
 		find_containing_cell_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d);
+	}
+
+
+	__global__
+	void check_bounds_kernel(Slots::SlotsDevice slots_d, 
+		const Background::BackgroundDevice bkg_d, 
+		const int tbound_type_int, const double imp_xbound_buffer, 
+		const int min_xbound_type_int, const double lcfs_x)
+	{
+		// Global index
+		int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+		// Don't try and access beyond the number of slots (segfault)
+		if (i >= slots_d.N) return;
+
+		// Skip dead particles
+		if (slots_d.state[i] > 0) return;
+
+		// --------------------
+		// Time boundary
+		// --------------------
+
+		// Maximum t: Absorbing boundary
+		if (tbound_type_int == 0)
+		{
+			// d_t_max defined in cuda/device_constants.cu
+			if (slots_d.t[i] > Background::d_t_max)
+			{
+				// Assign as dead
+				slots_d.state[i] = 1;
+				return;
+			}
+		}
+
+		// Maximum t: Periodic boundary
+		else if (tbound_type_int == 1)
+		{
+			if (slots_d.t[i] > Background::d_t_max)
+			{
+				slots_d.t[i] = (Background::d_t_min + (slots_d.t[i] 
+					- Background::d_t_max));
+			}
+		}
+
+		printf("Not done adding BCs!\n");
+
+	}
+
+	void check_bounds_gpu(Slots::SlotsDevice& slots_d, 
+		const Background::BackgroundDevice& bkg_d, 
+		const int tbound_type_int, const double imp_xbound_buffer, 
+		const int min_xbound_type_int, const double lcfs_x)
+	{
+
+		// Block and grid size
+		int blockSize = 256;
+		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
+
+		// Call kernel to check if particles have encountered boundary condition
+		check_bounds_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, 
+			tbound_type_int, imp_xbound_buffer, min_xbound_type_int, lcfs_x);
 	}
 
 } // namespace ImpurityTransport

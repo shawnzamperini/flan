@@ -1,5 +1,8 @@
 #include <cuda_runtime.h>
 
+#include "background_device.h"
+#include "slots_device.h"
+
 namespace ImpurityTransport
 {
 
@@ -21,4 +24,13 @@ namespace ImpurityTransport
 	*/
 	void find_containing_cell_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d);
+
+	/**
+	* @brief Check time and spatial boundaries and handle accordingly (GPU)
+	*/
+	void check_bounds_gpu(Slots::SlotsDevice& slots_d, 
+		const Background::BackgroundDevice& bkg_d, 
+		const int tbound_type_int, const double imp_xbound_buffer, 
+		const int min_xbound_type_int, const double lcfs_x);
+
 }
