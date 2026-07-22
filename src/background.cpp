@@ -255,20 +255,26 @@ namespace Background
 	}
 		
 	// Helper functions to get the start/end times of the simulation.
-	BkgFPType Background::get_t_min() const {return m_times.front();}
-	BkgFPType Background::get_t_max() const {return m_times.back();}
-	BkgFPType Background::get_x_min() const {return m_x.front();}
-	BkgFPType Background::get_x_max() const {return m_x.back();}
-	BkgFPType Background::get_y_min() const {return m_y.front();}
-	BkgFPType Background::get_y_max() const {return m_y.back();}
-	BkgFPType Background::get_z_min() const {return m_z.front();}
-	BkgFPType Background::get_z_max() const {return m_z.back();}
+	BkgFPType Background::get_t_min() const {return m_t_min;}
+	BkgFPType Background::get_t_max() const {return m_t_max;}
+	BkgFPType Background::get_x_min() const {return m_x_min;}
+	BkgFPType Background::get_x_max() const {return m_x_max;}
+	BkgFPType Background::get_y_min() const {return m_y_min;}
+	BkgFPType Background::get_y_max() const {return m_y_max;}
+	BkgFPType Background::get_z_min() const {return m_z_min;}
+	BkgFPType Background::get_z_max() const {return m_z_max;}
 
 	// Setters using move semantics. No idea if this is the proper
 	// way to do it but it works.
 	void Background::move_into_times(std::vector<BkgFPType>& times)
 	{
 		m_times = std::move(times);	
+
+		// Store min/max values
+		auto [min_it, max_it] = std::minmax_element(m_times.begin(), 
+			m_times.end());
+		m_t_min = *min_it;
+		m_t_max = *max_it;
 	}
 	void Background::move_into_x(std::vector<BkgFPType>& x)
 	{
@@ -285,14 +291,32 @@ namespace Background
 	void Background::move_into_grid_x(std::vector<BkgFPType>& grid_x)
 	{
 		m_grid_x = std::move(grid_x);	
+		
+		// Store min/max values
+		auto [min_it, max_it] = std::minmax_element(m_grid_x.begin(), 
+			m_grid_x.end());
+		m_x_min = *min_it;
+		m_x_max = *max_it;
 	}
 	void Background::move_into_grid_y(std::vector<BkgFPType>& grid_y)
 	{
 		m_grid_y = std::move(grid_y);	
+
+		// Store min/max values
+		auto [min_it, max_it] = std::minmax_element(m_grid_y.begin(), 
+			m_grid_y.end());
+		m_y_min = *min_it;
+		m_y_max = *max_it;
 	}
 	void Background::move_into_grid_z(std::vector<BkgFPType>& grid_z)
 	{
 		m_grid_z = std::move(grid_z);	
+
+		// Store min/max values
+		auto [min_it, max_it] = std::minmax_element(m_grid_z.begin(), 
+			m_grid_z.end());
+		m_z_min = *min_it;
+		m_z_max = *max_it;
 	}
 	void Background::move_into_ne(Vectors::Vector4D<BkgFPType>& ne) 
 	{
@@ -755,8 +779,20 @@ namespace Background
 		// of cudaMemcpyToSymbol which handles it.
 		const double t_min {m_times.front()};
 		const double t_max {m_times.back()};
+		const double x_min {m_x.front()};
+		const double x_max {m_x.back()};
+		const double y_min {m_y.front()};
+		const double y_max {m_y.back()};
+		const double z_min {m_z.front()};
+		const double z_max {m_z.back()};
 		cudaMemcpyToSymbol("Background::d_t_min", &t_min, sizeof(double));
 		cudaMemcpyToSymbol("Background::d_t_max", &t_max, sizeof(double));
+		cudaMemcpyToSymbol("Background::d_x_min", &x_min, sizeof(double));
+		cudaMemcpyToSymbol("Background::d_x_max", &x_max, sizeof(double));
+		cudaMemcpyToSymbol("Background::d_y_min", &y_min, sizeof(double));
+		cudaMemcpyToSymbol("Background::d_y_max", &y_max, sizeof(double));
+		cudaMemcpyToSymbol("Background::d_z_min", &z_min, sizeof(double));
+		cudaMemcpyToSymbol("Background::d_z_max", &z_max, sizeof(double));
 
 		cudaMemcpyToSymbol(d_dxdX, m_dxdX.get_data().data(), N_3D 
 			* sizeof(double));

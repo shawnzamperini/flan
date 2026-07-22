@@ -96,6 +96,15 @@ namespace Background
 		int m_dim3 {};
 		int m_dim4 {};
 
+		BkgFPType m_t_min {};
+		BkgFPType m_t_max {};
+		BkgFPType m_x_min {};
+		BkgFPType m_x_max {};
+		BkgFPType m_y_min {};
+		BkgFPType m_y_max {};
+		BkgFPType m_z_min {};
+		BkgFPType m_z_max {};
+
 	public:
 
 		// Accessors

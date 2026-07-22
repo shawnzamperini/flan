@@ -219,15 +219,95 @@ namespace Options
 	{
 		// Only assign if valid option, leaving as default if not
 		if (check_input<std::string>("min_xbound_type", min_xbound_type,
-			{"absorbing", "core", "separatrix"}))
+			{"absorbing", "periodic", "core"}))
 		{
 			m_min_xbound_type = min_xbound_type;
 		}
 
 		// Assign control integers
 		if (min_xbound_type == "absorbing") m_min_xbound_type_int = 0;
-		else if (min_xbound_type == "core") m_min_xbound_type_int = 1;
-		else if (min_xbound_type == "separatrix") m_min_xbound_type_int = 2;
+		else if (min_xbound_type == "periodic") m_min_xbound_type_int = 1;
+		else if (min_xbound_type == "core") m_min_xbound_type_int = 2;
+	}
+
+	// max_xbound_type
+	void Options::set_max_xbound_type(std::string max_xbound_type) 
+	{
+		// Only assign if valid option, leaving as default if not
+		if (check_input<std::string>("max_xbound_type", max_xbound_type,
+			{"absorbing", "periodic", "core"}))
+		{
+			m_max_xbound_type = max_xbound_type;
+		}
+
+		// Assign control integers
+		if (max_xbound_type == "absorbing") m_max_xbound_type_int = 0;
+		else if (max_xbound_type == "periodic") m_max_xbound_type_int = 1;
+		else if (max_xbound_type == "core") m_max_xbound_type_int = 2;
+	}
+
+	// min_ybound_type
+	void Options::set_min_ybound_type(std::string min_ybound_type) 
+	{
+		// Only assign if valid option, leaving as default if not
+		if (check_input<std::string>("min_ybound_type", min_ybound_type,
+			{"absorbing", "periodic", "core"}))
+		{
+			m_min_ybound_type = min_ybound_type;
+		}
+
+		// Assign control integers
+		if (min_ybound_type == "absorbing") m_min_ybound_type_int = 0;
+		else if (min_ybound_type == "periodic") m_min_ybound_type_int = 1;
+		else if (min_ybound_type == "core") m_min_ybound_type_int = 2;
+	}
+
+	// max_ybound_type
+	void Options::set_max_ybound_type(std::string max_ybound_type) 
+	{
+		// Only assign if valid option, leaving as default if not
+		if (check_input<std::string>("max_ybound_type", max_ybound_type,
+			{"absorbing", "periodic", "core"}))
+		{
+			m_max_ybound_type = max_ybound_type;
+		}
+
+		// Assign control integers
+		if (max_ybound_type == "absorbing") m_max_ybound_type_int = 0;
+		else if (max_ybound_type == "periodic") m_max_ybound_type_int = 1;
+		else if (max_ybound_type == "core") m_max_ybound_type_int = 2;
+	}
+
+	// min_zbound_type
+	void Options::set_min_zbound_type(std::string min_zbound_type) 
+	{
+		// Only assign if valid option, leaving as default if not
+		if (check_input<std::string>("min_zbound_type", min_zbound_type,
+			{"absorbing", "periodic", "core"}))
+		{
+			m_min_zbound_type = min_zbound_type;
+		}
+
+		// Assign control integers
+		if (min_zbound_type == "absorbing") m_min_zbound_type_int = 0;
+		else if (min_zbound_type == "periodic") m_min_zbound_type_int = 1;
+		else if (min_zbound_type == "core") m_min_zbound_type_int = 2;
+	}
+
+	// max_zbound_type
+	void Options::set_max_zbound_type(std::string max_zbound_type) 
+	{
+		// Only assign if valid option, leaving as default if not
+		if (check_input<std::string>("max_zbound_type", max_zbound_type,
+			{"absorbing", "periodic", "core"}))
+		{
+			m_max_zbound_type = max_zbound_type;
+		}
+
+		// Assign control integers
+		if (max_zbound_type == "absorbing") m_max_zbound_type_int = 0;
+		else if (max_zbound_type == "periodic") m_max_zbound_type_int = 1;
+		else if (max_zbound_type == "core") m_max_zbound_type_int = 2;
 	}
 
 	// lcfs_x
@@ -565,6 +645,16 @@ namespace Options
 		{return m_gkyl_moment_type;}
 	const std::string& Options::min_xbound_type() const 
 		{return m_min_xbound_type;}
+	const std::string& Options::max_xbound_type() const 
+		{return m_max_xbound_type;}
+	const std::string& Options::min_ybound_type() const 
+		{return m_min_ybound_type;}
+	const std::string& Options::max_ybound_type() const 
+		{return m_max_ybound_type;}
+	const std::string& Options::min_zbound_type() const 
+		{return m_min_zbound_type;}
+	const std::string& Options::max_zbound_type() const 
+		{return m_max_zbound_type;}
 	const double Options::lcfs_x() const 
 		{return m_lcfs_x;}
 	const double Options::sep_x_bc_xp_z1() const 
@@ -704,6 +794,16 @@ namespace Options
 		{return get_control_int("tbound_type", m_tbound_type_int);}
 	const int Options::min_xbound_type_int() const
 		{return get_control_int("min_xbound_type", m_min_xbound_type_int);}
+	const int Options::max_xbound_type_int() const
+		{return get_control_int("max_xbound_type", m_max_xbound_type_int);}
+	const int Options::min_ybound_type_int() const
+		{return get_control_int("min_ybound_type", m_min_ybound_type_int);}
+	const int Options::max_ybound_type_int() const
+		{return get_control_int("max_ybound_type", m_max_ybound_type_int);}
+	const int Options::min_zbound_type_int() const
+		{return get_control_int("min_zbound_type", m_min_zbound_type_int);}
+	const int Options::max_zbound_type_int() const
+		{return get_control_int("max_zbound_type", m_max_zbound_type_int);}
 	const int Options::calc_grad_elec_int() const
 		{return get_control_int("calc_grad_elec", m_calc_grad_elec_int);}
 

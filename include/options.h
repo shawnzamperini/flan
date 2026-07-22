@@ -61,6 +61,11 @@ namespace Options
 		double m_lcfs_x                              {0.0};
 		double m_imp_xbound_buffer                   {0.0};
 		std::string m_min_xbound_type        {"absorbing"};
+		std::string m_max_xbound_type        {"absorbing"};
+		std::string m_min_ybound_type        {"absorbing"};
+		std::string m_max_ybound_type        {"absorbing"};
+		std::string m_min_zbound_type        {"absorbing"};
+		std::string m_max_zbound_type        {"absorbing"};
 		double m_sep_x_bc_xp_z1                      {0.0};
 		double m_sep_x_bc_xp_z2                      {0.0};
 
@@ -139,6 +144,11 @@ namespace Options
 		int m_imp_iz_recomb_int			{-1};
 		int m_tbound_type_int			{-1};
 		int m_min_xbound_type_int		{-1};
+		int m_max_xbound_type_int		{-1};
+		int m_min_ybound_type_int		{-1};
+		int m_max_ybound_type_int		{-1};
+		int m_min_zbound_type_int		{-1};
+		int m_max_zbound_type_int		{-1};
 		int m_calc_grad_elec_int		{-1};
 
 		/**
@@ -182,6 +192,11 @@ namespace Options
 		void set_calc_grad_elec(std::string calc_grad_elec);
 		void set_tbound_type(std::string tbound_type);
 		void set_min_xbound_type(std::string min_xbound_type);
+		void set_max_xbound_type(std::string min_xbound_type);
+		void set_min_ybound_type(std::string max_ybound_type);
+		void set_max_ybound_type(std::string max_ybound_type);
+		void set_min_zbound_type(std::string min_zbound_type);
+		void set_max_zbound_type(std::string max_zbound_type);
 		void set_lcfs_x(double lcfs_x);
 		void set_sep_x_bc_xp_z1(double sep_x_bc_xp_z1);
 		void set_sep_x_bc_xp_z2(double sep_x_bc_xp_z2);
@@ -245,6 +260,11 @@ namespace Options
 		const std::string& calc_grad_elec() const;
 		const std::string& tbound_type() const;
 		const std::string& min_xbound_type() const;
+		const std::string& max_xbound_type() const;
+		const std::string& min_ybound_type() const;
+		const std::string& max_ybound_type() const;
+		const std::string& min_zbound_type() const;
+		const std::string& max_zbound_type() const;
 		const double lcfs_x() const;
 		const double sep_x_bc_xp_z1() const;
 		const double sep_x_bc_xp_z2() const;
@@ -312,6 +332,11 @@ namespace Options
 		const int imp_iz_recomb_int() const;
 		const int tbound_type_int() const;
 		const int min_xbound_type_int() const;
+		const int max_xbound_type_int() const;
+		const int min_ybound_type_int() const;
+		const int max_ybound_type_int() const;
+		const int min_zbound_type_int() const;
+		const int max_zbound_type_int() const;
 		const int calc_grad_elec_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.

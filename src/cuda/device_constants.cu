@@ -14,6 +14,12 @@ namespace Background
 	// 1D array bounds
 	__constant__ double d_t_min;
 	__constant__ double d_t_max;
+	__constant__ double d_x_min;
+	__constant__ double d_x_max;
+	__constant__ double d_y_min;
+	__constant__ double d_y_max;
+	__constant__ double d_z_min;
+	__constant__ double d_z_max;
 
 	// 3D arrays
     __constant__ double d_dxdX[3 * MAX_1D];

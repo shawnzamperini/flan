@@ -145,6 +145,7 @@ namespace ImpurityTransport
 		const int tbound_type_int, const double imp_xbound_buffer, 
 		const int min_xbound_type_int, const double lcfs_x)
 	{
+		/*
 		// Global index
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -180,8 +181,63 @@ namespace ImpurityTransport
 			}
 		}
 
-		printf("Not done adding BCs!\n");
+		// --------------------
+		// x boundary
+		// --------------------
+	
+		// Absorbing at maximum x. xbound_buffer move the BC off the x bound
+		// by that much to help avoid some common issues in the background
+		// that can happen there, causing impurities to "stick" to the 
+		// boundary instead of a proper BC being applied 
+		if ((slots_d.x[i] + imp_xbound_buffer) > d_x_max) 
+		{
+			// Assign as dead
+			slots_d.state[i] = 1;
+			return;
+		}
 
+		// Minimum x: Absorbing boundary (0)
+		if (min_xbound_type_int == 0)
+		{
+			if ((slots_d.x[i] - imp_xbound_buffer) < d_x_min) 
+			{
+				// Assign as dead
+				slots_d.state[i] = 1;
+				return;
+			}
+		}
+
+		// Minimum x: Core boundary (1)
+		else if (min_xbound_type_int == 1)
+		{
+			// At minimum x move the particle to a random y,z cell. This is
+			// a rough approximation to entering the core and leaving it 
+			// somewhere else.
+			if ((slots_d.x[i] - imp_xbound_buffer) < d_x_min)
+			{
+				//std::cout << "Core BC applied\n";
+				printf("Error! Core BC not implemented on GPUs yet\n";
+
+				// How to do the random number thing...
+				//slots_d.x[i] = d_x_min + imp_xbound_buffer;
+				//slots.set_y(i, Random::get(
+				//	static_cast<double>(bkg.get_y_min()), 
+				//	static_cast<double>(bkg.get_y_max())));
+				//slots.set_z(i, Random::get(
+				//	static_cast<double>(bkg.get_z_min()), 
+				//	static_cast<double>(bkg.get_z_max())));
+			}
+		}
+
+		// Minimum x: Separatrix boundary
+		// I don't like this one, I'll probably toss it
+		else if (min_xbound_type_int == 2)
+		{
+			printf("Error! Separatrix x-boundary not implemented on GPUs\n");
+		}  // min_xbound_type_int = 2
+
+		printf("Not done adding BCs!\n");
+		*/
 	}
 
 	void check_bounds_gpu(Slots::SlotsDevice& slots_d, 

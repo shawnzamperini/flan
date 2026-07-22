@@ -21,12 +21,16 @@ namespace Background
     extern __constant__ double d_grid_y[MAX_1D];
     extern __constant__ double d_grid_z[MAX_1D];
 
-
 	// Memory _ * double = __ B 
 	// 1D array bounds
 	extern __constant__ double d_t_min;
 	extern __constant__ double d_t_max;
-
+	extern __constant__ double d_x_min;
+	extern __constant__ double d_x_max;
+	extern __constant__ double d_y_min;
+	extern __constant__ double d_y_max;
+	extern __constant__ double d_z_min;
+	extern __constant__ double d_z_max;
 
 	// Memory: 9 * (3 * MAX_1D) * double = 9 * 150 * 8 B = 10.5 KB
 	// The basis vectors are 3D arrays, so we need to allocate 3 * MAX_1D bytes. 
