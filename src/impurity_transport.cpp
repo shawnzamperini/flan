@@ -222,6 +222,7 @@ namespace ImpurityTransport
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
+			// Defined in cuda/boris.cu
 			// Boris::update_velocity_gpu
 			return;
 		}
@@ -353,30 +354,36 @@ namespace ImpurityTransport
 
 		// Initial fill of slots with particles. 
 		std::cout << "pre-fill: rem_parts = " << rem_parts << '\n';
-		timer.start_fill_slots_timer();
 		fill_slots_wrapper(slots, slots_d, rem_parts, opts);
-		timer.end_fill_slots_timer();
 		std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
+
+		std::cout << "initial\n";
+		std::cout << " vx[0] = " << slots.vx()[0] << '\n';
+		std::cout << "  t[0] = " << slots.t()[0] << '\n';
+		std::cout << "  x[0] = " << slots.x()[0] << '\n';
+		std::cout << "  y[0] = " << slots.y()[0] << '\n';
+		std::cout << "  z[0] = " << slots.z()[0] << '\n';
 		
 		// Find starting grid index
-		timer.start_find_cell_timer();
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
-		timer.end_find_cell_timer();
 
 		// Boris algorithm: The velocity stored in the Slots objects
 		// will actually be the velocity at a half timestep earlier, i.e.,
 		// at t - dt/2. So we still need to push the particle velocity
 		// back by half a time step.
-		timer.start_boris_timer();
-		//boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
-		//	-opts.imp_time_step() / 2.0);
-		timer.end_boris_timer();
+		boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
+			-opts.imp_time_step() / 2.0);
+
+		std::cout << "initial (after half step)\n";
+		std::cout << " vx[0] = " << slots.vx()[0] << '\n';
+		std::cout << "  t[0] = " << slots.t()[0] << '\n';
+		std::cout << "  x[0] = " << slots.x()[0] << '\n';
+		std::cout << "  y[0] = " << slots.y()[0] << '\n';
+		std::cout << "  z[0] = " << slots.z()[0] << '\n';
 
 		// Record starting position in statistics arrays
-		timer.start_record_timer();
 		record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
 			opts.imp_time_step());
-		timer.end_record_timer();
 
 		// Begin loop
 		bool all_dead {false};
@@ -392,57 +399,59 @@ namespace ImpurityTransport
 			// Collision update
 			// To-do
 
-			// Update velocity (Boris).
-			timer.start_boris_timer();
-			//boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
-			//	opts.imp_time_step());
-			timer.end_boris_timer();
-			std::cout << "before step\n";
-			std::cout << " vx[0] = " << slots.vx()[0] << '\n';
-			std::cout << "  t[0] = " << slots.t()[0] << '\n';
-			std::cout << "  x[0] = " << slots.x()[0] << '\n';
-			std::cout << "  y[0] = " << slots.y()[0] << '\n';
-			std::cout << "  z[0] = " << slots.z()[0] << '\n';
+			// We create a scope for each step so that we can use a scoped
+			// timer to profile the time spent in each step of the loop.
+			// A scoped timer is a bit safer because it automatically stops
+			// when it goes out of scope.
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::Boris));
+
+				// Update velocity (Boris).
+				boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
+					opts.imp_time_step());
+			}
 
 			// Perform particle step
-			step_wrapper(slots, slots_d, bkg, bkg_d, opts);
-
-			std::cout << "after step\n";
-			std::cout << " vx[0] = " << slots.vx()[0] << '\n';
-			std::cout << "  t[0] = " << slots.t()[0] << '\n';
-			std::cout << "  x[0] = " << slots.x()[0] << '\n';
-			std::cout << "  y[0] = " << slots.y()[0] << '\n';
-			std::cout << "  z[0] = " << slots.z()[0] << '\n';
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::Step));
+				step_wrapper(slots, slots_d, bkg, bkg_d, opts);
+			}
 
 			// Bounds checking
-			timer.start_bounds_timer();
-			check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts);
-			timer.end_bounds_timer();
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::Bounds));
+				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts);
+			}
 
 			// Update particle indices
-			timer.start_find_cell_timer();
-			find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
-			timer.end_find_cell_timer();
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::FindCell));
+				find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
+			}
 
 			// Record statistics
-			timer.start_record_timer();
-			record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
-				opts.imp_time_step());
-			timer.end_record_timer();
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::Record));
+				record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, 
+					opts, opts.imp_time_step());
+			}
 
 			// Replace dead particles
-			std::cout << "pre-fill: rem_parts = " << rem_parts << '\n';
-			timer.start_fill_slots_timer();
-			fill_slots_wrapper(slots, slots_d, rem_parts, opts);
-			timer.end_fill_slots_timer();
-			std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::FillSlots));
+				fill_slots_wrapper(slots, slots_d, rem_parts, opts);
+			}
 
 			// User feedback
+			// To-do
 
 			// Check if all the particles in slots are dead. If this happens
 			// after fill_slots, it means there were no more alive particles
 			// to swap in and all the remaining ones are dead. So we're done.
-			all_dead = all_dead_wrapper(slots, slots_d, opts, rem_parts);
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::AllDead));
+				all_dead = all_dead_wrapper(slots, slots_d, opts, rem_parts);
+			}
 
 			// Intermittent save
 			// To-do

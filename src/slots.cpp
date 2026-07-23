@@ -236,16 +236,16 @@ namespace Slots
 		p.yidx = 0;
 		p.zidx = 0;
 
-		p.vx = 100.0;
+		p.vx = 0.0;
 		p.vy = 0.0;
 		p.vz = 0.0;
 
 		p.vX = 0.0;
-		p.vY = 0.0;
+		p.vY = 5000.0;
 		p.vZ = 0.0;
 		
 		p.weight = 1.0;
-		p.q = 0;
+		p.q = 1; 
 
 		return p;
 	}

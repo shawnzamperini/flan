@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iomanip>
 #include <numeric>
+#include <omp.h>
 #include <vector>
 
 #include "background.h"
@@ -812,21 +813,24 @@ namespace Impurity
 		stats_d.q = nullptr;
 	}
 
+	/*
+	// buffered approach
 	void record_stats_cpu(Statistics& imp_stats, const Slots::Slots& slots,
 		const Options::Options& opts, const double imp_time_step)
 	{
+		// Number of distinct thread-local arrays we need pointers to.
+		constexpr int NUM_FIELDS = 9;
 
-		// We are accumulating statistics in a simple imp_stats object, so
-		// we have to be sensitive to race conditions. The solution is to use
-		// thread local arrays and accumulate the stats into those each time
-		// step, and then add those into the imp_stats array under a critical
-		// block. 
+		// Sized to the max threads OpenMP could ever hand us -- allocated once,
+		// reused every timestep. Each inner vector<double*> holds one pointer
+		// per thread for that field.
+		static std::vector<std::vector<double*>> field_ptrs(NUM_FIELDS);
+		static std::vector<int*> counts_ptrs;  // counts is int, kept separate
+		static std::size_t grid_size {0};
+		static int num_threads_used {0};
+
 		#pragma omp parallel
 		{
-			// Allocate local arrays for each thread. static tells us they're
-			// global and will stay for the lifetime of the program, so we 
-			// don't need to waste time reallocating these arrays every time
-			// step. thread_local allocates it only for that thread.
 			static thread_local std::vector<int> counts_local;
 			static thread_local std::vector<double> weights_local;
 			static thread_local std::vector<double> vX_local;
@@ -837,9 +841,13 @@ namespace Impurity
 			static thread_local std::vector<double> vz_local;
 			static thread_local std::vector<double> charge_local;
 
-			// Allocate once per thread. This only executes when the thread
-			// is created the first time, so only once.
-			if (counts_local.empty()) 
+			const int tid {omp_get_thread_num()};
+
+			// First-touch setup: allocate this thread's local buffers, and
+			// register this thread's pointers into the shared lookup arrays.
+			// Every thread writes only index [tid] of each pointer array, so
+			// no two threads ever touch the same slot -- no lock needed here.
+			if (counts_local.empty())
 			{
 				counts_local.resize(imp_stats.get_counts().get_data().size());
 				weights_local.resize(imp_stats.get_weights().get_data().size());
@@ -850,11 +858,34 @@ namespace Impurity
 				vy_local.resize(imp_stats.get_vy().get_data().size());
 				vz_local.resize(imp_stats.get_vz().get_data().size());
 				charge_local.resize(imp_stats.get_charge().get_data().size());
+
+				// One thread (any one -- doesn't matter which) sizes the
+				// shared pointer/bookkeeping arrays before anyone writes into
+				// them, so every thread's write below lands in a valid slot.
+				#pragma omp single
+				{
+					num_threads_used = omp_get_num_threads();
+					grid_size = counts_local.size();
+
+					counts_ptrs.resize(num_threads_used);
+					for (auto& v : field_ptrs) v.resize(num_threads_used);
+				}
+				// implicit barrier at the end of "single" -- guarantees the
+				// resize above has happened before any thread writes its
+				// pointer into these arrays below.
+
+				counts_ptrs[tid]   = counts_local.data();
+				field_ptrs[0][tid] = weights_local.data();
+				field_ptrs[1][tid] = vX_local.data();
+				field_ptrs[2][tid] = vY_local.data();
+				field_ptrs[3][tid] = vZ_local.data();
+				field_ptrs[4][tid] = vx_local.data();
+				field_ptrs[5][tid] = vy_local.data();
+				field_ptrs[6][tid] = vz_local.data();
+				field_ptrs[7][tid] = charge_local.data();
 			}
 
-			// Zero them at each timestep. This sounds expensive but the 
-			// compiler should make this a pretty fast operation. We could
-			// add a timer here if we're curious.
+			// Zero local buffers each timestep
 			std::fill(counts_local.begin(), counts_local.end(), 0);
 			std::fill(weights_local.begin(), weights_local.end(), 0.0);
 			std::fill(vX_local.begin(), vX_local.end(), 0.0);
@@ -864,24 +895,20 @@ namespace Impurity
 			std::fill(vy_local.begin(), vy_local.end(), 0.0);
 			std::fill(vz_local.begin(), vz_local.end(), 0.0);
 			std::fill(charge_local.begin(), charge_local.end(), 0.0);
-			
+
 			// Independent loops, so nowait
 			#pragma omp for nowait
 			for (int i = 0; i < slots.N(); ++i)
 			{
-				// Skip dead particles (0=alive, 1+=dead)
 				if (slots.state()[i]) continue;
 
-				// 4D -> 1D index
-				int idx {imp_stats.get_counts().calc_index(slots.tidx()[i], 
+				int idx {imp_stats.get_counts().calc_index(slots.tidx()[i],
 					slots.xidx()[i], slots.yidx()[i], slots.zidx()[i])};
 
-				// Increment local arrays
 				double p_w {slots.weight()[i]};
 				counts_local[idx] += 1;
 				weights_local[idx] += p_w * imp_time_step;
-				
-				// Add property * weight since we are doing a weighted average
+
 				vX_local[idx] += slots.vX()[i] * p_w;
 				vY_local[idx] += slots.vY()[i] * p_w;
 				vZ_local[idx] += slots.vZ()[i] * p_w;
@@ -891,22 +918,116 @@ namespace Impurity
 				charge_local[idx] += slots.q()[i] * p_w;
 			}
 
-			// Merge into global stats
-			#pragma omp critical
+			// Barrier: every thread must finish its "omp for" (including the
+			// implicit end-of-for wait would normally happen here, but we used
+			// nowait above) before the merge below reads any thread's buffer.
+			#pragma omp barrier
+
+			// Merge: parallelized over grid index j instead of serialized over
+			// threads. Each thread sums every other thread's contribution for
+			// its own slice of j -- so this now gets *cheaper* per thread as
+			// thread count grows, rather than more expensive.
+			#pragma omp for schedule(static)
+			for (std::size_t j = 0; j < grid_size; ++j)
 			{
-				for (std::size_t j = 0; j < counts_local.size(); ++j)
+				int    count_sum  {0};
+				double weight_sum {0.0}, vX_sum {0.0}, vY_sum {0.0}, vZ_sum {0.0};
+				double vx_sum {0.0}, vy_sum {0.0}, vz_sum {0.0}, charge_sum {0.0};
+
+				for (int t = 0; t < num_threads_used; ++t)
 				{
-					imp_stats.get_counts().get_data()[j] += counts_local[j];
-					imp_stats.get_weights().get_data()[j] += weights_local[j];
-					imp_stats.get_vX().get_data()[j] += vX_local[j];
-					imp_stats.get_vY().get_data()[j] += vY_local[j];
-					imp_stats.get_vZ().get_data()[j] += vZ_local[j];
-					imp_stats.get_vx().get_data()[j] += vx_local[j];
-					imp_stats.get_vy().get_data()[j] += vy_local[j];
-					imp_stats.get_vz().get_data()[j] += vz_local[j];
+					count_sum  += counts_ptrs[t][j];
+					weight_sum += field_ptrs[0][t][j];
+					vX_sum     += field_ptrs[1][t][j];
+					vY_sum     += field_ptrs[2][t][j];
+					vZ_sum     += field_ptrs[3][t][j];
+					vx_sum     += field_ptrs[4][t][j];
+					vy_sum     += field_ptrs[5][t][j];
+					vz_sum     += field_ptrs[6][t][j];
+					charge_sum += field_ptrs[7][t][j];
 				}
+
+				imp_stats.get_counts().get_data()[j]  += count_sum;
+				imp_stats.get_weights().get_data()[j] += weight_sum;
+				imp_stats.get_vX().get_data()[j]      += vX_sum;
+				imp_stats.get_vY().get_data()[j]      += vY_sum;
+				imp_stats.get_vZ().get_data()[j]      += vZ_sum;
+				imp_stats.get_vx().get_data()[j]      += vx_sum;
+				imp_stats.get_vy().get_data()[j]      += vy_sum;
+				imp_stats.get_vz().get_data()[j]      += vz_sum;
+				imp_stats.get_charge().get_data()[j]  += charge_sum;
 			}
+			// implicit barrier at end of this "omp for" -- fine, since this is
+			// the last thing the parallel region does anyway.
+
 		} // pragma omp parallel
+
+	} // record_stats_cpu
+	*/
+
+	// atomic approach
+	// In my basic testing this approach is much faster than the above
+	// buffered approach, though it's possible the buffered approach wins
+	// ground when there are significantly more particles than grid cell. That's
+	// because in that case particles may be fighting over accumulating stats
+	// in a cell, which can get held up in the atomics here.
+	// I am partial to the atomic approach just because it's so much cleaner.
+	void record_stats_cpu(Statistics& imp_stats, const Slots::Slots& slots,
+		const Options::Options& opts, const double imp_time_step)
+	{
+		// Grab raw pointers once outside the parallel region -- avoids
+		// repeated virtual/accessor call overhead inside the hot loop.
+		int*    counts_data  {imp_stats.get_counts().get_data().data()};
+		double* weights_data {imp_stats.get_weights().get_data().data()};
+		double* vX_data      {imp_stats.get_vX().get_data().data()};
+		double* vY_data      {imp_stats.get_vY().get_data().data()};
+		double* vZ_data      {imp_stats.get_vZ().get_data().data()};
+		double* vx_data      {imp_stats.get_vx().get_data().data()};
+		double* vy_data      {imp_stats.get_vy().get_data().data()};
+		double* vz_data      {imp_stats.get_vz().get_data().data()};
+		double* charge_data  {imp_stats.get_charge().get_data().data()};
+
+		// No thread-local buffers, no zero-fill, no merge pass. Every thread
+		// writes straight into the shared arrays; atomics make each individual
+		// += race-free. Total work is now O(N particles), not O(grid_size) --
+		// grid cells that see no activity this timestep cost nothing.
+		#pragma omp parallel for schedule(static)
+		for (int i = 0; i < slots.N(); ++i)
+		{
+			if (slots.state()[i]) continue;
+
+			int idx {imp_stats.get_counts().calc_index(slots.tidx()[i],
+				slots.xidx()[i], slots.yidx()[i], slots.zidx()[i])};
+
+			double p_w {slots.weight()[i]};
+
+			#pragma omp atomic update
+			counts_data[idx] += 1;
+
+			#pragma omp atomic update
+			weights_data[idx] += p_w * imp_time_step;
+
+			#pragma omp atomic update
+			vX_data[idx] += slots.vX()[i] * p_w;
+
+			#pragma omp atomic update
+			vY_data[idx] += slots.vY()[i] * p_w;
+
+			#pragma omp atomic update
+			vZ_data[idx] += slots.vZ()[i] * p_w;
+
+			#pragma omp atomic update
+			vx_data[idx] += slots.vx()[i] * p_w;
+
+			#pragma omp atomic update
+			vy_data[idx] += slots.vy()[i] * p_w;
+
+			#pragma omp atomic update
+			vz_data[idx] += slots.vz()[i] * p_w;
+
+			#pragma omp atomic update
+			charge_data[idx] += slots.q()[i] * p_w;
+		}
 
 	} // record_stats_cpu
 
