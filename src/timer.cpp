@@ -80,6 +80,56 @@ namespace Timer
 		m_coll_time += calc_duration(m_timer);
 	}
 
+	// Start/end timer for time spent in the boris algorithm
+	void Timer::start_boris_timer()
+	{
+		start_timer();
+	}
+	void Timer::end_boris_timer()
+	{
+		m_boris_time += calc_duration(m_timer);
+	}
+
+	// Start/end timer for time spent checking boundary conditions
+	void Timer::start_bounds_timer()
+	{
+		start_timer();
+	}
+	void Timer::end_bounds_timer()
+	{
+		m_bounds_time += calc_duration(m_timer);
+	}
+
+	// Start/end timer for time spent filling slots
+	void Timer::start_fill_slots_timer()
+	{
+		start_timer();
+	}
+	void Timer::end_fill_slots_timer()
+	{
+		m_fill_slots_time += calc_duration(m_timer);
+	}
+
+	// Start/end timer for time spent finding particle cell indices
+	void Timer::start_find_cell_timer()
+	{
+		start_timer();
+	}
+	void Timer::end_find_cell_timer()
+	{
+		m_find_cell_time += calc_duration(m_timer);
+	}
+
+	// Start/end timer for time spent recording statistics
+	void Timer::start_record_timer()
+	{
+		start_timer();
+	}
+	void Timer::end_record_timer()
+	{
+		m_record_time += calc_duration(m_timer);
+	}
+
 	// Start/end timer for time spent saving data
 	void Timer::start_save_timer()
 	{
@@ -147,8 +197,16 @@ namespace Timer
 			<< format_time(m_read_time) << '\n';
 		std::cout << "    Following impurities: " << format_time(m_imp_time)
 			<< '\n';
+		std::cout << "      Boris algorithm:  " 
+			<< format_time(m_boris_time / omp_num_threads) << '\n';
 		std::cout << "      Calculating collisions:  " 
 			<< format_time(m_coll_time / omp_num_threads) << '\n';
+		std::cout << "      Updating cell indices:  " 
+			<< format_time(m_find_cell_time / omp_num_threads) << '\n';
+		std::cout << "      Filling slots:  " 
+			<< format_time(m_fill_slots_time / omp_num_threads) << '\n';
+		std::cout << "      Checking boundary conditions:  " 
+			<< format_time(m_bounds_time / omp_num_threads) << '\n';
 		std::cout << "    Saving data: " << format_time(m_save_time) << '\n';
 	}
 
@@ -169,6 +227,11 @@ namespace Timer
 		// the time in parallel regions needs to be divided by the number of 
 		// threads.
 		ret_timer.m_coll_time = m_coll_time + other.m_coll_time;
+		ret_timer.m_boris_time = m_boris_time + other.m_boris_time;
+		ret_timer.m_find_cell_time = m_find_cell_time + other.m_find_cell_time;
+		ret_timer.m_bounds_time = m_bounds_time + other.m_bounds_time;
+		ret_timer.m_fill_slots_time = m_fill_slots_time + other.m_fill_slots_time;
+		ret_timer.m_record_time = m_record_time + other.m_record_time;
 
 		// Return combined Timer
 		return ret_timer;

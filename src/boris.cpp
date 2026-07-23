@@ -14,19 +14,19 @@ namespace Boris
 {
 
 	// Interpolate the reciprocal basis functions at the impurity location
-	std::array<double, 9> interp_recp(const Impurity::Impurity& imp, 
+	std::array<double, 9> interp_recp(
 		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx)
+		const int zidx, const double x, const double y, const double z)
 	{
 		// Get nearest neighbor indices for each direction. These tell us
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
-		const int xidx_neighbor {Utilities::get_neighbor_index(imp.get_x(), 
+		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
 			bkg.get_x(), xidx)};
-		const int yidx_neighbor {Utilities::get_neighbor_index(imp.get_y(), 
+		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
 			bkg.get_y(), yidx)};
-		const int zidx_neighbor {Utilities::get_neighbor_index(imp.get_z(), 
+		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
 			bkg.get_z(), zidx)};
 
 		// x, y, z coordinates of two bounding vertices to interpolate 
@@ -69,11 +69,74 @@ namespace Boris
 			// Perform interpolation, storing value in our local array
 			interp_vals[i] = Utilities::trilinear_interpolate(x0, y0, z0, 
 				x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, v111, 
-				imp.get_x(), imp.get_y(), imp.get_z());
+				x, y, z);
 		}
 		return interp_vals;
 
 	}  // interp_recp
+
+
+	// Interpolate the tangent basis functions at the impurity location
+	std::array<double, 9> interp_tang(
+		const Background::Background& bkg, const int xidx, const int yidx, 
+		const int zidx, const double x, const double y, const double z)
+	{
+		// Get nearest neighbor indices for each direction. These tell us
+		// which direction we should interpolate towards, i.e., which
+		// rectangle made by the neighboring cell centers our particle
+		// is bounded by.
+		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
+			bkg.get_x(), xidx)};
+		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
+			bkg.get_y(), yidx)};
+		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
+			bkg.get_z(), zidx)};
+
+		// x, y, z coordinates of two bounding vertices to interpolate 
+		// between. Note these are not grid vertices, but rather are formed
+		// by cell center coordinates since that's where B/E are assumed
+		// to be defined. It is essentially a cell shifted by dx/2, dy/2
+		// and dz/2 if that helps.
+		const double x0 {bkg.get_x()[xidx]};
+		const double x1 {bkg.get_x()[xidx_neighbor]};
+		const double y0 {bkg.get_y()[yidx]};
+		const double y1 {bkg.get_y()[yidx_neighbor]};
+		const double z0 {bkg.get_z()[zidx]};
+		const double z1 {bkg.get_z()[zidx_neighbor]};
+
+		// Array of references to each tangent basis vector
+		const std::array<std::reference_wrapper<
+			const Vectors::Vector3D<BkgFPType>>, 9> tang_basis {
+			bkg.get_dXdx(), bkg.get_dYdx(), bkg.get_dZdx(),
+			bkg.get_dXdy(), bkg.get_dYdy(), bkg.get_dZdy(),
+			bkg.get_dXdz(), bkg.get_dYdz(), bkg.get_dZdz()};
+
+		// Loop through and interpolate each basis vector
+		std::array<double, 9> interp_vals {};
+		for (int i {}; i < 9; ++i)
+		{
+			// Values at each vertex, 8 total because it's a rectangle.
+			const double v000 {tang_basis[i](xidx, yidx, zidx)};
+			const double v100 {tang_basis[i](xidx_neighbor, yidx, zidx)};
+			const double v010 {tang_basis[i](xidx, yidx_neighbor, zidx)};
+			const double v110 {tang_basis[i](xidx_neighbor, yidx_neighbor, 
+				zidx)};
+			const double v001 {tang_basis[i](xidx, yidx, zidx_neighbor)};
+			const double v101 {tang_basis[i](xidx_neighbor, yidx, 
+				zidx_neighbor)};
+			const double v011 {tang_basis[i](xidx, yidx_neighbor, 
+				zidx_neighbor)};
+			const double v111 {tang_basis[i](xidx_neighbor, yidx_neighbor,	
+				zidx_neighbor)};
+
+			// Perform interpolation, storing value in our local array
+			interp_vals[i] = Utilities::trilinear_interpolate(x0, y0, z0, 
+				x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, v111, 
+				x, y, z);
+		}
+		return interp_vals;
+
+	}  // interp_tang
 
 	void update_velocity_cpu(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
@@ -158,6 +221,18 @@ namespace Boris
 			std::array<double, 4> E_local {};
 			std::array<double, 4>* locals [] = {&B_local, &E_local};
 
+			// x, y, z coordinates of two bounding vertices to interpolate 
+			// between. Note these are not grid vertices, but rather are formed
+			// by cell center coordinates since that's where B/E are assumed
+			// to be defined. It is essentially a cell shifted by dx/2, dy/2
+			// and dz/2 if that helps.
+			const double x0 {bkg.get_x()[xidx]};
+			const double x1 {bkg.get_x()[xidx_neighbor]};
+			const double y0 {bkg.get_y()[yidx]};
+			const double y1 {bkg.get_y()[yidx_neighbor]};
+			const double z0 {bkg.get_z()[zidx]};
+			const double z1 {bkg.get_z()[zidx_neighbor]};
+
 			// Loop through each B/E component, performing a trilinear interpolation
 			// to get the local value of each. First loop is to choose B or E.
 			for (int j = 0; j < 2; ++j) 
@@ -169,18 +244,6 @@ namespace Boris
 				// Get reference to output local values. This is a reference to
 				// an array of 3 doubles, B_local or E_local.
 				auto& out = *locals[j]; 
-
-				// x, y, z coordinates of two bounding vertices to interpolate 
-				// between. Note these are not grid vertices, but rather are formed
-				// by cell center coordinates since that's where B/E are assumed
-				// to be defined. It is essentially a cell shifted by dx/2, dy/2
-				// and dz/2 if that helps.
-				const double x0 {bkg.get_x()[xidx]};
-				const double x1 {bkg.get_x()[xidx_neighbor]};
-				const double y0 {bkg.get_y()[yidx]};
-				const double y1 {bkg.get_y()[yidx_neighbor]};
-				const double z0 {bkg.get_z()[zidx]};
-				const double z1 {bkg.get_z()[zidx_neighbor]};
 
 				// Loop through each component to get interpolated value for each
 				for (int k = 0; k < 4; ++k) 
@@ -305,8 +368,9 @@ namespace Boris
 			slots.set_vZ(i, vplus[2] + q_m * E_local[2] * 0.5 * dt);
 
 			// Interpolate reciprocal and tangent basis vector at impurity location
-			//std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
-			//	yidx, zidx)};
+			std::array<double, 9> int_rec_bas {interp_recp(bkg, slots.xidx()[i], 
+				slots.yidx()[i], slots.zidx()[i], slots.x()[i], slots.y()[i], 
+				slots.z()[i])};
 
 			//std::array<double, 9> int_tan_bas {interp_tang(imp, bkg, xidx, 
 			//	yidx, zidx)};
@@ -375,16 +439,16 @@ namespace Boris
 			*/
 
 			// Calculate velocity vector in computational coordinates using
-			// interpolated reciprocal basis vector. Not used right now since it's
-			// redundant/not needed in the particle update step, but leaving since
-			// it's an interesting idea.
-			//imp.set_vx(int_rec_bas[0] * imp.get_vX() 
-			//	+ int_rec_bas[1] * imp.get_vY() + int_rec_bas[2] * imp.get_vZ());
-			//imp.set_vy(int_rec_bas[3] * imp.get_vX() 
-			//	+ int_rec_bas[4] * imp.get_vY() + int_rec_bas[5] * imp.get_vZ());
-			//imp.set_vz(int_rec_bas[6] * imp.get_vX() 
-			//	+ int_rec_bas[7] * imp.get_vY() + int_rec_bas[8] * imp.get_vZ());
-
+			// interpolated reciprocal basis vector.
+			slots.set_vx(i, int_rec_bas[0] * slots.vX()[i] 
+				+ int_rec_bas[1] * slots.vY()[i] 
+				+ int_rec_bas[2] * slots.vZ()[i]);
+			slots.set_vy(i, int_rec_bas[3] * slots.vX()[i] 
+				+ int_rec_bas[4] * slots.vY()[i] 
+				+ int_rec_bas[5] * slots.vZ()[i]);
+			slots.set_vz(i, int_rec_bas[6] * slots.vX()[i] 
+				+ int_rec_bas[7] * slots.vY()[i] 
+				+ int_rec_bas[8] * slots.vZ()[i]);
 
 		}  // i loop, omp parallel for
 	}

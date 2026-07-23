@@ -29,6 +29,11 @@ namespace Timer
 		double m_total_time {};
 		double m_read_time {};
 		double m_imp_time {};
+		double m_boris_time {};
+		double m_find_cell_time {};
+		double m_bounds_time {};
+		double m_fill_slots_time {};
+		double m_record_time {};
 		double m_coll_time {};
 		double m_save_time {};
 
@@ -89,6 +94,36 @@ namespace Timer
 		void end_imp_timer();
 
 		/**
+		* @brief Start timer for time spent in the boris algorithm
+		*/
+		void start_boris_timer();
+
+		/**
+		* @brief End timer for time spent in the boris algorithm
+		*/
+		void end_boris_timer();
+
+		/**
+		* @brief Start timer for time spent checking boundary conditions
+		*/
+		void start_bounds_timer();
+
+		/**
+		* @brief End timer for time spent checking boundary conditions
+		*/
+		void end_bounds_timer();
+
+		/**
+		* @brief Start timer for time spent filling slots
+		*/
+		void start_fill_slots_timer();
+
+		/**
+		* @brief End timer for time spent filling slots
+		*/
+		void end_fill_slots_timer();
+
+		/**
 		* @brief Start timer for time spent in collisions
 		*/
 		void start_coll_timer();
@@ -97,6 +132,26 @@ namespace Timer
 		* @brief End timer for time spent in collisions
 		*/
 		void end_coll_timer();
+
+		/**
+		* @brief Start timer for time spent in finding cell indices
+		*/
+		void start_find_cell_timer();
+
+		/**
+		* @brief End timer for time spent in finding cell indices
+		*/
+		void end_find_cell_timer();
+
+		/**
+		* @brief Start timer for time spent recording statistics
+		*/
+		void start_record_timer();
+
+		/**
+		* @brief End timer for time spent in recording statistics
+		*/
+		void end_record_timer();
 
 		/**
 		* @brief Start timer for time spent saving data

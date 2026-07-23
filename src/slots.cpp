@@ -114,6 +114,7 @@ namespace Slots
 		cudaMalloc(&slots_d.q, m_N * sizeof(int));
 		cudaMalloc(&slots_d.state, m_N * sizeof(int));
 		cudaMalloc(&slots_d.all_dead, sizeof(bool));
+		cudaMalloc(&slots_d.rng, sizeof(curandState));
 
 		// Copy to device
 		cudaMemcpy(slots_d.t, m_t.data(), m_N * sizeof(double), 
@@ -150,6 +151,7 @@ namespace Slots
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.state,  m_state.data(), m_N * sizeof(int),
 			cudaMemcpyHostToDevice);
+		// No copy to be done for CUDA RNGs
 
 		// Initialize all_dead to false
 		bool init = false;
@@ -192,6 +194,7 @@ namespace Slots
 		cudaFree(slots_d.q);
 		cudaFree(slots_d.state);
 		cudaFree(slots_d.all_dead);
+		cudaFree(slots_d.rng);
 
 		slots_d.t = nullptr;
 		slots_d.x = nullptr;
@@ -221,8 +224,10 @@ namespace Slots
 		ParticleInit p;
 
 		// To-do: Replace with actual initialization logic
+		// It has to be thread-safe!!! So if we use a RNG, we have to be
+		// very careful.
 		p.t = 0.0;
-		p.x = 0.0;
+		p.x = 0.01;
 		p.y = 0.0;
 		p.z = 0.0;
 
@@ -231,7 +236,7 @@ namespace Slots
 		p.yidx = 0;
 		p.zidx = 0;
 
-		p.vx = 0.0;
+		p.vx = 100.0;
 		p.vy = 0.0;
 		p.vz = 0.0;
 
@@ -240,7 +245,7 @@ namespace Slots
 		p.vZ = 0.0;
 		
 		p.weight = 1.0;
-		p.q = 1;
+		p.q = 0;
 
 		return p;
 	}
@@ -250,12 +255,25 @@ namespace Slots
 	void fill_slots_cpu(Slots& slots, int& rem_parts)
 	{
 		// Loop through each slot as long as there are remaining particles
-		// Make this an OpenMP loop, watch for race condition on rem_parts
-		for (int i = 0; i < slots.N() && rem_parts > 0; i++)
+		#pragma omp parallel for
+		for (int i = 0; i < slots.N(); i++)
 		{
 			// If particle is dead
 			if (slots.state()[i] > 0)
 			{
+				int my_claim = 0;
+
+				// Decrement rem_parts by 1, avoid race condition
+				#pragma omp atomic capture
+				{
+					my_claim = rem_parts;
+					rem_parts--;
+				}
+
+				// If this thread runs out of particles then move on
+				if (my_claim <= 0)
+					continue;
+
 				ParticleInit p = make_new_particle();
 
 				// Assign initial positions and velocities
@@ -283,9 +301,16 @@ namespace Slots
 
 				// Reassign to alive, decrease remaining particles by one
 				slots.set_state(i, 0);
-				rem_parts--;
-			}
-		}
-	}
+
+			}  // slots.state()[i] > 0
+		}  // loop
+
+		// This can actually go below zero in the above loop. If there are
+		// 100 dead slots but only 5 remaining particles, everything will
+		// still work correctly but rem_parts will be arbitrarily decreased
+		// past 0 to -95. Not a huge deal, but it should be corrected.
+		if (rem_parts < 0) rem_parts = 0;
+		
+	}  // fill_slots_cpu
 
 }  // namespace Slots

@@ -62,6 +62,11 @@ namespace Options
 		set_imp_iz_recomb(m_imp_iz_recomb);
 		set_tbound_type(m_tbound_type);
 		set_min_xbound_type(m_min_xbound_type);
+		set_max_xbound_type(m_max_xbound_type);
+		set_min_ybound_type(m_min_ybound_type);
+		set_max_ybound_type(m_max_ybound_type);
+		set_min_zbound_type(m_min_zbound_type);
+		set_max_zbound_type(m_max_zbound_type);
 		set_calc_grad_elec(m_calc_grad_elec);
 	}
 
@@ -84,6 +89,10 @@ namespace Options
 		if (use_gpu == "off") m_use_gpu_int = 0;
 		else if (use_gpu == "cuda") m_use_gpu_int = 1;
 	}
+
+	// seed
+	void Options::set_seed(int seed) 
+		{m_seed = seed;}
 
 	// bkg_source
 	void Options::set_bkg_source(std::string bkg_source) 
@@ -580,6 +589,14 @@ namespace Options
 	// imp_xbound_buffer
 	void Options::set_imp_xbound_buffer(double imp_xbound_buffer) 
 		{m_imp_xbound_buffer = imp_xbound_buffer;}
+
+	// imp_ybound_buffer
+	void Options::set_imp_ybound_buffer(double imp_ybound_buffer) 
+		{m_imp_ybound_buffer = imp_ybound_buffer;}
+
+	// imp_zbound_buffer
+	void Options::set_imp_zbound_buffer(double imp_zbound_buffer) 
+		{m_imp_zbound_buffer = imp_zbound_buffer;}
 	
 	// imp_iz_recomb
 	void Options::set_imp_iz_recomb(std::string imp_iz_recomb) 
@@ -617,6 +634,8 @@ namespace Options
 		{return m_case_name;}
 	const std::string& Options::use_gpu() const 
 		{return m_use_gpu;}
+	const int Options::seed() const 
+		{return m_seed;}
 	const std::string& Options::bkg_source() const 
 		{return m_bkg_source;}
 	const std::string& Options::test_opt() const 
@@ -661,6 +680,12 @@ namespace Options
 		{return m_sep_x_bc_xp_z1;}
 	const double Options::sep_x_bc_xp_z2() const 
 		{return m_sep_x_bc_xp_z2;}
+	const double Options::imp_xbound_buffer() const 
+		{return m_imp_xbound_buffer;}
+	const double Options::imp_ybound_buffer() const 
+		{return m_imp_ybound_buffer;}
+	const double Options::imp_zbound_buffer() const 
+		{return m_imp_zbound_buffer;}
 	const int Options::imp_atom_num() const 
 		{return m_imp_atom_num;}
 	const double Options::imp_mass_amu() const 
@@ -729,8 +754,6 @@ namespace Options
 		{return m_imp_time_step_min;}
 	const double Options::imp_source_scale_fact() const 
 		{return m_imp_source_scale_fact;}
-	const double Options::imp_xbound_buffer() const 
-		{return m_imp_xbound_buffer;}
 	const std::string& Options::imp_iz_recomb() const 
 		{return m_imp_iz_recomb;}
 	const int Options::print_interval() const 

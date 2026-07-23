@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef USE_CUDA
+#include <curand_kernel.h>
+#endif
+
 namespace Slots
 {
     // POD struct for GPU-side data access
@@ -26,5 +30,13 @@ namespace Slots
         int* q;
         int* state;
 		bool* all_dead;
+
+#ifdef USE_CUDA
+		
+		// Each slot gets it RNG, otherwise we could get non-independent
+		// random number streams
+		curandState* rng;
+#endif
+
     };
 }

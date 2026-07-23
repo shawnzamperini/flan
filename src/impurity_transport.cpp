@@ -8,6 +8,7 @@
 
 #include "background.h"
 #include "boris.h"
+#include "boundary.h"
 #include "collisions.h"
 #include "constants.h"
 #include "flan_types.h"
@@ -25,6 +26,7 @@
 
 #ifdef USE_CUDA
 #include <cuda_runtime.h>
+#include "boundary.cuh"
 #include "impurity_stats.cuh"
 #include "impurity_transport.cuh"
 #include "slots.cuh"
@@ -128,269 +130,28 @@ namespace ImpurityTransport
 		}
 	}
 
-	// Absorbing boundary condition. Check is value is outside the bound.
-	// max_bound = true indicates that bound is a maximum, and that we are
-	// checking if value >= bound. Likewise, max_bound = false checks if
-	// value =< bound. buffer extends the boundary so that it triggers sooner.
-	// This is because sometimes the plasma can behave oddly right at the
-	// boundaries, so this can circumvent it. This function is written this way 
-	// to be SIMD/vectorizable friendly for the compiler (no if's).
-	inline int absorbing_bc(double a, double bound, bool max_bound,
-		double buffer = 0.0)
+	
+	// Perform particle step for each particle in slots
+	void step_cpu(Slots::Slots& slots, const Background::Background& bkg, 
+		const Options::Options& opts, const double dt)
 	{
-		// Compute both comparisons
-		const bool ge {(a + buffer) >= bound};  // for max-bound
-		const bool le {(a - buffer) <= bound};  // for min-bound
 
-		// Select the correct one using max_bound as a mask
-		const bool dead {max_bound ? ge : le};
-
-		// Returns 0 if alive, 1 if dead
-		return static_cast<int>(dead);
-	}
-
-	// Periodic boundary condition. This type of BC will never kill a particle,
-	// just loop it around to the other side. This function returns the new
-	// looped value, or just the same value if a BC was not encountered.
-	inline double periodic_bc(double a, double amin, double amax, 
-		double buffer = 0.0)
-	{
-		const double L = amax - amin;
-
-		const double gt = ((a + buffer) > amax);   // wrap high, subtract L
-		const double lt = ((a - buffer) < amin);   // wrap low, add L
-
-		// Return new (or same) position
-		return a - gt * L + lt * L;
-	}
-
-	// Core boundary condition. The coordinate being checked against is a. b
-	// and c are the other two coordinates. If a core condition is met, b is
-	// moved to a random value between b_min/b_max, likewise for c. This is
-	// essentially like entering the core and then popping out at a random
-	// location somewhere else along the core boundary. A residence time
-	// could easily be added to this if it was useful.
-	inline void core_bc(double& a, double& b, double& c, double a_min,
-		double a_max, double buffer, double b_min, double b_max,
-		double c_min, double c_max)
-	{
-		// Branchless boundary detection
-		const double hit_min = (a - buffer) < a_min;
-		const double hit_max = (a + buffer) > a_max;
-
-		// Combined mask: 1.0 if either boundary is hit
-		const double mask = hit_min || hit_max;
-
-		// Compute remap positions for min and max sides
-		const double a_new_min = a_min + buffer;
-		const double a_new_max = a_max - buffer;
-
-		// Select correct remap position
-		const double a_new =
-			hit_min * a_new_min +
-			hit_max * a_new_max;
-
-		// Branchless update of the coordinate
-		a = mask * a_new + (1.0 - mask) * a;
-
-		// RNG only when needed (cannot be SIMD-friendly)
-		if (mask)
+		#pragma omp parallel for
+		for (int i=0; i < slots.N(); ++i)
 		{
-			b = Random::get(b_min, b_max);
-			c = Random::get(c_min, c_max);
+			// Update time
+			slots.set_t(i, slots.t()[i] + dt);
+
+			// Update curvilinear position
+			slots.set_x(i, slots.x()[i] + slots.vx()[i] * dt);
+			slots.set_y(i, slots.y()[i] + slots.vy()[i] * dt);
+			slots.set_z(i, slots.z()[i] + slots.vz()[i] * dt);
 		}
 	}
 
-
-	void check_bounds_cpu(Slots::Slots& slots, 
-		const Background::Background& bkg, const Options::Options& opts)
-	{
-
-		// The different bounds are
-		//   0: Absorbing
-		//   1: Periodic
-		//   2: Core (only x,y,z)
-
-		// Loop through each slot
-		#pragma omp parallel for
-		for (int i = 0; i < slots.N(); i++)
-		{
-			// Skip dead particles
-			if (slots.state()[i] > 0) continue;
-
-			// Used in all, just define up front
-			int state {};
-			double new_val {};
-
-			// --------------------
-			// Time boundary
-			// --------------------
-
-			// Maximum t: Absorbing boundary
-			if (opts.tbound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.t()[i], bkg.get_t_max(), true);
-				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
-			}
-
-			// Maximum t: Periodic boundary
-			else if (opts.tbound_type_int() == 1)
-			{
-				// We check and overwrite each time here, even though hitting
-				// a BC is relatively rare. Despite this, this is still a very
-				// fast process since slots.t()[i] is loaded into L1, and 
-				// periodic_bc doesn't touch memory loads so the L1 cache never
-				// get evicted, so it's a very fast write.
-				new_val = periodic_bc(slots.t()[i], bkg.get_t_min(), 
-					bkg.get_t_max());
-				slots.set_t(i, new_val);
-			}
-
-			// --------------------
-			// Minimum x boundary
-			// --------------------
-		
-			// Absorbing boundary
-			if (opts.min_xbound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.x()[i], bkg.get_x_min(), false, 
-					opts.imp_xbound_buffer());
-				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
-			}
-
-			// Periodic boundary
-			else if (opts.min_xbound_type_int() == 1)
-			{
-				new_val = periodic_bc(slots.x()[i], bkg.get_x_min(), 
-					bkg.get_x_max(), opts.imp_xbound_buffer());
-				slots.set_x(i, new_val);
-			}
-
-			// Core boundary
-			else if (opts.min_xbound_type_int() == 2)
-			{
-
-				// Temporaries that may get updated in core_bc, which we will
-				// write into slots after
-				double xtmp {slots.x()[i]};
-				double ytmp {slots.y()[i]};
-				double ztmp {slots.z()[i]};
-				core_bc(xtmp, ytmp, ztmp, bkg.get_x_min(), bkg.get_x_max(), 
-					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
-					bkg.get_z_min(), bkg.get_z_max());
-
-				// Write back
-				slots.set_x(i, xtmp);
-				slots.set_y(i, ytmp);
-				slots.set_z(i, ztmp);
-			}
-
-			// --------------------
-			// Maximum x boundary
-			// --------------------
-
-			// Absorbing boundary
-			if (opts.max_xbound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.x()[i], bkg.get_x_max(), true, 
-					opts.imp_xbound_buffer());
-				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
-			}
-
-			// Periodic boundary
-			else if (opts.max_xbound_type_int() == 1)
-			{
-				new_val = periodic_bc(slots.x()[i], bkg.get_x_min(), 
-					bkg.get_x_max(), opts.imp_xbound_buffer());
-				slots.set_x(i, new_val);
-			}
-
-			// Core boundary
-			else if (opts.max_xbound_type_int() == 2)
-			{
-
-				// Temporaries that may get updated in core_bc, which we will
-				// write into slots after
-				double xtmp {slots.x()[i]};
-				double ytmp {slots.y()[i]};
-				double ztmp {slots.z()[i]};
-				core_bc(xtmp, ytmp, ztmp, bkg.get_x_min(), bkg.get_x_max(), 
-					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
-					bkg.get_z_min(), bkg.get_z_max());
-
-				// Write back
-				slots.set_x(i, xtmp);
-				slots.set_y(i, ytmp);
-				slots.set_z(i, ztmp);
-			}
-
-
-			// --------------------
-			// y boundary
-			// --------------------
-
-			// Minimum y: Periodic y boundary
-			if (slots.y()[i] < bkg.get_grid_y()[0])
-			{
-				slots.set_y(i, bkg.get_grid_y().back() + (slots.y()[i] 
-					- bkg.get_grid_y()[0]));
-			}
-			else if (slots.y()[i] > bkg.get_grid_y().back())
-			{
-				slots.set_y(i, bkg.get_grid_y()[0] + (slots.y()[i]
-					- bkg.get_grid_y().back()));
-			}
-
-			// --------------------
-			// z boundary
-			// --------------------
-
-			// Absorbing z boundary in SOL, periodic in core
-			// Problem: This assume x increases with distance from the core,
-			// this is not always true! E.g., it could depend on how psi is
-			// defined. 
-			if (slots.x()[i] > opts.lcfs_x())
-			{
-				// Minimum/maximum z: Absorbing boundary in SOL
-				if (slots.z()[i] < bkg.get_grid_z()[0] || 
-					slots.z()[i] > bkg.get_grid_z().back()) 
-					{
-						//std::cout << "Absorbed: Min/max z\n";
-						slots.set_state(i, 1);
-						continue;
-					}
-			}
-			else
-			{
-				// Minimum z: Periodic boundary
-				if (slots.z()[i] < bkg.get_grid_z()[0])
-				{
-					slots.set_z(i, bkg.get_grid_z().back() + (slots.z()[i] 
-						- bkg.get_grid_z()[0]));
-					//std::cout << "Periodic: Min z\n";
-				}
-				
-				// Maximum z: Periodic boundary
-				else if (slots.z()[i] > bkg.get_grid_z().back())
-				{
-					slots.set_z(i, bkg.get_grid_z()[0] + (slots.z()[i] 
-						- bkg.get_grid_z().back()));
-					//std::cout << "Periodic: Max z\n";
-				}
-			}
-
-		} // slot loop
-	}  // check_bounds_cpu
-
+	// ------------------
+	// Wrapper functions
+	// ------------------
 
 	// Wrapper to choose CPU or GPU implementation for finding containing cell
 	// for each particle in a slot
@@ -504,14 +265,41 @@ namespace ImpurityTransport
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
-			ImpurityTransport::check_bounds_gpu(slots_d, bkg_d, 
-				opts.tbound_type_int(), opts.imp_xbound_buffer(), 
-				opts.min_xbound_type_int(), opts.lcfs_x());
+			// Defined in cuda/boundary.cu
+			Boundary::check_bounds_gpu(slots_d, bkg_d, 
+				opts.tbound_type_int(), 
+				opts.min_xbound_type_int(), opts.max_xbound_type_int(),
+				opts.min_ybound_type_int(), opts.max_ybound_type_int(),
+				opts.min_zbound_type_int(), opts.max_zbound_type_int(),
+				opts.imp_xbound_buffer(), opts.imp_ybound_buffer(),
+				opts.imp_zbound_buffer(), opts.lcfs_x());
 			return;
 		}
 #endif
 
-		check_bounds_cpu(slots, bkg, opts);
+		// Defined in boundary.cpp
+		Boundary::check_bounds_cpu(slots, bkg, opts);
+	}
+
+	
+	// Perform particle step
+	void step_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
+		const Background::Background& bkg, 
+		const Background::BackgroundDevice& bkg_d, 
+		const Options::Options& opts)
+	{
+
+#ifdef USE_CUDA
+		if (opts.use_gpu_int() > 0) 
+		{
+			// Defined in impurity_transport.cu
+			//step_gpu();
+		}
+#endif
+
+		// Defined above
+		step_cpu(slots, bkg, opts, opts.imp_time_step());
+
 	}
 
 	
@@ -534,7 +322,6 @@ namespace ImpurityTransport
 
 		// Tracker for number of remaining particles to follow. We divide them
 		// evenly between the number of MPI tasks/GPUs
-		//int rem_parts {opts.imp_num()};
 		int parts_per_rank {opts.imp_num() / nprocs};
 
 		// Give last process the remainder.
@@ -566,22 +353,30 @@ namespace ImpurityTransport
 
 		// Initial fill of slots with particles. 
 		std::cout << "pre-fill: rem_parts = " << rem_parts << '\n';
+		timer.start_fill_slots_timer();
 		fill_slots_wrapper(slots, slots_d, rem_parts, opts);
+		timer.end_fill_slots_timer();
 		std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
 		
 		// Find starting grid index
+		timer.start_find_cell_timer();
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
+		timer.end_find_cell_timer();
 
 		// Boris algorithm: The velocity stored in the Slots objects
 		// will actually be the velocity at a half timestep earlier, i.e.,
 		// at t - dt/2. So we still need to push the particle velocity
 		// back by half a time step.
-		boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
-			-opts.imp_time_step() / 2.0);
+		timer.start_boris_timer();
+		//boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
+		//	-opts.imp_time_step() / 2.0);
+		timer.end_boris_timer();
 
 		// Record starting position in statistics arrays
+		timer.start_record_timer();
 		record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
 			opts.imp_time_step());
+		timer.end_record_timer();
 
 		// Begin loop
 		bool all_dead {false};
@@ -595,31 +390,51 @@ namespace ImpurityTransport
 			// To-do
 
 			// Collision update
+			// To-do
 
-			// Update velocity (Boris)
-			boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
-				opts.imp_time_step());
+			// Update velocity (Boris).
+			timer.start_boris_timer();
+			//boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
+			//	opts.imp_time_step());
+			timer.end_boris_timer();
+			std::cout << "before step\n";
+			std::cout << " vx[0] = " << slots.vx()[0] << '\n';
+			std::cout << "  t[0] = " << slots.t()[0] << '\n';
+			std::cout << "  x[0] = " << slots.x()[0] << '\n';
+			std::cout << "  y[0] = " << slots.y()[0] << '\n';
+			std::cout << "  z[0] = " << slots.z()[0] << '\n';
 
 			// Perform particle step
-			// Temporary just to debug
-			for (int i=0; i < slots.N(); ++i)
-			{
-				slots.set_t(i, slots.t()[i] + opts.imp_time_step());
-			}
+			step_wrapper(slots, slots_d, bkg, bkg_d, opts);
+
+			std::cout << "after step\n";
+			std::cout << " vx[0] = " << slots.vx()[0] << '\n';
+			std::cout << "  t[0] = " << slots.t()[0] << '\n';
+			std::cout << "  x[0] = " << slots.x()[0] << '\n';
+			std::cout << "  y[0] = " << slots.y()[0] << '\n';
+			std::cout << "  z[0] = " << slots.z()[0] << '\n';
 
 			// Bounds checking
+			timer.start_bounds_timer();
 			check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts);
+			timer.end_bounds_timer();
 
 			// Update particle indices
+			timer.start_find_cell_timer();
 			find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
+			timer.end_find_cell_timer();
 
 			// Record statistics
+			timer.start_record_timer();
 			record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
 				opts.imp_time_step());
+			timer.end_record_timer();
 
 			// Replace dead particles
 			std::cout << "pre-fill: rem_parts = " << rem_parts << '\n';
+			timer.start_fill_slots_timer();
 			fill_slots_wrapper(slots, slots_d, rem_parts, opts);
+			timer.end_fill_slots_timer();
 			std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
 
 			// User feedback
@@ -659,6 +474,11 @@ namespace ImpurityTransport
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer)
 	{
+		
+		// Some warnings to include as I still implement things
+		std::cout << "Warning! Need to still implement lcfs_x to divide"
+			<< " core/SOL BCs\n";
+
 		// Rank and number of processes
 		int rank {};
 		int nprocs {};
@@ -702,13 +522,13 @@ namespace ImpurityTransport
 		// millions or billions of particles, and allocating them all at once
 		// is wasteful and could cause you to run out of memory.
 		constexpr int slot_cap = 131072;
-		Slots::Slots slots {slot_cap};
+		Slots::Slots slots {std::min(slot_cap, opts.imp_num())};
 
 		// All particles assumed to have same mass.
 		slots.set_mass(opts.imp_mass_amu() * Constants::amu_to_kg);
 
-		// Debug while setting things up, set all to dead to test filling
-		std::cout << "setting all to dead\n";
+		// Set all particles to dead so that we can pass through the slot
+		// filling logic that will assign initial conditions
 		for (int i {}; i < slots.N(); ++i)
 		{
 			slots.set_state(i, 1);
@@ -761,6 +581,10 @@ namespace ImpurityTransport
 			std::vector<std::thread> threads;
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
+
+				// Initialize RNGs with SAME SEED FOR ALL OF THEM 
+				init_slot_rngs(gpu_slots[dev], opts.seed());
+
 				// Start a GPU worker on each thread. std::ref is used here 
 				// because std::thread copies by default, which isn't necessary
 				// or desirable for these larger objects.

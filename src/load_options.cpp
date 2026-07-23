@@ -55,6 +55,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "seed") 
+			{
+				auto set_func = std::bind(&Options::set_seed, &opts, 
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
 			else if (key == "bkg_source") 
 			{
 				auto set_func = std::bind(&Options::set_bkg_source, &opts, 
@@ -163,6 +170,41 @@ namespace Options
 			else if (key == "min_xbound_type") 
 			{
 				auto set_func = std::bind(&Options::set_min_xbound_type, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "max_xbound_type") 
+			{
+				auto set_func = std::bind(&Options::set_max_xbound_type, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "min_ybound_type") 
+			{
+				auto set_func = std::bind(&Options::set_min_ybound_type, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "max_ybound_type") 
+			{
+				auto set_func = std::bind(&Options::set_max_ybound_type, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "min_zbound_type") 
+			{
+				auto set_func = std::bind(&Options::set_min_zbound_type, &opts, 
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "max_zbound_type") 
+			{
+				auto set_func = std::bind(&Options::set_max_zbound_type, &opts, 
 					std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
 			}
@@ -431,6 +473,20 @@ namespace Options
 			else if (key == "imp_xbound_buffer") 
 			{
 				auto set_func = std::bind(&Options::set_imp_xbound_buffer, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_ybound_buffer") 
+			{
+				auto set_func = std::bind(&Options::set_imp_ybound_buffer, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_zbound_buffer") 
+			{
+				auto set_func = std::bind(&Options::set_imp_zbound_buffer, &opts, 
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}

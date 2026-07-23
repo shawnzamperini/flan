@@ -26,11 +26,10 @@ namespace ImpurityTransport
 		const Background::BackgroundDevice& bkg_d);
 
 	/**
-	* @brief Check time and spatial boundaries and handle accordingly (GPU)
+	* @brief Wrapper to call init_rng_kernel, which initializes the RNG for 
+	*   each slot on the device
 	*/
-	void check_bounds_gpu(Slots::SlotsDevice& slots_d, 
-		const Background::BackgroundDevice& bkg_d, 
-		const int tbound_type_int, const double imp_xbound_buffer, 
-		const int min_xbound_type_int, const double lcfs_x);
+	void init_slot_rngs(Slots::SlotsDevice& slots_d, 
+		const unsigned long long seed);
 
 }

@@ -35,6 +35,7 @@ namespace Options
 		// Meta options for the simulation
 		std::string m_case_name              {"undefined"};
 		std::string m_use_gpu					   {"off"};
+		int m_seed                                     {4};
 
 		// General background plasma options
 		std::string m_bkg_source                {"gkeyll"};
@@ -57,15 +58,17 @@ namespace Options
 		std::string m_calc_grad_elec               {"off"};
 
 		// Geometry options
-		std::string m_tbound_type              {"absorbing"};
-		double m_lcfs_x                              {0.0};
-		double m_imp_xbound_buffer                   {0.0};
+		std::string m_tbound_type            {"absorbing"};
 		std::string m_min_xbound_type        {"absorbing"};
 		std::string m_max_xbound_type        {"absorbing"};
 		std::string m_min_ybound_type        {"absorbing"};
 		std::string m_max_ybound_type        {"absorbing"};
 		std::string m_min_zbound_type        {"absorbing"};
 		std::string m_max_zbound_type        {"absorbing"};
+		double m_lcfs_x                              {0.0};
+		double m_imp_xbound_buffer                   {0.0};
+		double m_imp_ybound_buffer                   {0.0};
+		double m_imp_zbound_buffer                   {0.0};
 		double m_sep_x_bc_xp_z1                      {0.0};
 		double m_sep_x_bc_xp_z2                      {0.0};
 
@@ -176,6 +179,7 @@ namespace Options
 		// Setter declarations
 		void set_use_gpu(std::string use_gpu);
 		void set_case_name(std::string case_name);
+		void set_seed(int seed);
 		void set_bkg_source(std::string bkg_source);
 		void set_test_opt(std::string test_opt);
 		void set_save_track(std::string save_track);
@@ -192,14 +196,17 @@ namespace Options
 		void set_calc_grad_elec(std::string calc_grad_elec);
 		void set_tbound_type(std::string tbound_type);
 		void set_min_xbound_type(std::string min_xbound_type);
-		void set_max_xbound_type(std::string min_xbound_type);
-		void set_min_ybound_type(std::string max_ybound_type);
+		void set_max_xbound_type(std::string max_xbound_type);
+		void set_min_ybound_type(std::string min_ybound_type);
 		void set_max_ybound_type(std::string max_ybound_type);
 		void set_min_zbound_type(std::string min_zbound_type);
 		void set_max_zbound_type(std::string max_zbound_type);
 		void set_lcfs_x(double lcfs_x);
 		void set_sep_x_bc_xp_z1(double sep_x_bc_xp_z1);
 		void set_sep_x_bc_xp_z2(double sep_x_bc_xp_z2);
+		void set_imp_xbound_buffer(double imp_xbound_buffer);
+		void set_imp_ybound_buffer(double imp_ybound_buffer);
+		void set_imp_zbound_buffer(double imp_zbound_buffer);
 		void set_imp_atom_num(int imp_atom_num);
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
@@ -234,7 +241,6 @@ namespace Options
 		void set_imp_time_step(double imp_time_step);
 		void set_imp_time_step_min(double imp_time_step_min);
 		void set_imp_source_scale_fact(double imp_source_scale_fact);
-		void set_imp_xbound_buffer(double imp_xbound_buffer);
 		void set_imp_iz_recomb(std::string imp_iz_recomb);
 		void set_print_interval(int print_interval);
 		void set_openadas_root(std::string openadas_root);
@@ -244,6 +250,7 @@ namespace Options
 		// Accessor declarations
 		const std::string& case_name() const;
 		const std::string& use_gpu() const;
+		const int seed() const;
 		const std::string& bkg_source() const;
 		const std::string& test_opt() const;
 		const std::string& save_track() const;
@@ -268,6 +275,9 @@ namespace Options
 		const double lcfs_x() const;
 		const double sep_x_bc_xp_z1() const;
 		const double sep_x_bc_xp_z2() const;
+		const double imp_xbound_buffer() const;
+		const double imp_ybound_buffer() const;
+		const double imp_zbound_buffer() const;
 		const int imp_atom_num() const;
 		const double imp_mass_amu() const;
 		const int imp_init_charge() const;
@@ -302,7 +312,6 @@ namespace Options
 		const double imp_time_step() const;
 		const double imp_time_step_min() const;
 		const double imp_source_scale_fact() const;
-		const double imp_xbound_buffer() const;
 		const std::string& imp_iz_recomb() const;
 		const int print_interval() const;
 		const std::string& openadas_root() const;
