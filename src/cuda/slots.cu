@@ -111,6 +111,7 @@ namespace Slots
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 		fill_slots_kernel<<<gridSize, blockSize>>>(slots_d, d_counter, 
 			rem_parts);
+		printf("%d\n", cudaGetLastError());
 
 		// Retrieve how many particles were actually filled
 		int filled = 0;

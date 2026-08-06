@@ -8,6 +8,7 @@
 #include "impurity_transport.h"
 
 
+// Test interior points
 TEST(GetNearestCellIndexCPU, InteriorPoints)
 {
     // grid_edges: 0, 1, 2, 3
@@ -19,6 +20,7 @@ TEST(GetNearestCellIndexCPU, InteriorPoints)
     EXPECT_EQ(ImpurityTransport::get_nearest_cell_index_cpu(edges, 2.7), 2);  // between 2 and 3
 }
 
+// Test when the value is right at the edge of the grid
 TEST(GetNearestCellIndexCPU, ExactEdgeHits)
 {
     std::vector<double> edges = {0.0, 1.0, 2.0, 3.0};
@@ -27,6 +29,7 @@ TEST(GetNearestCellIndexCPU, ExactEdgeHits)
     EXPECT_EQ(ImpurityTransport::get_nearest_cell_index_cpu(edges, 2.0), 1);
 }
 
+// Test when outside the left boundary
 TEST(GetNearestCellIndexCPU, LeftBoundary)
 {
     std::vector<double> edges = {0.0, 1.0, 2.0, 3.0};
@@ -36,6 +39,7 @@ TEST(GetNearestCellIndexCPU, LeftBoundary)
     EXPECT_EQ(ImpurityTransport::get_nearest_cell_index_cpu(edges, 0.0), 0);
 }
 
+// Test when outside the right boundary
 TEST(GetNearestCellIndexCPU, RightBoundary)
 {
     std::vector<double> edges = {0.0, 1.0, 2.0, 3.0};
@@ -47,10 +51,11 @@ TEST(GetNearestCellIndexCPU, RightBoundary)
     EXPECT_EQ(ImpurityTransport::get_nearest_cell_index_cpu(edges, 3.0), 2);
 }
 
+// Just some more tests the AI wrote
 TEST(GetNearestCellIndexCPU, VisualSanityCheck)
 {
     // Edges: 0   1   2   3
-    // Cells:  |_0_|_1_|_2_|
+    // Cells: |_0_|_1_|_2_|
     std::vector<double> edges = {0.0, 1.0, 2.0, 3.0};
 
     // Value between edges[2]=2 and edges[3]=3 → cell index 2

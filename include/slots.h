@@ -108,6 +108,7 @@ namespace Slots
 
         // GPU transfer
         SlotsDevice to_device(int device_id = 0);
+        Slots to_host(const SlotsDevice& slots_d);
     };
 
 	// GPU cleanup

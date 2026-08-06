@@ -5,6 +5,12 @@
 
 namespace ImpurityStats
 {
+	/*
+	* @brief CUDA implementation of get_nearest_index
+	*/
+	template <typename T>
+	__device__ int get_nearest_index_gpu(const T* vec, int N, T value);
+
 	/**
 	* @brief Wrapper to call record_stats GPU kernel
 	*/

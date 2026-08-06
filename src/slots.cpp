@@ -168,6 +168,51 @@ namespace Slots
 	}
 
 	// Free up memory from device-side SlotsDevice object
+	Slots Slots::to_host(const SlotsDevice& slots_d)
+	{
+		Slots slots(slots_d.N);
+		slots.set_mass(slots_d.mass);
+
+#ifdef USE_CUDA
+		cudaSetDevice(slots_d.device_id);
+		cudaMemcpy(slots.m_t.data(), slots_d.t, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_x.data(), slots_d.x, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_y.data(), slots_d.y, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_z.data(), slots_d.z, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_vx.data(), slots_d.vx, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_vy.data(), slots_d.vy, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_vz.data(), slots_d.vz, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_vX.data(), slots_d.vX, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_vY.data(), slots_d.vY, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_vZ.data(), slots_d.vZ, slots_d.N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_tidx.data(), slots_d.tidx, slots_d.N * sizeof(int),	
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_xidx.data(), slots_d.xidx, slots_d.N * sizeof(int), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_yidx.data(), slots_d.yidx, slots_d.N * sizeof(int), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_zidx.data(), slots_d.zidx, slots_d.N * sizeof(int), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_weight.data(), slots_d.weight, 
+			slots_d.N * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_q.data(), slots_d.q, slots_d.N * sizeof(int), 
+			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_state.data(), slots_d.state, 
+			slots_d.N * sizeof(int), cudaMemcpyDeviceToHost);
+#endif
+		return slots;
+	}
+
 	void free_slots(SlotsDevice& slots_d, int device_id)
 	{
 
@@ -254,63 +299,59 @@ namespace Slots
 	// are greater than zero.
 	void fill_slots_cpu(Slots& slots, int& rem_parts)
 	{
-		// Loop through each slot as long as there are remaining particles
-		#pragma omp parallel for
-		for (int i = 0; i < slots.N(); i++)
+		int N = slots.N();
+		int dead_count = 0;
+
+		// First pass: count dead slots (reduction)
+		#pragma omp parallel for reduction(+:dead_count)
+		for (int i = 0; i < N; i++)
 		{
-			// If particle is dead
+			if (slots.state()[i] > 0)
+				dead_count++;
+		}
+
+		int revive = (rem_parts < dead_count) ? rem_parts : dead_count;
+		if (revive < 0) revive = 0;
+		rem_parts -= revive;
+
+		// Second pass: revive without atomics
+		int revived = 0;
+		#pragma omp parallel for
+		for (int i = 0; i < N; i++)
+		{
 			if (slots.state()[i] > 0)
 			{
-				int my_claim = 0;
-
-				// Decrement rem_parts by 1, avoid race condition
+				int claim = 0;
 				#pragma omp atomic capture
 				{
-					my_claim = rem_parts;
-					rem_parts--;
+					claim = revived;
+					revived++;
 				}
-
-				// If this thread runs out of particles then move on
-				if (my_claim <= 0)
+				if (claim >= revive)
 					continue;
 
 				ParticleInit p = make_new_particle();
-
-				// Assign initial positions and velocities
 				slots.set_t(i, p.t);
 				slots.set_x(i, p.x);
 				slots.set_y(i, p.y);
 				slots.set_z(i, p.z);
-
 				slots.set_tidx(i, p.tidx);
 				slots.set_xidx(i, p.xidx);
 				slots.set_yidx(i, p.yidx);
 				slots.set_zidx(i, p.zidx);
-
 				slots.set_vx(i, p.vx);
 				slots.set_vy(i, p.vy);
 				slots.set_vz(i, p.vz);
-
 				slots.set_vX(i, p.vX);
 				slots.set_vY(i, p.vY);
 				slots.set_vZ(i, p.vZ);
-
 				slots.set_q(i, p.q);
-
 				slots.set_weight(i, 1.0);
-
-				// Reassign to alive, decrease remaining particles by one
 				slots.set_state(i, 0);
+			}
+		}
 
-			}  // slots.state()[i] > 0
-		}  // loop
-
-		// This can actually go below zero in the above loop. If there are
-		// 100 dead slots but only 5 remaining particles, everything will
-		// still work correctly but rem_parts will be arbitrarily decreased
-		// past 0 to -95. Not a huge deal, but it should be corrected.
 		if (rem_parts < 0) rem_parts = 0;
-		
-	}  // fill_slots_cpu
+	}
 
 }  // namespace Slots

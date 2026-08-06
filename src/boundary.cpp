@@ -14,8 +14,8 @@ namespace Boundary
 	// This is because sometimes the plasma can behave oddly right at the
 	// boundaries, so this can circumvent it. This function is written this way 
 	// to be SIMD/vectorizable friendly for the compiler (no if's).
-	inline int absorbing_bc(double a, double bound, bool max_bound,
-		double buffer = 0.0)
+	int absorbing_bc(double a, double bound, bool max_bound,
+		double buffer)
 	{
 		// Compute both comparisons
 		const bool ge {(a + buffer) >= bound};  // for max-bound
@@ -31,7 +31,7 @@ namespace Boundary
 	// Periodic boundary condition. This type of BC will never kill a particle,
 	// just loop it around to the other side. This function returns the new
 	// looped value, or just the same value if a BC was not encountered.
-	inline double periodic_bc(double a, double amin, double amax)
+	double periodic_bc(double a, double amin, double amax)
 	{
 		const double L = amax - amin;
 
@@ -48,7 +48,7 @@ namespace Boundary
 	// essentially like entering the core and then popping out at a random
 	// location somewhere else along the core boundary. A residence time
 	// could easily be added to this if it was useful.
-	inline void core_bc(double& a, double& b, double& c, double a_min,
+	void core_bc(double& a, double& b, double& c, double a_min,
 		double a_max, double buffer, double b_min, double b_max,
 		double c_min, double c_max, bool max_bound)
 	{

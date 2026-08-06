@@ -27,7 +27,7 @@ namespace ImpurityStats
 			* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
 
 		// Add to stats. Need to use atomicAdd here to avoid a race condition :(
-		double p_w {slots_d.weight[i]};
+		double p_w {slots_d.weight[i]};  // Change to float
 		atomicAdd(&stats_d.counts[idx], 1);
 		atomicAdd(&stats_d.weights[idx], p_w * imp_time_step);
 		atomicAdd(&stats_d.vX[idx], slots_d.vX[i] * p_w);
