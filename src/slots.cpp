@@ -84,11 +84,12 @@ namespace Slots
 	SlotsDevice Slots::to_device(int device_id)
 	{
 
-		// Create struct to hold device-side memory locations
+		// Create struct on the host that holds device-side memory locations.
 		SlotsDevice slots_d {};
 
 #ifdef USE_CUDA
 
+		// These are just scalars, no allocation needed
 		slots_d.device_id = device_id;
 		slots_d.N = m_N;
 		slots_d.mass = m_mass;
@@ -157,7 +158,6 @@ namespace Slots
 		bool init = false;
 		cudaMemcpy(slots_d.all_dead, &init, sizeof(bool), 
 			cudaMemcpyHostToDevice);
-
 
 #else
 		std::cerr << "Error! Slots.to_device() was called but GPU support"
@@ -306,10 +306,11 @@ namespace Slots
 		#pragma omp parallel for reduction(+:dead_count)
 		for (int i = 0; i < N; i++)
 		{
-			if (slots.state()[i] > 0)
-				dead_count++;
+			if (slots.state()[i] > 0) dead_count++;
 		}
 
+		// Determine how many particles to revive, capping off at rem_parts
+		// if there are more dead particles than remaining.
 		int revive = (rem_parts < dead_count) ? rem_parts : dead_count;
 		if (revive < 0) revive = 0;
 		rem_parts -= revive;

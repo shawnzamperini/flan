@@ -90,11 +90,7 @@ include_directories(
 )
 
 if(ENABLE_CUDA)
-    include_directories(
-        include/cuda
-        ${FLANSOFT}/netcdf-cxx4/include
-        ${FLANSOFT}/netcdf-c/include
-    )
+    include_directories(include/cuda)
 endif()
 
 # ------------------------------------------------------------
@@ -131,7 +127,7 @@ target_compile_options(flan PRIVATE
 # CUDA compile flags (per build type)
 # ------------------------------------------------------------
 if(ENABLE_CUDA)
-    target_compile_definitions(flan PRIVATE USE_CUDA)
+    target_compile_definitions(flan PUBLIC USE_CUDA)
     target_link_libraries(flan PRIVATE CUDA::cudart)
 
     target_compile_options(flan PRIVATE
@@ -147,12 +143,15 @@ endif()
 # Link libraries
 # ------------------------------------------------------------
 target_link_libraries(flan
-    PUBLIC
+    PRIVATE
         netcdf
         netcdf-cxx4
         OpenMP::OpenMP_CXX
-        MPI::MPI_CXX
 )
+
+# MPI must be public, since the input file (the executable) needs to call
+# MPI_Init(). 
+target_link_libraries(flan PUBLIC MPI::MPI_CXX)
 
 # ------------------------------------------------------------
 # RPATH for netCDF

@@ -5,12 +5,38 @@ add_executable(test_fill_slots_cpu test_fill_slots_cpu.cpp)
 add_executable(test_fill_slots_gpu test_fill_slots_gpu.cpp)
 add_executable(test_boundary_cpu test_boundary_cpu.cpp)
 
+# Ensure CUDA support is included
+#if(ENABLE_CUDA)
+#    target_compile_definitions(test_fill_slots_gpu PRIVATE USE_CUDA)
+#    target_link_libraries(test_fill_slots_gpu PRIVATE CUDA::cudart flan)
+#endif()
+
+
+# Enable the tests to inherit the RPATH of the flan library so that it can
+# find the needed shared libraries (such as libnetcdf.so).
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 # Link your main library + GoogleTest
 target_link_libraries(test_get_nearest_index_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_get_nearest_cell_index_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_fill_slots_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_fill_slots_gpu PRIVATE flan gtest_main)
 target_link_libraries(test_boundary_cpu PRIVATE flan gtest_main)
+
+
+#include_directories("/home/zamp/github/flan/include")
+#target_link_libraries(test_get_nearest_index_cpu PRIVATE flan MPI::MPI_CXX)
+#target_link_libraries(test_get_nearest_cell_index_cpu PRIVATE flan MPI::MPI_CXX)
+#target_link_libraries(test_fill_slots_cpu PRIVATE flan MPI::MPI_CXX)
+#target_link_libraries(test_fill_slots_gpu PRIVATE flan MPI::MPI_CXX)
+#target_link_libraries(test_boundary_cpu PRIVATE flan MPI::MPI_CXX)
+
+
+#link_directories(
+#    ${FLANSOFT}/netcdf-cxx4/lib
+#    ${FLANSOFT}/netcdf-cxx4/lib64
+#    ${FLANSOFT}/netcdf-c/lib
+#)
 
 # Register with CTest
 add_test(NAME GetNearestIndexCpuTest COMMAND test_get_nearest_index_cpu)

@@ -30,10 +30,11 @@ namespace Slots
 
 	/**
 	* @brief GPU kernel to fill slots, replacing dead particles with alive ones.
+	*
+	* We choose to copy slots_d to the kernel each time this is called since
+	* the copy time is << kernel launch time, and copying results in clearer
+	* code.
 	*/
-	//__global__ void fill_slots_kernel(double* x, double* y, double* z,
-	//	double* vx, double* vy, double* vz, double* vX, double* vY, double* vZ,
-	//	double* weight, int* q, int* state, int N, int* counter,int rem_parts)
 	__global__ void fill_slots_kernel(SlotsDevice slots_d, int* counter, 
 		int rem_parts)
 	{
@@ -91,7 +92,6 @@ namespace Slots
 	// are greater than zero.
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts)
 	{
-		
 		// No more particles left, don't fill
 		if (rem_parts <= 0) return;
 
@@ -111,7 +111,6 @@ namespace Slots
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 		fill_slots_kernel<<<gridSize, blockSize>>>(slots_d, d_counter, 
 			rem_parts);
-		printf("%d\n", cudaGetLastError());
 
 		// Retrieve how many particles were actually filled
 		int filled = 0;

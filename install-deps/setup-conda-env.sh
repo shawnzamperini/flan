@@ -13,13 +13,15 @@ rm -rf $PREFIX
 # available via conda or pip, only through github. Therefore we setup our
 # python environment as so:
 # 1. Clone postgkyl repository
-git clone https://github.com/ammarhakim/postgkyl.git $PREFIX 
+#git clone https://github.com/ammarhakim/postgkyl.git $PREFIX 
+git clone https://github.com/gkeyllorg/postgkyl.git $PREFIX
 cd $PREFIX
 
 # 2. Checkout commit from 8/20/24. We can update (or comment this line out) 
 # for a more recent commit, but we're doing this just to keep things 
 # constant.
-git -c advice.detachedHead=false checkout a381be8eb64afb95220032ee90d507f3b416928d
+#git -c advice.detachedHead=false checkout a381be8eb64afb95220032ee90d507f3b416928d
+git -c advice.detachedHead=False checkout e9ffe5ea9d67c2fe936481dfb70e04819ce6331c
 
 # 3. Create the flan conda environment using the postgkyl one as a starting
 # point. Delete the flan environment if it already exists.
