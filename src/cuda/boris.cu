@@ -1,149 +1,97 @@
-#include <cmath>
-#include <iostream>
+#include <cuda_runtime.h>
+#include <cstdio>
 
-#include "background.h"
-#include "boris.h"
-#include "constants.h"
-#include "options.h"
-#include "slots.h"
+#include "background_device.h"
 #include "slots_device.h"
-#include "utilities.h"
-#include "vectors.h"
+
+#include "device_constants.cuh"
+#include "utilities.cuh"
+
 
 namespace Boris
 {
 
-	// Interpolate the reciprocal basis functions at the impurity location
-	std::array<double, 9> interp_recp(
-		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx, const double x, const double y, const double z)
+	__global__ void update_velocity_kernel(Slots::SlotsDevice slots_d, 
+		const Background::BackgroundDevice bkg_d)
 	{
+		// Global index
+		int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+		// Don't try and access beyond the number of slots (segfault)
+		if (i >= slots_d.N) return;
+
+		// Local variables
+		int tidx {slots_d.tidx[i]};
+		int xidx {slots_d.xidx[i]};
+		int yidx {slots_d.yidx[i]};
+		int zidx {slots_d.zidx[i]};
+
+		double t {slots_d.t[i]};
+		double x {slots_d.x[i]};
+		double y {slots_d.y[i]};
+		double z {slots_d.z[i]};
+
 		// Get nearest neighbor indices for each direction. These tell us
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
-		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
-			bkg.get_x(), xidx)};
-		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
-			bkg.get_y(), yidx)};
-		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
-			bkg.get_z(), zidx)};
+		// d_x is a global constant defined in cuda/device_constants.h.
+		const int xidx_neighbor {Utilities::get_neighbor_index_cuda(x, 
+			Background::d_x, xidx, bkg_d.xdim)};
+		const int yidx_neighbor {Utilities::get_neighbor_index_cuda(y, 
+			Background::d_y, yidx, bkg_d.ydim)};
+		const int zidx_neighbor {Utilities::get_neighbor_index_cuda(z, 
+			Background::d_z, zidx, bkg_d.zdim)};
+
+		// Similarly for t, except we can't use get_neighbor_index since it
+		// uses cell center coordinates, and t is defined at each frame (i.e.,
+		// not between each frame, that would be nonintuitive). So we use a
+		// little SIMD-friendly logic here to assign tidx_neighbor to tidx+1,
+		// and tidx-1 if we're in the last time frame.
+		// at_end = 1 if tidx == ntimes-1, else 0 
+		// If at_end = 0 → i + 1 
+		// If at_end = 1 → i - 1 
+		const int at_end {(tidx == static_cast<int>(bkg_d.tdim) - 1)}; 
+		const int tidx_neighbor {tidx + 1 - 2 * at_end};
+
+		// Time between neighboring t frames
+		const double frame_dt {d_t[tidx_neighbor] - d_t[tidx]};
+
+		// Trilinear interpolation to ensure we use a continous B/E in the 
+		// algorithm. Without interpolating, the particle will:
+		// a) Fail to follow the parallel direction of the field line due to
+		//    it being discrete in the code (this is called "numerical
+		//    diffusion" and introduces artificial cross-field transport).
+		// b) Experience large "kicks" at cell boundaries where B/E is 
+		//    discontinuous, which can introduce artificial drifts.
+		// 
+		// The issue in a) generally will still occur since we are still using
+		// an approximation to the field line, but this greatly reduces the
+		// numerical diffusion since B is now continous.
 
 		// x, y, z coordinates of two bounding vertices to interpolate 
 		// between. Note these are not grid vertices, but rather are formed
 		// by cell center coordinates since that's where B/E are assumed
 		// to be defined. It is essentially a cell shifted by dx/2, dy/2
 		// and dz/2 if that helps.
-		const double x0 {bkg.get_x()[xidx]};
-		const double x1 {bkg.get_x()[xidx_neighbor]};
-		const double y0 {bkg.get_y()[yidx]};
-		const double y1 {bkg.get_y()[yidx_neighbor]};
-		const double z0 {bkg.get_z()[zidx]};
-		const double z1 {bkg.get_z()[zidx_neighbor]};
+		const double x0 {d_x[xidx]};
+		const double x1 {d_x[xidx_neighbor]};
+		const double y0 {d_y[yidx]};
+		const double y1 {d_y[yidx_neighbor]};
+		const double z0 {d_z[zidx]};
+		const double z1 {d_z[zidx_neighbor]};
 
-		// Array of references to each reciprocal basis vector
-		const std::array<std::reference_wrapper<
-			const Vectors::Vector3D<BkgFPType>>, 9> recp_basis {
-			bkg.get_dxdX(), bkg.get_dxdY(), bkg.get_dxdZ(),
-			bkg.get_dydX(), bkg.get_dydY(), bkg.get_dydZ(),
-			bkg.get_dzdX(), bkg.get_dzdY(), bkg.get_dzdZ()};
+		// Find a nice way to group and interpolate E and B
+		// ...
 
-		// Loop through and interpolate each basis vector
-		std::array<double, 9> interp_vals {};
-		for (int i {}; i < 9; ++i)
-		{
-			// Values at each vertex, 8 total because it's a rectangle.
-			const double v000 {recp_basis[i](xidx, yidx, zidx)};
-			const double v100 {recp_basis[i](xidx_neighbor, yidx, zidx)};
-			const double v010 {recp_basis[i](xidx, yidx_neighbor, zidx)};
-			const double v110 {recp_basis[i](xidx_neighbor, yidx_neighbor, 
-				zidx)};
-			const double v001 {recp_basis[i](xidx, yidx, zidx_neighbor)};
-			const double v101 {recp_basis[i](xidx_neighbor, yidx, 
-				zidx_neighbor)};
-			const double v011 {recp_basis[i](xidx, yidx_neighbor, 
-				zidx_neighbor)};
-			const double v111 {recp_basis[i](xidx_neighbor, yidx_neighbor,	
-				zidx_neighbor)};
+	}
 
-			// Perform interpolation, storing value in our local array
-			interp_vals[i] = Utilities::trilinear_interpolate(x0, y0, z0, 
-				x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, v111, 
-				x, y, z);
-		}
-		return interp_vals;
-
-	}  // interp_recp
-
-
-	// Interpolate the tangent basis functions at the impurity location
-	std::array<double, 9> interp_tang(
-		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx, const double x, const double y, const double z)
-	{
-		// Get nearest neighbor indices for each direction. These tell us
-		// which direction we should interpolate towards, i.e., which
-		// rectangle made by the neighboring cell centers our particle
-		// is bounded by.
-		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
-			bkg.get_x(), xidx)};
-		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
-			bkg.get_y(), yidx)};
-		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
-			bkg.get_z(), zidx)};
-
-		// x, y, z coordinates of two bounding vertices to interpolate 
-		// between. Note these are not grid vertices, but rather are formed
-		// by cell center coordinates since that's where B/E are assumed
-		// to be defined. It is essentially a cell shifted by dx/2, dy/2
-		// and dz/2 if that helps.
-		const double x0 {bkg.get_x()[xidx]};
-		const double x1 {bkg.get_x()[xidx_neighbor]};
-		const double y0 {bkg.get_y()[yidx]};
-		const double y1 {bkg.get_y()[yidx_neighbor]};
-		const double z0 {bkg.get_z()[zidx]};
-		const double z1 {bkg.get_z()[zidx_neighbor]};
-
-		// Array of references to each tangent basis vector
-		const std::array<std::reference_wrapper<
-			const Vectors::Vector3D<BkgFPType>>, 9> tang_basis {
-			bkg.get_dXdx(), bkg.get_dYdx(), bkg.get_dZdx(),
-			bkg.get_dXdy(), bkg.get_dYdy(), bkg.get_dZdy(),
-			bkg.get_dXdz(), bkg.get_dYdz(), bkg.get_dZdz()};
-
-		// Loop through and interpolate each basis vector
-		std::array<double, 9> interp_vals {};
-		for (int i {}; i < 9; ++i)
-		{
-			// Values at each vertex, 8 total because it's a rectangle.
-			const double v000 {tang_basis[i](xidx, yidx, zidx)};
-			const double v100 {tang_basis[i](xidx_neighbor, yidx, zidx)};
-			const double v010 {tang_basis[i](xidx, yidx_neighbor, zidx)};
-			const double v110 {tang_basis[i](xidx_neighbor, yidx_neighbor, 
-				zidx)};
-			const double v001 {tang_basis[i](xidx, yidx, zidx_neighbor)};
-			const double v101 {tang_basis[i](xidx_neighbor, yidx, 
-				zidx_neighbor)};
-			const double v011 {tang_basis[i](xidx, yidx_neighbor, 
-				zidx_neighbor)};
-			const double v111 {tang_basis[i](xidx_neighbor, yidx_neighbor,	
-				zidx_neighbor)};
-
-			// Perform interpolation, storing value in our local array
-			interp_vals[i] = Utilities::trilinear_interpolate(x0, y0, z0, 
-				x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, v111, 
-				x, y, z);
-		}
-		return interp_vals;
-
-	}  // interp_tang
-
-	void update_velocity_cpu(Slots::Slots& slots, 
-		const Background::Background& bkg, 
-		const Options::Options& opts,
+	void update_velocity_gpu(Slots::SlotsDevice& slots_d, 
+		const Background::BackgroundDevice& bkg_d, 
 		const double dt)
 	{
 
+	/*
 		#pragma omp parallel for
 		for (int i=0; i < slots.N(); ++i)
 		{
@@ -372,72 +320,6 @@ namespace Boris
 				slots.yidx()[i], slots.zidx()[i], slots.x()[i], slots.y()[i], 
 				slots.z()[i])};
 
-			//std::array<double, 9> int_tan_bas {interp_tang(imp, bkg, xidx, 
-			//	yidx, zidx)};
-
-			// Put basis vectors into arrays for easier manipulation below. Can
-			// either use the interpolated ones or the discrete ones without
-			// interpolation.
-			//std::array<double, 3> e1 {int_rec_bas[0], int_rec_bas[1], 
-			//	int_rec_bas[2]};
-			//std::array<double, 3> e2 {int_rec_bas[3], int_rec_bas[4], 
-			//	int_rec_bas[5]};
-			//std::array<double, 3> e3 {int_rec_bas[6], int_rec_bas[7], 
-			//	int_rec_bas[8]};
-			//std::array<double, 3> e_1 {int_tan_bas[0], int_tan_bas[1], 
-			//	int_tan_bas[2]};
-			//std::array<double, 3> e_2 {int_tan_bas[3], int_tan_bas[4], 
-			//	int_tan_bas[5]};
-			//std::array<double, 3> e_3 {int_tan_bas[6], int_tan_bas[7], 
-			//	int_tan_bas[8]};
-			
-			// Discrete, no interpolation
-			//std::array<double, 3> e1 {bkg.get_dxdX()(xidx, yidx, zidx),
-			//	bkg.get_dxdY()(xidx, yidx, zidx),
-			//	bkg.get_dxdZ()(xidx, yidx, zidx)};
-			//std::array<double, 3> e2 {bkg.get_dydX()(xidx, yidx, zidx),
-			//	bkg.get_dydY()(xidx, yidx, zidx),
-			//	bkg.get_dydZ()(xidx, yidx, zidx)};
-			//std::array<double, 3> e3 {bkg.get_dzdX()(xidx, yidx, zidx),
-			//	bkg.get_dzdY()(xidx, yidx, zidx),
-			//	bkg.get_dzdZ()(xidx, yidx, zidx)};
-			//std::array<double, 3> e_1 {bkg.get_dXdx()(xidx, yidx, zidx),
-			//	bkg.get_dYdx()(xidx, yidx, zidx),
-			//	bkg.get_dZdx()(xidx, yidx, zidx)};
-			//std::array<double, 3> e_2 {bkg.get_dXdy()(xidx, yidx, zidx),
-			//	bkg.get_dYdy()(xidx, yidx, zidx),
-			//	bkg.get_dZdy()(xidx, yidx, zidx)};
-			//std::array<double, 3> e_3 {bkg.get_dXdz()(xidx, yidx, zidx),
-			//	bkg.get_dYdz()(xidx, yidx, zidx),
-			//	bkg.get_dZdz()(xidx, yidx, zidx)};
-
-			// Check that coordinate system is mostly correct
-			/*
-			std::cout << "J = " << Utilities::dot_product(e_1, 
-				Utilities::cross_product(e_2, e_3)) << '\n';
-			std::cout << "e_1: " << e_1[0] << '\t' << e_1[1] << '\t' << e_1[2] << '\n';
-			std::cout << "e_2: " << e_2[0] << '\t' << e_2[1] << '\t' << e_2[2] << '\n';
-			std::cout << "e_3: " << e_3[0] << '\t' << e_3[1] << '\t' << e_3[2] << '\n';
-			std::cout << "e1: " << e1[0] << '\t' << e1[1] << '\t' << e1[2] << '\n';
-			std::cout << "e2: " << e2[0] << '\t' << e2[1] << '\t' << e2[2] << '\n';
-			std::cout << "e3: " << e3[0] << '\t' << e3[1] << '\t' << e3[2] << '\n';
-			std::cout << "e_1 * e_1 = " << Utilities::dot_product(e_1, e_1) << '\n';
-			std::cout << "e_1 * e_2 = " << Utilities::dot_product(e_1, e_2) << '\n';
-			std::cout << "e_1 * e_3 = " << Utilities::dot_product(e_1, e_3) << '\n';
-			std::cout << "e_2 * e_2 = " << Utilities::dot_product(e_2, e_2) << '\n';
-			std::cout << "e_2 * e_3 = " << Utilities::dot_product(e_2, e_3) << '\n';
-			std::cout << "e_3 * e_3 = " << Utilities::dot_product(e_3, e_3) << '\n';
-			std::cout << "e1 * e_1 = " << Utilities::dot_product(e1, e_1) << '\n';
-			std::cout << "e1 * e_2 = " << Utilities::dot_product(e1, e_2) << '\n';
-			std::cout << "e1 * e_3 = " << Utilities::dot_product(e1, e_3) << '\n';
-			std::cout << "e2 * e_1 = " << Utilities::dot_product(e2, e_1) << '\n';
-			std::cout << "e2 * e_2 = " << Utilities::dot_product(e2, e_2) << '\n';
-			std::cout << "e2 * e_3 = " << Utilities::dot_product(e2, e_3) << '\n';
-			std::cout << "e3 * e_1 = " << Utilities::dot_product(e3, e_1) << '\n';
-			std::cout << "e3 * e_2 = " << Utilities::dot_product(e3, e_2) << '\n';
-			std::cout << "e3 * e_3 = " << Utilities::dot_product(e3, e_3) << '\n';
-			*/
-
 			// Calculate velocity vector in computational coordinates using
 			// interpolated reciprocal basis vector.
 			slots.set_vx(i, int_rec_bas[0] * slots.vX()[i] 
@@ -451,6 +333,7 @@ namespace Boris
 				+ int_rec_bas[8] * slots.vZ()[i]);
 
 		}  // i loop, omp parallel for
-	}  // update_velocity_cpu
+		*/
+	} // update_velocity_gpu
 
-}  // namespace Boris
+} // namespace Boris

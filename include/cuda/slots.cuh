@@ -1,3 +1,5 @@
+#pragma once
+
 #include "slots_device.h"
 
 namespace Slots

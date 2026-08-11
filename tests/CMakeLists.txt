@@ -4,6 +4,7 @@ add_executable(test_get_nearest_cell_index_cpu test_get_nearest_cell_index_cpu.c
 add_executable(test_fill_slots_cpu test_fill_slots_cpu.cpp)
 add_executable(test_fill_slots_gpu test_fill_slots_gpu.cpp)
 add_executable(test_boundary_cpu test_boundary_cpu.cpp)
+add_executable(test_neighbor_index_cuda test_neighbor_index_cuda.cpp)
 
 # Ensure CUDA support is included
 #if(ENABLE_CUDA)
@@ -22,7 +23,7 @@ target_link_libraries(test_get_nearest_cell_index_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_fill_slots_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_fill_slots_gpu PRIVATE flan gtest_main)
 target_link_libraries(test_boundary_cpu PRIVATE flan gtest_main)
-
+target_link_libraries(test_neighbor_index_cuda PRIVATE flan gtest_main)
 
 #include_directories("/home/zamp/github/flan/include")
 #target_link_libraries(test_get_nearest_index_cpu PRIVATE flan MPI::MPI_CXX)
@@ -43,5 +44,6 @@ add_test(NAME GetNearestIndexCpuTest COMMAND test_get_nearest_index_cpu)
 add_test(NAME GetNearestCellIndexCpuTest COMMAND test_get_nearest_cell_index_cpu)
 add_test(NAME FillSlotsCpuTest COMMAND test_fill_slots_cpu)
 add_test(NAME FillSlotsGpuTest COMMAND test_fill_slots_gpu)
-add_test(NAME TestBoundaryCpuTest COMMAND test_boundary_cpu)
+add_test(NAME BoundaryCpuTest COMMAND test_boundary_cpu)
+add_test(NAME NeighborIndexCUDATest COMMAND test_neighbor_index_cuda)
 

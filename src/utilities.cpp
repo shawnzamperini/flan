@@ -134,7 +134,6 @@ namespace Utilities
 
 		return idx + offset;
 	}
-	#include <vector>
 
 	// Create vector of N equally spaced values between a and b
 	std::vector<double> linspace(double a, double b, std::size_t N)

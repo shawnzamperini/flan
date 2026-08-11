@@ -5,13 +5,6 @@
 
 TEST(FillSlotsGPU, RevivesDeadParticles)
 {
-#ifdef USE_CUDA
-std::cout << "CUDA enabled\n";
-#else
-std::cout << "CUDA disabled\n";
-#endif
-
-	std::cout << "Test starting...\n";
 	// 10 slots, 5 dead particles and only 3 particles left to swap in
     Slots::Slots slots(10);
     for (int i = 0; i < 10; i++) slots.set_state(i, i % 2); // 5 dead

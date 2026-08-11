@@ -139,6 +139,17 @@ namespace ImpurityTransport
 		#pragma omp parallel for
 		for (int i=0; i < slots.N(); ++i)
 		{
+			if (i == 0)
+			{
+				std::cout << "t = " << slots.t()[i] << '\n';
+				std::cout << "x = " << slots.x()[i] << '\n';
+				std::cout << "y = " << slots.y()[i] << '\n';
+				std::cout << "z = " << slots.z()[i] << '\n';
+				std::cout << "vx = " << slots.vx()[i] << '\n';
+				std::cout << "vy = " << slots.vy()[i] << '\n';
+				std::cout << "vz = " << slots.vz()[i] << '\n';
+			}
+
 			// Update time
 			slots.set_t(i, slots.t()[i] + dt);
 
@@ -228,7 +239,7 @@ namespace ImpurityTransport
 		}
 #endif
 
-		Boris::update_velocity_cpu(slots, slots_d, bkg, bkg_d, opts, dt);
+		Boris::update_velocity_cpu(slots, bkg, opts, dt);
 
 	}
 

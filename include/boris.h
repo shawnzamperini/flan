@@ -8,7 +8,7 @@
 namespace Boris
 {
 	void update_velocity_cpu(Slots::Slots& slots, 
-		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
-		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
+		const Background::Background& bkg, 
+		const Options::Options& opts,
 		const double dt);
 }

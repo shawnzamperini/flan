@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cuda_runtime.h>
 
 #include "background_device.h"
