@@ -26,6 +26,7 @@
 
 #ifdef USE_CUDA
 #include <cuda_runtime.h>
+#include "boris.cuh"
 #include "boundary.cuh"
 #include "impurity_stats.cuh"
 #include "impurity_transport.cuh"
@@ -139,6 +140,7 @@ namespace ImpurityTransport
 		#pragma omp parallel for
 		for (int i=0; i < slots.N(); ++i)
 		{
+			/*
 			if (i == 0)
 			{
 				std::cout << "t = " << slots.t()[i] << '\n';
@@ -149,6 +151,7 @@ namespace ImpurityTransport
 				std::cout << "vy = " << slots.vy()[i] << '\n';
 				std::cout << "vz = " << slots.vz()[i] << '\n';
 			}
+			*/
 
 			// Update time
 			slots.set_t(i, slots.t()[i] + dt);
@@ -234,13 +237,12 @@ namespace ImpurityTransport
 		if (opts.use_gpu_int() > 0) 
 		{
 			// Defined in cuda/boris.cu
-			// Boris::update_velocity_gpu
+			Boris::update_velocity_gpu(slots_d, bkg_d, dt);
 			return;
 		}
 #endif
 
 		Boris::update_velocity_cpu(slots, bkg, opts, dt);
-
 	}
 
 	// Check if all particles in slots are dead
@@ -364,17 +366,8 @@ namespace ImpurityTransport
 #endif
 
 		// Initial fill of slots with particles. 
-		std::cout << "pre-fill: rem_parts = " << rem_parts << '\n';
 		fill_slots_wrapper(slots, slots_d, rem_parts, opts);
-		std::cout << "post-fill: rem_parts = " << rem_parts << '\n';
 
-		std::cout << "initial\n";
-		std::cout << " vx[0] = " << slots.vx()[0] << '\n';
-		std::cout << "  t[0] = " << slots.t()[0] << '\n';
-		std::cout << "  x[0] = " << slots.x()[0] << '\n';
-		std::cout << "  y[0] = " << slots.y()[0] << '\n';
-		std::cout << "  z[0] = " << slots.z()[0] << '\n';
-		
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
 
@@ -384,13 +377,6 @@ namespace ImpurityTransport
 		// back by half a time step.
 		boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
 			-opts.imp_time_step() / 2.0);
-
-		std::cout << "initial (after half step)\n";
-		std::cout << " vx[0] = " << slots.vx()[0] << '\n';
-		std::cout << "  t[0] = " << slots.t()[0] << '\n';
-		std::cout << "  x[0] = " << slots.x()[0] << '\n';
-		std::cout << "  y[0] = " << slots.y()[0] << '\n';
-		std::cout << "  z[0] = " << slots.z()[0] << '\n';
 
 		// Record starting position in statistics arrays
 		record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
@@ -414,10 +400,10 @@ namespace ImpurityTransport
 			// timer to profile the time spent in each step of the loop.
 			// A scoped timer is a bit safer because it automatically stops
 			// when it goes out of scope.
+
+			// Update velocity (Boris).
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Boris));
-
-				// Update velocity (Boris).
 				boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
 					opts.imp_time_step());
 			}
@@ -536,12 +522,12 @@ namespace ImpurityTransport
 			MPI_Barrier(MPI_COMM_WORLD);
 		}
 
-		// Slot capacity, 2^17 seems reasonable but can be adjusted. The larger
+		// Slot capacity, 2^20 seems reasonable but can be adjusted. The larger
 		// the better (probably). The motivation for this is to alleviate 
 		// memory pressure, since you could theoretically want to follow
 		// millions or billions of particles, and allocating them all at once
 		// is wasteful and could cause you to run out of memory.
-		constexpr int slot_cap = 131072;
+		constexpr int slot_cap = 1048576;  
 		Slots::Slots slots {std::min(slot_cap, opts.imp_num())};
 
 		// All particles assumed to have same mass.
