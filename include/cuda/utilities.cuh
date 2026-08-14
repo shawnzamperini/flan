@@ -6,7 +6,8 @@ namespace Utilities
 {
 
 	// Compute cross-product in-place, storing result in out
-	__device__ __forceinline__ void cross_product_cuda(const double a[3], const double b[3],
+	__device__ __forceinline__ 
+	void cross_product_cuda(const double a[3], const double b[3],
 		double out[3])
 	{
 		out[0] = a[1] * b[2] - a[2] * b[1];
@@ -16,14 +17,16 @@ namespace Utilities
 
 
 	// Compute and return dot product
-	__device__ __forceinline__ double dot_product_cuda(const double a[3], const double b[3])
+	__device__ __forceinline__ 
+	double dot_product_cuda(const double a[3], const double b[3])
 	{
 		return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 	}
 
 
 	// Find nearest neighbor index of val using cell_center as the locations
-	__device__ inline int get_neighbor_index_cuda(const double val,
+	__device__ inline 
+	int get_neighbor_index_cuda(const double val,
 		const double* cell_centers, int idx, int N)
 	{
 		// dx > 0 → +1, dx < 0 → -1
@@ -44,16 +47,26 @@ namespace Utilities
 	}
 
 	// 4D -> 1D index for indexing Vector4Ds that are stored flattened
-	__device__ inline int calc_index_cuda(int xdim, int ydim, 
+	__device__ inline 
+	int calc_4d_index_cuda(int xdim, int ydim, 
 		int zdim, int tidx, int xidx, int yidx, int zidx)
 	{
 		// This is from Vector4D::calc_index
-		return tidx * (xdim * ydim * zdim) + xidx 
-			* (ydim * zdim) + yidx * zdim + zidx;
+		return tidx * (xdim * ydim * zdim) + xidx * (ydim * zdim) 
+			+ yidx * zdim + zidx;
+	}
+
+	// 3D -> 1D index for indexing Vector4Ds that are stored flattened
+	__device__ inline 
+	int calc_3d_index_cuda(int ydim, int zdim, int xidx, int yidx, int zidx)
+	{
+		// This is from Vector3D::calc_index
+		return xidx * (ydim * zdim) + yidx * zdim + zidx;
 	}
 
 	// Trilinearly interpolate the values defined by the 8 vertices at (x, y, z)
-	__device__ inline double trilinear_interpolate(
+	__device__ inline 
+	double trilinear_interpolate(
 		const double x0, const double y0, const double z0, 
 		const double dx, const double dy, const double dz,
 		const double v000, const double v100, const double v010, 

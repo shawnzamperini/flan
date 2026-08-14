@@ -5,6 +5,11 @@ add_executable(test_fill_slots_cpu test_fill_slots_cpu.cpp)
 add_executable(test_fill_slots_gpu test_fill_slots_gpu.cpp)
 add_executable(test_boundary_cpu test_boundary_cpu.cpp)
 add_executable(test_neighbor_index_cuda test_neighbor_index_cuda.cpp)
+add_executable(test_all_dead_cuda test_all_dead_cuda.cpp)
+add_executable(test_trilinear_cuda test_trilinear_cuda.cu)
+
+# CUDA function tests
+set_target_properties(test_trilinear_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # Ensure CUDA support is included
 #if(ENABLE_CUDA)
@@ -24,6 +29,11 @@ target_link_libraries(test_fill_slots_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_fill_slots_gpu PRIVATE flan gtest_main)
 target_link_libraries(test_boundary_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_neighbor_index_cuda PRIVATE flan gtest_main)
+target_link_libraries(test_all_dead_cuda PRIVATE flan gtest_main)
+
+# When testing the CUDA kernel directly, no wrapper, we need to link against
+# CUDA truntime.
+target_link_libraries(test_trilinear_cuda PRIVATE flan gtest_main CUDA::cudart)
 
 #include_directories("/home/zamp/github/flan/include")
 #target_link_libraries(test_get_nearest_index_cpu PRIVATE flan MPI::MPI_CXX)
@@ -46,4 +56,6 @@ add_test(NAME FillSlotsCpuTest COMMAND test_fill_slots_cpu)
 add_test(NAME FillSlotsGpuTest COMMAND test_fill_slots_gpu)
 add_test(NAME BoundaryCpuTest COMMAND test_boundary_cpu)
 add_test(NAME NeighborIndexCUDATest COMMAND test_neighbor_index_cuda)
+add_test(NAME AllDeadCUDATest COMMAND test_all_dead_cuda)
+add_test(NAME TrilinearCUDATest COMMAND test_trilinear_cuda)
 

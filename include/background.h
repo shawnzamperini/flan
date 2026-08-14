@@ -387,6 +387,8 @@ namespace Background
 
 		/**
 		* @brief Copy background data to device
+		*
+		* Defined in src/cuda/background.cu since it calls CUDA code
 		*/
 		BackgroundDevice to_device(int device_id);
 

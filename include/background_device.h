@@ -61,19 +61,17 @@ namespace Background
 		double* gij_12;
 		double* gij_22;
 
-		// Similar to t/x/y/z, these are stored in constant memory and can be
-		// accessed in the Background namespace with d_dxdX, etc.
-		//double* dxdX;
-		//double* dxdY;
-		//double* dxdZ;
+		double* dxdX;
+		double* dxdY;
+		double* dxdZ;
 
-		//double* dydX;
-		//double* dydY;
-		//double* dydZ;
+		double* dydX;
+		double* dydY;
+		double* dydZ;
 
-		//double* dzdX;
-		//double* dzdY;
-		//double* dzdZ;
+		double* dzdX;
+		double* dzdY;
+		double* dzdZ;
 
 		double* dXdx;
 		double* dYdx;

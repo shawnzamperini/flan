@@ -112,7 +112,7 @@ namespace Boundary
 		if (tbound_type_int == 0)
 		{
 			// d_t_max defined in device_constants.cu
-			state = absorbing_bc_gpu(slots_d.t[i], Background::d_t_max, true);
+			state = absorbing_bc_gpu(slots_d.t[i], d_t_max, true);
 			slots_d.state[i] = state;
 
 			// If dead (>0) we can skip the rest of the checks.
@@ -127,8 +127,8 @@ namespace Boundary
 			// fast process since slots.t()[i] is loaded into L1, and 
 			// periodic_bc doesn't touch memory loads so the L1 cache never
 			// get evicted, so it's a very fast write.
-			new_val = periodic_bc_gpu(slots_d.t[i], Background::d_t_min, 
-				Background::d_t_max);
+			new_val = periodic_bc_gpu(slots_d.t[i], d_t_min, 
+				d_t_max);
 			slots_d.t[i] = new_val;
 		}
 
@@ -139,7 +139,7 @@ namespace Boundary
 		// Absorbing boundary
 		if (min_xbound_type_int == 0)
 		{
-			state = absorbing_bc_gpu(slots_d.x[i], Background::d_x_min, false, 
+			state = absorbing_bc_gpu(slots_d.x[i], d_x_min, false, 
 				imp_xbound_buffer);
 			slots_d.state[i] = state;
 
@@ -150,8 +150,8 @@ namespace Boundary
 		// Periodic boundary
 		else if (min_xbound_type_int == 1)
 		{
-			new_val = periodic_bc_gpu(slots_d.x[i], Background::d_x_min, 
-				Background::d_x_max);
+			new_val = periodic_bc_gpu(slots_d.x[i], d_x_min, 
+				d_x_max);
 			slots_d.x[i] = new_val;
 		}
 
@@ -164,9 +164,9 @@ namespace Boundary
 			double xtmp {slots_d.x[i]};
 			double ytmp {slots_d.y[i]};
 			double ztmp {slots_d.z[i]};
-			core_bc_gpu(xtmp, ytmp, ztmp, Background::d_x_min, 
-				Background::d_x_max, imp_xbound_buffer, Background::d_y_min, 
-				Background::d_y_max, Background::d_z_min, Background::d_z_max, 
+			core_bc_gpu(xtmp, ytmp, ztmp, d_x_min, 
+				d_x_max, imp_xbound_buffer, d_y_min, 
+				d_y_max, d_z_min, d_z_max, 
 				false, slots_d.rng[i]);
 
 			// Write back
@@ -182,7 +182,7 @@ namespace Boundary
 		// Absorbing boundary
 		if (max_xbound_type_int == 0)
 		{
-			state = absorbing_bc_gpu(slots_d.x[i], Background::d_x_max, true, 
+			state = absorbing_bc_gpu(slots_d.x[i], d_x_max, true, 
 				imp_xbound_buffer);
 			slots_d.state[i] = state;
 
@@ -193,8 +193,8 @@ namespace Boundary
 		// Periodic boundary
 		else if (max_xbound_type_int == 1)
 		{
-			new_val = periodic_bc_gpu(slots_d.x[i], Background::d_x_min, 
-				Background::d_x_max);
+			new_val = periodic_bc_gpu(slots_d.x[i], d_x_min, 
+				d_x_max);
 			slots_d.x[i] = new_val;
 		}
 
@@ -207,9 +207,9 @@ namespace Boundary
 			double xtmp {slots_d.x[i]};
 			double ytmp {slots_d.y[i]};
 			double ztmp {slots_d.z[i]};
-			core_bc_gpu(xtmp, ytmp, ztmp, Background::d_x_min, 
-				Background::d_x_max, imp_xbound_buffer, Background::d_y_min, 
-				Background::d_y_max, Background::d_z_min, Background::d_z_max, 
+			core_bc_gpu(xtmp, ytmp, ztmp, d_x_min, 
+				d_x_max, imp_xbound_buffer, d_y_min, 
+				d_y_max, d_z_min, d_z_max, 
 				true, slots_d.rng[i]);
 
 			// Write back
@@ -225,7 +225,7 @@ namespace Boundary
 		// Absorbing boundary
 		if (min_ybound_type_int == 0)
 		{
-			state = absorbing_bc_gpu(slots_d.y[i], Background::d_y_min, false, 
+			state = absorbing_bc_gpu(slots_d.y[i], d_y_min, false, 
 				imp_ybound_buffer);
 			slots_d.state[i] = state;
 
@@ -236,8 +236,8 @@ namespace Boundary
 		// Periodic boundary
 		else if (min_ybound_type_int == 1)
 		{
-			new_val = periodic_bc_gpu(slots_d.y[i], Background::d_y_min, 
-				Background::d_y_max);
+			new_val = periodic_bc_gpu(slots_d.y[i], d_y_min, 
+				d_y_max);
 			slots_d.y[i] = new_val;
 		}
 
@@ -250,9 +250,9 @@ namespace Boundary
 			double xtmp {slots_d.x[i]};
 			double ytmp {slots_d.y[i]};
 			double ztmp {slots_d.z[i]};
-			core_bc_gpu(ytmp, ztmp, xtmp, Background::d_y_min, 
-				Background::d_y_max, imp_ybound_buffer, Background::d_z_min, 
-				Background::d_z_max, Background::d_x_min, Background::d_x_max, 
+			core_bc_gpu(ytmp, ztmp, xtmp, d_y_min, 
+				d_y_max, imp_ybound_buffer, d_z_min, 
+				d_z_max, d_x_min, d_x_max, 
 				false, slots_d.rng[i]);
 
 			// Write back
@@ -268,7 +268,7 @@ namespace Boundary
 		// Absorbing boundary
 		if (max_ybound_type_int == 0)
 		{
-			state = absorbing_bc_gpu(slots_d.y[i], Background::d_y_max, true, 
+			state = absorbing_bc_gpu(slots_d.y[i], d_y_max, true, 
 				imp_ybound_buffer);
 			slots_d.state[i] = state;
 
@@ -279,8 +279,8 @@ namespace Boundary
 		// Periodic boundary
 		else if (max_ybound_type_int == 1)
 		{
-			new_val = periodic_bc_gpu(slots_d.y[i], Background::d_y_min, 
-				Background::d_y_max);
+			new_val = periodic_bc_gpu(slots_d.y[i], d_y_min, 
+				d_y_max);
 			slots_d.y[i] = new_val;
 		}
 
@@ -293,9 +293,9 @@ namespace Boundary
 			double xtmp {slots_d.x[i]};
 			double ytmp {slots_d.y[i]};
 			double ztmp {slots_d.z[i]};
-			core_bc_gpu(ytmp, ztmp, xtmp, Background::d_y_min, 
-				Background::d_y_max, imp_ybound_buffer, Background::d_z_min, 
-				Background::d_z_max, Background::d_x_min, Background::d_x_max, 
+			core_bc_gpu(ytmp, ztmp, xtmp, d_y_min, 
+				d_y_max, imp_ybound_buffer, d_z_min, 
+				d_z_max, d_x_min, d_x_max, 
 				true, slots_d.rng[i]);
 
 			// Write back
@@ -311,7 +311,7 @@ namespace Boundary
 		// Absorbing boundary
 		if (min_zbound_type_int == 0)
 		{
-			state = absorbing_bc_gpu(slots_d.z[i], Background::d_z_min, false, 
+			state = absorbing_bc_gpu(slots_d.z[i], d_z_min, false, 
 				imp_zbound_buffer);
 			slots_d.state[i] = state;
 
@@ -322,8 +322,8 @@ namespace Boundary
 		// Periodic boundary
 		else if (min_zbound_type_int == 1)
 		{
-			new_val = periodic_bc_gpu(slots_d.z[i], Background::d_z_min, 
-				Background::d_z_max);
+			new_val = periodic_bc_gpu(slots_d.z[i], d_z_min, 
+				d_z_max);
 			slots_d.z[i] = new_val;
 		}
 
@@ -336,9 +336,9 @@ namespace Boundary
 			double xtmp {slots_d.x[i]};
 			double ytmp {slots_d.y[i]};
 			double ztmp {slots_d.z[i]};
-			core_bc_gpu(ztmp, xtmp, ytmp, Background::d_z_min, 
-				Background::d_z_max, imp_zbound_buffer, Background::d_x_min, 
-				Background::d_x_max, Background::d_y_min, Background::d_y_max, 
+			core_bc_gpu(ztmp, xtmp, ytmp, d_z_min, 
+				d_z_max, imp_zbound_buffer, d_x_min, 
+				d_x_max, d_y_min, d_y_max, 
 				false, slots_d.rng[i]);
 
 			// Write back
@@ -354,7 +354,7 @@ namespace Boundary
 		// Absorbing boundary
 		if (max_zbound_type_int == 0)
 		{
-			state = absorbing_bc_gpu(slots_d.z[i], Background::d_z_max, true, 
+			state = absorbing_bc_gpu(slots_d.z[i], d_z_max, true, 
 				imp_zbound_buffer);
 			slots_d.state[i] = state;
 
@@ -365,8 +365,8 @@ namespace Boundary
 		// Periodic boundary
 		else if (max_zbound_type_int == 1)
 		{
-			new_val = periodic_bc_gpu(slots_d.z[i], Background::d_z_min, 
-				Background::d_z_max);
+			new_val = periodic_bc_gpu(slots_d.z[i], d_z_min, 
+				d_z_max);
 			slots_d.z[i] = new_val;
 		}
 
@@ -379,9 +379,9 @@ namespace Boundary
 			double xtmp {slots_d.x[i]};
 			double ytmp {slots_d.y[i]};
 			double ztmp {slots_d.z[i]};
-			core_bc_gpu(ztmp, xtmp, ytmp, Background::d_z_min, 
-				Background::d_z_max, imp_zbound_buffer, Background::d_x_min, 
-				Background::d_x_max, Background::d_y_min, Background::d_y_max, 
+			core_bc_gpu(ztmp, xtmp, ytmp, d_z_min, 
+				d_z_max, imp_zbound_buffer, d_x_min, 
+				d_x_max, d_y_min, d_y_max, 
 				true, slots_d.rng[i]);
 
 			// Write back

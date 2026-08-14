@@ -108,15 +108,15 @@ namespace ImpurityTransport
 
 		// d_t in constant memory, included from cuda/device_constants.cuh and
 		// lives in Background namespace.
-		int tidx {get_nearest_index_gpu(Background::d_t, bkg_d.tdim, 
+		int tidx {get_nearest_index_gpu(d_t, bkg_d.tdim, 
 			slots_d.t[i])};
 
 		// Likewise, d_grid_x is in constant memory
-		int xidx {get_nearest_cell_index_gpu(Background::d_grid_x, bkg_d.xdim, 
+		int xidx {get_nearest_cell_index_gpu(d_grid_x, bkg_d.xdim, 
 			slots_d.x[i])};
-		int yidx {get_nearest_cell_index_gpu(Background::d_grid_y, bkg_d.ydim, 
+		int yidx {get_nearest_cell_index_gpu(d_grid_y, bkg_d.ydim, 
 			slots_d.y[i])};
-		int zidx {get_nearest_cell_index_gpu(Background::d_grid_z, bkg_d.zdim, 
+		int zidx {get_nearest_cell_index_gpu(d_grid_z, bkg_d.zdim, 
 			slots_d.z[i])};
 
 		// Update indices
@@ -161,6 +161,31 @@ namespace ImpurityTransport
 
 		init_rng_kernel<<<gridSize, blockSize>>>(slots_d.rng, slots_d.N, 
 			seed);
+	}
+
+	// Step particles
+	__global__ void step_kernel(Slots::SlotsDevice slots_d, const double dt)
+	{
+		// Global index
+		int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+		// Don't try and access beyond the number of slots (segfault)
+		if (i >= slots_d.N) return;
+
+		slots_d.t[i] += dt;
+		slots_d.x[i] += slots_d.vx[i] * dt;
+		slots_d.y[i] += slots_d.vy[i] * dt;
+		slots_d.z[i] += slots_d.vz[i] * dt;
+	}
+
+	// Wrapper to call step_kernel
+	void step_gpu(Slots::SlotsDevice& slots_d, const double dt)
+	{
+		// Block and grid size
+		int blockSize = 256;
+		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
+
+		step_kernel<<<gridSize, blockSize>>>(slots_d, dt);
 	}
 
 } // namespace ImpurityTransport

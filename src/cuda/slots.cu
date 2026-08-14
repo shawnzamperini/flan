@@ -13,17 +13,17 @@ namespace Slots
 		ParticleInitDevice p;
 
 		// To-do
-		p.x = 0.0;
+		p.x = 0.01;
 		p.y = 0.0;
 		p.z = 0.0;
 		p.vx = 0.0;
 		p.vy = 0.0;
 		p.vz = 0.0;
 		p.vX = 0.0;
-		p.vY = 0.0;
+		p.vY = 5000.0;
 		p.vZ = 0.0;
 		p.weight = 1.0;
-		p.q = 0.0;
+		p.q = 1.0;
 
 		return p;
 	}

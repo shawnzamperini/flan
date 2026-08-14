@@ -227,6 +227,7 @@ namespace ImpurityTransport
 	}
 
 
+	// Update velocity with the Boris algorithm
 	void boris_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
@@ -307,13 +308,12 @@ namespace ImpurityTransport
 		if (opts.use_gpu_int() > 0) 
 		{
 			// Defined in impurity_transport.cu
-			//step_gpu();
+			step_gpu(slots_d, opts.imp_time_step());
 		}
 #endif
 
 		// Defined above
 		step_cpu(slots, bkg, opts, opts.imp_time_step());
-
 	}
 
 	

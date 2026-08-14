@@ -32,6 +32,14 @@ namespace Boris
 		double x {slots_d.x[i]};
 		double y {slots_d.y[i]};
 		double z {slots_d.z[i]};
+		/*
+		printf("x ptr = %p\n", slots_d.x);
+		printf("y ptr = %p\n", slots_d.y);
+		printf("z ptr = %p\n", slots_d.z);
+		printf("i=%d\n", i);
+		printf("tidx=%d xidx=%d yidx=%d zidx=%d\n", tidx, xidx, yidx, zidx);
+		printf("t=%f x=%f y=%f z=%f\n", t, x, y, z);
+		*/
 
 		// Get nearest neighbor indices for each direction. These tell us
 		// which direction we should interpolate towards, i.e., which
@@ -39,11 +47,11 @@ namespace Boris
 		// is bounded by.
 		// d_x is a global constant defined in cuda/device_constants.h.
 		const int xidx_neighbor {Utilities::get_neighbor_index_cuda(x, 
-			Background::d_x, xidx, bkg_d.xdim)};
+			d_x, xidx, bkg_d.xdim)};
 		const int yidx_neighbor {Utilities::get_neighbor_index_cuda(y, 
-			Background::d_y, yidx, bkg_d.ydim)};
+			d_y, yidx, bkg_d.ydim)};
 		const int zidx_neighbor {Utilities::get_neighbor_index_cuda(z, 
-			Background::d_z, zidx, bkg_d.zdim)};
+			d_z, zidx, bkg_d.zdim)};
 
 		// Similarly for t, except we can't use get_neighbor_index since it
 		// uses cell center coordinates, and t is defined at each frame (i.e.,
@@ -73,14 +81,14 @@ namespace Boris
 		// by cell center coordinates since that's where B/E are assumed
 		// to be defined. It is essentially a cell shifted by dx/2, dy/2
 		// and dz/2 if that helps.
-		const double t0 {Background::d_t[tidx]};
-		const double t1 {Background::d_t[tidx_neighbor]};
-		const double x0 {Background::d_x[xidx]};
-		const double x1 {Background::d_x[xidx_neighbor]};
-		const double y0 {Background::d_y[yidx]};
-		const double y1 {Background::d_y[yidx_neighbor]};
-		const double z0 {Background::d_z[zidx]};
-		const double z1 {Background::d_z[zidx_neighbor]};
+		const double t0 {d_t[tidx]};
+		const double t1 {d_t[tidx_neighbor]};
+		const double x0 {d_x[xidx]};
+		const double x1 {d_x[xidx_neighbor]};
+		const double y0 {d_y[yidx]};
+		const double y1 {d_y[yidx_neighbor]};
+		const double z0 {d_z[zidx]};
+		const double z1 {d_z[zidx_neighbor]};
 
 		// Distance between neighbors
 		const double dx {x1 - x0};
@@ -100,6 +108,7 @@ namespace Boris
 		// another pointer, and allows the compiler to optimize the arrays.
 		double* __restrict__ field_ptrs[5][4];  
 
+		// 4D arrays
 		field_ptrs[0][0] = bkg_d.bX;
 		field_ptrs[0][1] = bkg_d.bY;
 		field_ptrs[0][2] = bkg_d.bZ;
@@ -109,61 +118,103 @@ namespace Boris
 		field_ptrs[1][2] = bkg_d.eZ;
 		field_ptrs[1][3] = bkg_d.emag;
 
-		field_ptrs[2][0] = Background::d_dxdX;
-		field_ptrs[2][1] = Background::d_dxdY;
-		field_ptrs[2][2] = Background::d_dxdZ;
-		field_ptrs[3][0] = Background::d_dydX;
-		field_ptrs[3][1] = Background::d_dydY;
-		field_ptrs[3][2] = Background::d_dydZ;
-		field_ptrs[4][0] = Background::d_dzdX;
-		field_ptrs[4][1] = Background::d_dzdY;
-		field_ptrs[4][2] = Background::d_dzdZ;
+		// 3D arrays
+		field_ptrs[2][0] = bkg_d.dxdX;
+		field_ptrs[2][1] = bkg_d.dxdY;
+		field_ptrs[2][2] = bkg_d.dxdZ;
+		field_ptrs[3][0] = bkg_d.dydX;
+		field_ptrs[3][1] = bkg_d.dydY;
+		field_ptrs[3][2] = bkg_d.dydZ;
+		field_ptrs[4][0] = bkg_d.dzdX;
+		field_ptrs[4][1] = bkg_d.dzdY;
+		field_ptrs[4][2] = bkg_d.dzdZ;
 
 		// This will hold the interpolated field values
-		double intrp_field[2][4];
+		double intrp_field[5][4];
 
 		// 4D -> 1D index for indexing background arrays in bkg_d. 
 		// _0 is at tidx, and _1 is at tidx_neighbor
-		int idx000_0 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx000_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx, xidx, yidx, zidx)};
-		int idx001_0 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx001_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx, xidx, yidx, zidx_neighbor)};
-		int idx010_0 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx010_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx, xidx, yidx_neighbor, zidx)};
-		int idx011_0 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx011_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx, xidx, yidx_neighbor, zidx_neighbor)};
-		int idx100_0 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx100_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx, xidx_neighbor, yidx, zidx)};
-		int idx101_0 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx101_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx, xidx_neighbor, yidx, zidx_neighbor)};
-		int idx110_0 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx110_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx, xidx_neighbor, yidx_neighbor, zidx)};
-		int idx111_0 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx111_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx, xidx_neighbor, yidx_neighbor, zidx_neighbor)};
 
-		int idx000_1 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx000_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx_neighbor, xidx, yidx, zidx)};
-		int idx001_1 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx001_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx_neighbor, xidx, yidx, zidx_neighbor)};
-		int idx010_1 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx010_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx_neighbor, xidx, yidx_neighbor, zidx)};
-		int idx011_1 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx011_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx_neighbor, xidx, yidx_neighbor, zidx_neighbor)};
-		int idx100_1 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx100_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx_neighbor, xidx_neighbor, yidx, zidx)};
-		int idx101_1 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx101_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx_neighbor, xidx_neighbor, yidx, zidx_neighbor)};
-		int idx110_1 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx110_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx_neighbor, xidx_neighbor, yidx_neighbor, zidx)};
-		int idx111_1 {Utilities::calc_index_cuda(bkg_d.xdim, bkg_d.ydim, 
+		int idx111_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
 			bkg_d.zdim, tidx_neighbor, xidx_neighbor, yidx_neighbor, 
 			zidx_neighbor)};
 
+		// Again for the 3D->1D indices
+		int idx000_0_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx, yidx, zidx)};
+		int idx001_0_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx, yidx, zidx_neighbor)};
+		int idx010_0_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx, yidx_neighbor, zidx)};
+		int idx011_0_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx, yidx_neighbor, zidx_neighbor)};
+		int idx100_0_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx_neighbor, yidx, zidx)};
+		int idx101_0_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx_neighbor, yidx, zidx_neighbor)};
+		int idx110_0_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx_neighbor, yidx_neighbor, zidx)};
+		int idx111_0_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx_neighbor, yidx_neighbor, zidx_neighbor)};
+
+		int idx000_1_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx, yidx, zidx)};
+		int idx001_1_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx, yidx, zidx_neighbor)};
+		int idx010_1_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx, yidx_neighbor, zidx)};
+		int idx011_1_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx, yidx_neighbor, zidx_neighbor)};
+		int idx100_1_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx_neighbor, yidx, zidx)};
+		int idx101_1_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx_neighbor, yidx, zidx_neighbor)};
+		int idx110_1_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx_neighbor, yidx_neighbor, zidx)};
+		int idx111_1_3d {Utilities::calc_3d_index_cuda(bkg_d.ydim, 
+			bkg_d.zdim, xidx_neighbor, yidx_neighbor, 
+			zidx_neighbor)};
+
 		// Group into an array, can help reduce register pressure
-		int idx0[8] = {idx000_0, idx001_0, idx010_0, idx011_0,
-						idx100_0, idx101_0, idx110_0, idx111_0};
-		int idx1[8] = {idx000_1, idx001_1, idx010_1, idx011_1,
-						idx100_1, idx101_1, idx110_1, idx111_1};
+		int idx0_4d[8] = {idx000_0_4d, idx001_0_4d, idx010_0_4d, idx011_0_4d,
+						idx100_0_4d, idx101_0_4d, idx110_0_4d, idx111_0_4d};
+		int idx1_4d[8] = {idx000_1_4d, idx001_1_4d, idx010_1_4d, idx011_1_4d,
+						idx100_1_4d, idx101_1_4d, idx110_1_4d, idx111_1_4d};
+
+		int idx0_3d[8] = {idx000_0_3d, idx001_0_3d, idx010_0_3d, idx011_0_3d,
+						idx100_0_3d, idx101_0_3d, idx110_0_3d, idx111_0_3d};
+		int idx1_3d[8] = {idx000_1_3d, idx001_1_3d, idx010_1_3d, idx011_1_3d,
+						idx100_1_3d, idx101_1_3d, idx110_1_3d, idx111_1_3d};
 
 		// Array to hold all 8 values at the vertices
 		double verts0[8];
@@ -188,8 +239,21 @@ namespace Boris
 				#pragma unroll
 				for (int l = 0; l < 8; ++l)
 				{
-					verts0[l] = field_ptrs[j][k][idx0[l]];
-					verts1[l] = field_ptrs[j][k][idx1[l]];
+					// 3D arrays
+					if (j > 1)
+					{
+						verts0[l] = field_ptrs[j][k][idx0_3d[l]];
+						verts1[l] = field_ptrs[j][k][idx1_3d[l]];
+					}
+
+					// 4D arrays
+					else
+					{
+						verts0[l] = field_ptrs[j][k][idx0_4d[l]];
+						verts1[l] = field_ptrs[j][k][idx1_4d[l]];
+					}
+					//if (i == 0 && j == 2)
+					//	printf("%d %d verts[%d] = %f\n", j, k, l, verts0[l]);
 				}
 
 				// Trilinear interpolation at the particle location for this
@@ -204,6 +268,8 @@ namespace Boris
 				double comp1 {Utilities::trilinear_interpolate(x0, y0, z0, 
 					dx, dy, dz, verts1[0], verts1[4], verts1[2], verts1[6], 
 					verts1[1], verts1[5], verts1[3], verts1[7], x, y, z)};
+
+				//if (i == 0) printf("%d comp0=%f, comp1=%f\n", j, comp0, comp1);
 
 				// Now linearly interpolate in time (this is just point slope)
 				const double slope {(comp1 - comp0) / frame_dt};
@@ -252,6 +318,7 @@ namespace Boris
 				intrp_field[j][k] = intrp_field[j][k] * intrp_field[j][3] 
 					/ denom * mask;
 			}
+
 		}  // j loop
 
 		// Boris continues
@@ -297,6 +364,20 @@ namespace Boris
 		slots_d.vX[i] = vplus[0] + q_m * intrp_field[1][0] * 0.5 * dt;
 		slots_d.vY[i] = vplus[1] + q_m * intrp_field[1][1] * 0.5 * dt;
 		slots_d.vZ[i] = vplus[2] + q_m * intrp_field[1][2] * 0.5 * dt;
+
+		/*
+		for (int j {}; j < 5; ++j)
+		{
+			for (int k {}; k < 4; ++k)
+			{
+				printf("interp_field[%d][%d] = %f\n", j, k, intrp_field[j][k]);
+			}
+		}
+		*/
+
+		//printf("slots_d.vX[i] = %f\n", slots_d.vX[i]);
+		//printf("slots_d.vY[i] = %f\n", slots_d.vY[i]);
+		//printf("slots_d.vZ[i] = %f\n", slots_d.vZ[i]);
 
 		// Update particle curvilinear velocity. For example,
 		// vx = dx/dX * vX + dx/dY * vY + dx/dZ * vZ

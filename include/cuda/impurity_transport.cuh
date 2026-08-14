@@ -34,4 +34,9 @@ namespace ImpurityTransport
 	void init_slot_rngs(Slots::SlotsDevice& slots_d, 
 		const unsigned long long seed);
 
+	/**
+	* @brief Wrapper to call step_kernel, which performs a particle step
+	*   over time dt.
+	*/
+	void step_gpu(Slots::SlotsDevice& slots_d, const double dt);
 }
