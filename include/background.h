@@ -2,8 +2,7 @@
 * @file background.h
 * @brief Header file for background.cpp
 */
-#ifndef BACKGROUND_H
-#define BACKGROUND_H
+#pragma once
 
 #include <vector>
 
@@ -400,5 +399,3 @@ namespace Background
 	*/
 	void free_bkg(BackgroundDevice& bkg_d, int device_id);
 }
-
-#endif

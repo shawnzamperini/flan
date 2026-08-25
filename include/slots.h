@@ -115,6 +115,6 @@ namespace Slots
 	void free_slots(SlotsDevice& slots_d, int device_id = 0);
 
 	// Replace dead particles with alive ones
-	void fill_slots_cpu(Slots& slots, int& rem_parts);
+	void fill_slots_cpu(Slots& slots, int& rem_parts, int& alive_slots);
 }
 

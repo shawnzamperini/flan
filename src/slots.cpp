@@ -297,7 +297,7 @@ namespace Slots
 
 	// Replace dead particles with alive ones, as long as remaining particles
 	// are greater than zero.
-	void fill_slots_cpu(Slots& slots, int& rem_parts)
+	void fill_slots_cpu(Slots& slots, int& rem_parts, int& alive_slots)
 	{
 		int N = slots.N();
 		int dead_count = 0;
@@ -353,6 +353,9 @@ namespace Slots
 		}
 
 		if (rem_parts < 0) rem_parts = 0;
+
+		// Number of alive slots is the number of zeros
+		alive_slots = std::count(slots.state().begin(), slots.state().end(), 0);
 	}
 
 }  // namespace Slots

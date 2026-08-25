@@ -17,16 +17,19 @@ TEST(FillSlotsGPU, RevivesDeadParticles)
 	Slots::SlotsDevice slots_d {slots.to_device()};
 
 	// Call wrapper that calls kernel to fill slots on the GPU
-	Slots::fill_slots_gpu(slots_d, rem);
+	int alive {};
+	Slots::fill_slots_gpu(slots_d, rem, alive);
 
 	// Copy back to host, copies slots_d into slots. Free memory on GPU.
 	slots = slots.to_host(slots_d);
 	Slots::free_slots(slots_d);
 
 	// Count number of alive particles in slots
+	/*
     int alive = 0;
     for (int i = 0; i < 10; i++)
         if (slots.state()[i] == 0) alive++;
+	*/
 
 	std::cout << "after\n";
 	for (int i = 0; i < 10; i++) std::cout << i << " : " << slots.state()[i] << '\n';

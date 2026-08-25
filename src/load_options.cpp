@@ -62,6 +62,13 @@ namespace Options
 				assign_option<int>(set_func, var, key);
 			}
 
+			else if (key == "slot_cap") 
+			{
+				auto set_func = std::bind(&Options::set_slot_cap, &opts, 
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
 			else if (key == "bkg_source") 
 			{
 				auto set_func = std::bind(&Options::set_bkg_source, &opts, 

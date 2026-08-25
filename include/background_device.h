@@ -85,6 +85,6 @@ namespace Background
 		double* dYdz;
 		double* dZdz;
 
-	};
+	};  // BackgroundDevice
 
 }  // namespace Background

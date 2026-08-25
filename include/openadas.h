@@ -2,15 +2,15 @@
 * @file openadas.h
 * @brief Header file for openadas.cpp
 */
-#ifndef OPENADAS_H
-#define OPENADAS_H
+#pragma once
 
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "vectors.h"
-#include "impurity.h"
 #include "background.h"
+#include "impurity.h"
+#include "openadas_device.h"
+#include "vectors.h"
 
 
 namespace OpenADAS
@@ -86,6 +86,10 @@ namespace OpenADAS
 		*
 		*/
 		double get_rate_coeff(const int charge, double ne, double te) const;
+
+
+		// Create a device-side struct with the OpenADAS data
+		OpenADASDevice to_device(int device_id);
 	};
 
 	/**
@@ -117,5 +121,3 @@ namespace OpenADAS
 		const int tidx, const int xidx, const int yidx, const int zidx, 
 		int& ioniz_warnings, int& recomb_warnings);
 }
-
-#endif

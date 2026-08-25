@@ -15,6 +15,7 @@ namespace Timer
 		Read,
 		Imp,
 		Boris,
+		IonRec,
 		Step,
 		Coll,
 		Bounds,

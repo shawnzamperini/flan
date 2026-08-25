@@ -94,6 +94,10 @@ namespace Options
 	void Options::set_seed(int seed) 
 		{m_seed = seed;}
 
+	// slot_cap
+	void Options::set_slot_cap(int slot_cap) 
+		{m_slot_cap = slot_cap;}
+
 	// bkg_source
 	void Options::set_bkg_source(std::string bkg_source) 
 	{
@@ -636,6 +640,8 @@ namespace Options
 		{return m_use_gpu;}
 	const int Options::seed() const 
 		{return m_seed;}
+	const int Options::slot_cap() const 
+		{return m_slot_cap;}
 	const std::string& Options::bkg_source() const 
 		{return m_bkg_source;}
 	const std::string& Options::test_opt() const 

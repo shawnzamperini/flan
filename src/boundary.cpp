@@ -94,8 +94,6 @@ namespace Boundary
 				state = absorbing_bc(slots.t()[i], bkg.get_t_max(), true);
 				slots.set_state(i, state);
 
-				if(i==0 && state) std::cout << "killed! max time\n";
-
 				// If dead (>0) we can skip the rest of the checks.
 				if (state) continue;
 			}
@@ -123,8 +121,6 @@ namespace Boundary
 				state = absorbing_bc(slots.x()[i], bkg.get_x_min(), false, 
 					opts.imp_xbound_buffer());
 				slots.set_state(i, state);
-
-				if(i==0 && state) std::cout << "killed! min x\n";
 
 				// If dead (>0) we can skip the rest of the checks.
 				if (state) continue;
@@ -168,8 +164,6 @@ namespace Boundary
 					opts.imp_xbound_buffer());
 				slots.set_state(i, state);
 
-				if(i==0 && state) std::cout << "killed! max x\n";
-
 				// If dead (>0) we can skip the rest of the checks.
 				if (state) continue;
 			}
@@ -212,8 +206,6 @@ namespace Boundary
 					opts.imp_ybound_buffer());
 				slots.set_state(i, state);
 
-				if(i==0 && state) std::cout << "killed! min y\n";
-
 				// If dead (>0) we can skip the rest of the checks.
 				if (state) continue;
 			}
@@ -255,8 +247,6 @@ namespace Boundary
 				state = absorbing_bc(slots.y()[i], bkg.get_y_max(), true, 
 					opts.imp_ybound_buffer());
 				slots.set_state(i, state);
-
-				if(i==0 && state) std::cout << "killed! max y\n";
 
 				// If dead (>0) we can skip the rest of the checks.
 				if (state) continue;
@@ -301,8 +291,6 @@ namespace Boundary
 					opts.imp_zbound_buffer());
 				slots.set_state(i, state);
 
-				if(i==0 && state) std::cout << "killed! min z\n";
-
 				// If dead (>0) we can skip the rest of the checks.
 				if (state) continue;
 			}
@@ -344,8 +332,6 @@ namespace Boundary
 				state = absorbing_bc(slots.z()[i], bkg.get_z_max(), true, 
 					opts.imp_zbound_buffer());
 				slots.set_state(i, state);
-
-				if(i==0 && state) std::cout << "killed! max z\n";
 
 				// If dead (>0) we can skip the rest of the checks.
 				if (state) continue;

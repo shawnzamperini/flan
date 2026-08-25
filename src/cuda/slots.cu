@@ -36,14 +36,21 @@ namespace Slots
 	* code.
 	*/
 	__global__ void fill_slots_kernel(SlotsDevice slots_d, int* counter, 
-		int rem_parts)
+		int* alive_counter, int rem_parts)
 	{
 		// Global index
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
 		if (i >= slots_d.N) return;
 
-		// Skip alive slots
-		if (slots_d.state[i] == 0) return;
+		// Skip alive slots and add to count of alive slots (used in progress
+		// print out). This atomicAdd isn't a big deal for warp divergence
+		// since this thread is already exiting early compared to those that
+		// continue past this loop.
+		if (slots_d.state[i] == 0) 
+		{
+			atomicAdd(alive_counter, 1);
+			return;
+		}
 
 		// Atomically claim a particle index. This prevents the race condition
 		// in which multiple threads grab the same index.
@@ -74,6 +81,9 @@ namespace Slots
 
 		// Mark slot alive
 		slots_d.state[i] = 0;
+
+		// Newly alive, count it
+		atomicAdd(alive_counter, 1);
 	}
 
 	__global__ void all_dead_kernel(SlotsDevice slots_d)
@@ -90,7 +100,7 @@ namespace Slots
 
 	// Replace dead particles with alive ones, as long as remaining particles
 	// are greater than zero.
-	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts)
+	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots)
 	{
 		// No more particles left, don't fill
 		if (rem_parts <= 0) return;
@@ -106,15 +116,23 @@ namespace Slots
 		int zero = 0;
 		cudaMemcpy(d_counter, &zero, sizeof(int), cudaMemcpyHostToDevice);
 
+		// Counter for number of alive slots
+		int* d_alive;
+		cudaMalloc(&d_alive, sizeof(int));
+		cudaMemset(d_alive, 0, sizeof(int));
+
 		// Call GPU kernel to fill slots.
 		int blockSize = 256;
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 		fill_slots_kernel<<<gridSize, blockSize>>>(slots_d, d_counter, 
-			rem_parts);
+			d_alive, rem_parts);
 
 		// Retrieve how many particles were actually filled
 		int filled = 0;
 		cudaMemcpy(&filled, d_counter, sizeof(int), cudaMemcpyDeviceToHost);
+
+		// Retrieve number of alive slots
+		cudaMemcpy(&alive_slots, d_alive, sizeof(int), cudaMemcpyDeviceToHost);
 
 		// Update remaining particles
 		rem_parts -= filled;
@@ -122,6 +140,7 @@ namespace Slots
 
 		// Free memory
 		cudaFree(d_counter);
+		cudaFree(d_alive);
 	}
 
 	bool all_dead_gpu(SlotsDevice& slots_d)

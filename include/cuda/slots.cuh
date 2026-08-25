@@ -21,7 +21,7 @@ namespace Slots
 	* @param slots Slots object to swap out dead particles in
 	* @param rem_parts Number of remaining alive particles to track
 	*/
-	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts);
+	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots);
 
 	/**
 	* @brief Check if slots contain all dead particles

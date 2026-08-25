@@ -4,21 +4,22 @@
 * in a storing OpenADAS data. Also contains two helper routines outside the 
 * class for updating an impurity's ionization state.
 */
-#include <vector>
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <tuple>
+#include <vector>
 
-#include "openadas.h"
-#include "vectors.h"
-#include "utilities.h"
-#include "impurity.h"
 #include "background.h"
+#include "impurity.h"
+#include "openadas.h"
+#include "openadas_device.h"
 #include "random.h"
+#include "utilities.h"
+#include "vectors.h"
 
 
 namespace OpenADAS
@@ -336,17 +337,32 @@ namespace OpenADAS
 			rate1, te, ne);
 	}
 
+#ifndef USE_CUDA
+
+	// If these definitions gets called, it means you're in the CPU-only version
+	// of the code trying to call GPU-specific code.
+	// Defined in src/cuda/openadas.cu since it calls CUDA code
+	OpenADASDevice OpenADAS::to_device(int device_id)
+	{
+		std::cerr << "Error! OpenADAS::to_device was called but GPU support"
+				  << " was not compiled in.\n";
+	}
+
+	void free_oa(OpenADASDevice& oa_d, int device_id)
+	{
+		std::cerr << "Error! OpenADAS::free_bkg was called but GPU support"
+				  << " was not compiled in.\n";
+	}
+
+#endif
+
 	std::pair<double, double> calc_ioniz_recomb_probs(
 		Impurity::Impurity& imp, const Background::Background& bkg,
 		const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
 		const double imp_time_step, const int tidx, const int xidx, 
 		const int yidx, const int zidx)
 	{
-		// We use ne and te more than once here, so to avoid indexing
-		// multiple times it is cheaper to just do it once and save it in
-		// a local variable.
-		//double local_ne = bkg.get_ne()(tidx, xidx, yidx, zidx);
-		//double local_te = bkg.get_te()(tidx, xidx, yidx, zidx);
+		// Interpolate at the particle location
 		double local_ne {bkg.interp_ne_at_imp(imp)};
 		double local_te {bkg.interp_te_at_imp(imp)};
 		
@@ -406,17 +422,6 @@ namespace OpenADAS
 		// Clever branchless way to adjust the charge
 		const int dq = ionize - recomb;
 		imp.set_charge(imp.get_charge() + dq);
-
-		/*
-		if (Random::get(0.0, 1.0) < ioniz_prob)
-		{
-			imp.set_charge(imp.get_charge() + 1);
-		}
-		if (Random::get(0.0, 1.0) < recomb_prob)
-		{
-			imp.set_charge(imp.get_charge() - 1);
-		}
-		*/
 	}
 }
 

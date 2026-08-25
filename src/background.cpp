@@ -733,7 +733,7 @@ namespace Background
 
 	// If these definitions gets called, it means you're in the CPU-only version
 	// of the code trying to call GPU-specific code.
-
+	// Defined in src/cuda/background.cu since it calls CUDA code
 	BackgroundDevice Background::to_device(int device_id)
 	{
 		std::cerr << "Error! Background::to_device was called but GPU support"
@@ -742,7 +742,7 @@ namespace Background
 
 	void free_bkg(BackgroundDevice& bkg_d, int device_id)
 	{
-		std::cerr << "Error! Background.free_bkg was called but GPU support"
+		std::cerr << "Error! Background::free_bkg was called but GPU support"
 				  << " was not compiled in.\n";
 	}
 

@@ -17,6 +17,7 @@
 #include "impurity_transport.h"
 #include "openadas.h"
 #include "options.h"
+#include "particle_progress.h"
 #include "random.h"
 #include "slots.h"
 #include "timer.h"
@@ -163,6 +164,30 @@ namespace ImpurityTransport
 		}
 	}
 
+	
+	// Update particlle charges states based on ionization/recombination
+	// probabilities
+	void ioniz_recomb_cpu(Slots::Slots& slots, 
+		const Background::Background& bkg, const OpenADAS::OpenADAS oa_ioniz,
+		const OpenADAS::OpenADAS oa_recomb, const Options::Options& opts, 
+		const double dt)
+	{
+
+		#pragma omp parallel for
+		for (int i=0; i < slots.N(); ++i)
+		{
+
+			//OpenADAS::ioniz_recomb(imp, bkg, oa_ioniz, oa_recomb, 
+			//	dt, tidx, xidx, yidx, zidx, ioniz_warnings, 
+			//	recomb_warnings);
+
+			// Get ionization/recombination probabilities
+
+			// Pull random number, modify charge state
+		}
+
+	}
+
 	// ------------------
 	// Wrapper functions
 	// ------------------
@@ -210,20 +235,20 @@ namespace ImpurityTransport
 
 
 	void fill_slots_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
-		int& rem_parts, Options::Options& opts)
+		int& rem_parts, Options::Options& opts, int& alive_slots)
 	{
 
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
 			// Defined in cuda/slots.cu
-			Slots::fill_slots_gpu(slots_d, rem_parts);
+			Slots::fill_slots_gpu(slots_d, rem_parts, alive_slots);
 			return;
 		}
 #endif
 
 		// Defined in slots.cpp
-		Slots::fill_slots_cpu(slots, rem_parts);
+		Slots::fill_slots_cpu(slots, rem_parts, alive_slots);
 	}
 
 
@@ -316,7 +341,32 @@ namespace ImpurityTransport
 		step_cpu(slots, bkg, opts, opts.imp_time_step());
 	}
 
-	
+	// Check for ionization/recombination
+	void ioniz_recomb_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
+		const Background::Background& bkg, 
+		const Background::BackgroundDevice& bkg_d, 
+		const OpenADAS::OpenADAS& oa_ioniz,
+		const OpenADAS::OpenADASDevice& oa_ioniz_d,
+		const OpenADAS::OpenADAS& oa_recomb,
+		const OpenADAS::OpenADASDevice& oa_recomb_d,
+		const Options::Options& opts)
+	{
+
+#ifdef USE_CUDA
+		if (opts.use_gpu_int() > 0) 
+		{
+			// Defined in impurity_transport.cu
+			//ioniz_recomb_gpu(slots_d, opts.imp_time_step());
+		}
+#endif
+
+		// Defined above
+		ioniz_recomb_cpu(slots, bkg, oa_ioniz, oa_recomb, opts, 
+			opts.imp_time_step());
+	}
+
+
+	// Main particle following loop
 	void main_loop(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
@@ -324,7 +374,10 @@ namespace ImpurityTransport
 		Impurity::Statistics& imp_stats, 
 		ImpurityStats::StatisticsDevice& imp_stats_d,
 		const OpenADAS::OpenADAS& oa_ioniz, 
-		const OpenADAS::OpenADAS& oa_recomb, Options::Options& opts, 
+		const OpenADAS::OpenADASDevice& oa_ioniz_d, 
+		const OpenADAS::OpenADAS& oa_recomb, 
+		const OpenADAS::OpenADASDevice& oa_recomb_d, 
+		Options::Options& opts, 
 		Timer::Timer& timer)
 	{
 
@@ -365,8 +418,13 @@ namespace ImpurityTransport
 		}
 #endif
 
-		// Initial fill of slots with particles. 
-		fill_slots_wrapper(slots, slots_d, rem_parts, opts);
+		// Struct to keep track of progress for user feedback.
+		ParticleProgress prog(rem_parts, opts.print_interval());
+
+		// Initial fill of slots with particles. alive_slots is used in
+		// the progress print out in the loop
+		int alive_slots {};
+		fill_slots_wrapper(slots, slots_d, rem_parts, opts, alive_slots);
 
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
@@ -388,7 +446,12 @@ namespace ImpurityTransport
 		{
 
 			// Check for ionization/recombination
-			// To-do
+			if (opts.imp_iz_recomb_int() > 0)
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::IonRec));
+				ioniz_recomb_wrapper(slots, slots_d, bkg, bkg_d, oa_ioniz,
+					oa_ioniz_d, oa_recomb, oa_recomb_d, opts);
+			}
 
 			// Variance reduction
 			// To-do
@@ -436,11 +499,17 @@ namespace ImpurityTransport
 			// Replace dead particles
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::FillSlots));
-				fill_slots_wrapper(slots, slots_d, rem_parts, opts);
+				fill_slots_wrapper(slots, slots_d, rem_parts, opts, alive_slots);
 			}
 
-			// User feedback
-			// To-do
+			// User feedback just for rank 0, no MPI communication. The total
+			// number of remaining particles is rem_parts plus the number
+			// actively being followed (alive_slots).
+			if (rank == 0 && prog.tot_parts > slots.N()) 
+				prog.update(rem_parts + alive_slots);
+
+			// Reset alive_slots for next iteration
+			alive_slots = 0;
 
 			// Check if all the particles in slots are dead. If this happens
 			// after fill_slots, it means there were no more alive particles
@@ -467,12 +536,15 @@ namespace ImpurityTransport
 		const Background::BackgroundDevice& bkg_d,
 		Impurity::Statistics& imp_stats, 
 		ImpurityStats::StatisticsDevice imp_stats_d,
-		const OpenADAS::OpenADAS& oa_ioniz, const OpenADAS::OpenADAS& oa_recomb, 
+		const OpenADAS::OpenADAS& oa_ioniz, 
+		const OpenADAS::OpenADASDevice& oa_ioniz_d, 
+		const OpenADAS::OpenADAS& oa_recomb, 
+		const OpenADAS::OpenADASDevice& oa_recomb_d, 
 		Options::Options& opts, Timer::Timer& timer)
 	{
 		cudaSetDevice(slots_d.device_id);   // THIS THREAD USES THIS GPU
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
-			oa_recomb, opts, timer);
+			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, timer);
 	}
 
 #endif
@@ -527,8 +599,9 @@ namespace ImpurityTransport
 		// memory pressure, since you could theoretically want to follow
 		// millions or billions of particles, and allocating them all at once
 		// is wasteful and could cause you to run out of memory.
-		constexpr int slot_cap = 1048576;  
-		Slots::Slots slots {std::min(slot_cap, opts.imp_num())};
+		//constexpr int slot_cap = 1048576;  
+		std::cout << "Slot Capacity = " << opts.slot_cap() << '\n';
+		Slots::Slots slots {std::min(opts.slot_cap(), opts.imp_num())};
 
 		// All particles assumed to have same mass.
 		slots.set_mass(opts.imp_mass_amu() * Constants::amu_to_kg);
@@ -576,11 +649,15 @@ namespace ImpurityTransport
 			std::vector<Slots::SlotsDevice> gpu_slots;
 			std::vector<ImpurityStats::StatisticsDevice> gpu_stats;
 			std::vector<Background::BackgroundDevice> gpu_bkgs;
+			std::vector<OpenADAS::OpenADASDevice> gpu_oa_izs;
+			std::vector<OpenADAS::OpenADASDevice> gpu_oa_rcs;
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
 				gpu_slots.push_back(slots.to_device(dev));
 				gpu_stats.push_back(imp_stats.to_device(dev));
 				gpu_bkgs.push_back(bkg.to_device(dev));
+				gpu_oa_izs.push_back(oa_ioniz.to_device(dev));
+				gpu_oa_rcs.push_back(oa_recomb.to_device(dev));
 			}
 
 			// Spawn threads to launch main_loop on each available GPU
@@ -597,8 +674,10 @@ namespace ImpurityTransport
 				threads.emplace_back(gpu_worker, std::ref(slots), 
 					std::ref(gpu_slots[dev]), std::ref(bkg), 
 					std::ref(gpu_bkgs[dev]), std::ref(imp_stats), 
-					std::ref(gpu_stats[dev]), std::ref(oa_ioniz), 
-					std::ref(oa_recomb), std::ref(opts), std::ref(timer));
+					std::ref(gpu_stats[dev]), 
+					std::ref(oa_ioniz), std::ref(gpu_oa_izs[dev]), 
+					std::ref(oa_recomb), std::ref(gpu_oa_rcs[dev]), 
+					std::ref(opts), std::ref(timer));
 			}
 
 			// Wait for all threads to finish
@@ -623,14 +702,15 @@ namespace ImpurityTransport
 
 #endif
 
-		// Dummy SlotsDevice, StatsDevice and BackgroundDevice. They're not 
-		// used in CPU-only simulations.
+		// Dummy device-side structs. They're not used in CPU-only simulations.
 		Slots::SlotsDevice slots_d {};
 		ImpurityStats::StatisticsDevice imp_stats_d {};
 		Background::BackgroundDevice bkg_d {};
+		OpenADAS::OpenADASDevice oa_ioniz_d {};
+		OpenADAS::OpenADASDevice oa_recomb_d {};
 
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
-			oa_recomb, opts, timer);
+			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, timer);
 
 		return imp_stats;
 	}

@@ -36,6 +36,7 @@ namespace Options
 		std::string m_case_name              {"undefined"};
 		std::string m_use_gpu					   {"off"};
 		int m_seed                                     {4};
+		int m_slot_cap                           {1048576};  
 
 		// General background plasma options
 		std::string m_bkg_source                {"gkeyll"};
@@ -180,6 +181,7 @@ namespace Options
 		void set_use_gpu(std::string use_gpu);
 		void set_case_name(std::string case_name);
 		void set_seed(int seed);
+		void set_slot_cap(int slot_cap);
 		void set_bkg_source(std::string bkg_source);
 		void set_test_opt(std::string test_opt);
 		void set_save_track(std::string save_track);
@@ -251,6 +253,7 @@ namespace Options
 		const std::string& case_name() const;
 		const std::string& use_gpu() const;
 		const int seed() const;
+		const int slot_cap() const;
 		const std::string& bkg_source() const;
 		const std::string& test_opt() const;
 		const std::string& save_track() const;
