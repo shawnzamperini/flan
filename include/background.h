@@ -297,6 +297,12 @@ namespace Background
 			const double y0, const double z0) const;
 
 		/**
+		* @brief Interpolate ne at a given t,x,y,z
+		*/
+		const BkgFPType interp_ne(const double t0, const double x0, 
+			const double y0, const double z0) const;
+
+		/**
 		* @brief Interpolate Te at Impurity location
 		*
 		* @param imp Impurity object containing time, location to interpolate at

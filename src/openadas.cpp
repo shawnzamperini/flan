@@ -8,6 +8,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <omp.h>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -17,10 +18,14 @@
 #include "impurity.h"
 #include "openadas.h"
 #include "openadas_device.h"
-#include "random.h"
+#include "pcg32.h"
+#include "slots.h"
 #include "utilities.h"
 #include "vectors.h"
 
+#ifdef USE_CUDA
+#include <cuda_runtime.h> 
+#endif
 
 namespace OpenADAS
 {
@@ -34,7 +39,7 @@ namespace OpenADAS
 		// These are the ACD and SCD files, respectively.
 		std::string openadas_path {get_openadas_path(openadas_root, 
 			openadas_year, imp_atom_num, rate_type)};
-		std::cout << "ADAS: Loading " << openadas_path << '\n';
+		std::cout << "ADAS: Loading " << openadas_path << '\n' << std::flush;
 
 		// Open file
 		std::ifstream openadas_stream {openadas_path};
@@ -42,8 +47,6 @@ namespace OpenADAS
 		// Read in the rate coefficients along with all the header info. 
 		// Everything is stored internally in the class. 
 		read_rate_coefficients(openadas_stream);
-
-		// Read in rate coefficients into Vector3D.
 	}
 
 	std::string OpenADAS::get_openadas_path(
@@ -60,7 +63,8 @@ namespace OpenADAS
 
 		// Select element name from atomic number.
 		std::string imp_name {};
-		if (imp_atom_num == 2) imp_name = "he";
+		if (imp_atom_num == 1) imp_name = "h";
+		else if (imp_atom_num == 2) imp_name = "he";
 		else if (imp_atom_num == 3) imp_name = "li";
 		else if (imp_atom_num == 4) imp_name = "be";
 		else if (imp_atom_num == 5) imp_name = "b";
@@ -356,19 +360,21 @@ namespace OpenADAS
 
 #endif
 
+	//std::pair<double, double> calc_ioniz_recomb_probs(
+	//	Impurity::Impurity& imp, const Background::Background& bkg,
+	//	const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
+	//	const double imp_time_step, const int tidx, const int xidx, 
+	//	const int yidx, const int zidx)
 	std::pair<double, double> calc_ioniz_recomb_probs(
-		Impurity::Impurity& imp, const Background::Background& bkg,
+		const Background::Background& bkg,
 		const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
-		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx)
+		const double dt, const double t, const double x, 
+		const double y, const double z, const double q, const double Z)
 	{
 		// Interpolate at the particle location
-		double local_ne {bkg.interp_ne_at_imp(imp)};
-		double local_te {bkg.interp_te_at_imp(imp)};
+		double local_ne {bkg.interp_ne(t, x, y, z)}; 
+		double local_te {bkg.interp_te(t, x, y, z)}; 
 		
-		const int q {imp.get_charge()};
-		const int Z {imp.get_atom_num()};
-
 		// Branchless masks
 		const bool can_ionize {q < Z};	
 		const bool can_recomb {q > 0};	
@@ -388,40 +394,129 @@ namespace OpenADAS
 
 		// The probability of either ionization or recombination occuring is:
 		//   prob = rate [m3/s] * ne [m-3] * dt [s]
-		const double ne_dt {local_ne * imp_time_step};
+		const double ne_dt {local_ne * dt};
 		double ioniz_prob {ioniz_rate * ne_dt};
 		double recomb_prob {recomb_rate * ne_dt};
 
 		return std::make_pair(ioniz_prob, recomb_prob);
 	}
 
-	void ioniz_recomb(Impurity::Impurity& imp, 
+
+	void ioniz_recomb(Slots::Slots& slots, 
 		const Background::Background& bkg, const OpenADAS& oa_ioniz, 
-		const OpenADAS& oa_recomb, const double imp_time_step, 
-		const int tidx, const int xidx, const int yidx, const int zidx, 
-		int& ioniz_warnings, int& recomb_warnings)
+		const OpenADAS& oa_recomb, const double dt, 
+		int& ioniz_warnings, int& recomb_warnings, std::vector<pcg32>& rngs)
 	{
-		// Get ionization/recombination probabilities.
-		auto [ioniz_prob, recomb_prob] = calc_ioniz_recomb_probs(imp, bkg, 
-			oa_ioniz, oa_recomb, imp_time_step, tidx, xidx, yidx, zidx);
 
-		// Track number of times the probabilities are greater than 1. This
-		// indicates that a smaller timestep should be used if there are a
-		// significant number of warnings. 
-		ioniz_warnings += (ioniz_prob  > 1.0);
-		recomb_warnings += (recomb_prob > 1.0);
+		// Atomic number
+		int Z {slots.Z()};
 
-		// For each process, pull a random number. If that number is less than
-		// prob, then that event occurs. If both events occur, then they just 
-		// cancel each other out and there's no change.
-		const double r1 = Random::get(0.0, 1.0);
-		const double r2 = Random::get(0.0, 1.0);
-		const int ionize  = (r1 < ioniz_prob);
-		const int recomb  = (r2 < recomb_prob);
+		#pragma omp parallel
+		{
+			// Grab our RNG for this thread, each thread has it own (and they're
+			// seeded uniquely).
+			int tid = omp_get_thread_num();
+			pcg32& rng = rngs[tid];
+	
+			#pragma omp for reduction(+:ioniz_warnings, recomb_warnings)
+			for (int i=0; i < slots.N(); ++i)
+			{
+				// Pull into local variables
+				int q {slots.q()[i]};
+				double t {slots.t()[i]};
+				double x {slots.x()[i]};
+				double y {slots.y()[i]};
+				double z {slots.z()[i]};
 
-		// Clever branchless way to adjust the charge
-		const int dq = ionize - recomb;
-		imp.set_charge(imp.get_charge() + dq);
-	}
-}
+				// Get ionization/recombination probabilities.
+				auto [ioniz_prob, recomb_prob] = calc_ioniz_recomb_probs(bkg, 
+					oa_ioniz, oa_recomb, dt, t, x, y, z, q, Z);
+
+				// Track number of times the probabilities are greater than 1. 
+				// This indicates that a smaller timestep should be used if 
+				// there are a significant number of warnings. 
+				ioniz_warnings += (ioniz_prob  > 1.0);
+				recomb_warnings += (recomb_prob > 1.0);
+
+				// For each process, pull a random number. If that number is
+				// less than prob, then that event occurs. If both events occur, 
+				// then they just cancel each other out and there's no change.
+				const double r1 = rng.next_double();
+				const double r2 = rng.next_double();
+				const int ionize = (r1 < ioniz_prob);
+				const int recomb = (r2 < recomb_prob);
+
+				// Clever branchless way to adjust the charge
+				const int dq = ionize - recomb;
+				slots.set_q(i, q + dq);
+
+			}  // i loop
+		}  // omp parallel
+	}  // ioniz_recomb
+
+	// Copy ADAS data to device, returning a OpenADASDevice object with
+	// pointers to memory location on device.
+	OpenADASDevice OpenADAS::to_device(int device_id)
+	{
+		OpenADASDevice oa_d {};
+
+#ifdef USE_CUDA
+
+		// Integer values
+		oa_d.device_id = device_id;
+		oa_d.atomic_number = m_atomic_number;
+		oa_d.ndens = m_ndens;
+		oa_d.ntemp = m_ntemp;
+		oa_d.charge_low = m_charge_low;
+		oa_d.charge_high = m_charge_high;
+
+		// Allocate oa_d memory
+		cudaMalloc(&oa_d.te, m_ntemp * sizeof(double));
+		cudaMalloc(&oa_d.ne, m_ndens * sizeof(double));
+
+		// Calculate how many rates there are
+		const int ncharges = m_charge_high - m_charge_low + 1;
+		const int nrates = m_ndens * m_ntemp * ncharges;
+		cudaMalloc(&oa_d.rates, nrates * sizeof(double));
+
+		// Copy data
+		cudaMemcpy(oa_d.te, m_te.data(), m_ntemp * sizeof(double), 
+			cudaMemcpyHostToDevice);
+		cudaMemcpy(oa_d.ne, m_ne.data(), m_ndens * sizeof(double), 
+			cudaMemcpyHostToDevice);
+		cudaMemcpy(oa_d.rates, m_rates.get_data().data(), nrates * sizeof(double), 
+			cudaMemcpyHostToDevice);
+
+		return oa_d;
+
+#else
+		std::cerr << "Error! OpenADAS::to_device() was called but GPU support"
+				  << " was not compiled in.\n";
+#endif
+
+	}  // to_device
+
+	// Free up memory from device-side OpenADASDevice object
+	void free_oa(OpenADASDevice& oa_d, int device_id)
+	{
+
+#ifdef USE_CUDA
+
+		cudaSetDevice(device_id);
+
+		cudaFree(oa_d.te);
+		oa_d.te = nullptr;
+
+		cudaFree(oa_d.ne);
+		oa_d.ne = nullptr;
+
+		cudaFree(oa_d.rates);
+		oa_d.rates = nullptr;
+
+#endif
+
+	}  // free_oa
+
+
+}  // namespace OpenADAS
 

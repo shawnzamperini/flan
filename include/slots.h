@@ -2,6 +2,9 @@
 
 #include <vector>
 
+#include "background.h"
+#include "options.h"
+#include "pcg32.h"
 #include "slots_device.h"
 
 /*
@@ -23,19 +26,20 @@ namespace Slots
 	};
 
 	/**
-	* Impurity particle class. Contains:
 	*   t: Time of the particle
 	*   x,y,z: Coordinates of the particle in computational space
 	*   X,Y,Z: Coordinates of the particle in Cartesian space
 	*   vX,vY,vZ: Velocity components of the particle in Cartesian space
 	*   weight: The Monte Carlo weight of the particle
 	*   q: Current charge of the particle
+	*   Z: Atomic number
 	*   mass: The mass of the particle (kg)
 	*/
     class Slots
     {
     private:
         int m_N;
+		int m_Z;
 		double m_mass;
 
         std::vector<double> m_t;
@@ -65,6 +69,7 @@ namespace Slots
 
         // Accessors
         int N() const noexcept;
+        int Z() const noexcept;
 		double mass() const noexcept;
         const std::vector<double>& t() const noexcept;
         const std::vector<double>& x() const noexcept;
@@ -84,8 +89,9 @@ namespace Slots
         const std::vector<int>& q() const noexcept;
         const std::vector<int>& state() const noexcept;
 
-		// Assume all particles share the same mass
+		// Assume all particles share the same mass and atomic number
 		void set_mass(double mass);
+		void set_Z(int Z);
 
         // Element-level setters
         void set_t(int i, double val);
@@ -115,6 +121,8 @@ namespace Slots
 	void free_slots(SlotsDevice& slots_d, int device_id = 0);
 
 	// Replace dead particles with alive ones
-	void fill_slots_cpu(Slots& slots, int& rem_parts, int& alive_slots);
+	void fill_slots_cpu(Slots& slots, int& rem_parts, int& alive_slots,
+		const Background::Background& bkg, const Options::Options& opts,
+		std::vector<pcg32>& rngs);
 }
 

@@ -11,6 +11,7 @@ namespace Slots
     {
 		int device_id;
         int N;
+        int Z;
 		double mass;
         double* t;
         double* x;

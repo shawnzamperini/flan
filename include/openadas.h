@@ -10,6 +10,8 @@
 #include "background.h"
 #include "impurity.h"
 #include "openadas_device.h"
+#include "pcg32.h"
+#include "slots.h"
 #include "vectors.h"
 
 
@@ -90,6 +92,7 @@ namespace OpenADAS
 
 		// Create a device-side struct with the OpenADAS data
 		OpenADASDevice to_device(int device_id);
+
 	};
 
 	/**
@@ -97,11 +100,11 @@ namespace OpenADAS
 	* @return Returns a pair of doubles representing the probabilities of each
 	*	process occurring (ionization, recombination).
 	*/
-	std::pair<double, double> calc_ioniz_recomb_probs(
-		Impurity::Impurity& imp, const Background::Background& bkg,
-		const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
-		const double imp_time_step, const int tidx, const int xidx, 
-		const int yidx, const int zidx);
+	//std::pair<double, double> calc_ioniz_recomb_probs(
+	//	Impurity::Impurity& imp, const Background::Background& bkg,
+	//	const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
+	//	const double imp_time_step, const int tidx, const int xidx, 
+	//	const int yidx, const int zidx);
 
 	/**
 	* @brief Handle impurity ion ionization and recombination
@@ -115,9 +118,11 @@ namespace OpenADAS
 	* @param recomb_warnings Integer that tracks number of recombination 
 	* probability > 1.0 events
 	*/
-	void ioniz_recomb(Impurity::Impurity& imp, 
+	void ioniz_recomb(Slots::Slots& slots, 
 		const Background::Background& bkg, const OpenADAS& oa_ioniz, 
-		const OpenADAS& oa_recomb, const double imp_time_step, 
-		const int tidx, const int xidx, const int yidx, const int zidx, 
-		int& ioniz_warnings, int& recomb_warnings);
+		const OpenADAS& oa_recomb, const double dt, 
+		int& ioniz_warnings, int& recomb_warnings, std::vector<pcg32>& rngs);
+
+	// Free memory of device-side OpenADAS struct
+	void free_oa(OpenADASDevice& oa_d, int device_id);
 }

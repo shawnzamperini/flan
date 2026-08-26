@@ -1,6 +1,9 @@
 #include <iostream>
+#include <omp.h>
 #include <vector>
 
+#include "background.h"
+#include "pcg32.h"
 #include "slots.h"
 #include "slots_device.h"
 
@@ -40,6 +43,7 @@ namespace Slots
 	
 	// Accessors
 	int Slots::N() const noexcept {return m_N;}
+	int Slots::Z() const noexcept {return m_Z;}
 	double Slots::mass() const noexcept {return m_mass;}
 	const std::vector<double>& Slots::t() const noexcept {return m_t;}
 	const std::vector<double>& Slots::x() const noexcept {return m_x;}
@@ -60,6 +64,7 @@ namespace Slots
 	const std::vector<int>& Slots::state() const noexcept {return m_state;}
 
 	void Slots::set_mass(double mass) {m_mass = mass;}
+	void Slots::set_Z(int Z) {m_Z = Z;}
 
 	// Element level setters
 	void Slots::set_t(int i, double val) {m_t[i] = val;}
@@ -92,6 +97,7 @@ namespace Slots
 		// These are just scalars, no allocation needed
 		slots_d.device_id = device_id;
 		slots_d.N = m_N;
+		slots_d.Z = m_Z;
 		slots_d.mass = m_mass;
 
 		// GPU allocation
@@ -263,24 +269,67 @@ namespace Slots
 		return;
 	}
 
+	// Function to decide starting t,x,y,z based on input options
+	double get_birth_val(const Background::Background& bkg, 
+		const int start_opt_int, const double start_val, const double range_min, 
+		const double range_max, const double bkg_min, 
+		const double bkg_max, pcg32& rng)
+	{
+		// Start at specific point
+		double return_start_val {};
+		if (start_opt_int == 0)
+		{
+			 return_start_val = start_val;
+		}
+
+		// Start between a user-specified range 
+		else if (start_opt_int == 1)
+		{
+			return_start_val = range_min + (range_max - range_min) 
+				* rng.next_double();
+		}
+
+		// Start between the full range of the simulation volume 
+		else if (start_opt_int == 2)
+		{
+			return_start_val = bkg_min + (bkg_max - bkg_min) 
+				* rng.next_double();
+		}
+		
+		return return_start_val;
+	}
+
 	// Initialize a new particle and return it
-	ParticleInit make_new_particle() 
+	ParticleInit make_new_particle(const Background::Background& bkg,
+		const Options::Options& opts, pcg32& rng) 
 	{
 		ParticleInit p;
 
-		// To-do: Replace with actual initialization logic
-		// It has to be thread-safe!!! So if we use a RNG, we have to be
-		// very careful.
-		p.t = 0.0;
-		p.x = 0.01;
-		p.y = 0.0;
-		p.z = 0.0;
+		// Initialize starting time/location based on input options
+		p.t = get_birth_val(bkg, opts.imp_tstart_opt_int(), 
+			opts.imp_tstart_val(), opts.imp_trange_min(), opts.imp_trange_max(), 
+			bkg.get_t_min(), bkg.get_t_max(), rng);
 
+		p.x = get_birth_val(bkg, opts.imp_xstart_opt_int(), 
+			opts.imp_xstart_val(), opts.imp_xrange_min(), opts.imp_xrange_max(), 
+			bkg.get_x_min(), bkg.get_x_max(), rng);
+
+		p.y = get_birth_val(bkg, opts.imp_ystart_opt_int(), 
+			opts.imp_ystart_val(), opts.imp_yrange_min(), opts.imp_yrange_max(), 
+			bkg.get_y_min(), bkg.get_y_max(), rng);
+
+		p.z = get_birth_val(bkg, opts.imp_zstart_opt_int(), 
+			opts.imp_zstart_val(), opts.imp_zrange_min(), opts.imp_zrange_max(), 
+			bkg.get_z_min(), bkg.get_z_max(), rng);
+
+
+		// These get assigned in the main_loop right after fill_slots
 		p.tidx = 0;
 		p.xidx = 0;
 		p.yidx = 0;
 		p.zidx = 0;
 
+		// Still need to implement the normal logic here
 		p.vx = 0.0;
 		p.vy = 0.0;
 		p.vz = 0.0;
@@ -290,14 +339,16 @@ namespace Slots
 		p.vZ = 0.0;
 		
 		p.weight = 1.0;
-		p.q = 1; 
+		p.q = opts.imp_init_charge(); 
 
 		return p;
 	}
 
 	// Replace dead particles with alive ones, as long as remaining particles
 	// are greater than zero.
-	void fill_slots_cpu(Slots& slots, int& rem_parts, int& alive_slots)
+	void fill_slots_cpu(Slots& slots, int& rem_parts, int& alive_slots,
+		const Background::Background& bkg, const Options::Options& opts,
+		std::vector<pcg32>& rngs)
 	{
 		int N = slots.N();
 		int dead_count = 0;
@@ -317,40 +368,49 @@ namespace Slots
 
 		// Second pass: revive without atomics
 		int revived = 0;
-		#pragma omp parallel for
-		for (int i = 0; i < N; i++)
+		#pragma omp parallel
 		{
-			if (slots.state()[i] > 0)
-			{
-				int claim = 0;
-				#pragma omp atomic capture
-				{
-					claim = revived;
-					revived++;
-				}
-				if (claim >= revive)
-					continue;
 
-				ParticleInit p = make_new_particle();
-				slots.set_t(i, p.t);
-				slots.set_x(i, p.x);
-				slots.set_y(i, p.y);
-				slots.set_z(i, p.z);
-				slots.set_tidx(i, p.tidx);
-				slots.set_xidx(i, p.xidx);
-				slots.set_yidx(i, p.yidx);
-				slots.set_zidx(i, p.zidx);
-				slots.set_vx(i, p.vx);
-				slots.set_vy(i, p.vy);
-				slots.set_vz(i, p.vz);
-				slots.set_vX(i, p.vX);
-				slots.set_vY(i, p.vY);
-				slots.set_vZ(i, p.vZ);
-				slots.set_q(i, p.q);
-				slots.set_weight(i, 1.0);
-				slots.set_state(i, 0);
-			}
-		}
+			// Grab our RNG for this thread, each thread has it own (and they're
+			// seeded uniquely).
+			int tid = omp_get_thread_num();
+			pcg32& rng = rngs[tid];
+
+			#pragma omp for
+			for (int i = 0; i < N; i++)
+			{
+				if (slots.state()[i] > 0)
+				{
+					int claim = 0;
+					#pragma omp atomic capture
+					{
+						claim = revived;
+						revived++;
+					}
+					if (claim >= revive)
+						continue;
+
+					ParticleInit p = make_new_particle(bkg, opts, rng);
+					slots.set_t(i, p.t);
+					slots.set_x(i, p.x);
+					slots.set_y(i, p.y);
+					slots.set_z(i, p.z);
+					slots.set_tidx(i, p.tidx);
+					slots.set_xidx(i, p.xidx);
+					slots.set_yidx(i, p.yidx);
+					slots.set_zidx(i, p.zidx);
+					slots.set_vx(i, p.vx);
+					slots.set_vy(i, p.vy);
+					slots.set_vz(i, p.vz);
+					slots.set_vX(i, p.vX);
+					slots.set_vY(i, p.vY);
+					slots.set_vZ(i, p.vZ);
+					slots.set_q(i, p.q);
+					slots.set_weight(i, 1.0);
+					slots.set_state(i, 0);
+				}
+			}  // i loop
+		}  // pragma omp parallel
 
 		if (rem_parts < 0) rem_parts = 0;
 

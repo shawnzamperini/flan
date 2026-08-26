@@ -610,6 +610,13 @@ namespace Background
 		return interp_4d(m_te, t0, x0, y0, z0);
 	}
 
+	// Interpolate ne at a given t,x,y,z
+	const BkgFPType Background::interp_ne(const double t0, const double x0, 
+		const double y0, const double z0) const
+	{
+		return interp_4d(m_ne, t0, x0, y0, z0);
+	}
+
 	// Interpolate Te at Impurity location
 	const BkgFPType Background::interp_te_at_imp(const Impurity::Impurity& imp) 
 		const

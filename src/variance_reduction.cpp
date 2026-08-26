@@ -66,6 +66,7 @@ namespace VarianceReduction
 		const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb)
 	{
+		/*
 		// Check if in a region where splitting should occur
 		bool split_particle {check_split_particle(
 			imp, tidx, xidx, yidx, zidx, opts, var_red_counts, 
@@ -102,6 +103,7 @@ namespace VarianceReduction
 				create_secondary(imp, imps, recomb_prob, -1);
 			}
 		}
+		*/
 	}
 
 	bool russian_roulette(Impurity::Impurity& imp, 
@@ -140,6 +142,7 @@ namespace VarianceReduction
 		const Background::Background& bkg, const OpenADAS::OpenADAS& oa_ioniz, 
 		const OpenADAS::OpenADAS& oa_recomb, const double imp_time_step)
 	{
+		/*
 		// First check if particle's weight is higher than the user-defined
 		// minimum weight. Without this we'd go on splitting forever.
 		if (imp.get_weight() < var_red_min_weight) return;
@@ -177,7 +180,7 @@ namespace VarianceReduction
 				//create_secondary(imp, imps, recomb_prob, false);
 			}
 		}
-
+		*/
 	}
 
 	std::vector<int> get_counts(Impurity::Statistics& imp_stats, 

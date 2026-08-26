@@ -204,9 +204,12 @@ namespace Test
 			int idx {test_ne.calc_index(i,j,k,l)};
 
 			// All test cases use constant values for density and temperature
-			test_ne.get_data()[idx] = 1e20;
-			test_te.get_data()[idx] = 1;
-			test_ti.get_data()[idx] = 1;
+			//test_ne.get_data()[idx] = 1e20;
+			test_ne.get_data()[idx] = 1e18;
+			//test_te.get_data()[idx] = 1;
+			test_te.get_data()[idx] = 1000;
+			//test_ti.get_data()[idx] = 1;
+			test_ti.get_data()[idx] = 1000;
 			//test_vp.get_data()[idx] = 0.0; // Not needed
 
 			// Zero electric field in these tests

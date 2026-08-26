@@ -8,6 +8,7 @@ add_executable(test_neighbor_index_cuda test_neighbor_index_cuda.cpp)
 add_executable(test_all_dead_cuda test_all_dead_cuda.cpp)
 add_executable(test_boris_cpu test_boris_cpu.cpp)
 add_executable(test_trilinear_cuda test_trilinear_cuda.cu)
+add_executable(test_openadas_cpu test_openadas_cpu.cpp)
 
 # CUDA function tests
 set_target_properties(test_trilinear_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
@@ -26,12 +27,13 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # Link your main library + GoogleTest
 target_link_libraries(test_get_nearest_index_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_get_nearest_cell_index_cpu PRIVATE flan gtest_main)
-target_link_libraries(test_fill_slots_cpu PRIVATE flan gtest_main)
-target_link_libraries(test_fill_slots_gpu PRIVATE flan gtest_main)
-target_link_libraries(test_boundary_cpu PRIVATE flan gtest_main)
+target_link_libraries(test_fill_slots_cpu PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
+target_link_libraries(test_fill_slots_gpu PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
+target_link_libraries(test_boundary_cpu PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 target_link_libraries(test_boris_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_neighbor_index_cuda PRIVATE flan gtest_main)
 target_link_libraries(test_all_dead_cuda PRIVATE flan gtest_main)
+target_link_libraries(test_openadas_cpu PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 
 # When testing the CUDA kernel directly, no wrapper, we need to link against
 # CUDA truntime.
@@ -61,4 +63,5 @@ add_test(NAME BorisCpuTest COMMAND test_boris_cpu)
 add_test(NAME NeighborIndexCUDATest COMMAND test_neighbor_index_cuda)
 add_test(NAME AllDeadCUDATest COMMAND test_all_dead_cuda)
 add_test(NAME TrilinearCUDATest COMMAND test_trilinear_cuda)
+add_test(NAME OpenADASCpuTest COMMAND test_openadas_cpu)
 

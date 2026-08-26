@@ -136,6 +136,7 @@ namespace Timer
 			case Section::Read:      return "Read background";
 			case Section::Imp:       return "Following impurities";
 			case Section::Boris:     return "Boris algorithm";
+			case Section::IonRec:    return "Ionization/Recombination";
 			case Section::Step:      return "Position update";
 			case Section::Coll:      return "Collisions";
 			case Section::Bounds:    return "Boundary conditions";
@@ -157,6 +158,7 @@ namespace Timer
 			{Section::Read,      "    "},
 			{Section::Imp,       "    "},
 			{Section::Boris,     "      "},
+			{Section::IonRec,    "      "},
 			{Section::Coll,      "      "},
 			{Section::FindCell,  "      "},
 			{Section::FillSlots, "      "},
