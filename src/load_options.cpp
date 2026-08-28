@@ -525,20 +525,6 @@ namespace Options
 					std::placeholders::_1);
 				assign_option<int>(set_func, var, key);
 			}
-			/* Hand-written one, don't want to delete until I check the above.	
-			if (key == "imp_num") 
-			{
-				auto set_func = std::bind(&Options::set_imp_num, &opts, 
-					std::placeholders::_1);
-				assign_option<int>(set_func, var, key);
-			}
-			*/
-			else if (key == "mapc2p") 
-			{
-				auto set_func = std::bind(&Options::set_mapc2p, &opts, 
-					std::placeholders::_1);
-				assign_option<Mapc2p_ptr>(set_func, var, key);
-			}
 			else
 			{
 				std::cerr << "Error! " << key << " is not a recognized "

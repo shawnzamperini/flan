@@ -31,13 +31,5 @@ namespace Slots
         int* q;
         int* state;
 		bool* all_dead;
-
-#ifdef USE_CUDA
-		
-		// Each slot gets it RNG, otherwise we could get non-independent
-		// random number streams
-		curandState* rng;
-#endif
-
     };
 }

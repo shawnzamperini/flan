@@ -1,21 +1,65 @@
+#include <cstdio>
+
+#include "options_device.h"
+#include "pcg32.h"
 #include "slots.cuh"
 #include "slots_device.h"
 
-#include <cstdio>
+#include "device_constants.cuh"
 
 
 namespace Slots
 {
+	// Function to decide starting t,x,y,z based on input options
+	__device__
+	double get_birth_val_cuda(const int start_opt_int, const double start_val, 
+		const double range_min, const double range_max, const double bkg_min, 
+		const double bkg_max, pcg32& rng)
+	{
+		// Start at specific point
+		double return_start_val {};
+		if (start_opt_int == 0)
+		{
+			 return_start_val = start_val;
+		}
+
+		// Start between a user-specified range 
+		else if (start_opt_int == 1)
+		{
+			return_start_val = range_min + (range_max - range_min) 
+				* rng.next_double();
+		}
+
+		// Start between the full range of the simulation volume 
+		else if (start_opt_int == 2)
+		{
+			return_start_val = bkg_min + (bkg_max - bkg_min) 
+				* rng.next_double();
+		}
+		
+		return return_start_val;
+	}
+
 	
-	// Initialize a new particle and return it
-	__device__ ParticleInitDevice make_new_particle_device()
+	// Initialize a new particle and return it. Important to pass the rng in
+	// as a reference since we change its state each time we pull a random
+	// number
+	__device__ 
+	ParticleInitDevice make_new_particle_cuda(pcg32& rng, 
+		const Options::OptionsDevice* opts_d)
 	{
 		ParticleInitDevice p;
 
-		// To-do
-		p.x = 0.01;
-		p.y = 0.0;
-		p.z = 0.0;
+		// Create a new particle based on input options.
+		// d_x_min/max, etc. are defined in device_constants.cuh
+		p.t = get_birth_val_cuda(opts_d->tstart_opt_int, opts_d->tstart_val, 
+			opts_d->trange_min, opts_d->trange_max, d_t_min, d_t_max, rng);
+		p.x = get_birth_val_cuda(opts_d->xstart_opt_int, opts_d->xstart_val, 
+			opts_d->xrange_min, opts_d->xrange_max, d_x_min, d_x_max, rng);
+		p.y = get_birth_val_cuda(opts_d->ystart_opt_int, opts_d->ystart_val, 
+			opts_d->yrange_min, opts_d->yrange_max, d_y_min, d_y_max, rng);
+		p.z = get_birth_val_cuda(opts_d->zstart_opt_int, opts_d->zstart_val, 
+			opts_d->zrange_min, opts_d->zrange_max, d_z_min, d_z_max, rng);
 		p.vx = 0.0;
 		p.vy = 0.0;
 		p.vz = 0.0;
@@ -23,7 +67,7 @@ namespace Slots
 		p.vY = 5000.0;
 		p.vZ = 0.0;
 		p.weight = 1.0;
-		p.q = 1.0;
+		p.q = opts_d->init_charge;
 
 		return p;
 	}
@@ -36,7 +80,8 @@ namespace Slots
 	* code.
 	*/
 	__global__ void fill_slots_kernel(SlotsDevice slots_d, int* counter, 
-		int* alive_counter, int rem_parts)
+		int* alive_counter, int rem_parts, pcg32* rngs_d, 
+		const Options::OptionsDevice* opts_d)
 	{
 		// Global index
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -59,8 +104,9 @@ namespace Slots
 		// If we ran out of particles, stop
 		if (idx >= rem_parts) return;
 
-		// Create a new particle (device-side initializer)
-		ParticleInitDevice p = make_new_particle_device();
+		// Create a new particle (device-side initializer), passing in the
+		// PCG32 RNG for this thread.
+		ParticleInitDevice p = make_new_particle_cuda(rngs_d[i], opts_d);
 
 		// Write particle data
 		slots_d.x[i]  = p.x;
@@ -100,7 +146,8 @@ namespace Slots
 
 	// Replace dead particles with alive ones, as long as remaining particles
 	// are greater than zero.
-	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots)
+	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
+		pcg32* rngs_d, Options::OptionsDevice* opts_d)
 	{
 		// No more particles left, don't fill
 		if (rem_parts <= 0) return;
@@ -125,7 +172,7 @@ namespace Slots
 		int blockSize = 256;
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 		fill_slots_kernel<<<gridSize, blockSize>>>(slots_d, d_counter, 
-			d_alive, rem_parts);
+			d_alive, rem_parts, rngs_d, opts_d);
 
 		// Retrieve how many particles were actually filled
 		int filled = 0;

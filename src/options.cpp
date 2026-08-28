@@ -7,19 +7,11 @@
 #include <initializer_list>
 
 #include "options.h"
+#include "options_device.h"
 
 
 namespace Options
 {
-	// Default mapc2p that assumes computational coordinates are already the
-	// Cartesian coordinates.
-	std::tuple<double, double, double> mapc2p_default 
-		(double xc, double yc, double zc)
-	{
-		// Default implementation assumes the computational coordinates are
-		// already Cartesian
-		return std::make_tuple(xc, yc, zc);
-	}
 
 	// Constructors
 	Options::Options()
@@ -629,10 +621,6 @@ namespace Options
 	void Options::set_openadas_year(int openadas_year) 
 		{m_openadas_year = openadas_year;}
 	
-	// mapc2p
-	void Options::set_mapc2p(Mapc2p_ptr mapc2p) 
-		{m_mapc2p = mapc2p;}
-
 	// Accessor definitions
 	const std::string& Options::case_name() const 
 		{return m_case_name;}
@@ -768,8 +756,6 @@ namespace Options
 		{return m_openadas_root;}
 	const int Options::openadas_year() const 
 		{return m_openadas_year;}
-	const Mapc2p_ptr Options::mapc2p() const 
-		{return m_mapc2p;}
 	
 	// Wrapper for returning control integer value that ensures they were
 	// set to the respective option (i.e., not -1).
@@ -840,6 +826,25 @@ namespace Options
 	void Options::set_var_red_split_int(int var_red_split_int)
 		{m_var_red_split_int = var_red_split_int;}
 	
+#ifndef USE_CUDA
+
+	// If these definitions gets called, it means you're in the CPU-only version
+	// of the code trying to call GPU-specific code.
+	// Defined in src/cuda/options.cu since it calls CUDA code
+	OptionsDevice* Options::to_device(int device_id)
+	{
+		std::cerr << "Error! Options::to_device was called but GPU support"
+				  << " was not compiled in.\n";
+	}
+
+	void free_opts(OptionsDevice* opts_d, int device_id)
+	{
+		std::cerr << "Error! Options::free_bkg was called but GPU support"
+				  << " was not compiled in.\n";
+	}
+
+#endif
+
 	template <typename T>
 	bool Options::check_input(const std::string& var, const T& value, 
 		std::initializer_list<T> valid_values)

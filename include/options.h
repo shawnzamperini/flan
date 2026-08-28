@@ -8,16 +8,11 @@
 #include <tuple>
 
 #include "flan_types.h"
+#include "options_device.h"
 
 
 namespace Options
 {
-	/** 
-	* @brief Default mapc2p that assumes computational coordinates are 
-	*        already the Cartesian coordinates.
-	*/
-	std::tuple<double, double, double> mapc2p_default 
-		(double xc, double yc, double zc);
 
 	/**
 	* @brief Class for storing all the options that control a simulation.
@@ -118,12 +113,6 @@ namespace Options
 		// OpenADAS options
 		std::string m_openadas_root          {"undefined"};
 		int m_openadas_year                           {50};
-
-		// Function to map between computational and physical (Cartesian)
-		// coordinates. Generally copy/pasted from Gkeyll input file. 
-		// mapc2p_default is defined at the beginning of this file before the
-		// class. Mapc2p_ptr is defined in flan_types.h.
-		Mapc2p_ptr m_mapc2p {&mapc2p_default};
 
 		// Internal control variables for string options. The string options
 		// are just there to be user-friendly, but it is more efficient to
@@ -247,7 +236,6 @@ namespace Options
 		void set_print_interval(int print_interval);
 		void set_openadas_root(std::string openadas_root);
 		void set_openadas_year(int openadas_year);
-		void set_mapc2p(Mapc2p_ptr mapc2p);
 
 		// Accessor declarations
 		const std::string& case_name() const;
@@ -319,7 +307,6 @@ namespace Options
 		const int print_interval() const;
 		const std::string& openadas_root() const;
 		const int openadas_year() const;
-		const Mapc2p_ptr mapc2p() const;
 
 		// Wrapper function for retrieving control integers that ensures they
 		// have been correctly set.
@@ -353,8 +340,13 @@ namespace Options
 
 		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);
-	};
 
+		// Copy a select number of options to device
+		OptionsDevice* to_device(int device_id = 0);
+	};
+	
+	// Free options on device
+	void free_opts(OptionsDevice* opts_d, int device_id = 0);
 }
 
 #endif

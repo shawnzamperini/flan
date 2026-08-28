@@ -140,29 +140,6 @@ namespace ImpurityTransport
 		find_containing_cell_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d);
 	}
 
-	// Initialize each CUDA RNG contained within SlotsDevice
-	__global__ 
-	void init_rng_kernel(curandState* rng_state, int N, unsigned long long seed)
-	{
-		int i = blockIdx.x * blockDim.x + threadIdx.x;
-		if (i >= N) return;
-
-		// Same seed, unique sequence number per slot -> independent streams
-		curand_init(seed, i, 0, &rng_state[i]);
-	}
-
-	// Wrapper to call init_rng_kernel
-	void init_slot_rngs(Slots::SlotsDevice& slots_d, 
-		const unsigned long long seed)
-	{
-		// Block and grid size
-		int blockSize = 256;
-		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
-
-		init_rng_kernel<<<gridSize, blockSize>>>(slots_d.rng, slots_d.N, 
-			seed);
-	}
-
 	// Step particles
 	__global__ void step_kernel(Slots::SlotsDevice slots_d, const double dt)
 	{

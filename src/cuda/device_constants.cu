@@ -1,5 +1,6 @@
 #include "device_constants.cuh"
 
+
 // 1D arrays
 __constant__ double d_t[MAX_1D];
 __constant__ double d_x[MAX_1D];

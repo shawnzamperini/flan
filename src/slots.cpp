@@ -121,7 +121,6 @@ namespace Slots
 		cudaMalloc(&slots_d.q, m_N * sizeof(int));
 		cudaMalloc(&slots_d.state, m_N * sizeof(int));
 		cudaMalloc(&slots_d.all_dead, sizeof(bool));
-		cudaMalloc(&slots_d.rng, sizeof(curandState));
 
 		// Copy to device
 		cudaMemcpy(slots_d.t, m_t.data(), m_N * sizeof(double), 
@@ -158,7 +157,6 @@ namespace Slots
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.state,  m_state.data(), m_N * sizeof(int),
 			cudaMemcpyHostToDevice);
-		// No copy to be done for CUDA RNGs
 
 		// Initialize all_dead to false
 		bool init = false;
@@ -245,7 +243,6 @@ namespace Slots
 		cudaFree(slots_d.q);
 		cudaFree(slots_d.state);
 		cudaFree(slots_d.all_dead);
-		cudaFree(slots_d.rng);
 
 		slots_d.t = nullptr;
 		slots_d.x = nullptr;
@@ -270,9 +267,8 @@ namespace Slots
 	}
 
 	// Function to decide starting t,x,y,z based on input options
-	double get_birth_val(const Background::Background& bkg, 
-		const int start_opt_int, const double start_val, const double range_min, 
-		const double range_max, const double bkg_min, 
+	double get_birth_val(const int start_opt_int, const double start_val, 
+		const double range_min, const double range_max, const double bkg_min, 
 		const double bkg_max, pcg32& rng)
 	{
 		// Start at specific point
@@ -306,19 +302,19 @@ namespace Slots
 		ParticleInit p;
 
 		// Initialize starting time/location based on input options
-		p.t = get_birth_val(bkg, opts.imp_tstart_opt_int(), 
+		p.t = get_birth_val(opts.imp_tstart_opt_int(), 
 			opts.imp_tstart_val(), opts.imp_trange_min(), opts.imp_trange_max(), 
 			bkg.get_t_min(), bkg.get_t_max(), rng);
 
-		p.x = get_birth_val(bkg, opts.imp_xstart_opt_int(), 
+		p.x = get_birth_val(opts.imp_xstart_opt_int(), 
 			opts.imp_xstart_val(), opts.imp_xrange_min(), opts.imp_xrange_max(), 
 			bkg.get_x_min(), bkg.get_x_max(), rng);
 
-		p.y = get_birth_val(bkg, opts.imp_ystart_opt_int(), 
+		p.y = get_birth_val(opts.imp_ystart_opt_int(), 
 			opts.imp_ystart_val(), opts.imp_yrange_min(), opts.imp_yrange_max(), 
 			bkg.get_y_min(), bkg.get_y_max(), rng);
 
-		p.z = get_birth_val(bkg, opts.imp_zstart_opt_int(), 
+		p.z = get_birth_val(opts.imp_zstart_opt_int(), 
 			opts.imp_zstart_val(), opts.imp_zrange_min(), opts.imp_zrange_max(), 
 			bkg.get_z_min(), bkg.get_z_max(), rng);
 

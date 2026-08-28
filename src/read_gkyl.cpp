@@ -153,8 +153,8 @@ namespace Gkyl
 		// These aren't actually used, but left here just in case they become
 		// useful in the future.
 		//std::cout << "  - X,Y,Z coordinates\n";
-		calc_cell_XYZ_centers(grid_data, opts);
-		calc_cell_XYZ_edges(grid_data, opts);
+		//calc_cell_XYZ_centers(grid_data, opts);
+		//calc_cell_XYZ_edges(grid_data, opts);
 
 		// Write out the (X,Y,Z) coordinates so that we can load them in python
 		// to take advantage of scipy library in calculating gradients on
@@ -1527,14 +1527,12 @@ namespace Gkyl
 
 					// Get the three Cartesian coordinates and store within
 					// our 3D vector of 3-tuples
-					auto [X, Y, Z] = opts.mapc2p()(std::get<1>(grid_data)[i], 
-						std::get<2>(grid_data)[j], std::get<3>(grid_data)[k]);
+					//auto [X, Y, Z] = opts.mapc2p()(std::get<1>(grid_data)[i], 
+					//	std::get<2>(grid_data)[j], std::get<3>(grid_data)[k]);
 
-					std::get<7>(grid_data)(i,j,k) = X;
-					std::get<8>(grid_data)(i,j,k) = Y;
-					std::get<9>(grid_data)(i,j,k) = Z;
-
-
+					//std::get<7>(grid_data)(i,j,k) = X;
+					//std::get<8>(grid_data)(i,j,k) = Y;
+					//std::get<9>(grid_data)(i,j,k) = Z;
 				}
 			}
 		}

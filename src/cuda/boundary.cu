@@ -58,7 +58,7 @@ namespace Boundary
 	__device__
 	void core_bc_gpu(double& a, double& b, double& c, double a_min,
 		double a_max, double buffer, double b_min, double b_max,
-		double c_min, double c_max, bool max_bound, curandState& rng_state)
+		double c_min, double c_max, bool max_bound)
 	{
 		// Only check the boundary side we were called for
 		const bool hit = max_bound ? (a + buffer) > a_max 
@@ -68,13 +68,7 @@ namespace Boundary
 		{
 			a = max_bound ? a_max - buffer : a_min + buffer;
 
-			// I leave the commented out CPU code here to point something out.
-			// The mt19937 CPU implementation is great, but it doesn't easily
-			// port to GPUs. Therefore we decide to rely on the CUDA RNG.
-			//b = Random::get(b_min, b_max);
-			//c = Random::get(c_min, c_max);
-			b = b_min + curand_uniform_double(&rng_state) * (b_max - b_min);
-			c = c_min + curand_uniform_double(&rng_state) * (c_max - c_min);
+			printf("Error! core_bc on CUDA not implemented yet\n");
 		}
 	}
 
@@ -167,7 +161,7 @@ namespace Boundary
 			core_bc_gpu(xtmp, ytmp, ztmp, d_x_min, 
 				d_x_max, imp_xbound_buffer, d_y_min, 
 				d_y_max, d_z_min, d_z_max, 
-				false, slots_d.rng[i]);
+				false);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -210,7 +204,7 @@ namespace Boundary
 			core_bc_gpu(xtmp, ytmp, ztmp, d_x_min, 
 				d_x_max, imp_xbound_buffer, d_y_min, 
 				d_y_max, d_z_min, d_z_max, 
-				true, slots_d.rng[i]);
+				true);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -253,7 +247,7 @@ namespace Boundary
 			core_bc_gpu(ytmp, ztmp, xtmp, d_y_min, 
 				d_y_max, imp_ybound_buffer, d_z_min, 
 				d_z_max, d_x_min, d_x_max, 
-				false, slots_d.rng[i]);
+				false);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -296,7 +290,7 @@ namespace Boundary
 			core_bc_gpu(ytmp, ztmp, xtmp, d_y_min, 
 				d_y_max, imp_ybound_buffer, d_z_min, 
 				d_z_max, d_x_min, d_x_max, 
-				true, slots_d.rng[i]);
+				true);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -339,7 +333,7 @@ namespace Boundary
 			core_bc_gpu(ztmp, xtmp, ytmp, d_z_min, 
 				d_z_max, imp_zbound_buffer, d_x_min, 
 				d_x_max, d_y_min, d_y_max, 
-				false, slots_d.rng[i]);
+				false);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -382,7 +376,7 @@ namespace Boundary
 			core_bc_gpu(ztmp, xtmp, ytmp, d_z_min, 
 				d_z_max, imp_zbound_buffer, d_x_min, 
 				d_x_max, d_y_min, d_y_max, 
-				true, slots_d.rng[i]);
+				true);
 
 			// Write back
 			slots_d.x[i] = xtmp;

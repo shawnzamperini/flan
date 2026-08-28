@@ -395,7 +395,7 @@ namespace Background
 		*
 		* Defined in src/cuda/background.cu since it calls CUDA code
 		*/
-		BackgroundDevice to_device(int device_id);
+		BackgroundDevice to_device(int device_id = 0);
 
 		BkgFPType interp_te();
 	};
@@ -403,5 +403,5 @@ namespace Background
 	/**
 	* @brief Free memory in BackgroundDevice object
 	*/
-	void free_bkg(BackgroundDevice& bkg_d, int device_id);
+	void free_bkg(BackgroundDevice& bkg_d, int device_id = 0);
 }
