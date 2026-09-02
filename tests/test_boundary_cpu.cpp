@@ -8,7 +8,6 @@ TEST(Boundary, AbsorbingKill)
 	// Value is 10.0. Bound is 5.0 and it's a maximimum bound (true). Should
 	// kill particle because 10 > 5, and thus return 1 (dead).
     int result = Boundary::absorbing_bc(10.0, 5.0, true);
-    std::cout << "absorbing_bc result: " << result << std::endl;
     EXPECT_EQ(result, 1);
 
 	// In this case, 3 < 5 so should return 0 (still alive)

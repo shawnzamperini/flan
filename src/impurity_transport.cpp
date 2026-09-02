@@ -296,7 +296,7 @@ namespace ImpurityTransport
 	void check_bounds_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
-		const Options::Options& opts)
+		const Options::Options& opts, pcg32* rngs_d)
 	{
 
 #ifdef USE_CUDA
@@ -309,7 +309,7 @@ namespace ImpurityTransport
 				opts.min_ybound_type_int(), opts.max_ybound_type_int(),
 				opts.min_zbound_type_int(), opts.max_zbound_type_int(),
 				opts.imp_xbound_buffer(), opts.imp_ybound_buffer(),
-				opts.imp_zbound_buffer(), opts.lcfs_x());
+				opts.imp_zbound_buffer(), opts.lcfs_x(), rngs_d);
 			return;
 		}
 #endif
@@ -484,7 +484,7 @@ namespace ImpurityTransport
 			// Bounds checking
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Bounds));
-				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts);
+				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs_d);
 			}
 
 			// Replace dead particles

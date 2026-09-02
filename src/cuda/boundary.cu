@@ -1,6 +1,7 @@
 #include <cstdio>
 
 #include "background_device.h"
+#include "pcg32.h"
 #include "slots_device.h"
 
 #include <curand_kernel.h>
@@ -19,7 +20,7 @@ namespace Boundary
 	// boundaries, so this can circumvent it.
 	__device__ 
 	int absorbing_bc_gpu(double a, double bound, bool max_bound,
-		double buffer = 0.0)
+		double buffer)
 	{
 		// Compute both comparisons
 		const bool ge {(a + buffer) >= bound};  // for max-bound
@@ -57,18 +58,27 @@ namespace Boundary
 	// could easily be added to this if it was useful.
 	__device__
 	void core_bc_gpu(double& a, double& b, double& c, double a_min,
-		double a_max, double buffer, double b_min, double b_max,
-		double c_min, double c_max, bool max_bound)
+		double a_max, double a_buffer, double b_min, double b_max,
+		double b_buffer, double c_min, double c_max, double c_buffer, 
+		bool max_bound, pcg32& rng)
 	{
-		// Only check the boundary side we were called for
-		const bool hit = max_bound ? (a + buffer) > a_max 
-			: (a - buffer) < a_min;
+		// Only check the boundary side we were called for, accounting for 
+		// a (symmetric) buffer to avoid artificial edge effects.
+		const bool hit = max_bound ? (a + a_buffer) >= a_max 
+			: (a - a_buffer) <= a_min;
 
 		if (hit)
 		{
-			a = max_bound ? a_max - buffer : a_min + buffer;
+			a = max_bound ? a_max - a_buffer : a_min + a_buffer;
 
-			printf("Error! core_bc on CUDA not implemented yet\n");
+			// Particle starts at random a/b locations (accounting for buffers)
+			const double b_lo = b_min + b_buffer;
+			const double b_hi = b_max - b_buffer;
+			b = b_lo + rng.next_double() * (b_hi - b_lo);
+
+			const double c_lo = c_min + c_buffer;
+			const double c_hi = c_max - c_buffer;
+			c = c_lo + rng.next_double() * (c_hi - c_lo);
 		}
 	}
 
@@ -83,7 +93,7 @@ namespace Boundary
 		const double imp_xbound_buffer, 
 		const double imp_ybound_buffer, 
 		const double imp_zbound_buffer, 
-		const double lcfs_x)
+		const double lcfs_x, pcg32* rngs_d)
 	{
 		// Global index
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -160,8 +170,8 @@ namespace Boundary
 			double ztmp {slots_d.z[i]};
 			core_bc_gpu(xtmp, ytmp, ztmp, d_x_min, 
 				d_x_max, imp_xbound_buffer, d_y_min, 
-				d_y_max, d_z_min, d_z_max, 
-				false);
+				d_y_max, imp_ybound_buffer, d_z_min, d_z_max, imp_zbound_buffer,
+				false, rngs_d[i]);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -203,8 +213,8 @@ namespace Boundary
 			double ztmp {slots_d.z[i]};
 			core_bc_gpu(xtmp, ytmp, ztmp, d_x_min, 
 				d_x_max, imp_xbound_buffer, d_y_min, 
-				d_y_max, d_z_min, d_z_max, 
-				true);
+				d_y_max, imp_ybound_buffer,  d_z_min, d_z_max, imp_zbound_buffer,
+				true, rngs_d[i]);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -246,8 +256,8 @@ namespace Boundary
 			double ztmp {slots_d.z[i]};
 			core_bc_gpu(ytmp, ztmp, xtmp, d_y_min, 
 				d_y_max, imp_ybound_buffer, d_z_min, 
-				d_z_max, d_x_min, d_x_max, 
-				false);
+				d_z_max, imp_zbound_buffer, d_x_min, d_x_max, imp_xbound_buffer,
+				false, rngs_d[i]);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -289,8 +299,8 @@ namespace Boundary
 			double ztmp {slots_d.z[i]};
 			core_bc_gpu(ytmp, ztmp, xtmp, d_y_min, 
 				d_y_max, imp_ybound_buffer, d_z_min, 
-				d_z_max, d_x_min, d_x_max, 
-				true);
+				d_z_max, imp_zbound_buffer, d_x_min, d_x_max, imp_xbound_buffer,
+				true, rngs_d[i]);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -332,8 +342,8 @@ namespace Boundary
 			double ztmp {slots_d.z[i]};
 			core_bc_gpu(ztmp, xtmp, ytmp, d_z_min, 
 				d_z_max, imp_zbound_buffer, d_x_min, 
-				d_x_max, d_y_min, d_y_max, 
-				false);
+				d_x_max, imp_xbound_buffer, d_y_min, d_y_max, imp_ybound_buffer,
+				false, rngs_d[i]);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -375,8 +385,8 @@ namespace Boundary
 			double ztmp {slots_d.z[i]};
 			core_bc_gpu(ztmp, xtmp, ytmp, d_z_min, 
 				d_z_max, imp_zbound_buffer, d_x_min, 
-				d_x_max, d_y_min, d_y_max, 
-				true);
+				d_x_max, imp_xbound_buffer, d_y_min, d_y_max, imp_ybound_buffer, 
+				true, rngs_d[i]);
 
 			// Write back
 			slots_d.x[i] = xtmp;
@@ -396,7 +406,7 @@ namespace Boundary
 		const double imp_xbound_buffer, 
 		const double imp_ybound_buffer, 
 		const double imp_zbound_buffer, 
-		const double lcfs_x)
+		const double lcfs_x, pcg32* rngs_d)
 	{
 
 		// Block and grid size
@@ -409,7 +419,7 @@ namespace Boundary
 			min_xbound_type_int, max_xbound_type_int, 
 			min_ybound_type_int, max_ybound_type_int, 
 			min_zbound_type_int, max_zbound_type_int, imp_xbound_buffer, 
-			imp_ybound_buffer, imp_zbound_buffer, lcfs_x);
+			imp_ybound_buffer, imp_zbound_buffer, lcfs_x, rngs_d);
 	}
 
 }
