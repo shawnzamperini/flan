@@ -90,9 +90,9 @@ namespace OpenADAS
 		double get_rate_coeff(const int charge, double ne, double te) const;
 
 
-		// Create a device-side struct with the OpenADAS data
+		// Create a device-side struct with the OpenADAS data. Defined in
+		// src/cuda/openadas.cu
 		OpenADASDevice to_device(int device_id);
-
 	};
 
 	/**

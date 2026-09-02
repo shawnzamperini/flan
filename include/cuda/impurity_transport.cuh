@@ -3,6 +3,7 @@
 #include <cuda_runtime.h>
 
 #include "background_device.h"
+#include "pcg32.h"
 #include "slots_device.h"
 
 namespace ImpurityTransport
@@ -39,4 +40,5 @@ namespace ImpurityTransport
 	*   over time dt.
 	*/
 	void step_gpu(Slots::SlotsDevice& slots_d, const double dt);
+
 }

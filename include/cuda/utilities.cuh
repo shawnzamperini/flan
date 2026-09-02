@@ -64,6 +64,59 @@ namespace Utilities
 		return xidx * (ydim * zdim) + yidx * zdim + zidx;
 	}
 
+
+	// Bilinearly interpolate the values in flattened 2D arr at (x, y)
+	template <typename T>
+	__device__ inline T bilinear_interp(
+		const T* __restrict__ table,   // flattened 2D array: nx * ny
+		const T* __restrict__ x_grid,  // size nx
+		int nx,
+		const T* __restrict__ y_grid,  // size ny
+		int ny,
+		T x,                           // physical x value
+		T y)                           // physical y value
+	{
+		// --- 1. Find bracketing x indices ---
+		int ix = 0;
+		while (ix + 1 < nx && x_grid[ix + 1] < x)
+			ix++;
+
+		if (ix >= nx - 1)
+			ix = nx - 2;
+
+		T tx = (x - x_grid[ix]) /
+					(x_grid[ix + 1] - x_grid[ix]);
+
+		// --- 2. Find bracketing y indices ---
+		int iy = 0;
+		while (iy + 1 < ny && y_grid[iy + 1] < y)
+			iy++;
+
+		if (iy >= ny - 1)
+			iy = ny - 2;
+
+		T ty = (y - y_grid[iy]) /
+					(y_grid[iy + 1] - y_grid[iy]);
+
+		// --- 3. Compute flattened indices ---
+		int idx00 = ix * ny + iy;
+		int idx10 = (ix + 1) * ny + iy;
+		int idx01 = ix * ny + (iy + 1);
+		int idx11 = (ix + 1) * ny + (iy + 1);
+
+		T v00 = table[idx00];
+		T v10 = table[idx10];
+		T v01 = table[idx01];
+		T v11 = table[idx11];
+
+		// --- 4. Bilinear interpolation ---
+		T vx0 = v00 + tx * (v10 - v00);
+		T vx1 = v01 + tx * (v11 - v01);
+
+		return vx0 + ty * (vx1 - vx0);
+	}
+
+
 	// Trilinearly interpolate the values defined by the 8 vertices at (x, y, z)
 	__device__ inline 
 	double trilinear_interpolate(

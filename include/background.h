@@ -286,20 +286,20 @@ namespace Background
 		* @param y0 Coordinate to interpolate at
 		* @param z0 Coordinate to interpolate at
 		*/
-		const BkgFPType interp_4d(const Vectors::Vector4D<BkgFPType>& vec4d, 
+		BkgFPType interp_4d(const Vectors::Vector4D<BkgFPType>& vec4d, 
 			const double t0, const double x0, const double y0, const double z0) 
 			const;
 
 		/**
 		* @brief Interpolate Te at a given t,x,y,z
 		*/
-		const BkgFPType interp_te(const double t0, const double x0, 
+		BkgFPType interp_te(const double t0, const double x0, 
 			const double y0, const double z0) const;
 
 		/**
 		* @brief Interpolate ne at a given t,x,y,z
 		*/
-		const BkgFPType interp_ne(const double t0, const double x0, 
+		BkgFPType interp_ne(const double t0, const double x0, 
 			const double y0, const double z0) const;
 
 		/**
@@ -309,7 +309,7 @@ namespace Background
 		*
 		* @returns Interpolated value at Impurity t,x,y,z
 		*/
-		const BkgFPType interp_te_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_te_at_imp(const Impurity::Impurity& imp) const;
 
 		/**
 		* @brief Interpolate Ti at Impurity location
@@ -318,7 +318,7 @@ namespace Background
 		*
 		* @returns Interpolated value at Impurity t,x,y,z
 		*/
-		const BkgFPType interp_ti_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_ti_at_imp(const Impurity::Impurity& imp) const;
 
 		/**
 		* @brief Interpolate ne at Impurity location
@@ -327,7 +327,7 @@ namespace Background
 		*
 		* @returns Interpolated value at Impurity t,x,y,z
 		*/
-		const BkgFPType interp_ne_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_ne_at_imp(const Impurity::Impurity& imp) const;
 
 		/**
 		* @brief Interpolate uX at Impurity location
@@ -336,7 +336,7 @@ namespace Background
 		*
 		* @returns Interpolated value at Impurity t,x,y,z
 		*/
-		const BkgFPType interp_uX_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_uX_at_imp(const Impurity::Impurity& imp) const;
 
 		/**
 		* @brief Interpolate uY at Impurity location
@@ -345,7 +345,7 @@ namespace Background
 		*
 		* @returns Interpolated value at Impurity t,x,y,z
 		*/
-		const BkgFPType interp_uY_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_uY_at_imp(const Impurity::Impurity& imp) const;
 
 		/**
 		* @brief Interpolate uZ at Impurity location
@@ -354,7 +354,7 @@ namespace Background
 		*
 		* @returns Interpolated value at Impurity t,x,y,z
 		*/
-		const BkgFPType interp_uZ_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_uZ_at_imp(const Impurity::Impurity& imp) const;
 
 		/**
 		* @brief Safety check that any data that is read into Background is 

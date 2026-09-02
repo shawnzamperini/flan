@@ -20,6 +20,7 @@ namespace Timer
 		{
 			std::cerr << "Error! Timer is already in use. This is a "
 				<< "programming error.\n";
+			m_acc.running = false;
 			return;
 		}
 		m_acc.running = true;

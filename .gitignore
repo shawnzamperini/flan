@@ -5,6 +5,9 @@
 *.vim
 *.swp
 *.tar.gz
+*.make
+*.internal
+*.ts
 python/__pycache__
 install-deps/adios*
 install-deps/boost*

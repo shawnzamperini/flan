@@ -33,6 +33,7 @@
 #include "init_rngs.cuh"
 #include "impurity_stats.cuh"
 #include "impurity_transport.cuh"
+#include "openadas.cuh"
 #include "slots.cuh"
 #endif
 
@@ -347,14 +348,16 @@ namespace ImpurityTransport
 		const OpenADAS::OpenADAS& oa_recomb,
 		const OpenADAS::OpenADASDevice& oa_recomb_d,
 		const Options::Options& opts,
-		int& ioniz_warnings, int& recomb_warnings, std::vector<pcg32>& rngs)
+		int& ioniz_warnings, int& recomb_warnings,  
+		std::vector<pcg32>& rngs, pcg32* rngs_d)
 	{
 
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
-			// Defined in impurity_transport.cu
-			//ioniz_recomb_gpu(slots_d, opts.imp_time_step());
+			// Defined in openadas.cu
+			OpenADAS::ioniz_recomb_gpu(slots_d, bkg_d, oa_ioniz_d, oa_recomb_d, 
+				opts.imp_time_step(), ioniz_warnings, recomb_warnings, rngs_d);
 			return;
 		}
 #endif
@@ -414,7 +417,6 @@ namespace ImpurityTransport
 			if (slots_d.device_id == 0) 
 				rem_parts = parts_per_gpu + extra;
 			else rem_parts = parts_per_gpu;
-
 		}
 #endif
 
@@ -452,7 +454,7 @@ namespace ImpurityTransport
 				Timer::ScopedTimer t(timer.acc(Timer::Section::IonRec));
 				ioniz_recomb_wrapper(slots, slots_d, bkg, bkg_d, oa_ioniz,
 					oa_ioniz_d, oa_recomb, oa_recomb_d, opts, ioniz_warnings,
-					recomb_warnings, rngs);
+					recomb_warnings, rngs, rngs_d);
 			}
 
 			// Variance reduction
@@ -508,12 +510,8 @@ namespace ImpurityTransport
 			// User feedback just for rank 0, no MPI communication. The total
 			// number of remaining particles is rem_parts plus the number
 			// actively being followed (alive_slots).
-			//if (rank == 0 && prog.tot_parts > slots.N()) 
 			if (rank == 0) 
 				prog.update(rem_parts + alive_slots);
-
-			// Reset alive_slots for next iteration
-			alive_slots = 0;
 
 			// Check if all the particles in slots are dead. If this happens
 			// after fill_slots, it means there were no more alive particles

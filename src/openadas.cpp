@@ -454,69 +454,18 @@ namespace OpenADAS
 		}  // omp parallel
 	}  // ioniz_recomb
 
-	// Copy ADAS data to device, returning a OpenADASDevice object with
-	// pointers to memory location on device.
+#ifndef USE_CUDA
+
+	// If these definitions gets called, it means you're in the CPU-only version
+	// of the code trying to call GPU-specific code.
+	// Defined in src/cuda/openadas.cu since it calls CUDA code
 	OpenADASDevice OpenADAS::to_device(int device_id)
 	{
-		OpenADASDevice oa_d {};
-
-#ifdef USE_CUDA
-
-		// Integer values
-		oa_d.device_id = device_id;
-		oa_d.atomic_number = m_atomic_number;
-		oa_d.ndens = m_ndens;
-		oa_d.ntemp = m_ntemp;
-		oa_d.charge_low = m_charge_low;
-		oa_d.charge_high = m_charge_high;
-
-		// Allocate oa_d memory
-		cudaMalloc(&oa_d.te, m_ntemp * sizeof(double));
-		cudaMalloc(&oa_d.ne, m_ndens * sizeof(double));
-
-		// Calculate how many rates there are
-		const int ncharges = m_charge_high - m_charge_low + 1;
-		const int nrates = m_ndens * m_ntemp * ncharges;
-		cudaMalloc(&oa_d.rates, nrates * sizeof(double));
-
-		// Copy data
-		cudaMemcpy(oa_d.te, m_te.data(), m_ntemp * sizeof(double), 
-			cudaMemcpyHostToDevice);
-		cudaMemcpy(oa_d.ne, m_ne.data(), m_ndens * sizeof(double), 
-			cudaMemcpyHostToDevice);
-		cudaMemcpy(oa_d.rates, m_rates.get_data().data(), nrates * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		return oa_d;
-
-#else
-		std::cerr << "Error! OpenADAS::to_device() was called but GPU support"
+		std::cerr << "Error! OpenADAS::to_device was called but GPU support"
 				  << " was not compiled in.\n";
-#endif
-
-	}  // to_device
-
-	// Free up memory from device-side OpenADASDevice object
-	void free_oa(OpenADASDevice& oa_d, int device_id)
-	{
-
-#ifdef USE_CUDA
-
-		cudaSetDevice(device_id);
-
-		cudaFree(oa_d.te);
-		oa_d.te = nullptr;
-
-		cudaFree(oa_d.ne);
-		oa_d.ne = nullptr;
-
-		cudaFree(oa_d.rates);
-		oa_d.rates = nullptr;
+	}
 
 #endif
-
-	}  // free_oa
-
 
 }  // namespace OpenADAS
 

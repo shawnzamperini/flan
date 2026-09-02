@@ -109,6 +109,8 @@ namespace Slots
 		ParticleInitDevice p = make_new_particle_cuda(rngs_d[i], opts_d);
 
 		// Write particle data
+		slots_d.t[i]  = p.t;
+
 		slots_d.x[i]  = p.x;
 		slots_d.y[i]  = p.y;
 		slots_d.z[i]  = p.z;
@@ -124,6 +126,12 @@ namespace Slots
 		slots_d.weight[i] = p.weight;
 
 		slots_d.q[i] = p.q;
+
+		// These get assigned in main_loop
+		slots_d.tidx[i] = 0;
+		slots_d.xidx[i] = 0;
+		slots_d.yidx[i] = 0;
+		slots_d.zidx[i] = 0;
 
 		// Mark slot alive
 		slots_d.state[i] = 0;
@@ -149,8 +157,10 @@ namespace Slots
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d)
 	{
+		// We actually want the kernel to run in this case otherwise it won't
+		// give the most up to date value of alive for the print out. 
 		// No more particles left, don't fill
-		if (rem_parts <= 0) return;
+		//if (rem_parts <= 0) return;
 
 		// Each slot is assigned to a specific GPU where its data lies
 		cudaSetDevice(slots_d.device_id);

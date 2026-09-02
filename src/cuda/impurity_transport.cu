@@ -4,8 +4,12 @@
 #include <curand_kernel.h>
 
 #include "background_device.h"
-#include "device_constants.cuh"
+#include "openadas_device.h"
+#include "pcg32.h"
 #include "slots_device.h"
+
+#include "device_constants.cuh"
+#include "utilities.cuh"
 
 namespace ImpurityTransport
 {
@@ -126,6 +130,7 @@ namespace ImpurityTransport
 		slots_d.zidx[i] = zidx;
 	}
 
+
 	// Find what cell all the particles in slots_d are in, updating the
 	// indices accordingly (GPU)
 	void find_containing_cell_gpu(Slots::SlotsDevice& slots_d, 
@@ -139,6 +144,7 @@ namespace ImpurityTransport
 		// Call kernel to update indices (tidx, xidx, ...) in slots_d
 		find_containing_cell_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d);
 	}
+
 
 	// Step particles
 	__global__ void step_kernel(Slots::SlotsDevice slots_d, const double dt)
@@ -155,6 +161,7 @@ namespace ImpurityTransport
 		slots_d.z[i] += slots_d.vz[i] * dt;
 	}
 
+
 	// Wrapper to call step_kernel
 	void step_gpu(Slots::SlotsDevice& slots_d, const double dt)
 	{
@@ -164,5 +171,7 @@ namespace ImpurityTransport
 
 		step_kernel<<<gridSize, blockSize>>>(slots_d, dt);
 	}
+
+
 
 } // namespace ImpurityTransport

@@ -626,9 +626,9 @@ namespace Options
 		{return m_case_name;}
 	const std::string& Options::use_gpu() const 
 		{return m_use_gpu;}
-	const int Options::seed() const 
+	int Options::seed() const 
 		{return m_seed;}
-	const int Options::slot_cap() const 
+	int Options::slot_cap() const 
 		{return m_slot_cap;}
 	const std::string& Options::bkg_source() const 
 		{return m_bkg_source;}
@@ -640,17 +640,17 @@ namespace Options
 		{return m_gkyl_dir;}
 	const std::string& Options::gkyl_casename() const 
 		{return m_gkyl_casename;}
-	const int Options::gkyl_frame_start() const 
+	int Options::gkyl_frame_start() const 
 		{return m_gkyl_frame_start;}
-	const int Options::gkyl_frame_end() const 
+	int Options::gkyl_frame_end() const 
 		{return m_gkyl_frame_end;}
 	const std::string& Options::gkyl_elec_name() const 
 		{return m_gkyl_elec_name;}
 	const std::string& Options::gkyl_ion_name() const 
 		{return m_gkyl_ion_name;}
-	const double Options::gkyl_elec_mass_amu() const 
+	double Options::gkyl_elec_mass_amu() const 
 		{return m_gkyl_elec_mass_amu;}
-	const double Options::gkyl_ion_mass_amu() const 
+	double Options::gkyl_ion_mass_amu() const 
 		{return m_gkyl_ion_mass_amu;}
 	const std::string& Options::gkyl_file_type() const 
 		{return m_gkyl_file_type;}
@@ -668,61 +668,61 @@ namespace Options
 		{return m_min_zbound_type;}
 	const std::string& Options::max_zbound_type() const 
 		{return m_max_zbound_type;}
-	const double Options::lcfs_x() const 
+	double Options::lcfs_x() const 
 		{return m_lcfs_x;}
-	const double Options::sep_x_bc_xp_z1() const 
+	double Options::sep_x_bc_xp_z1() const 
 		{return m_sep_x_bc_xp_z1;}
-	const double Options::sep_x_bc_xp_z2() const 
+	double Options::sep_x_bc_xp_z2() const 
 		{return m_sep_x_bc_xp_z2;}
-	const double Options::imp_xbound_buffer() const 
+	double Options::imp_xbound_buffer() const 
 		{return m_imp_xbound_buffer;}
-	const double Options::imp_ybound_buffer() const 
+	double Options::imp_ybound_buffer() const 
 		{return m_imp_ybound_buffer;}
-	const double Options::imp_zbound_buffer() const 
+	double Options::imp_zbound_buffer() const 
 		{return m_imp_zbound_buffer;}
-	const int Options::imp_atom_num() const 
+	int Options::imp_atom_num() const 
 		{return m_imp_atom_num;}
-	const double Options::imp_mass_amu() const 
+	double Options::imp_mass_amu() const 
 		{return m_imp_mass_amu;}
-	const int Options::imp_init_charge() const 
+	int Options::imp_init_charge() const 
 		{return m_imp_init_charge;}
-	const int Options::imp_num() const
+	int Options::imp_num() const
 		{return m_imp_num;}
 	const std::string& Options::imp_tstart_opt() const 
 		{return m_imp_tstart_opt;}
-	const double Options::imp_tstart_val() const 
+	double Options::imp_tstart_val() const 
 		{return m_imp_tstart_val;}
-	const double Options::imp_trange_min() const 
+	double Options::imp_trange_min() const 
 		{return m_imp_trange_min;}
-	const double Options::imp_trange_max() const 
+	double Options::imp_trange_max() const 
 		{return m_imp_trange_max;}
 	const std::string& Options::imp_xstart_opt() const 
 		{return m_imp_xstart_opt;}
-	const double Options::imp_xstart_val() const 
+	double Options::imp_xstart_val() const 
 		{return m_imp_xstart_val;}
-	const double Options::imp_xrange_min() const 
+	double Options::imp_xrange_min() const 
 		{return m_imp_xrange_min;}
-	const double Options::imp_xrange_max() const 
+	double Options::imp_xrange_max() const 
 		{return m_imp_xrange_max;}
 	const std::string& Options::imp_ystart_opt() const 
 		{return m_imp_ystart_opt;}
-	const double Options::imp_ystart_val() const 
+	double Options::imp_ystart_val() const 
 		{return m_imp_ystart_val;}
-	const double Options::imp_yrange_min() const 
+	double Options::imp_yrange_min() const 
 		{return m_imp_yrange_min;}
-	const double Options::imp_yrange_max() const 
+	double Options::imp_yrange_max() const 
 		{return m_imp_yrange_max;}
 	const std::string& Options::imp_zstart_opt() const 
 		{return m_imp_zstart_opt;}
-	const double Options::imp_zstart_val() const 
+	double Options::imp_zstart_val() const 
 		{return m_imp_zstart_val;}
-	const double Options::imp_zrange_min() const 
+	double Options::imp_zrange_min() const 
 		{return m_imp_zrange_min;}
-	const double Options::imp_zrange_max() const 
+	double Options::imp_zrange_max() const 
 		{return m_imp_zrange_max;}
 	const std::string& Options::imp_temp_start_opt() const 
 		{return m_imp_temp_start_opt;}
-	const double Options::imp_temp_start_val() const 
+	double Options::imp_temp_start_val() const 
 		{return m_imp_temp_start_val;}
 	const std::string& Options::imp_collisions() const 
 		{return m_imp_collisions;}
@@ -730,36 +730,36 @@ namespace Options
 		{return m_var_red_split;}
 	const std::string& Options::var_red_import() const 
 		{return m_var_red_import;}
-	const double Options::var_red_freq() const 
+	double Options::var_red_freq() const 
 		{return m_var_red_freq;}
-	const double Options::var_red_min_weight() const 
+	double Options::var_red_min_weight() const 
 		{return m_var_red_min_weight;}
-	const double Options::var_red_med_mod() const 
+	double Options::var_red_med_mod() const 
 		{return m_var_red_med_mod;}
 	const std::string& Options::var_red_rusrol() const 
 		{return m_var_red_rusrol;}
-	const double Options::var_red_rusrol_prob() const 
+	double Options::var_red_rusrol_prob() const 
 		{return m_var_red_rusrol_prob;}
 	const std::string& Options::imp_time_step_opt() const 
 		{return m_imp_time_step_opt;}
-	const double Options::imp_time_step() const 
+	double Options::imp_time_step() const 
 		{return m_imp_time_step;}
-	const double Options::imp_time_step_min() const 
+	double Options::imp_time_step_min() const 
 		{return m_imp_time_step_min;}
-	const double Options::imp_source_scale_fact() const 
+	double Options::imp_source_scale_fact() const 
 		{return m_imp_source_scale_fact;}
 	const std::string& Options::imp_iz_recomb() const 
 		{return m_imp_iz_recomb;}
-	const int Options::print_interval() const 
+	int Options::print_interval() const 
 		{return m_print_interval;}
 	const std::string& Options::openadas_root() const 
 		{return m_openadas_root;}
-	const int Options::openadas_year() const 
+	int Options::openadas_year() const 
 		{return m_openadas_year;}
 	
 	// Wrapper for returning control integer value that ensures they were
 	// set to the respective option (i.e., not -1).
-	const int Options::get_control_int(const std::string& var_name, 
+	int Options::get_control_int(const std::string& var_name, 
 		const int control_int) const
 	{
 		if (control_int < 0)
@@ -775,51 +775,51 @@ namespace Options
 	}
 
 	// Accessors for internal control variables
-	const int Options::use_gpu_int() const
+	int Options::use_gpu_int() const
 		{return get_control_int("use_gpu", m_use_gpu_int);}
-	const int Options::bkg_source_int() const
+	int Options::bkg_source_int() const
 		{return get_control_int("bkg_source", m_bkg_source_int);}
-	const int Options::test_opt_int() const
+	int Options::test_opt_int() const
 		{return get_control_int("test_opt", m_test_opt_int);}
-	const int Options::save_track_int() const
+	int Options::save_track_int() const
 		{return get_control_int("save_track", m_save_track_int);}
-	const int Options::imp_tstart_opt_int() const
+	int Options::imp_tstart_opt_int() const
 		{return get_control_int("imp_tstart_opt", m_imp_tstart_opt_int);}
-	const int Options::imp_xstart_opt_int() const
+	int Options::imp_xstart_opt_int() const
 		{return get_control_int("imp_xstart_opt", m_imp_xstart_opt_int);}
-	const int Options::imp_ystart_opt_int() const
+	int Options::imp_ystart_opt_int() const
 		{return get_control_int("imp_ystart_opt", m_imp_ystart_opt_int);}
-	const int Options::imp_zstart_opt_int() const
+	int Options::imp_zstart_opt_int() const
 		{return get_control_int("imp_zstart_opt", m_imp_zstart_opt_int);}
-	const int Options::imp_temp_start_opt_int() const
+	int Options::imp_temp_start_opt_int() const
 		{return get_control_int("imp_temp_start_opt", m_imp_temp_start_opt_int);}
-	const int Options::imp_collisions_int() const
+	int Options::imp_collisions_int() const
 		{return get_control_int("imp_collisions", m_imp_collisions_int);}
-	const int Options::var_red_split_int() const
+	int Options::var_red_split_int() const
 		{return get_control_int("var_red_split", m_var_red_split_int);}
-	const int Options::var_red_import_int() const
+	int Options::var_red_import_int() const
 		{return get_control_int("var_red_import", m_var_red_import_int);}
-	const int Options::var_red_rusrol_int() const
+	int Options::var_red_rusrol_int() const
 		{return get_control_int("var_red_rusrol", m_var_red_rusrol_int);}
-	const int Options::imp_time_step_opt_int() const
+	int Options::imp_time_step_opt_int() const
 		{return get_control_int("imp_time_step_opt", m_imp_time_step_opt_int);}
-	const int Options::imp_iz_recomb_int() const
+	int Options::imp_iz_recomb_int() const
 		{return get_control_int("imp_iz_recomb", m_imp_iz_recomb_int);}
-	const int Options::tbound_type_int() const
+	int Options::tbound_type_int() const
 		{return get_control_int("tbound_type", m_tbound_type_int);}
-	const int Options::min_xbound_type_int() const
+	int Options::min_xbound_type_int() const
 		{return get_control_int("min_xbound_type", m_min_xbound_type_int);}
-	const int Options::max_xbound_type_int() const
+	int Options::max_xbound_type_int() const
 		{return get_control_int("max_xbound_type", m_max_xbound_type_int);}
-	const int Options::min_ybound_type_int() const
+	int Options::min_ybound_type_int() const
 		{return get_control_int("min_ybound_type", m_min_ybound_type_int);}
-	const int Options::max_ybound_type_int() const
+	int Options::max_ybound_type_int() const
 		{return get_control_int("max_ybound_type", m_max_ybound_type_int);}
-	const int Options::min_zbound_type_int() const
+	int Options::min_zbound_type_int() const
 		{return get_control_int("min_zbound_type", m_min_zbound_type_int);}
-	const int Options::max_zbound_type_int() const
+	int Options::max_zbound_type_int() const
 		{return get_control_int("max_zbound_type", m_max_zbound_type_int);}
-	const int Options::calc_grad_elec_int() const
+	int Options::calc_grad_elec_int() const
 		{return get_control_int("calc_grad_elec", m_calc_grad_elec_int);}
 
 	// Setter declarations for internal control variables

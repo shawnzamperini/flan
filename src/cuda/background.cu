@@ -16,6 +16,7 @@ namespace Background
 		BackgroundDevice bkg_d {};
 
 	#ifdef USE_CUDA
+
 		bkg_d.device_id = device_id;
 
 		// In include/cuda/device_constants.cuh we define arrays like t, x, 
