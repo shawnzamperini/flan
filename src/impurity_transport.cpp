@@ -429,6 +429,10 @@ namespace ImpurityTransport
 		fill_slots_wrapper(slots, slots_d, rem_parts, bkg, opts, alive_slots, 
 			rngs, rngs_d, opts_d);
 
+		// If for whatever reason the particle is started outside the grid,
+		// check bounds to make sure it doesn't cause any chaos.
+		check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs_d);
+
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
 

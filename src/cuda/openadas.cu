@@ -150,6 +150,9 @@ namespace OpenADAS
 		// Don't try and access beyond the number of slots (segfault)
 		if (i >= slots_d.N) return;
 
+		// If particle isn't alive then skip
+		if (slots_d.state[i] > 0) return;
+
 		// ---------------------------------------------------------------
 		// The following algorithm is similar to that in boris.cu. It 
 		// interpolates background values in time (linear) and space 

@@ -72,6 +72,89 @@ namespace Slots
 		return p;
 	}
 
+	
+	// Kernel to compact dead cells at warp level (what?). 
+	__global__ void compact_dead_slots(const int* __restrict__ state,
+		int* __restrict__ dead_indices, int* __restrict__ num_dead, int N)
+	{
+		// Global thread index
+		int tid  = blockIdx.x * blockDim.x + threadIdx.x;
+
+		// Thread position within its warp (lane within warp)
+		int lane = threadIdx.x & 31;  // This is essentially thread % 32
+
+		// Active mask for this warp. Tells us which lanes are active.
+		// This returns a bitwise mask in a 32-bit integer. For
+		// example, if mask = 0b00000000_00000000_00000000_11101111, this 
+		// means lanes 0, 1, 2, 3, 5, 6, 7 are active and 4, 8-31 are inactive.
+		// Really just relevant for the final warp if slots doesn't equally
+		// divide by 32. We need this for the warp-level intrinsics below.
+		unsigned int mask {__activemask()};
+
+		// Is this thread in range?
+		bool in_range {(tid < N)};
+
+		// Is this slot dead (state > 0)?
+		bool is_dead {false};
+		if (in_range) is_dead = (state[tid] != 0);
+
+		// Warp-wide vote: which lanes are dead? Similar to activemask, this
+		// returns a 32-bit bitwise mask indicating the lanes where
+		// is_dead=true. It only evaluates this for active lanes, as set in
+		// mask. For example, say our active lanes are:
+		//       mask = 0b00000000_00000000_00000000_11101111
+		//                                           TFT FFTT  <- is_dead values
+		// Then we'd get:
+		//  dead_mask = 0b00000000_00000000_00000000_10100011
+		unsigned int dead_mask = __ballot_sync(mask, is_dead);
+
+		// Number of dead lanes in this warp (popc = population count). This 
+		// just counts the number of 1's in dead_mask. Following the above
+		// example, we'd get 4 for this.
+		int warp_dead_count = __popc(dead_mask);
+
+		// No dead slots in this warp, nothing to do
+		if (warp_dead_count == 0) return;
+
+		// Compute this lane's offset among dead lanes in the warp
+		// Mask of dead lanes with index < lane
+		// First, 1u << lane creates a 32-bit mask with a single bit at position
+		// lane. So if lane = 16, then
+		//   1u << lane = 0b00000000_00000001_00000000_00000000
+		// Then subtracting 1 from this turns it into a mask with all bits
+		// below our bit equal to 1;
+		//   (1u << lane - 1) = 0b00000000_00000000_11111111_11111111
+		// Then we perform a bitwise & with dead_mask which keeps only the 
+		// dead bits below this lane. For our example from above,
+		//  dead_mask = 0b00000000_00000000_00000000_10100011
+		//              0b00000000_00000000_11111111_11111111
+		//  lane_mask = 0b00000000_00000000_00000000_10100011
+		// Finally, lane_offset is the sum of all the 1's, lane_offset = 4.
+		// This is used in calculating the index in dead_indices that we will 
+		// place the dead slot index in, done below.
+		unsigned int lane_mask = dead_mask & ((1u << lane) - 1);
+		int lane_offset = __popc(lane_mask);
+
+		// Let lane 0 reserve space in the global dead_indices array
+		// atomicAdd returns the original value of num_dead, which we assign
+		// to warp_base. Continuing our example where warp_dead_count=4, if
+		// we just say num_dead was 10 going into this, then after
+		// num_dead = 14 and warp_base = 10. Therefore when we get down to
+		// dead_indices, we will know that this warp "owns" (will only be
+		// indexing into) indices 10, 11, 12, 13, where each lane knows which
+		// index it will do via lane_offset.
+		int warp_base = 0;
+		if (lane == 0) warp_base = atomicAdd(num_dead, warp_dead_count);
+
+		// Broadcast warp_base to all lanes so that every lane in this warp 
+		// knows where in dead_indices to start from
+		warp_base = __shfl_sync(mask, warp_base, 0);
+
+		// If this lane is dead, write its global index into the compacted array
+		if (is_dead) dead_indices[warp_base + lane_offset] = tid;
+	}
+
+
 	/**
 	* @brief GPU kernel to fill slots, replacing dead particles with alive ones.
 	*
@@ -79,30 +162,36 @@ namespace Slots
 	* the copy time is << kernel launch time, and copying results in clearer
 	* code.
 	*/
-	__global__ void fill_slots_kernel(SlotsDevice slots_d, int* counter, 
-		int* alive_counter, int rem_parts, pcg32* rngs_d, 
+	__global__ void fill_slots_kernel(SlotsDevice slots_d, 
+		int rem_parts, pcg32* rngs_d, 
 		const Options::OptionsDevice* opts_d)
 	{
 		// Global index
-		int i = blockIdx.x * blockDim.x + threadIdx.x;
-		if (i >= slots_d.N) return;
+		//int i = blockIdx.x * blockDim.x + threadIdx.x;
+		//if (i >= slots_d.N) return;
+		int idx = blockIdx.x * blockDim.x + threadIdx.x;
+		if (idx >= *slots_d.num_dead) return;
+		if (idx >= rem_parts) return;
+
+		// Pick slot index only from those that have been found to be dead.
+		int i = slots_d.dead_indices[idx];
 
 		// Skip alive slots and add to count of alive slots (used in progress
 		// print out). This atomicAdd isn't a big deal for warp divergence
 		// since this thread is already exiting early compared to those that
 		// continue past this loop.
-		if (slots_d.state[i] == 0) 
-		{
-			atomicAdd(alive_counter, 1);
-			return;
-		}
+		//if (slots_d.state[i] == 0) 
+		//{
+		//	atomicAdd(slots_d.alive, 1);
+		//	return;
+		//}
 
 		// Atomically claim a particle index. This prevents the race condition
 		// in which multiple threads grab the same index.
-		int idx = atomicAdd(counter, 1);
+		//int idx2 = atomicAdd(slots_d.counter, 1);
 
 		// If we ran out of particles, stop
-		if (idx >= rem_parts) return;
+		//if (idx2 >= rem_parts) return;
 
 		// Create a new particle (device-side initializer), passing in the
 		// PCG32 RNG for this thread.
@@ -137,7 +226,7 @@ namespace Slots
 		slots_d.state[i] = 0;
 
 		// Newly alive, count it
-		atomicAdd(alive_counter, 1);
+		//atomicAdd(slots_d.alive, 1);
 	}
 
 	__global__ void all_dead_kernel(SlotsDevice slots_d)
@@ -157,48 +246,47 @@ namespace Slots
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d)
 	{
-		// We actually want the kernel to run in this case otherwise it won't
-		// give the most up to date value of alive for the print out. 
-		// No more particles left, don't fill
-		//if (rem_parts <= 0) return;
 
 		// Each slot is assigned to a specific GPU where its data lies
 		cudaSetDevice(slots_d.device_id);
 
-		// Device counter
-		int* d_counter;
-		cudaMalloc(&d_counter, sizeof(int));
+		// Reset number of dead slots to zero
+		cudaMemset(slots_d.num_dead, 0, sizeof(*slots_d.num_dead));
 
-		// Set counter to zero
-		int zero = 0;
-		cudaMemcpy(d_counter, &zero, sizeof(int), cudaMemcpyHostToDevice);
-
-		// Counter for number of alive slots
-		int* d_alive;
-		cudaMalloc(&d_alive, sizeof(int));
-		cudaMemset(d_alive, 0, sizeof(int));
-
-		// Call GPU kernel to fill slots.
+		// Fill in dead_indices with just the slots indices that have dead
+		// particles.
 		int blockSize = 256;
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
-		fill_slots_kernel<<<gridSize, blockSize>>>(slots_d, d_counter, 
-			d_alive, rem_parts, rngs_d, opts_d);
+		compact_dead_slots<<<gridSize, blockSize>>>(slots_d.state,
+			slots_d.dead_indices, slots_d.num_dead, slots_d.N);
+
+		// Read back num_dead
+		int num_dead = 0;
+		cudaMemcpy(&num_dead, slots_d.num_dead, sizeof(*slots_d.num_dead), 
+			cudaMemcpyDeviceToHost);
+
+		// Set counter and number of alive slots to zero
+		cudaMemset(slots_d.counter, 0, sizeof(*slots_d.counter));
+		cudaMemset(slots_d.alive, 0, sizeof(*slots_d.alive));
+
+		int rem_initial {rem_parts};
+
+		// Call GPU kernel to fill slots.
+		int fillBlock = 256;
+		int fillGrid  = (num_dead + fillBlock - 1) / fillBlock;
+		fill_slots_kernel<<<fillGrid, fillBlock>>>(slots_d, rem_parts, rngs_d, 
+			opts_d);
 
 		// Retrieve how many particles were actually filled
-		int filled = 0;
-		cudaMemcpy(&filled, d_counter, sizeof(int), cudaMemcpyDeviceToHost);
+		int filled {std::min(rem_initial, num_dead)};
 
 		// Retrieve number of alive slots
-		cudaMemcpy(&alive_slots, d_alive, sizeof(int), cudaMemcpyDeviceToHost);
+		alive_slots = slots_d.N - num_dead + filled;
 
 		// Update remaining particles
-		rem_parts -= filled;
-		if (rem_parts < 0) rem_parts = 0;
-
-		// Free memory
-		cudaFree(d_counter);
-		cudaFree(d_alive);
+		rem_parts = rem_initial - filled;
 	}
+
 
 	bool all_dead_gpu(SlotsDevice& slots_d)
 	{

@@ -110,17 +110,20 @@ namespace ImpurityTransport
 		// Don't try and access beyond the number of slots (segfault)
 		if (i >= slots_d.N) return;
 
+		// If particle isn't alive then skip
+		if (slots_d.state[i] > 0) return;
+
 		// d_t in constant memory, included from cuda/device_constants.cuh and
 		// lives in Background namespace.
 		int tidx {get_nearest_index_gpu(d_t, bkg_d.tdim, 
 			slots_d.t[i])};
 
-		// Likewise, d_grid_x is in constant memory
-		int xidx {get_nearest_cell_index_gpu(d_grid_x, bkg_d.xdim, 
+		// Likewise, d_grid_x is in constant memory and they have shape dim+1
+		int xidx {get_nearest_cell_index_gpu(d_grid_x, bkg_d.xdim+1, 
 			slots_d.x[i])};
-		int yidx {get_nearest_cell_index_gpu(d_grid_y, bkg_d.ydim, 
+		int yidx {get_nearest_cell_index_gpu(d_grid_y, bkg_d.ydim+1, 
 			slots_d.y[i])};
-		int zidx {get_nearest_cell_index_gpu(d_grid_z, bkg_d.zdim, 
+		int zidx {get_nearest_cell_index_gpu(d_grid_z, bkg_d.zdim+1, 
 			slots_d.z[i])};
 
 		// Update indices
@@ -154,6 +157,9 @@ namespace ImpurityTransport
 
 		// Don't try and access beyond the number of slots (segfault)
 		if (i >= slots_d.N) return;
+
+		// If particle isn't alive then skip
+		if (slots_d.state[i] > 0) return;
 
 		slots_d.t[i] += dt;
 		slots_d.x[i] += slots_d.vx[i] * dt;

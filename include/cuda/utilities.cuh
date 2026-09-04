@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cmath>
+#include <cstdio>
 #include <cuda_runtime.h>
+
 
 namespace Utilities
 {
@@ -29,7 +32,7 @@ namespace Utilities
 	int get_neighbor_index_cuda(const double val,
 		const double* cell_centers, int idx, int N)
 	{
-		// dx > 0 → +1, dx < 0 → -1
+		// dx > 0 -> +1, dx < 0 -> -1
 		double dx_from_center = val - cell_centers[idx];
 		int side = 2 * (dx_from_center > 0.0) - 1;
 
@@ -131,6 +134,24 @@ namespace Utilities
 		const double tx = (x - x0) / dx;  // dx = x1 - x0
 		const double ty = (y - y0) / dy;
 		const double tz = (z - z0) / dz;
+
+		// Debug: warn if weights are out of range or invalid
+		/*
+		if (tx < 0.0 || tx > 1.0 || std::isnan(tx) || std::isinf(tx) ||
+			ty < 0.0 || ty > 1.0 || std::isnan(ty) || std::isinf(ty) ||
+			tz < 0.0 || tz > 1.0 || std::isnan(tz) || std::isinf(tz))
+		{
+			printf("TRILINEAR WARNING:\n"
+				   "  tx=%g ty=%g tz=%g\n"
+				   "  x=%g y=%g z=%g\n"
+				   "  x0=%g y0=%g z0=%g\n"
+				   "  dx=%g dy=%g dz=%g\n",
+				   tx, ty, tz,
+				   x, y, z,
+				   x0, y0, z0,
+				   dx, dy, dz);
+		}
+		*/
 
 		// Interpolate along x for the four lower/upper face corners
 		const double c00 = v000 + tx * (v100 - v000);

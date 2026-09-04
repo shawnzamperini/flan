@@ -31,5 +31,9 @@ namespace Slots
         int* q;
         int* state;
 		bool* all_dead;
+		int* counter;
+		int* alive;
+		int* dead_indices;  // size N
+		int* num_dead;      // size 1
     };
 }

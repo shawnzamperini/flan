@@ -62,6 +62,9 @@ TEST(UpdateVelocityGPU, UniformFieldBorisRotation)
     // Actual physical time of particle
     slots.set_t(0, bkg.get_times()[0]);
 
+	// Set state to alive
+	slots.set_state(0, 0);
+
 	// Copy to device
 	Slots::SlotsDevice slots_d {slots.to_device()};
 

@@ -22,6 +22,9 @@ namespace Boris
 		// Don't try and access beyond the number of slots (segfault)
 		if (i >= slots_d.N) return;
 
+		// If particle isn't alive then skip
+		if (slots_d.state[i] > 0) return;
+
 		// Local variables
 		int tidx {slots_d.tidx[i]};
 		int xidx {slots_d.xidx[i]};
@@ -32,14 +35,9 @@ namespace Boris
 		double x {slots_d.x[i]};
 		double y {slots_d.y[i]};
 		double z {slots_d.z[i]};
-		/*
-		printf("x ptr = %p\n", slots_d.x);
-		printf("y ptr = %p\n", slots_d.y);
-		printf("z ptr = %p\n", slots_d.z);
-		printf("i=%d\n", i);
-		printf("tidx=%d xidx=%d yidx=%d zidx=%d\n", tidx, xidx, yidx, zidx);
-		printf("t=%f x=%f y=%f z=%f\n", t, x, y, z);
-		*/
+
+		//printf("tidx, xidx, yidx, zidx = %d %d %d %d\n", tidx, xidx, yidx, zidx);
+		//printf("t, x, y, z = %g %g %g %g\n", t, x, y, z);
 
 		// Get nearest neighbor indices for each direction. These tell us
 		// which direction we should interpolate towards, i.e., which
@@ -226,6 +224,7 @@ namespace Boris
 		{
 			for (int k = 0; k < 4; ++k)
 			{
+
 				// We skip the last index for the reciprocal basis vector
 				// components since it's garbage (we do not interpolate the
 				// magnitude of the basis vectors because that would break
@@ -252,8 +251,6 @@ namespace Boris
 						verts0[l] = field_ptrs[j][k][idx0_4d[l]];
 						verts1[l] = field_ptrs[j][k][idx1_4d[l]];
 					}
-					//if (i == 0 && j == 2)
-					//	printf("%d %d verts[%d] = %f\n", j, k, l, verts0[l]);
 				}
 
 				// Trilinear interpolation at the particle location for this
@@ -269,7 +266,6 @@ namespace Boris
 					dx, dy, dz, verts1[0], verts1[4], verts1[2], verts1[6], 
 					verts1[1], verts1[5], verts1[3], verts1[7], x, y, z)};
 
-				//if (i == 0) printf("%d comp0=%f, comp1=%f\n", j, comp0, comp1);
 
 				// Now linearly interpolate in time (this is just point slope)
 				const double slope {(comp1 - comp0) / frame_dt};
@@ -365,20 +361,6 @@ namespace Boris
 		slots_d.vY[i] = vplus[1] + q_m * intrp_field[1][1] * 0.5 * dt;
 		slots_d.vZ[i] = vplus[2] + q_m * intrp_field[1][2] * 0.5 * dt;
 
-		/*
-		for (int j {}; j < 5; ++j)
-		{
-			for (int k {}; k < 4; ++k)
-			{
-				printf("interp_field[%d][%d] = %f\n", j, k, intrp_field[j][k]);
-			}
-		}
-		*/
-
-		//printf("slots_d.vX[i] = %f\n", slots_d.vX[i]);
-		//printf("slots_d.vY[i] = %f\n", slots_d.vY[i]);
-		//printf("slots_d.vZ[i] = %f\n", slots_d.vZ[i]);
-
 		// Update particle curvilinear velocity. For example,
 		// vx = dx/dX * vX + dx/dY * vY + dx/dZ * vZ
 		slots_d.vx[i] = intrp_field[2][0] * slots_d.vX[i] 
@@ -390,14 +372,14 @@ namespace Boris
 		slots_d.vz[i] = intrp_field[4][0] * slots_d.vX[i] 
 			+ intrp_field[4][1] * slots_d.vY[i] 
 			+ intrp_field[4][2] * slots_d.vZ[i];
-		
+
 	}  // update_velocity_kernel
 
 
 	void update_velocity_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d, const double dt)
 	{
-
+		
 		// Block and grid size
 		int blockSize = 256;
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;

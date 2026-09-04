@@ -85,6 +85,7 @@ namespace Slots
 	void Slots::set_q(int i, int val) {m_q[i] = val;}
 	void Slots::set_state(int i, int val) {m_state[i] = val;}
 
+	// I think this should probably be moved to slots.cu...
 	// Copy data to device and return SlotsDevice struct
 	SlotsDevice Slots::to_device(int device_id)
 	{
@@ -121,6 +122,10 @@ namespace Slots
 		cudaMalloc(&slots_d.q, m_N * sizeof(int));
 		cudaMalloc(&slots_d.state, m_N * sizeof(int));
 		cudaMalloc(&slots_d.all_dead, sizeof(bool));
+		cudaMalloc(&slots_d.counter, sizeof(int));
+		cudaMalloc(&slots_d.alive, sizeof(int));
+		cudaMalloc(&slots_d.num_dead, sizeof(int));
+		cudaMalloc(&slots_d.dead_indices, m_N * sizeof(int));
 
 		// Copy to device
 		cudaMemcpy(slots_d.t, m_t.data(), m_N * sizeof(double), 
@@ -243,6 +248,10 @@ namespace Slots
 		cudaFree(slots_d.q);
 		cudaFree(slots_d.state);
 		cudaFree(slots_d.all_dead);
+		cudaFree(slots_d.counter);
+		cudaFree(slots_d.alive);
+		cudaFree(slots_d.num_dead);
+		cudaFree(slots_d.dead_indices);
 
 		slots_d.t = nullptr;
 		slots_d.x = nullptr;
