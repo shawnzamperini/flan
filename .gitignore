@@ -15,6 +15,7 @@ install-deps/msgpack-c*
 install-deps/hdf5-*
 install-deps/netcdf-c*
 install-deps/netcdf-cxx4*
+install-deps/postgkyl/
 install-deps/zlib-*
 install-deps/build-opts.sh*
 install-deps/build-opts.cmake*
@@ -27,3 +28,91 @@ lib/cmake/*
 scripts/flan_setup.sh*
 build/*
 !build/.gitkeep
+
+############################
+# Core build artifacts
+############################
+build/
+build_cpu/
+build_gpu/
+!build/.gitkeep
+
+src/tmp/
+
+############################
+# Tests (ignore all artifacts)
+############################
+tests/CMakeCache.txt
+tests/CMakeFiles/
+tests/CTestTestfile.cmake
+tests/Makefile
+tests/Testing/
+tests/_deps/
+tests/cmake_install.cmake
+tests/config.h
+tests/install_manifest.txt
+tests/lib/
+tests/tests/
+tests/flan_setup.sh*
+
+############################
+# MkDocs / documentation
+############################
+docs-site/
+docs/html*
+docs/latex*
+Doxyfile.bak
+
+############################
+# Python packaging
+############################
+python/__pycache__/
+python/flan.egg-info*
+src/flan.egg-info*
+
+############################
+# Install-deps (third-party libs)
+############################
+install-deps/adios*
+install-deps/boost*
+install-deps/msgpack-c*
+install-deps/hdf5-*
+install-deps/netcdf-c*
+install-deps/netcdf-cxx4*
+install-deps/zlib-*
+install-deps/build-opts.sh*
+install-deps/build-opts.cmake*
+install_local/
+
+############################
+# CMake
+############################
+lib/cmake/*
+
+############################
+# Scripts
+############################
+scripts/flan_setup.sh*
+
+############################
+# Generic binary/object files
+############################
+*.so
+*.o
+*.ts
+
+############################
+# Editor / OS junk
+############################
+.DS_Store
+*.vim
+*.swp
+
+############################
+# Archives / misc
+############################
+*.tar.gz
+*.make
+*.internal
+*.html
+
