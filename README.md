@@ -27,3 +27,12 @@ A publication detailing Flan is anticipated in 2025.
 - ~~Add time profiling~~ Merged to main 7/31/25
 - ~~Upgrade to Nanbu collision model~~ Merged to main 7/23/25
 - ~~Expand code to non-Cartesian geometries (e.g., tokamak coordinates)~~ Merged to main 5/30/25
+
+
+FLAN is dual-licensed under the GNU General Public License v3.0 (GPLv3) and a commercial license.
+
+- The GPLv3 license applies to all open-source use.
+- A commercial license is available for organizations that wish to use FLAN in proprietary software, avoid GPL obligations, or obtain commercial support.
+
+For commercial licensing inquiries, please contact: [your email].
+
