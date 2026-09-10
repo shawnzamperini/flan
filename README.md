@@ -34,5 +34,5 @@ FLAN is dual-licensed under the GNU General Public License v3.0 (GPLv3) and a co
 - The GPLv3 license applies to all open-source use.
 - A commercial license is available for organizations that wish to use FLAN in proprietary software, avoid GPL obligations, or obtain commercial support.
 
-For commercial licensing inquiries, please contact: [your email].
+For commercial licensing inquiries, please contact: zamperinis@fusion.gat.com.
 
