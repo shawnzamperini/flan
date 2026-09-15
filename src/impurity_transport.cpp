@@ -182,6 +182,27 @@ namespace ImpurityTransport
 			ioniz_warnings, recomb_warnings, rngs);
 	}
 
+	void collision_cpu(Slots::Slots& slots, const Background::Background& bkg, 
+		const double dt, const Options::Options& opts)
+	{
+	/*
+		// Update impurity velocity based on Nanbu collision model. Impurity
+		// is modified within function. First call is for ions (the false) and
+		// second call is for electrons (the true).
+		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, false, 
+			imp_time_step, imp_stats);
+
+		// friction_force test case only considers ion collisions to compare
+		// against expected flow
+		if (opts.test_opt_int() != 5)
+		{
+			Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
+				imp_time_step, imp_stats);
+		}
+	*/
+	}
+
+
 	// ------------------
 	// Wrapper functions
 	// ------------------
@@ -268,6 +289,7 @@ namespace ImpurityTransport
 		Boris::update_velocity_cpu(slots, bkg, opts, dt);
 	}
 
+
 	// Check if all particles in slots are dead
 	bool all_dead_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Options::Options& opts, int rem_parts)
@@ -339,6 +361,7 @@ namespace ImpurityTransport
 		step_cpu(slots, bkg, opts, opts.imp_time_step());
 	}
 
+
 	// Check for ionization/recombination
 	void ioniz_recomb_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
@@ -367,6 +390,24 @@ namespace ImpurityTransport
 			opts.imp_time_step(), ioniz_warnings, recomb_warnings, rngs);
 	}
 
+
+	void collision_wrapper(Slots::Slots& slots, 
+		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
+		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
+		const double dt)
+	{
+
+#ifdef USE_CUDA
+		if (opts.use_gpu_int() > 0) 
+		{
+			// Defined in cuda/collision.cu
+			//collision_gpu(slots_d, bkg_d, dt);
+			return;
+		}
+#endif
+
+		//collision_cpu(slots, bkg, dt);
+	}
 
 	// Main particle following loop
 	void main_loop(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
@@ -465,7 +506,9 @@ namespace ImpurityTransport
 			// To-do
 
 			// Collision update
-			// To-do
+			{
+				Timer::ScopedTimer t(timer.acc(Timer::Section::Coll));
+			}
 
 			// We create a scope for each step so that we can use a scoped
 			// timer to profile the time spent in each step of the loop.

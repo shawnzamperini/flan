@@ -297,9 +297,24 @@ namespace Background
 			const double y0, const double z0) const;
 
 		/**
+		* @brief Interpolate Ti at a given t,x,y,z
+		*/
+		BkgFPType interp_ti(const double t0, const double x0, 
+			const double y0, const double z0) const;
+
+		/**
 		* @brief Interpolate ne at a given t,x,y,z
 		*/
 		BkgFPType interp_ne(const double t0, const double x0, 
+			const double y0, const double z0) const;
+
+		BkgFPType interp_uX(const double t0, const double x0, 
+			const double y0, const double z0) const;
+
+		BkgFPType interp_uY(const double t0, const double x0, 
+			const double y0, const double z0) const;
+
+		BkgFPType interp_uZ(const double t0, const double x0, 
 			const double y0, const double z0) const;
 
 		/**

@@ -7,6 +7,7 @@
 #include "impurity_stats.h"
 #include "options.h"
 #include "background.h"
+#include "slots.h"
 
 namespace Collisions
 {
@@ -14,9 +15,6 @@ namespace Collisions
 	* @brief Update impurity Cartesian velocity according to Nanbu collision
 	* model.
 	*/
-	void nanbu_coll(Impurity::Impurity& imp, const Background::Background& bkg,
-		const int tidx, const int xidx, const int yidx, const int zidx,
-		const Options::Options& opts, bool elec, const double imp_time_step,
-		Impurity::Statistics& imp_stats);
-
+	void nanbu_coll(Slots::Slots& slots, const Background::Background& bkg,
+		const Options::Options& opts, bool elec, const double dt);
 }

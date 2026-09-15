@@ -297,6 +297,7 @@ namespace OpenADAS
 		return std::make_tuple(value, value0, value1, index0, index1);
 	}
 
+
 	double OpenADAS::get_rate_coeff(int charge, double ne, double te)
 		const
 	{

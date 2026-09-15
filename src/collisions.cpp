@@ -15,6 +15,7 @@
 #include "nanbu_s_a.h"
 #include "options.h"
 #include "random.h"
+#include "slots.h"
 #include "utilities.h"
 #include "variance_reduction.h"
 
@@ -27,7 +28,7 @@ namespace Collisions
 	}
 
 	std::tuple<double, double, double> sample_bkg_velocity(
-		const Background::Background& bkg, Impurity::Impurity& imp, 
+		const Background::Background& bkg,
 		const double T, const double uX, const double uY, const double uZ,
 		const double m)
 	{
@@ -50,10 +51,12 @@ namespace Collisions
 
 	// Calculate s term in Nanbu collision model
 	std::tuple<double, double, double, double> nanbu_calc_s(
-		Impurity::Impurity& imp, const Background::Background& bkg, 
+		const Background::Background& bkg, 
 		const double imp_time_step, const double T, const double mass_kg, 
 		const double Te, const double ne, const double imp_vX_n, 
-		const double imp_vY_n, const double imp_vZ_n)
+		const double imp_vY_n, const double imp_vZ_n, const double t,
+		const double x, const double y, const double z, const double vX,
+		const double vY, const double vZ)
 	{
 		// While I think the below is still valid, it was solved in calc_chi
 		// by returning an isotropically distributed chi at large s (small A)
@@ -77,20 +80,21 @@ namespace Collisions
 		//     the mean flow. We call this the mean relative velocity.
 
 		// Background flow at impurity location
-		double uX {bkg.interp_uX_at_imp(imp)};
-		double uY {bkg.interp_uY_at_imp(imp)};
-		double uZ {bkg.interp_uZ_at_imp(imp)};
+		double uX {bkg.interp_uX(t, x, y, z)}; 
+		double uY {bkg.interp_uY(t, x, y, z)}; 
+		double uZ {bkg.interp_uZ(t, x, y, z)}; 
 
 		// Random sample of background species instantanoues velocity 
 		// (flow + thermal sampling) that particle is colliding with.
-		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, imp, T, uX, 
+		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, T, uX, 
 			uY, uZ, mass_kg);
 
 		// XYZ components of instantaneous relative velocity
-		double inst_gX {imp.get_vX() - bkg_vX};
-		double inst_gY {imp.get_vY() - bkg_vY};
-		double inst_gZ {imp.get_vZ() - bkg_vZ};
+		double inst_gX {vX - bkg_vX};
+		double inst_gY {vY - bkg_vY};
+		double inst_gZ {vZ - bkg_vZ};
 
+		/*
 		// XYZ components of mean relative velocity
 		double mean_gX {imp.get_vX() - uX};
 		double mean_gY {imp.get_vY() - uY};
@@ -200,6 +204,7 @@ namespace Collisions
 		}
 
 		return std::make_tuple(s, inst_gX, inst_gY, inst_gZ);
+		*/
 	}
 
 	// Calculate A term in Nanbu collision model
@@ -329,78 +334,94 @@ namespace Collisions
 		return std::make_tuple(vX_post, vY_post, vZ_post);
 	}
 
-	void nanbu_coll(Impurity::Impurity& imp, const Background::Background& bkg,
-		const int tidx, const int xidx, const int yidx, const int zidx,
-		const Options::Options& opts, bool elec, const double imp_time_step,
-		Impurity::Statistics& imp_stats)
+
+	void nanbu_coll(Slots::Slots& slots, const Background::Background& bkg,
+		const Options::Options& opts, bool elec, const double dt)
 	{
 		// Derivation and steps taken from:
 		// Nanbu, K. Theory of cumulative small-angle collisions in plasmas. 
 		// Phys. Rev. E 55, 4642–4652 (1997).
 
-		// A neutral will not experience a Coloumb collision (in fact, will
-		// cause a divide by zero later on in this algorithm), so do nothing
-		// in that case.
-		if (imp.get_charge() == 0) return;
 
-		// Will always need electron temperature/density. Trilinearly
-		// interpolate in space and then linearly interpolate in time.
-		//double Te {bkg.get_te()(tidx, xidx, yidx, zidx)};
-		//double ne {bkg.get_ne()(tidx, xidx, yidx, zidx)};
-		double Te {bkg.interp_te_at_imp(imp)};
-		double ne {bkg.interp_ne_at_imp(imp)};
-
-		// Need to account for this better, just putting it here for now so I
-		// can get this paper submitted :(
-		Te = std::max(0.1, Te);
-		ne = std::max(1e16, ne);
-
-		// Load some reusable variables based on which species. If elec = true,
-		// then electrons and ions if not. 
-		double mass_kg {};
-		double T {};
-		if (elec)
+		#pragma omp parallel for
+		for (int i=0; i < slots.N(); ++i)
 		{
-			mass_kg = opts.gkyl_elec_mass_amu() * Constants::amu_to_kg;	
-			T = Te;
-		}
-		else
-		{
-			mass_kg = opts.gkyl_ion_mass_amu() * Constants::amu_to_kg;	
-			//T = bkg.get_ti()(tidx, xidx, yidx, zidx);
-			T = bkg.interp_ti_at_imp(imp);
-			T = std::max(0.1, T);
-		}
 
-		// Subtlety! Impurity velocity is defined at half time steps, but the collision
-		// happens at a full time step. Since this collision update is happening
-		// after the Boris update, imp.v is at n+1/2 and imp.prev_v is at n-1/2.
-		// So reconstruct the full-time step as
-		// the average between v_n-1/2 and v_n+1/2 and use that in the following.
-		// We will overwrite v_n+1/2 with the post-collision value.
-		// ---
-		// These aren't used right now in the following functions, but it still 
-		// may be the correct thing to do. Will need time to test/compare the 
-		// two. Right now just set to zero so we can leave the function calls
-		// in place.
-		//double imp_vX_n {(imp.get_vX() + imp.get_prev_vX()) / 2.0};
-		//double imp_vY_n {(imp.get_vY() + imp.get_prev_vY()) / 2.0};
-		//double imp_vZ_n {(imp.get_vZ() + imp.get_prev_vZ()) / 2.0};
-		constexpr double imp_vX_n {0.0};
-		constexpr double imp_vY_n {0.0};
-		constexpr double imp_vZ_n {0.0};
+			// A neutral will not experience a Coloumb collision (in fact, will
+			// cause a divide by zero later on in this algorithm), so do nothing
+			// in that case.
+			if (slots.q()[i] == 0) continue;
 
-		// The Nanbu model has three main variables in it:
-		// s:    How collisional is this step?
-		// A(s): What is the shape of the scattering distribution? A(s) is
-		//       the PDF.
-		// chi:  What is the actual deflection angle this time? It is calculated
-		//       via direct inversion from the CDF formed from our PDF (A(s)). 
+			// Local variables
+			double t {slots.t()[i]};
+			double x {slots.x()[i]};
+			double y {slots.y()[i]};
+			double z {slots.z()[i]};
+			double vX {slots.vX()[i]};
+			double vY {slots.vY()[i]};
+			double vZ {slots.vZ()[i]};
 
-		// Calculate s (Eq. 19), making sure to pass in the full time step
-		// velocities.
-		auto [s, gX, gY, gZ] = nanbu_calc_s(imp, bkg, imp_time_step, T, 
-			mass_kg, Te, ne, imp_vX_n, imp_vY_n, imp_vZ_n);
+			// Will always need electron temperature/density. Trilinearly
+			// interpolate in space and then linearly interpolate in time.
+			double ne {bkg.interp_ne(t, x, y, z)}; 
+			double Te {bkg.interp_te(t, x, y, z)}; 
+
+
+			// Need to account for this better, just putting it here for now so I
+			// can get this paper submitted :(
+			Te = std::max(0.1, Te);
+			ne = std::max(1e16, ne);
+
+
+			// Load some reusable variables based on which species. If elec = true,
+			// then electrons and ions if not. 
+			double mass_kg {};
+			double T {};
+			if (elec)
+			{
+				mass_kg = opts.gkyl_elec_mass_amu() * Constants::amu_to_kg;	
+				T = Te;
+			}
+			else
+			{
+				mass_kg = opts.gkyl_ion_mass_amu() * Constants::amu_to_kg;	
+				T = bkg.interp_ti(t, x, y, z); 
+				T = std::max(0.1, T);
+			}
+
+
+			// Subtlety! Impurity velocity is defined at half time steps, but the collision
+			// happens at a full time step. Since this collision update is happening
+			// after the Boris update, imp.v is at n+1/2 and imp.prev_v is at n-1/2.
+			// So reconstruct the full-time step as
+			// the average between v_n-1/2 and v_n+1/2 and use that in the following.
+			// We will overwrite v_n+1/2 with the post-collision value.
+			// ---
+			// These aren't used right now in the following functions, but it still 
+			// may be the correct thing to do. Will need time to test/compare the 
+			// two. Right now just set to zero so we can leave the function calls
+			// in place.
+			//double imp_vX_n {(imp.get_vX() + imp.get_prev_vX()) / 2.0};
+			//double imp_vY_n {(imp.get_vY() + imp.get_prev_vY()) / 2.0};
+			//double imp_vZ_n {(imp.get_vZ() + imp.get_prev_vZ()) / 2.0};
+			constexpr double imp_vX_n {0.0};
+			constexpr double imp_vY_n {0.0};
+			constexpr double imp_vZ_n {0.0};
+
+			// The Nanbu model has three main variables in it:
+			// s:    How collisional is this step?
+			// A(s): What is the shape of the scattering distribution? A(s) is
+			//       the PDF.
+			// chi:  What is the actual deflection angle this time? It is calculated
+			//       via direct inversion from the CDF formed from our PDF (A(s)). 
+
+			// Calculate s (Eq. 19), making sure to pass in the full time step
+			// velocities.
+			auto [s, gX, gY, gZ] = nanbu_calc_s(bkg, dt, T, 
+				mass_kg, Te, ne, imp_vX_n, imp_vY_n, imp_vZ_n, t, x, y, z, vX,
+				vY, vZ);
+
+		/*
 
 		// Add to running sum of s values in each cell so we can do an average
 		// later. Only consider for ions since they are the dominant collision
@@ -472,6 +493,8 @@ namespace Collisions
 		imp.set_vX(vX_post);
 		imp.set_vY(vY_post);
 		imp.set_vZ(vZ_post);
+		*/
+		}
 
 	}
 }

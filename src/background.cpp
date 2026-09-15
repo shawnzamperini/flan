@@ -610,11 +610,39 @@ namespace Background
 		return interp_4d(m_te, t0, x0, y0, z0);
 	}
 
+	// Interpolate Ti at a given t,x,y,z
+	BkgFPType Background::interp_ti(const double t0, const double x0, 
+		const double y0, const double z0) const
+	{
+		return interp_4d(m_ti, t0, x0, y0, z0);
+	}
+
 	// Interpolate ne at a given t,x,y,z
 	BkgFPType Background::interp_ne(const double t0, const double x0, 
 		const double y0, const double z0) const
 	{
 		return interp_4d(m_ne, t0, x0, y0, z0);
+	}
+
+	// Interpolate uX at a given t,x,y,z
+	BkgFPType Background::interp_uX(const double t0, const double x0, 
+		const double y0, const double z0) const
+	{
+		return interp_4d(m_uX, t0, x0, y0, z0);
+	}
+
+	// Interpolate uX at a given t,x,y,z
+	BkgFPType Background::interp_uY(const double t0, const double x0, 
+		const double y0, const double z0) const
+	{
+		return interp_4d(m_uY, t0, x0, y0, z0);
+	}
+
+	// Interpolate uX at a given t,x,y,z
+	BkgFPType Background::interp_uZ(const double t0, const double x0, 
+		const double y0, const double z0) const
+	{
+		return interp_4d(m_uZ, t0, x0, y0, z0);
 	}
 
 	// Interpolate Te at Impurity location
