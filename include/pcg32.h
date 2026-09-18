@@ -1,5 +1,8 @@
 #pragma once
+#include <cmath>
 #include <cstdint>
+
+#include "constants.h"
 
 // If using nvcc define this so that this struct can be used in CPU and GPU code
 #ifdef __CUDACC__
@@ -14,6 +17,9 @@ struct pcg32
 {
     uint64_t state;
     uint64_t inc;
+
+	bool has_spare {false};
+	double spare {};
 
 	HD
     pcg32(uint64_t seed, uint64_t seq) {
@@ -37,4 +43,33 @@ struct pcg32
     double next_double() {
         return (next_uint() >> 8) * (1.0 / 16777216.0);
     }
+
+	// Box-Mueller transform for returning two normally distributed random
+	// numbers centered on mean with standard deviation stddev. Since it
+	// returns two numbers, we cache the second one to avoid throwing it away.
+	HD
+	double normal(double mean, double stddev)
+	{
+		// If spare random number was cached use it
+		if (has_spare)
+		{
+			has_spare = false;
+			return mean + stddev * spare;
+		}
+
+		// Box-Mueller transform for two normally distributed random numbers
+		double u1 = next_double();
+		if (u1 < 1e-12) u1 = 1e-12;
+		
+		double u2 = next_double();
+
+		double r = sqrt(-2.0 * log(u1));
+		double theta = 2.0 * Constants::pi * u2;
+
+		// Cache the second number
+		spare = r * sin(theta);
+		has_spare = true;
+
+		return mean + stddev * (r * cos(theta));
+	}
 };

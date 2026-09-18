@@ -1005,7 +1005,7 @@ namespace Impurity
 			counts_data[idx] += 1;
 
 			#pragma omp atomic update
-			weights_data[idx] += p_w * imp_time_step;
+			weights_data[idx] += p_w;
 
 			#pragma omp atomic update
 			vX_data[idx] += slots.vX()[i] * p_w;

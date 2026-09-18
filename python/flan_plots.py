@@ -1497,7 +1497,8 @@ class FlanPlots:
 			# Hardcoded values that this test uses (see read_test.cpp)
 			BX = 1.0
 			uX = 1000
-			Ti = 1
+			#Ti = 1
+			Ti = 10
 			mi = 2.014
 			ni = 1e20
 			#ln_alpha = 10
@@ -1581,6 +1582,7 @@ class FlanPlots:
 			ax1.set_xlabel("Time (s)", fontsize=fontsize)
 			ax1.set_ylabel("vX (m/s)", fontsize=fontsize, color="tab:red")
 			ax1.set_ylim([0, 2000])
+			ax1.legend()
 
 			if show_nanbu_s:
 				ax11 = ax1.twinx()

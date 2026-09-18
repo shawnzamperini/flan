@@ -1,9 +1,12 @@
+#include <array>
 #include <iostream>
 #include <omp.h>
 #include <vector>
 
 #include "background.h"
+#include "indices.h"
 #include "pcg32.h"
+#include "random.h"
 #include "slots.h"
 #include "slots_device.h"
 
@@ -304,11 +307,79 @@ namespace Slots
 		return return_start_val;
 	}
 
+
+	std::array<double, 3> get_birth_vXYZ(const Background::Background& bkg, 
+		const Options::Options& opts, const double t, const double x, 
+		const double y, const double z, const int tidx, const int xidx,
+		const int yidx, const int zidx, pcg32& rng)
+	{
+		// If we're running a test we will want to start at predetermined
+		// velocities to make sure things work correctly. Ideally there
+		// wouldn't be an if statement to favor vectorization, but seeing as
+		// this is only happens once per particle it's not a huge deal.
+		if (opts.bkg_source_int() == 0)
+		{
+			// Give particles an initial Y velocity to kick off gyration
+			if (opts.test_opt_int() == 0 || opts.test_opt_int() == 1
+				|| opts.test_opt_int() == 2 || opts.test_opt_int() == 3)
+			{
+				return {0.0, 10000.0, 0.0};
+			}
+
+			// Curvature drift test requires an initial velocity parallel to
+			// the field line, we set that to be 30,000 m/s. In this geometry
+			// x = R, y = Z and z = phi
+			else if (opts.test_opt_int() == 4)
+			{
+				constexpr double v_par = 30000;
+				double v_X {- v_par * std::sin(z)};
+				double v_Y {v_par * std::cos(z)};
+				return {v_X, v_Y, 0.0};
+			}
+
+			// Friction force test case we start at rest so it can accelerate 
+			// up to the background velocity
+			else if (opts.test_opt_int() == 5)
+			{
+				return {0.0, 0.0, 0.0};
+			}
+		}
+
+		// Start at input temperature value
+		double start_temp {};
+		if (opts.imp_temp_start_opt_int() == 0)
+		{
+			start_temp = opts.imp_temp_start_val();
+		}
+
+		// Start at main ion temperature
+		else if (opts.imp_temp_start_opt_int() == 1)
+			start_temp = bkg.get_ti()(tidx, xidx, yidx, zidx);
+
+		// Sample from a Maxwellian with sigma = sqrt(kT/m) and mean = 0 for an
+		// isotropic velocity distribution. T [eV], m [kg]
+		const double sigma {std::sqrt(start_temp * Constants::ev_to_j 
+			/ (opts.imp_mass_amu() * Constants::amu_to_kg))};  // m/s
+
+		double vX {rng.normal(0.0, sigma)};
+		double vY {rng.normal(0.0, sigma)};
+		double vZ {rng.normal(0.0, sigma)};
+
+		return {vX, vY, vZ};
+	}
+
+
 	// Initialize a new particle and return it
 	ParticleInit make_new_particle(const Background::Background& bkg,
 		const Options::Options& opts, pcg32& rng) 
 	{
 		ParticleInit p;
+
+		// Variables for each grid to avoid repeatedly calling in the loop
+		const auto& times = bkg.get_times();
+		const auto& grid_x = bkg.get_grid_x();
+		const auto& grid_y = bkg.get_grid_y();
+		const auto& grid_z = bkg.get_grid_z();
 
 		// Initialize starting time/location based on input options
 		p.t = get_birth_val(opts.imp_tstart_opt_int(), 
@@ -327,22 +398,25 @@ namespace Slots
 			opts.imp_zstart_val(), opts.imp_zrange_min(), opts.imp_zrange_max(), 
 			bkg.get_z_min(), bkg.get_z_max(), rng);
 
+		// Get indices, same process as in impurity_transport.cpp
+		p.tidx = Indices::get_nearest_index_cpu(times, p.t);
+		p.xidx = Indices::get_nearest_cell_index_cpu(grid_x, p.x);
+		p.yidx = Indices::get_nearest_cell_index_cpu(grid_y, p.y);
+		p.zidx = Indices::get_nearest_cell_index_cpu(grid_z, p.z);
 
-		// These get assigned in the main_loop right after fill_slots
-		p.tidx = 0;
-		p.xidx = 0;
-		p.yidx = 0;
-		p.zidx = 0;
+		// Get velocity components in Cartesian space
+		auto [vX, vY, vZ] = get_birth_vXYZ(bkg, opts, p.t, p.x, p.y, p.z, 
+			p.tidx, p.xidx, p.yidx, p.zidx, rng);
+		p.vX = vX;
+		p.vY = vY;
+		p.vZ = vZ;
 
-		// Still need to implement the normal logic here
+		// These get set on the first call to Boris::update_velocity 
 		p.vx = 0.0;
 		p.vy = 0.0;
 		p.vz = 0.0;
-
-		p.vX = 0.0;
-		p.vY = 5000.0;
-		p.vZ = 0.0;
 		
+		// Start with weight 1.0 by default until we have reason not to
 		p.weight = 1.0;
 		p.q = opts.imp_init_charge(); 
 

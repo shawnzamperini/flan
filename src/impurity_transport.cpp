@@ -15,6 +15,7 @@
 #include "impurity.h"
 #include "impurity_stats.h"
 #include "impurity_transport.h"
+#include "indices.h"
 #include "openadas.h"
 #include "options.h"
 #include "options_device.h"
@@ -40,69 +41,6 @@
 
 namespace ImpurityTransport
 {
-
-	template <typename T>
-	int get_nearest_index_cpu(const std::vector<T>& vec, const T value)
-	{
-		auto lower = std::lower_bound(vec.begin(), vec.end(), value);
-    
-		if (lower == vec.begin()) 
-		{
-			return 0;
-		}
-		if (lower == vec.end()) 
-		{
-			return vec.size() - 1;
-		}
-		
-		auto prev = lower - 1;
-		if (std::fabs(*lower - value) < std::fabs(*prev - value)) 
-		{
-			return lower - vec.begin();
-		} 
-		else 
-		{
-			return prev - vec.begin();
-		}
-	}
-
-	template <typename T>
-	int get_nearest_cell_index_cpu(const std::vector<T>& grid_edges, 
-		const T value)
-	{
-		// Get the index of the first value in grid_edges that is larger
-		// than value.
-		auto lower = std::lower_bound(grid_edges.begin(), grid_edges.end(), 
-			value);
-
-		// Realize that one minus the index represented by lower is the value
-		// we're after in the vectors with values at the cell centers.
-		//  ____________
-		//  |_0_|_1_|_2_|  <-- cell center indices
-		//  0   1   2   3  <-- grid_edges indices
-		//          ^
-		//        lower
-		//
-		// In this example, we want 1 returned, so we return 2 - 1 = 1. If
-		// value is outside the range, return the index of the respective end
-		// of the vector.
-		int index = std::distance(grid_edges.begin(), lower);
-
-		// If less than everything, return the first cell.
-		if (lower == grid_edges.begin()) return 0;
-
-		// If larger than everything, return the last cell. Note end() is the
-		// iterator that points past the last element of a vector, so to return
-		// the cell we need to subtract by 2. 
-		else if (lower == grid_edges.end()) 
-		{
-			return index - 2;
-		}
-
-		//else return lower - grid_edges.begin() - 1;
-		else return index - 1;
-	}
-
 	void find_containing_cell_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg)
 	{
@@ -120,13 +58,13 @@ namespace ImpurityTransport
 			// "time centers", if that helps think about it. So we just find
 			// the nearest index for it. The spatial coordinates have a grid
 			// so we use that.
-			int tidx {get_nearest_index_cpu(times, slots.t()[i])};
+			int tidx {Indices::get_nearest_index_cpu(times, slots.t()[i])};
 
 			// Find nearest cell using the grid (unlike time, which uses
 			// cell "centers"). 
-			int xidx {get_nearest_cell_index_cpu(grid_x, slots.x()[i])};
-			int yidx {get_nearest_cell_index_cpu(grid_y, slots.y()[i])};
-			int zidx {get_nearest_cell_index_cpu(grid_z, slots.z()[i])};
+			int xidx {Indices::get_nearest_cell_index_cpu(grid_x, slots.x()[i])};
+			int yidx {Indices::get_nearest_cell_index_cpu(grid_y, slots.y()[i])};
+			int zidx {Indices::get_nearest_cell_index_cpu(grid_z, slots.z()[i])};
 
 			slots.set_tidx(i, tidx);
 			slots.set_xidx(i, xidx);
@@ -154,6 +92,9 @@ namespace ImpurityTransport
 				std::cout << "vx = " << slots.vx()[i] << '\n';
 				std::cout << "vy = " << slots.vy()[i] << '\n';
 				std::cout << "vz = " << slots.vz()[i] << '\n';
+				std::cout << "vX = " << slots.vX()[i] << '\n';
+				std::cout << "vY = " << slots.vY()[i] << '\n';
+				std::cout << "vZ = " << slots.vZ()[i] << '\n';
 			}
 			*/
 
@@ -183,23 +124,20 @@ namespace ImpurityTransport
 	}
 
 	void collision_cpu(Slots::Slots& slots, const Background::Background& bkg, 
-		const double dt, const Options::Options& opts)
+		const double dt, const Options::Options& opts, 
+		Impurity::Statistics& imp_stats, std::vector<pcg32>& rngs)
 	{
-	/*
 		// Update impurity velocity based on Nanbu collision model. Impurity
 		// is modified within function. First call is for ions (the false) and
 		// second call is for electrons (the true).
-		Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, false, 
-			imp_time_step, imp_stats);
+		Collisions::nanbu_coll(slots, bkg, opts, false, dt, imp_stats, rngs);
 
 		// friction_force test case only considers ion collisions to compare
 		// against expected flow
 		if (opts.test_opt_int() != 5)
 		{
-			Collisions::nanbu_coll(imp, bkg, tidx, xidx, yidx, zidx, opts, true, 
-				imp_time_step, imp_stats);
+			Collisions::nanbu_coll(slots, bkg, opts, true, dt, imp_stats, rngs);
 		}
-	*/
 	}
 
 
@@ -394,7 +332,8 @@ namespace ImpurityTransport
 	void collision_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
-		const double dt)
+		Impurity::Statistics& imp_stats, const double dt, 
+		std::vector<pcg32>& rngs)
 	{
 
 #ifdef USE_CUDA
@@ -406,7 +345,7 @@ namespace ImpurityTransport
 		}
 #endif
 
-		//collision_cpu(slots, bkg, dt);
+		collision_cpu(slots, bkg, dt, opts, imp_stats, rngs);
 	}
 
 	// Main particle following loop
@@ -506,8 +445,11 @@ namespace ImpurityTransport
 			// To-do
 
 			// Collision update
+			if (opts.imp_collisions_int() > 0)
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Coll));
+				collision_wrapper(slots, slots_d, bkg, bkg_d, opts,
+					imp_stats, opts.imp_time_step(), rngs);
 			}
 
 			// We create a scope for each step so that we can use a scoped
