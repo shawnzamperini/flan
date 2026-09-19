@@ -7,6 +7,7 @@
 #include "slots_device.h"
 
 #include "device_constants.cuh"
+#include "interpolate.cuh"
 #include "utilities.cuh"
 
 
@@ -35,6 +36,94 @@ namespace Boris
 		double x {slots_d.x[i]};
 		double y {slots_d.y[i]};
 		double z {slots_d.z[i]};
+
+		// Trilinear interpolation to ensure we use a continous B/E in the 
+		// algorithm. Without interpolating, the particle will:
+		// a) Fail to follow the parallel direction of the field line due to
+		//    it being discrete in the code (this is called "numerical
+		//    diffusion" and introduces artificial cross-field transport).
+		// b) Experience large "kicks" at cell boundaries where B/E is 
+		//    discontinuous, which can introduce artificial drifts.
+		// 
+		// The issue in a) generally will still occur since we are still using
+		// an approximation to the field line, but this greatly reduces the
+		// numerical diffusion since B is now continous.
+
+		// Create stencils for interpolation
+		Interpolate::InterpolationStencil stencil_3d
+			{Interpolate::build_stencil_3d(bkg_d, xidx, yidx, zidx)};
+		Interpolate::InterpolationStencil stencil_4d
+			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx)};
+
+		// Interpolate reciprocal basis vectors
+		// 0-2: dxdX
+		// 3-5: dydX
+		// 6-8: dzdX
+		double rbv[9];
+		rbv[0] = Interpolate::interpolate_field_3d(bkg_d.dxdX, stencil_3d, x, y, z);
+		rbv[1] = Interpolate::interpolate_field_3d(bkg_d.dxdY, stencil_3d, x, y, z);
+		rbv[2] = Interpolate::interpolate_field_3d(bkg_d.dxdZ, stencil_3d, x, y, z);
+		rbv[3] = Interpolate::interpolate_field_3d(bkg_d.dydX, stencil_3d, x, y, z);
+		rbv[4] = Interpolate::interpolate_field_3d(bkg_d.dydY, stencil_3d, x, y, z);
+		rbv[5] = Interpolate::interpolate_field_3d(bkg_d.dydZ, stencil_3d, x, y, z);
+		rbv[6] = Interpolate::interpolate_field_3d(bkg_d.dzdX, stencil_3d, x, y, z);
+		rbv[7] = Interpolate::interpolate_field_3d(bkg_d.dzdY, stencil_3d, x, y, z);
+		rbv[8] = Interpolate::interpolate_field_3d(bkg_d.dzdZ, stencil_3d, x, y, z);
+
+		// Interpolate E and B components and magnitudes
+		double E[4];
+		E[0] = Interpolate::interpolate_field_4d(bkg_d.eX, stencil_4d, t, x, y, z);
+		E[1] = Interpolate::interpolate_field_4d(bkg_d.eY, stencil_4d, t, x, y, z);
+		E[2] = Interpolate::interpolate_field_4d(bkg_d.eZ, stencil_4d, t, x, y, z);
+		E[3] = Interpolate::interpolate_field_4d(bkg_d.emag, stencil_4d, t, x, y, z);
+
+		double B[4];
+		B[0] = Interpolate::interpolate_field_4d(bkg_d.bX, stencil_4d, t, x, y, z);
+		B[1] = Interpolate::interpolate_field_4d(bkg_d.bY, stencil_4d, t, x, y, z);
+		B[2] = Interpolate::interpolate_field_4d(bkg_d.bZ, stencil_4d, t, x, y, z);
+		B[3] = Interpolate::interpolate_field_4d(bkg_d.bmag, stencil_4d, t, x, y, z);
+
+		// We interpolated the magnitude as well. This is because there is
+		// no guarantee that the interpolated vector will have the same
+		// magnitude (in fact it almost certainly shrinks). We are faced
+		// with a choice:
+		//   a) Leave as-is. B/E are continuous at cell boundaries, but
+		//      the magntiude will be off. The size of the gyro-orbit will
+		//      be affected as a result.
+		//   b) Scale via the interpolated magnitude. B/E will be 
+		//      discontinuous at cell boundaries, but definitely not as
+		//      discontinous as without interpolation. Gyro-orbit will
+		//      be more physically correct.
+		// We choose option b), because getting the gyro-orbit correct is
+		// central to Flan. Slight discontinuities are not ideal, but the
+		// particle spends order of magnitude more time not crossing 
+		// a boundary, therefore option b) also minimizes numerical
+		// diffusion in that sense as well by ensuring the gyro-orbit is
+		// as correct as possible.
+		//
+		// We do not do this for the reciprocal basis vector. 
+		// The reason is subtle and kind of tricky, but it has to do with
+		// not destroying the orthogonality anymore than we have from
+		// interpolating.
+
+		// Compute magnitude of interpolated vectors
+		double calc_Emag {sqrt(E[0]*E[0] + E[1]*E[1] + E[2]*E[2])};
+		double calc_Bmag {sqrt(B[0]*B[0] + B[1]*B[1] + B[2]*B[2])};
+
+		// Branch-free mask: 1.0 if calc_mag > 0, else 0.0
+		double Emask = (calc_Emag > 0.0);
+		double Bmask = (calc_Bmag > 0.0);
+
+		// Scale vector components using interpolated magnitude. fmax prevents 
+		// divide-by-zero
+		double Edenom = fmax(calc_Emag, 1e-30);
+		double Bdenom = fmax(calc_Bmag, 1e-30);
+		for (int j {}; j < 3; ++j)
+		{
+			E[j] = E[j] * E[3] / Edenom * Emask;
+			B[j] = B[j] * B[3] / Bdenom * Bmask;
+		}
+		/*
 
 		//printf("tidx, xidx, yidx, zidx = %d %d %d %d\n", tidx, xidx, yidx, zidx);
 		//printf("t, x, y, z = %g %g %g %g\n", t, x, y, z);
@@ -316,6 +405,7 @@ namespace Boris
 			}
 
 		}  // j loop
+		*/
 
 		// Boris continues
 
@@ -324,9 +414,8 @@ namespace Boris
 		double v[3] {slots_d.vX[i], slots_d.vY[i], slots_d.vZ[i]};
 
 		// t vector (t is already taken so calling it tb, t-Boris, if you will)
-		// Reminder that intrp_field[0] is B.
 		double tb[3];
-		for (int j {}; j < 3; ++j) tb[j] = q_m * intrp_field[0][j] * 0.5 * dt;
+		for (int j {}; j < 3; ++j) tb[j] = q_m * B[j] * 0.5 * dt;
 
 		// Magnitude of t, squared
 		double tmag2 {tb[0]*tb[0] + tb[1]*tb[1] + tb[2]*tb[2]};
@@ -336,10 +425,8 @@ namespace Boris
 		for (int j {}; j < 3; ++j) s[j] = 2 * tb[j] / (1.0 + tmag2);
 
 		// v minus
-		// intrp_field[1] is E
 		double vminus[3];
-		for (int j {}; j < 3; ++j) vminus[j] = v[j] + q_m * intrp_field[1][j] 
-			* 0.5 * dt;
+		for (int j {}; j < 3; ++j) vminus[j] = v[j] + q_m * E[j] * 0.5 * dt;
 
 		// v prime
 		double vprime[3];
@@ -356,13 +443,13 @@ namespace Boris
 		// v n+1/2
 		// Note we are storing particle velocity at the half time steps before
 		// the position. I.e., xi = x(ti), vi = v(ti - dt/2). 
-		// intrp_field[1] is E
-		slots_d.vX[i] = vplus[0] + q_m * intrp_field[1][0] * 0.5 * dt;
-		slots_d.vY[i] = vplus[1] + q_m * intrp_field[1][1] * 0.5 * dt;
-		slots_d.vZ[i] = vplus[2] + q_m * intrp_field[1][2] * 0.5 * dt;
+		slots_d.vX[i] = vplus[0] + q_m * E[0] * 0.5 * dt;
+		slots_d.vY[i] = vplus[1] + q_m * E[1] * 0.5 * dt;
+		slots_d.vZ[i] = vplus[2] + q_m * E[2] * 0.5 * dt;
 
 		// Update particle curvilinear velocity. For example,
 		// vx = dx/dX * vX + dx/dY * vY + dx/dZ * vZ
+		/*
 		slots_d.vx[i] = intrp_field[2][0] * slots_d.vX[i] 
 			+ intrp_field[2][1] * slots_d.vY[i] 
 			+ intrp_field[2][2] * slots_d.vZ[i];
@@ -372,6 +459,13 @@ namespace Boris
 		slots_d.vz[i] = intrp_field[4][0] * slots_d.vX[i] 
 			+ intrp_field[4][1] * slots_d.vY[i] 
 			+ intrp_field[4][2] * slots_d.vZ[i];
+		*/
+		slots_d.vx[i] = rbv[0] * slots_d.vX[i] + rbv[1] * slots_d.vY[i] 
+			+ rbv[2] * slots_d.vZ[i];
+		slots_d.vy[i] = rbv[3] * slots_d.vX[i] + rbv[4] * slots_d.vY[i] 
+			+ rbv[5] * slots_d.vZ[i];
+		slots_d.vz[i] = rbv[6] * slots_d.vX[i] + rbv[7] * slots_d.vY[i] 
+			+ rbv[8] * slots_d.vZ[i];
 
 	}  // update_velocity_kernel
 

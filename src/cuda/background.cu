@@ -66,6 +66,9 @@ namespace Background
 		cudaMemcpyToSymbol(d_grid_z, m_grid_z.data(), (m_dim4+1) 
 			* sizeof(double));
 
+		double tmp[2];
+		cudaMemcpyFromSymbol(tmp, d_x, 2*sizeof(double));
+
 		// Copying scalars to constant memory is a little tricker since they
 		// are not treated the same way as arrays. So we use this overload
 		// of cudaMemcpyToSymbol which handles it.

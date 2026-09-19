@@ -19,9 +19,21 @@ add_executable(test_boundary_cuda test_boundary_cuda.cu
 	${PROJECT_SOURCE_DIR}/src/cuda/boundary.cu
 	${PROJECT_SOURCE_DIR}/src/cuda/device_constants.cu)
 
+# So tricky. We have to compile with background.cu here so that we don't use
+# the flan library version of it, otherwise we end up with two different
+# versions of device_constants (d_x, etc.), which results in undefined behavior.
+# This occurs whenever to_device is used while needing device_constants.
+# Wish I didn't put myself in this situation, but unsure how to fix it.
+add_executable(test_interpolate_cuda
+    test_interpolate_cuda.cu
+    ${PROJECT_SOURCE_DIR}/src/cuda/interpolate.cu
+    ${PROJECT_SOURCE_DIR}/src/cuda/device_constants.cu
+    ${PROJECT_SOURCE_DIR}/src/cuda/background.cu)
+
 # Test executables that call specific CUDA functions (instead of via a wrapper)
 set_target_properties(test_trilinear_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(test_boundary_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(test_interpolate_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # Enable the tests to inherit the RPATH of the flan library so that it can
 # find the needed shared libraries (such as libnetcdf.so).
@@ -42,11 +54,13 @@ target_link_libraries(test_all_dead_cuda PRIVATE flan gtest_main)
 target_link_libraries(test_boris_cuda PRIVATE flan gtest_main)
 target_link_libraries(test_neighbor_index_cuda PRIVATE flan gtest_main)
 target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main)
+target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main)
 
 # When testing the CUDA kernel directly, no wrapper, we need to link against
 # CUDA truntime.
 target_link_libraries(test_trilinear_cuda PRIVATE flan gtest_main CUDA::cudart)
 target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main CUDA::cudart)
+#target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main CUDA::cudart)
 
 # Register with CTest
 add_test(NAME GetNearestIndexCPUTest COMMAND test_get_nearest_index_cpu)
@@ -63,3 +77,4 @@ add_test(NAME TrilinearCUDATest COMMAND test_trilinear_cuda)
 add_test(NAME AllDeadCUDATest COMMAND test_all_dead_cuda)
 add_test(NAME NeighborIndexCUDATest COMMAND test_neighbor_index_cuda)
 add_test(NAME BoundaryCUDATest COMMAND test_boundary_cuda)
+add_test(NAME InterpolateCUDATest COMMAND test_interpolate_cuda)

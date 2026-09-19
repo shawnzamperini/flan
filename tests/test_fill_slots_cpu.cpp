@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <omp.h>
 #include "pcg32.h"
+#include "read_bkg.h"
 #include "slots.h"
 
 
@@ -11,8 +12,12 @@ TEST(FillSlotsCPU, RevivesDeadParticles)
     for (int i = 0; i < 10; i++) slots.set_state(i, i % 2); // 5 dead
     int rem = 3;
 	int alive {};
+
+	// Use just one of the test backgrounds, unimportant which
     Options::Options opts {};
-    Background::Background bkg {};
+    opts.set_bkg_source("test");
+    opts.set_test_opt("gyrate");
+    Background::Background bkg = Background::read_bkg(opts);
 
 	// Create RNGs
 	std::vector<pcg32> rngs;

@@ -1,0 +1,5 @@
+namespace Interpolate
+{
+
+	
+}  //namespace Interpolate

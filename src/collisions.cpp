@@ -30,7 +30,6 @@ namespace Collisions
 
 
 	std::tuple<double, double, double> sample_bkg_velocity(
-		const Background::Background& bkg,
 		const double T, const double uX, const double uY, const double uZ,
 		const double m, pcg32& rng)
 	{
@@ -86,7 +85,7 @@ namespace Collisions
 
 		// Random sample of background species instantanoues velocity 
 		// (flow + thermal sampling) that particle is colliding with.
-		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(bkg, T, uX, 
+		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(T, uX, 
 			uY, uZ, mass_kg, rng);
 
 		// XYZ components of instantaneous relative velocity
@@ -230,6 +229,7 @@ namespace Collisions
 
 	}
 
+
 	// Calculate chi (deflection angle) in Nanbu collision model
 	double nanbu_calc_chi(const double s, const double A, pcg32& rng)
 	{
@@ -261,6 +261,7 @@ namespace Collisions
 		cos_chi = std::clamp(cos_chi, -1.0, 1.0);
 		return std::acos(cos_chi);
 	}
+
 
 	// Calculate post-collision Cartesian velocity components from Nanbu model
 	std::tuple<double, double, double> nanbu_post_coll(const double gX,
