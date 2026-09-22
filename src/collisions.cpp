@@ -272,7 +272,6 @@ namespace Collisions
 		// For calculating h components
 		double g_perp {std::sqrt(gY*gY + gZ*gZ)};
 		double g {std::sqrt(gX*gX + gY*gY + gZ*gZ)};
-		//double eps {2.0 * Constants::pi * Random::get(0.0, 1.0)};
 		double eps {2.0 * Constants::pi * rng.next_double()};
 		double cos_eps {std::cos(eps)};
 		double sin_eps {std::sin(eps)};

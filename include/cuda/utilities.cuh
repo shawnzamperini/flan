@@ -68,6 +68,28 @@ namespace Utilities
 	}
 
 
+	// 1D linear interpolate for arrays that are known at compile time
+	template <typename T, size_t N>
+	__host__ __device__
+	T linear_interpolate_cuda(const T (&xarr)[N], const T (&yarr)[N],
+		T x)
+	{
+		#pragma unroll
+		for (int i = 0; i < N - 1; i++)
+		{
+			if ((x >= xarr[i] && x <= xarr[i + 1]) ||
+				(x <= xarr[i] && x >= xarr[i + 1]))
+			{
+				const T t = (x - xarr[i]) / (xarr[i + 1] - xarr[i]);
+				return yarr[i] + t * (yarr[i + 1] - yarr[i]);
+			}
+		}
+
+		// Should never happen for valid usage.
+		return yarr[N - 1];
+	}
+
+
 	// Bilinearly interpolate the values in flattened 2D arr at (x, y)
 	template <typename T>
 	__device__ inline T bilinear_interp(
