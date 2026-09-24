@@ -1,15 +1,27 @@
 #include <cstdio>
 
+#include "background_device.h"
 #include "options_device.h"
 #include "pcg32.h"
 #include "slots.cuh"
 #include "slots_device.h"
 
 #include "device_constants.cuh"
+#include "indices.cuh"
+#include "interpolate.cuh"
 
 
 namespace Slots
 {
+
+	// Simple struct to hold three floats
+	struct Vec3d
+	{
+		double x;
+		double y;
+		double z;
+	};
+
 	// Function to decide starting t,x,y,z based on input options
 	__device__
 	double get_birth_val_cuda(const int start_opt_int, const double start_val, 
@@ -40,32 +52,123 @@ namespace Slots
 		return return_start_val;
 	}
 
+
+	__device__
+	Vec3d get_birth_vXYZ(const Background::BackgroundDevice bkg_d, 
+		const double t, const double x, const double y, const double z, 
+		const int tidx, const int xidx, const int yidx, const int zidx, 
+		pcg32& rng, const Options::OptionsDevice* opts_d)
+	{
+		// If we're running a test we will want to start at predetermined
+		// velocities to make sure things work correctly. Ideally there
+		// wouldn't be an if statement to favor vectorization, but seeing as
+		// this is only happens once per particle it's not a huge deal.
+		if (opts_d->bkg_source_int == 0)
+		{
+			// Give particles an initial Y velocity to kick off gyration
+			if (opts_d->test_opt_int == 0 || opts_d->test_opt_int == 1
+				|| opts_d->test_opt_int == 2 || opts_d->test_opt_int == 3)
+			{
+				return {0.0, 10000.0, 0.0};
+			}
+
+			// Curvature drift test requires an initial velocity parallel to
+			// the field line, we set that to be 30,000 m/s. In this geometry
+			// x = R, y = Z and z = phi
+			else if (opts_d->test_opt_int == 4)
+			{
+				constexpr double v_par = 30000;
+				double v_X {- v_par * sin(z)};
+				double v_Y {v_par * cos(z)};
+				return {v_X, v_Y, 0.0};
+			}
+
+			// Friction force test case we start at rest so it can accelerate 
+			// up to the background velocity
+			else if (opts_d->test_opt_int == 5)
+			{
+				return {0.0, 0.0, 0.0};
+			}
+		}
+
+		// Start at input temperature value
+		double start_temp {};
+		if (opts_d->imp_temp_start_opt_int == 0)
+		{
+			start_temp = opts_d->imp_temp_start_val;
+		}
+
+		// Start at main ion temperature, interpolating for it
+		// Get interpolation stencil at this location for 4D arrays
+		else if (opts_d->imp_temp_start_opt_int == 1)
+		{
+			Interpolate::InterpolationStencil stencil_4d
+				{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx)};
+
+			start_temp = Interpolate::interpolate_field_4d(bkg_d.ti, 
+				stencil_4d, t, x, y, z);
+		}
+
+		// Sample from a Maxwellian with sigma = sqrt(kT/m) and mean = 0 for an
+		// isotropic velocity distribution. T [eV], m [kg]
+		const double sigma {sqrt(start_temp * Constants::ev_to_j 
+			/ (opts_d->imp_mass_amu * Constants::amu_to_kg))};  // m/s
+
+		double vX {rng.normal(0.0, sigma)};
+		double vY {rng.normal(0.0, sigma)};
+		double vZ {rng.normal(0.0, sigma)};
+
+		return {vX, vY, vZ};
+	}
+
 	
 	// Initialize a new particle and return it. Important to pass the rng in
 	// as a reference since we change its state each time we pull a random
 	// number
 	__device__ 
-	ParticleInitDevice make_new_particle_cuda(pcg32& rng, 
-		const Options::OptionsDevice* opts_d)
+	ParticleInitDevice make_new_particle_cuda(pcg32* rngs_d, 
+		const Options::OptionsDevice* opts_d, 
+		const Background::BackgroundDevice& bkg_d)
 	{
+
+		// Global thread index
+		int i  = blockIdx.x * blockDim.x + threadIdx.x;
+
 		ParticleInitDevice p;
 
 		// Create a new particle based on input options.
 		// d_x_min/max, etc. are defined in device_constants.cuh
 		p.t = get_birth_val_cuda(opts_d->tstart_opt_int, opts_d->tstart_val, 
-			opts_d->trange_min, opts_d->trange_max, d_t_min, d_t_max, rng);
+			opts_d->trange_min, opts_d->trange_max, d_t_min, d_t_max, rngs_d[i]);
 		p.x = get_birth_val_cuda(opts_d->xstart_opt_int, opts_d->xstart_val, 
-			opts_d->xrange_min, opts_d->xrange_max, d_x_min, d_x_max, rng);
+			opts_d->xrange_min, opts_d->xrange_max, d_x_min, d_x_max, rngs_d[i]);
 		p.y = get_birth_val_cuda(opts_d->ystart_opt_int, opts_d->ystart_val, 
-			opts_d->yrange_min, opts_d->yrange_max, d_y_min, d_y_max, rng);
+			opts_d->yrange_min, opts_d->yrange_max, d_y_min, d_y_max, rngs_d[i]);
 		p.z = get_birth_val_cuda(opts_d->zstart_opt_int, opts_d->zstart_val, 
-			opts_d->zrange_min, opts_d->zrange_max, d_z_min, d_z_max, rng);
+			opts_d->zrange_min, opts_d->zrange_max, d_z_min, d_z_max, rngs_d[i]);
+
+		// Get indices, same process as in impurity_transport.cu
+		p.tidx = Indices::get_nearest_index_cuda(d_t, bkg_d.tdim, p.t);
+		p.xidx = Indices::get_nearest_cell_index_cuda(d_grid_x, bkg_d.xdim+1, 
+			p.x);
+		p.yidx = Indices::get_nearest_cell_index_cuda(d_grid_y, bkg_d.ydim+1, 
+			p.y);
+		p.zidx = Indices::get_nearest_cell_index_cuda(d_grid_z, bkg_d.zdim+1, 
+			p.z);
+
+		// Get starting vX, vY, vZ into struct
+		Vec3d vXYZ {get_birth_vXYZ(bkg_d, p.t, p.x, p.y, p.z, p.tidx, p.xidx, 
+			p.yidx, p.zidx, rngs_d[i], opts_d)};
+		p.vX = vXYZ.x;
+		p.vY = vXYZ.y;
+		p.vZ = vXYZ.z;
+		//printf("vX, vY, vZ = %f, %f, %f\n", p.vX, p.vY, p.vZ);
+
+		// These get set on the first call to Boris::update_velocity 
 		p.vx = 0.0;
 		p.vy = 0.0;
 		p.vz = 0.0;
-		p.vX = 0.0;
-		p.vY = 5000.0;
-		p.vZ = 0.0;
+
 		p.weight = 1.0;
 		p.q = opts_d->init_charge;
 
@@ -163,7 +266,7 @@ namespace Slots
 	* code.
 	*/
 	__global__ void fill_slots_kernel(SlotsDevice slots_d, 
-		int rem_parts, pcg32* rngs_d, 
+		Background::BackgroundDevice bkg_d, int rem_parts, pcg32* rngs_d, 
 		const Options::OptionsDevice* opts_d)
 	{
 		// Global index
@@ -193,9 +296,8 @@ namespace Slots
 		// If we ran out of particles, stop
 		//if (idx2 >= rem_parts) return;
 
-		// Create a new particle (device-side initializer), passing in the
-		// PCG32 RNG for this thread.
-		ParticleInitDevice p = make_new_particle_cuda(rngs_d[i], opts_d);
+		// Create a new particle (device-side initializer)
+		ParticleInitDevice p = make_new_particle_cuda(rngs_d, opts_d, bkg_d);
 
 		// Write particle data
 		slots_d.t[i]  = p.t;
@@ -244,7 +346,8 @@ namespace Slots
 	// Replace dead particles with alive ones, as long as remaining particles
 	// are greater than zero.
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
-		pcg32* rngs_d, Options::OptionsDevice* opts_d)
+		pcg32* rngs_d, Options::OptionsDevice* opts_d,
+		const Background::BackgroundDevice& bkg_d)
 	{
 
 		// Each slot is assigned to a specific GPU where its data lies
@@ -267,15 +370,15 @@ namespace Slots
 
 		// Set counter and number of alive slots to zero
 		cudaMemset(slots_d.counter, 0, sizeof(*slots_d.counter));
-		cudaMemset(slots_d.alive, 0, sizeof(*slots_d.alive));
+		//cudaMemset(slots_d.alive, 0, sizeof(*slots_d.alive));
 
 		int rem_initial {rem_parts};
 
 		// Call GPU kernel to fill slots.
 		int fillBlock = 256;
 		int fillGrid  = (num_dead + fillBlock - 1) / fillBlock;
-		fill_slots_kernel<<<fillGrid, fillBlock>>>(slots_d, rem_parts, rngs_d, 
-			opts_d);
+		fill_slots_kernel<<<fillGrid, fillBlock>>>(slots_d, bkg_d, rem_parts, 
+			rngs_d, opts_d);
 
 		// Retrieve how many particles were actually filled
 		int filled {std::min(rem_initial, num_dead)};

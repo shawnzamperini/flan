@@ -29,7 +29,7 @@ namespace ImpurityStats
 		// Add to stats. Need to use atomicAdd here to avoid a race condition :(
 		double p_w {slots_d.weight[i]};  // Change to float
 		atomicAdd(&stats_d.counts[idx], 1);
-		atomicAdd(&stats_d.weights[idx], p_w * imp_time_step);
+		atomicAdd(&stats_d.weights[idx], p_w);
 		atomicAdd(&stats_d.vX[idx], slots_d.vX[i] * p_w);
 		atomicAdd(&stats_d.vY[idx], slots_d.vY[i] * p_w);
 		atomicAdd(&stats_d.vZ[idx], slots_d.vZ[i] * p_w);
@@ -55,10 +55,12 @@ namespace ImpurityStats
 		record_stats_kernel<<<gridSize, blockSize>>>(stats_d, slots_d, 
 			imp_time_step);
 
+#ifdef DEBUG
 		// Check for errors
 		cudaError_t err {cudaDeviceSynchronize()};
 		if (err != cudaSuccess)
 			printf("record_stats_kernel error: %s\n", cudaGetErrorString(err));
+#endif
 
 	}
 

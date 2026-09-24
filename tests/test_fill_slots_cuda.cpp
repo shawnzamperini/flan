@@ -1,8 +1,11 @@
 #include <gtest/gtest.h>
 
+#include "background.h"
+#include "background_device.h"
 #include "options.h"
 #include "options_device.h"
 #include "pcg32.h"
+#include "read_bkg.h"
 #include "slots.h"
 #include "slots_device.h"
 
@@ -24,11 +27,18 @@ TEST(FillSlotsCUDA, RevivesDeadParticles)
 
 	// Create dummy options to pass in. Options not important for this test.
 	Options::Options opts {};
+    opts.set_bkg_source("test");
+    opts.set_test_opt("gyrate");
+
 	Options::OptionsDevice* opts_d {opts.to_device()};
+
+	// Create background, copy to device
+    Background::Background bkg = Background::read_bkg(opts);
+	Background::BackgroundDevice bkg_d {bkg.to_device()};
 
 	// Call wrapper that calls kernel to fill slots on the GPU
 	int alive {};
-	Slots::fill_slots_gpu(slots_d, rem, alive, rngs_d, opts_d);
+	Slots::fill_slots_gpu(slots_d, rem, alive, rngs_d, opts_d, bkg_d);
 
 	// Copy back to host, copies slots_d into slots. Free memory on GPU.
 	slots = slots.to_host(slots_d);

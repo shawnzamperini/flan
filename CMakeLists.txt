@@ -9,6 +9,7 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithD
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+
 # ------------------------------------------------------------
 # Load dependency options (FLANSOFT, FLANROOT)
 # ------------------------------------------------------------
@@ -169,6 +170,14 @@ install(TARGETS flan
     LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/lib
     PUBLIC_HEADER DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+# ------------------------------------------------------------
+# Define DEBUG compiler macro
+# ------------------------------------------------------------
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	message(STATUS "Defining DEBUG macro")
+    target_compile_definitions(flan PRIVATE DEBUG)
+endif()
 
 # ------------------------------------------------------------
 # Export config

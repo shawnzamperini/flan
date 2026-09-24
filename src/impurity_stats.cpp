@@ -449,7 +449,7 @@ namespace Impurity
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)
 	{
-		std::cout << "calc_density: NEED TO THINK ABOUT IF THIS IS RIGHT\n";
+		std::cout << "calc_density: THIS IS NOT QUITE RIGHT YET\n";
 		// Allocate empty density Vector4D. Important we do this here,
 		// since if we do it when ImpurityStats gets constructed that means
 		// a pointless allocated Vector4D gets created for each OpenMP thread
@@ -617,7 +617,7 @@ namespace Impurity
 		cudaMalloc(&stats_d.vy, N * sizeof(double));
 		cudaMalloc(&stats_d.vz, N * sizeof(double));
 		cudaMalloc(&stats_d.q, N * sizeof(double));
-		//cudaMalloc(&stats_d.s, N * sizeof(double));
+		cudaMalloc(&stats_d.s, N * sizeof(double));
 
 		// Copy to device
 		cudaMemcpy(stats_d.counts, m_counts.get_data().data(), N * sizeof(int), 
@@ -638,8 +638,8 @@ namespace Impurity
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(stats_d.q, m_charge.get_data().data(), N * sizeof(double), 
 			cudaMemcpyHostToDevice);
-		//cudaMemcpy(stats_d.s, m_s.get_data().data(), N * sizeof(double), 
-		//	cudaMemcpyHostToDevice);
+		cudaMemcpy(stats_d.s, m_s.get_data().data(), N * sizeof(double), 
+			cudaMemcpyHostToDevice);
 
 #endif
 
@@ -663,6 +663,7 @@ namespace Impurity
 		std::vector<double> vx_h (N);
 		std::vector<double> vy_h (N);
 		std::vector<double> vz_h (N);
+		std::vector<double> s_h (N);
 		std::vector<double> charge_h (N);
 
 		// Previous errors could cause this to hang, unsure how to handle
@@ -698,6 +699,9 @@ namespace Impurity
 		std::cout << "  - vz\n";
 		cudaMemcpy(vz_h.data(), stats_d.vz, N * sizeof(double), 
 			cudaMemcpyDeviceToHost);
+		std::cout << "  - Nanbu s\n";
+		cudaMemcpy(s_h.data(), stats_d.s, N * sizeof(double), 
+			cudaMemcpyDeviceToHost);
 		std::cout << "  - charge\n";
 		cudaMemcpy(charge_h.data(), stats_d.q, N * sizeof(double), 
 			cudaMemcpyDeviceToHost);
@@ -725,6 +729,7 @@ namespace Impurity
 			m_vx(i,j,k,l) += vx_h[idx];
 			m_vy(i,j,k,l) += vy_h[idx];
 			m_vz(i,j,k,l) += vz_h[idx];
+			m_s(i,j,k,l)  += s_h[idx];
 			m_charge(i,j,k,l) += charge_h[idx];
 		}
 		}
@@ -797,6 +802,7 @@ namespace Impurity
 		cudaFree(stats_d.vx);
 		cudaFree(stats_d.vy);
 		cudaFree(stats_d.vz);
+		cudaFree(stats_d.s);
 		cudaFree(stats_d.q);
 
 #endif
@@ -810,6 +816,7 @@ namespace Impurity
 		stats_d.vx = nullptr;
 		stats_d.vy = nullptr;
 		stats_d.vz = nullptr;
+		stats_d.s = nullptr;
 		stats_d.q = nullptr;
 	}
 

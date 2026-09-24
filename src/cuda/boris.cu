@@ -480,6 +480,13 @@ namespace Boris
 
 		update_velocity_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, dt);
 
+#ifdef DEBUG
+		// Check for errors
+		cudaError_t err {cudaDeviceSynchronize()};
+		if (err != cudaSuccess)
+			printf("update_velocity_kernel error: %s\n", cudaGetErrorString(err));
+#endif
+
 	} // update_velocity_gpu
 
 } // namespace Boris

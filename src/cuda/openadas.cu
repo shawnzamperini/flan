@@ -371,6 +371,13 @@ namespace OpenADAS
 			oa_ioniz_d, oa_recomb_d, dt, rngs_d, d_ioniz_warnings, 
 			d_recomb_warnings);
 
+#ifdef DEBUG
+		// Check for errors
+		cudaError_t err {cudaDeviceSynchronize()};
+		if (err != cudaSuccess)
+			printf("ioniz_recomb_kernel error: %s\n", cudaGetErrorString(err));
+#endif
+
 		// Retrieve how many times the warning was incremented for each
 		int num_warnings = 0;
 		cudaMemcpy(&num_warnings, d_ioniz_warnings, sizeof(int), 

@@ -22,6 +22,8 @@ namespace ImpurityStats
 		double *vy;
 		double *vz;
 
+		double *s;
+
 		double *q;
 	};
 }

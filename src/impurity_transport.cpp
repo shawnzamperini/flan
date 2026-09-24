@@ -31,6 +31,7 @@
 #include <cuda_runtime.h>
 #include "boris.cuh"
 #include "boundary.cuh"
+#include "collisions.cuh"
 #include "init_rngs.cuh"
 #include "impurity_stats.cuh"
 #include "impurity_transport.cuh"
@@ -176,7 +177,7 @@ namespace ImpurityTransport
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0)
 		{
-			// Defined in cuda/impurity_transport.cu
+			// Defined in cuda/impurity_stats.cu
 			ImpurityStats::record_stats_gpu(imp_stats_d, slots_d, imp_time_step);
 			return;
 		}
@@ -190,7 +191,8 @@ namespace ImpurityTransport
 	void fill_slots_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		int& rem_parts, const Background::Background& bkg, 
 		Options::Options& opts, int& alive_slots, std::vector<pcg32>& rngs,
-		pcg32* rngs_d, Options::OptionsDevice* opts_d)
+		pcg32* rngs_d, Options::OptionsDevice* opts_d, 
+		const Background::BackgroundDevice& bkg_d)
 	{
 
 #ifdef USE_CUDA
@@ -198,7 +200,7 @@ namespace ImpurityTransport
 		{
 			// Defined in cuda/slots.cu
 			Slots::fill_slots_gpu(slots_d, rem_parts, alive_slots, rngs_d, 
-				opts_d);
+				opts_d, bkg_d);
 			return;
 		}
 #endif
@@ -332,19 +334,30 @@ namespace ImpurityTransport
 	void collision_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
-		Impurity::Statistics& imp_stats, const double dt, 
-		std::vector<pcg32>& rngs)
+		Impurity::Statistics& imp_stats, 
+		ImpurityStats::StatisticsDevice& imp_stats_d, 
+		const double dt, std::vector<pcg32>& rngs, pcg32* rngs_d)
 	{
 
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
-			// Defined in cuda/collision.cu
-			//collision_gpu(slots_d, bkg_d, dt);
+			// Defined in cuda/collision.cu. First call is for ions (the false)
+			Collisions::collision_gpu(slots_d, bkg_d, false, dt, imp_stats_d,
+				rngs_d, opts.gkyl_elec_mass_amu(), opts.gkyl_ion_mass_amu());
+
+			// friction_force test case only considers ion collisions to compare
+			// against expected flow
+			if (opts.test_opt_int() != 5)
+			{
+				Collisions::collision_gpu(slots_d, bkg_d, true, dt, imp_stats_d,
+					rngs_d, opts.gkyl_elec_mass_amu(), opts.gkyl_ion_mass_amu());
+			}
 			return;
 		}
 #endif
 
+		// The elec/ion distinction is done within
 		collision_cpu(slots, bkg, dt, opts, imp_stats, rngs);
 	}
 
@@ -407,7 +420,7 @@ namespace ImpurityTransport
 		// the progress print out in the loop
 		int alive_slots {};
 		fill_slots_wrapper(slots, slots_d, rem_parts, bkg, opts, alive_slots, 
-			rngs, rngs_d, opts_d);
+			rngs, rngs_d, opts_d, bkg_d);
 
 		// If for whatever reason the particle is started outside the grid,
 		// check bounds to make sure it doesn't cause any chaos.
@@ -432,6 +445,15 @@ namespace ImpurityTransport
 		while (!all_dead)
 		{
 
+			// We create a scope for each step so that we can use a scoped
+			// timer to profile the time spent in each step of the loop.
+			// A scoped timer is a bit safer because it automatically stops
+			// when it goes out of scope.
+
+#ifdef DEBUG
+			std::cout << "Wrapper called: Ionization/recombination...\n";
+#endif
+
 			// Check for ionization/recombination
 			if (opts.imp_iz_recomb_int() > 0)
 			{
@@ -444,18 +466,21 @@ namespace ImpurityTransport
 			// Variance reduction
 			// To-do
 
+#ifdef DEBUG
+			std::cout << "Wrapper called: Collisions...\n";
+#endif
+
 			// Collision update
 			if (opts.imp_collisions_int() > 0)
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Coll));
 				collision_wrapper(slots, slots_d, bkg, bkg_d, opts,
-					imp_stats, opts.imp_time_step(), rngs);
+					imp_stats, imp_stats_d, opts.imp_time_step(), rngs, rngs_d);
 			}
 
-			// We create a scope for each step so that we can use a scoped
-			// timer to profile the time spent in each step of the loop.
-			// A scoped timer is a bit safer because it automatically stops
-			// when it goes out of scope.
+#ifdef DEBUG
+			std::cout << "Wrapper called: Boris...\n";
+#endif
 
 			// Update velocity (Boris).
 			{
@@ -464,11 +489,19 @@ namespace ImpurityTransport
 					opts.imp_time_step());
 			}
 
+#ifdef DEBUG
+			std::cout << "Wrapper called: Step...\n";
+#endif
+
 			// Perform particle step
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Step));
 				step_wrapper(slots, slots_d, bkg, bkg_d, opts);
 			}
+
+#ifdef DEBUG
+			std::cout << "Wrapper called: Bounds...\n";
+#endif
 
 			// Bounds checking
 			{
@@ -476,18 +509,30 @@ namespace ImpurityTransport
 				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs_d);
 			}
 
+#ifdef DEBUG
+			std::cout << "Wrapper called: Fill slots...\n";
+#endif
+
 			// Replace dead particles
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::FillSlots));
 				fill_slots_wrapper(slots, slots_d, rem_parts, bkg, opts, 
-					alive_slots, rngs, rngs_d, opts_d);
+					alive_slots, rngs, rngs_d, opts_d, bkg_d);
 			}
+
+#ifdef DEBUG
+			std::cout << "Wrapper called: Find cell...\n";
+#endif
 
 			// Update particle indices
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::FindCell));
 				find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
 			}
+
+#ifdef DEBUG
+			std::cout << "Wrapper called: Record statistics...\n";
+#endif
 
 			// Record statistics
 			{
@@ -502,9 +547,15 @@ namespace ImpurityTransport
 			if (rank == 0) 
 				prog.update(rem_parts + alive_slots);
 
+#ifdef DEBUG
+			std::cout << "Wrapper called: All dead...\n";
+#endif
+
 			// Check if all the particles in slots are dead. If this happens
 			// after fill_slots, it means there were no more alive particles
 			// to swap in and all the remaining ones are dead. So we're done.
+			// For GPUs, this has a GPU->CPU memory copy which means it has
+			// an implicit synchronize in it. 
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::AllDead));
 				all_dead = all_dead_wrapper(slots, slots_d, opts, rem_parts);
@@ -547,6 +598,11 @@ namespace ImpurityTransport
 		Options::Options& opts, Timer::Timer& timer)
 	{
 		
+#ifdef DEBUG
+			std::cout << "Debug mode enabled. Synchronizations after each" 
+				<< "wrapper call and print statements are on.\n";
+#endif
+
 		// Some warnings to include as I still implement things
 		std::cout << "Warning! Need to still implement lcfs_x to divide"
 			<< " core/SOL BCs\n";
@@ -646,6 +702,10 @@ namespace ImpurityTransport
 		if (opts.use_gpu_int() > 0)
 		{
 
+#ifdef DEBUG
+			std::cout << "Copying data to GPU(s)...\n";
+#endif
+
 			// Create device-side structs on each GPU if using GPUs
 			std::vector<Slots::SlotsDevice> gpu_slots;
 			std::vector<ImpurityStats::StatisticsDevice> gpu_stats;
@@ -677,6 +737,9 @@ namespace ImpurityTransport
 				gpu_rngs.push_back(init_rngs_cuda(gpu_slots[dev], seed));
 			}
 
+#ifdef DEBUG
+			std::cout << "Starting main loop (GPU)...\n";
+#endif
 
 			// Spawn threads to launch main_loop on each available GPU
 			std::vector<std::thread> threads;
@@ -746,6 +809,10 @@ namespace ImpurityTransport
 			uint64_t stream = tid;             // unique per thread
 			rngs.push_back(pcg32(seed, stream));
 		}
+
+#ifdef DEBUG
+			std::cout << "Starting main loop (CPU)...\n";
+#endif
 
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, opts_d, timer, 

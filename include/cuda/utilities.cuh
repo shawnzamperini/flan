@@ -70,11 +70,10 @@ namespace Utilities
 
 	// 1D linear interpolate for arrays that are known at compile time
 	template <typename T, size_t N>
-	__host__ __device__
+	__device__
 	T linear_interpolate_cuda(const T (&xarr)[N], const T (&yarr)[N],
 		T x)
 	{
-		#pragma unroll
 		for (int i = 0; i < N - 1; i++)
 		{
 			if ((x >= xarr[i] && x <= xarr[i + 1]) ||

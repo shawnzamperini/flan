@@ -1497,8 +1497,8 @@ class FlanPlots:
 			# Hardcoded values that this test uses (see read_test.cpp)
 			BX = 1.0
 			uX = 1000
-			#Ti = 1
-			Ti = 10
+			Ti = 1
+			#Ti = 10
 			mi = 2.014
 			ni = 1e20
 			#ln_alpha = 10
@@ -1569,7 +1569,8 @@ class FlanPlots:
 				vx_i = vx[i]
 				vx_std_i = vx_std[i]
 				vxa_i = vx_analytic[i]
-				print(f"{t_i:.2e} {vx_i:.2e} {vx_std_i:.2e} {vxa_i:.2e}") 
+				s_i = s[i]
+				print(f"{t_i:.2e} {vx_i:.2e} {vx_std_i:.2e} {vxa_i:.2e} {s_i:.2e}") 
 
 			fig, ax1 = plt.subplots(figsize=figsize)
 			ax1.fill_between(t, vx-vx_std, vx+vx_std, color="tab:red", alpha=0.3)

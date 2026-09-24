@@ -371,10 +371,6 @@ namespace Collisions
 				T = std::max(0.1, T);
 			}
 
-			constexpr double imp_vX_n {0.0};
-			constexpr double imp_vY_n {0.0};
-			constexpr double imp_vZ_n {0.0};
-
 			// The Nanbu model has three main variables in it:
 			// s:    How collisional is this step?
 			// A(s): What is the shape of the scattering distribution? A(s) is

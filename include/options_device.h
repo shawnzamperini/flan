@@ -5,6 +5,11 @@ namespace Options
 	struct OptionsDevice
 	{
 		// Only a subset of the options that are actually used in kernels
+		int test_opt_int;
+		int bkg_source_int;
+
+		double imp_mass_amu;
+
 		int tstart_opt_int;
 		double tstart_val;
 		double trange_min;
@@ -26,6 +31,9 @@ namespace Options
 		double zrange_max;
 
 		int init_charge;
+
+		double imp_temp_start_opt_int;
+		double imp_temp_start_val;
 
 	}; // OptionsDevice
 }  // namespace Options

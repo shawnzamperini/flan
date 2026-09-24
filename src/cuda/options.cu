@@ -17,6 +17,11 @@ namespace Options
 		// return the struct that can be copied into kernels
 		OptionsDevice opts_h {};
 
+		opts_h.test_opt_int   = m_test_opt_int;
+		opts_h.bkg_source_int = m_bkg_source_int;
+
+		opts_h.imp_mass_amu   = m_imp_mass_amu;
+
 		opts_h.tstart_opt_int = m_imp_tstart_opt_int;
 		opts_h.tstart_val     = m_imp_tstart_val;
 		opts_h.trange_min     = m_imp_trange_min;
@@ -38,6 +43,9 @@ namespace Options
 		opts_h.zrange_max     = m_imp_zrange_max;
 
 		opts_h.init_charge    = m_imp_init_charge;
+
+		opts_h.imp_temp_start_opt_int = m_imp_temp_start_opt_int;
+		opts_h.imp_temp_start_val = m_imp_temp_start_val;
 
 		OptionsDevice* opts_d = nullptr;
 		cudaMalloc(&opts_d, sizeof(OptionsDevice));

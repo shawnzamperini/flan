@@ -205,10 +205,10 @@ namespace Test
 
 			// All test cases use constant values for density and temperature
 			test_ne.get_data()[idx] = 1e20;
-			//test_te.get_data()[idx] = 1;
-			test_te.get_data()[idx] = 10;
-			//test_ti.get_data()[idx] = 1;
-			test_ti.get_data()[idx] = 10;
+			test_te.get_data()[idx] = 1;
+			//test_te.get_data()[idx] = 10;
+			test_ti.get_data()[idx] = 1;
+			//test_ti.get_data()[idx] = 10;
 			//test_vp.get_data()[idx] = 0.0; // Not needed
 
 			// Zero electric field in these tests

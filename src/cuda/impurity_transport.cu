@@ -91,6 +91,13 @@ namespace ImpurityTransport
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 
 		step_kernel<<<gridSize, blockSize>>>(slots_d, dt);
+
+#ifdef DEBUG
+		// Check for errors
+		cudaError_t err {cudaDeviceSynchronize()};
+		if (err != cudaSuccess)
+			printf("step_kernel error: %s\n", cudaGetErrorString(err));
+#endif
 	}
 
 } // namespace ImpurityTransport

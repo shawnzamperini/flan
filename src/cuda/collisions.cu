@@ -32,6 +32,17 @@ namespace Collisions
 		double z;
 	};
 
+
+	/**
+	* Computes the electron Debye length.
+	*
+	* λ_D = sqrt(eps0 kT_e / (n_e e²))
+	*
+	* @param te Electron temperature [eV].
+	* @param ne Electron density [m-3].
+	*
+	* @return Debye length [m].
+	*/
 	__device__ __forceinline__
 	double calc_debye_length_cuda(const double te, const double ne)
 	{
@@ -40,6 +51,22 @@ namespace Collisions
 	}
 
 
+	/**
+	 * Samples a velocity from a drifting Maxwellian distribution.
+	 *
+	 * The distribution has temperature T and bulk velocity
+	 * (uX, uY, uZ).
+	 *
+	 * @param T Temperature [eV].
+	 * @param uX Drift velocity x-component [m/s].
+	 * @param uY Drift velocity y-component [m/s].
+	 * @param uZ Drift velocity z-component [m/s].
+	 * @param m Particle mass [kg].
+	 * @param rng Random number generator.
+	 * @param[out] bkg_vX Sampled x-velocity [m/s].
+	 * @param[out] bkg_vY Sampled y-velocity [m/s].
+	 * @param[out] bkg_vZ Sampled z-velocity [m/s].
+	 */
 	__device__ __forceinline__
 	void sample_bkg_velocity_cuda(const double T, const double uX, const double uY, 
 		const double uZ, const double m, pcg32& rng, double& bkg_vX, 
@@ -67,14 +94,6 @@ namespace Collisions
 		const int q, const double imp_mass, pcg32& rng, 
 		Interpolate::InterpolationStencil stencil_4d)
 	{
-		// Background flow
-		//const double uX = bkg.interp_uX(t, x, y, z);
-		//const double uY = bkg.interp_uY(t, x, y, z);
-		//const double uZ = bkg.interp_uZ(t, x, y, z);
-
-		// Get interpolation stencil at this location for 4D arrays
-		//Interpolate::InterpolationStencil stencil_4d
-		//	{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx)};
 
 		// Interpolate to get background flow at particle location
 		const double uX {Interpolate::interpolate_field_4d(bkg_d.uX, 
@@ -94,18 +113,21 @@ namespace Collisions
 		double inst_gY = vY - bkg_vY;
 		double inst_gZ = vZ - bkg_vZ;
 
-		// Mean relative velocity
-		//const double mean_gX = vX - uX;
-		//const double mean_gY = vY - uY;
-		//const double mean_gZ = vZ - uZ;
+		// Mean relative velocity. Not actually part of the Nanbu algorithm, 
+		// but if you want to match analytic fluid results this is often
+		// a built in assumption in those derivations, so you'd swap inst_g
+		// out with mean_g. inst_g is more kinetic/accurate though.
+		const double mean_gX = vX - uX;
+		const double mean_gY = vY - uY;
+		const double mean_gZ = vZ - uZ;
 
-		//double mean_g = sqrt(mean_gX * mean_gX + mean_gY * mean_gY +
-		//		 mean_gZ * mean_gZ);
-
+		// Magnitude
+		double mean_g = sqrt(mean_gX * mean_gX + mean_gY * mean_gY +
+				 mean_gZ * mean_gZ);
 		double inst_g = sqrt(inst_gX * inst_gX + inst_gY * inst_gY +
 				 inst_gZ * inst_gZ);
 
-		//mean_g = fmax(mean_g, 1.0e-3);
+		mean_g = fmax(mean_g, 1.0e-3);
 		inst_g = fmax(inst_g, 1.0e-3);
 
 		// Optional correction left disabled as in CPU version
@@ -135,13 +157,19 @@ namespace Collisions
 		// Calculate s
 		const double square_term = q * Constants::charge_e * 
 			Constants::charge_e / (Constants::eps0 * mu_ab);
+		//const double s = ln_alpha / (4.0 * Constants::pi) * square_term *
+		//	square_term * ne / (inst_g * inst_g * inst_g) * dt;
+
+		// Needed to match assumptions made in the equation for the friction 
+		// force
 		const double s = ln_alpha / (4.0 * Constants::pi) * square_term *
-			square_term * ne / (inst_g * inst_g * inst_g) * dt;
+			square_term * ne / (mean_g * mean_g * mean_g) * dt;
 
 		// Return as struct
-		return {s, inst_gX, inst_gY, inst_gZ};
+		//return {s, inst_gX, inst_gY, inst_gZ};
+		return {s, mean_gX, mean_gY, mean_gZ};
 
-	}  // calc_nanbu_s
+	}  // nanbu_calc_s_cuda
 
 
 	// Calculate A term in Nanbu collision model
@@ -164,7 +192,7 @@ namespace Collisions
 		else
 		{
 			// Use interpolation function to find A value from precomputed 
-			// arrays of A(s) values found in nanbu_s_a.h. These values were 
+			// arrays of A(s) values found in nanbu_s_a.cuhh. These values were 
 			// calculated using python/calc_nanbu.py.
 			return Utilities::linear_interpolate_cuda(Nanbu::s, Nanbu::A, s);
 		}
@@ -253,10 +281,10 @@ namespace Collisions
 
 
 	__global__
-	void nanbu_coll_kernel(Slots::SlotsDevice& slots_d, 
-		const Background::BackgroundDevice& bkg_d, bool elec, const double dt, 
-		ImpurityStats::StatisticsDevice& imp_stats_d, pcg32* rngs_d, 
-		const double mass_kg)
+	void nanbu_coll_kernel(Slots::SlotsDevice slots_d, 
+		const Background::BackgroundDevice bkg_d, bool elec, const double dt, 
+		ImpurityStats::StatisticsDevice stats_d, pcg32* rngs_d, 
+		const double elec_mass_amu, const double ion_mass_amu)
 	{
 		// Derivation and steps taken from:
 		// Nanbu, K. Theory of cumulative small-angle collisions in plasmas. 
@@ -271,19 +299,11 @@ namespace Collisions
 		// If particle isn't alive then skip
 		if (slots_d.state[i] > 0) return;
 
-		// ---------------------------------------------------------------
-		// The following algorithm is similar to that in boris.cu. It 
-		// interpolates background values in time (linear) and space 
-		// (trilinear). The main difference is we are just interpolating
-		// different background fields (ne & Te instead of B & E). 
-		// ---------------------------------------------------------------
-
 		// Local variables
 		int tidx {slots_d.tidx[i]};
 		int xidx {slots_d.xidx[i]};
 		int yidx {slots_d.yidx[i]};
 		int zidx {slots_d.zidx[i]};
-
 		double t {slots_d.t[i]};
 		double x {slots_d.x[i]};
 		double y {slots_d.y[i]};
@@ -293,7 +313,7 @@ namespace Collisions
 		double vZ {slots_d.vZ[i]};
 		int q {slots_d.q[i]};
 
-		// Inteprolate for ne, Te
+		// Interpolate for ne, Te
 		// Get interpolation stencil at this location for 4D arrays
 		Interpolate::InterpolationStencil stencil_4d
 			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx)};
@@ -307,12 +327,15 @@ namespace Collisions
 		// Load some reusable variables based on which species. If elec = true,
 		// then electrons and ions if not. 
 		double T {};
+		double mass_kg {};
 		if (elec)
 		{
+			mass_kg = elec_mass_amu * Constants::amu_to_kg;	
 			T = Te;
 		}
 		else
 		{
+			mass_kg = ion_mass_amu * Constants::amu_to_kg;	
 			T = Interpolate::interpolate_field_4d(bkg_d.ti, stencil_4d, t, x, 
 				y, z);
 			T = fmax(0.1, T);
@@ -335,23 +358,21 @@ namespace Collisions
 		double gY {s_res.gY};
 		double gZ {s_res.gZ};
 
-		// Not implemented yet - this is the CPU code just to note that
 		// Add to running sum of s values in each cell so we can do an average
 		// later. Only consider for ions since they are the dominant collision
 		// but no reason this can't be expanded for electrons as well. 
 		// Generally leave this commented out unless you are investigating the 
 		// collision model.
-		//if (!elec)
-		//{
-		//	double p_w {slots.weight()[i]};
-		//	int tidx {slots.tidx()[i]};
-		//	int xidx {slots.xidx()[i]};
-		//	int yidx {slots.yidx()[i]};
-		//	int zidx {slots.zidx()[i]};
-		//
-		//	#pragma omp critical
-		//	imp_stats.add_s(tidx, xidx, yidx, zidx, s * p_w);
-		//}
+		if (!elec)
+		{
+			int Nx {stats_d.Nx};
+			int Ny {stats_d.Ny};
+			int Nz {stats_d.Nz};
+			int idx {slots_d.tidx[i] * (Nx * Ny * Nz) + slots_d.xidx[i] 
+				* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
+			double p_w {slots_d.weight[i]};  // Change to float
+			atomicAdd(&stats_d.s[idx], s * p_w);
+		}
 
 		// Calcluate A (Eq. 13)
 		double A {nanbu_calc_A_cuda(s)};
@@ -379,126 +400,29 @@ namespace Collisions
 		slots_d.vY[i] = v_post.y;
 		slots_d.vZ[i] = v_post.z;
 
-		/*
-		#pragma omp parallel
-		{
-
-			// Grab our RNG for this thread, each thread has it own (and they're
-			// seeded uniquely).
-			int tid = omp_get_thread_num();
-			pcg32& rng = rngs[tid];
-
-		#pragma omp for
-		for (int i=0; i < slots.N(); ++i)
-		{
-
-			// A neutral will not experience a Coloumb collision (in fact, will
-			// cause a divide by zero later on in this algorithm), so do nothing
-			// in that case.
-			if (slots.q()[i] == 0) continue;
-
-			// Local variables
-			double t {slots.t()[i]};
-			double x {slots.x()[i]};
-			double y {slots.y()[i]};
-			double z {slots.z()[i]};
-			double vX {slots.vX()[i]};
-			double vY {slots.vY()[i]};
-			double vZ {slots.vZ()[i]};
-			int q {slots.q()[i]};
-
-			// Will always need electron temperature/density. Trilinearly
-			// interpolate in space and then linearly interpolate in time.
-			double ne {bkg.interp_ne(t, x, y, z)}; 
-			double Te {bkg.interp_te(t, x, y, z)}; 
-
-			// Need to account for this better, just putting it here for now so I
-			// can get this paper submitted :(
-			//Te = std::max(0.1, Te);
-			//ne = std::max(1e16, ne);
-
-			// Load some reusable variables based on which species. If elec = true,
-			// then electrons and ions if not. 
-			double mass_kg {};
-			double T {};
-			if (elec)
-			{
-				mass_kg = opts.gkyl_elec_mass_amu() * Constants::amu_to_kg;	
-				T = Te;
-			}
-			else
-			{
-				mass_kg = opts.gkyl_ion_mass_amu() * Constants::amu_to_kg;	
-				T = bkg.interp_ti(t, x, y, z); 
-				T = std::max(0.1, T);
-			}
-
-			constexpr double imp_vX_n {0.0};
-			constexpr double imp_vY_n {0.0};
-			constexpr double imp_vZ_n {0.0};
-
-			// The Nanbu model has three main variables in it:
-			// s:    How collisional is this step?
-			// A(s): What is the shape of the scattering distribution? A(s) is
-			//       the PDF.
-			// chi:  What is the actual deflection angle this time? It is calculated
-			//       via direct inversion from the CDF formed from our PDF (A(s)). 
-
-			// Calculate s (Eq. 19), making sure to pass in the full time step
-			// velocities.
-			auto [s, gX, gY, gZ] = nanbu_calc_s(bkg, dt, T, 
-				mass_kg, Te, ne, t, x, y, z, vX, vY, vZ, q, slots, rng);
-
-			// Add to running sum of s values in each cell so we can do an average
-			// later. Only consider for ions since they are the dominant collision
-			// but no reason this can't be expanded for electrons as well. 
-			// Generally leave this commented out unless you are investigating the 
-			// collision model.
-			if (!elec)
-			{
-				double p_w {slots.weight()[i]};
-				int tidx {slots.tidx()[i]};
-				int xidx {slots.xidx()[i]};
-				int yidx {slots.yidx()[i]};
-				int zidx {slots.zidx()[i]};
-
-				#pragma omp critical
-				imp_stats.add_s(tidx, xidx, yidx, zidx, s * p_w);
-			}
-
-			// Calcluate A (Eq. 13)
-			double A {nanbu_calc_A(s)};
-			//std::cout << "s = " << s << "\tA = " << A << '\n';
-
-			// Calculate deflection angle, chi (Eq. 17)
-			double chi {nanbu_calc_chi(s, A, rng)};
-			if (std::isnan(chi))
-			{
-				#pragma omp critical
-				{
-					std::cerr << "Error! chi = nan\n";
-					std::cerr << "  T = " << T << '\n';
-					std::cerr << "  Te = " << Te << '\n';
-					std::cerr << "  ne = " << ne << '\n';
-					std::cerr << "  chi = " << chi << '\n';
-					std::cerr << "  s = " << s << '\n';
-					std::cerr << "  A = " << A << '\n';
-				}
-			}
-
-			// Calculate post-collision velocity (Eq. 20a)
-			auto [vX_post, vY_post, vZ_post] = nanbu_post_coll(gX, gY, gZ, chi, 
-				slots.mass(), mass_kg, vX, vY, vZ, rng);
-
-			// Update impurity velocity, which is v_n+1/2 since this is happening
-			// after the Boris update.
-			slots.set_vX(i, vX_post);
-			slots.set_vY(i, vY_post);
-			slots.set_vZ(i, vZ_post);
-
-		}  // slots loop
-		} // omp parallel
-	*/
 	}  // nanbu_coll
+
+
+	void collision_gpu(Slots::SlotsDevice& slots_d, 
+		const Background::BackgroundDevice& bkg_d, const bool elec, 
+		const double dt, ImpurityStats::StatisticsDevice& imp_stats_d,
+		pcg32* rngs_d, const double elec_mass_amu, const double ion_mass_amu)
+	{
+		
+		// Block and grid size
+		int blockSize = 256;
+		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
+
+		nanbu_coll_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, elec, dt, 
+			imp_stats_d, rngs_d, elec_mass_amu, ion_mass_amu);
+
+#ifdef DEBUG
+		// Check for errors
+		cudaError_t err {cudaDeviceSynchronize()};
+		if (err != cudaSuccess)
+			printf("nanbu_coll_kernel error: %s\n", cudaGetErrorString(err));
+#endif
+
+	} // nanbu_coll_gpu
 
 }  // namespace Collisions

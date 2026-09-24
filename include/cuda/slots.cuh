@@ -22,7 +22,8 @@ namespace Slots
 	* @param rem_parts Number of remaining alive particles to track
 	*/
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
-		pcg32* rngs_d, Options::OptionsDevice* opts_d);
+		pcg32* rngs_d, Options::OptionsDevice* opts_d, 
+		const Background::BackgroundDevice& bkg_d);
 
 	/**
 	* @brief Check if slots contain all dead particles
