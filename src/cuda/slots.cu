@@ -162,14 +162,16 @@ namespace Slots
 		p.vX = vXYZ.x;
 		p.vY = vXYZ.y;
 		p.vZ = vXYZ.z;
-		//printf("vX, vY, vZ = %f, %f, %f\n", p.vX, p.vY, p.vZ);
 
 		// These get set on the first call to Boris::update_velocity 
 		p.vx = 0.0;
 		p.vy = 0.0;
 		p.vz = 0.0;
 
-		p.weight = 1.0;
+		// Particle weights are in units of particles/s, meant to represent a
+		// given source of particles at this location. We need to normalize
+		// by number of particle launched as well.
+		p.weight = 1.0 / opts_d->imp_num;
 		p.q = opts_d->init_charge;
 
 		return p;

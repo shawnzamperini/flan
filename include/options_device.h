@@ -9,6 +9,7 @@ namespace Options
 		int bkg_source_int;
 
 		double imp_mass_amu;
+		int imp_num;
 
 		int tstart_opt_int;
 		double tstart_val;

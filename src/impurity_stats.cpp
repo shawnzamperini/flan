@@ -361,7 +361,6 @@ namespace Impurity
 	}
 
 
-
 	/**
 	* @brief Pack all the arrays into a single buffer that can be sent across
 	*        MPI processes
@@ -449,11 +448,9 @@ namespace Impurity
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)
 	{
-		std::cout << "calc_density: THIS IS NOT QUITE RIGHT YET\n";
 		// Allocate empty density Vector4D. Important we do this here,
 		// since if we do it when ImpurityStats gets constructed that means
-		// a pointless allocated Vector4D gets created for each OpenMP thread
-		// during the impurity following code!
+		// an unused allocated Vector4D is held for the enitre simulation.
 		m_density = Vectors::Vector4D<BkgFPType>(m_dim1, m_dim2, m_dim3, 
 			m_dim4);
 
@@ -477,8 +474,16 @@ namespace Impurity
 
 			// Normalize each weight value by the volume and total number of
 			// particles launched. This goes from units of (s) to (s/m3). 
-			m_density(i,j,k,l) = m_weights(i,j,k,l) / cell_vol 
-				/ tot_imp_num * imp_source_scale_fact;
+			// m_weights is in units of particles/s, so to get total number of
+			// particles (weight -> N) we multiply by dt. 
+			//m_density(i,j,k,l) = m_weights(i,j,k,l) / cell_vol 
+			//	/ tot_imp_num * imp_source_scale_fact;
+
+			// Weights ([particles] since it was accumulated as p_w * dt), so 
+			// density is just weight / volume. The weight was already 
+			// normalized by the number of particles when the particle was
+			// created.
+			m_density(i,j,k,l) = m_weights(i,j,k,l) / cell_vol;
 		}
 		}
 		}	
@@ -501,18 +506,14 @@ namespace Impurity
 		{
 		for (int l {}; l < m_dim4; ++l)
 		{
-			// Total weight
+			// Total weight (actually, occupancy since this is w * dt)
 			double tot_weight {m_weights(i,j,k,l)};
 
 			// Convert each velocity sum in each cell to an average velocity
-			// by dividing it by the number of counts.
+			// by dividing it by the weight
 			double counts {static_cast<double>(m_counts(i,j,k,l))};
 			if (counts > 0)
 			{
-				// This is actually wrong for a weighted average
-				//m_vX(i,j,k,l) /= counts;
-				//m_vY(i,j,k,l) /= counts;
-				//m_vZ(i,j,k,l) /= counts;
 				m_vX(i,j,k,l) /= tot_weight;
 				m_vY(i,j,k,l) /= tot_weight;
 				m_vZ(i,j,k,l) /= tot_weight;
@@ -535,6 +536,7 @@ namespace Impurity
 	*/
 	void Statistics::calc_charge()
 	{
+
 		// Average charge is just the running sum divided by the number of
 		// counts in the cell.
 		for (int i {}; i < m_dim1; ++i)
@@ -545,10 +547,14 @@ namespace Impurity
 		{
 		for (int l {}; l < m_dim4; ++l)
 		{
+
+			// Total weight (actually, occupancy since this is w * dt)
+			double tot_weight {m_weights(i,j,k,l)};
+
 			int counts {m_counts(i,j,k,l)};
 			if (counts > 0)
 			{
-				m_charge(i,j,k,l) /= counts;
+				m_charge(i,j,k,l) /= tot_weight;
 			}
 			else
 			{
@@ -565,8 +571,7 @@ namespace Impurity
 	*/
 	void Statistics::calc_s()
 	{
-		// Average s is just the running sum divided by the number of
-		// counts in the cell.
+		// Average s is a weighted average. m_s has accumulated s*w
 		for (int i {}; i < m_dim1; ++i)
 		{
 		for (int j {}; j < m_dim2; ++j)
@@ -575,10 +580,13 @@ namespace Impurity
 		{
 		for (int l {}; l < m_dim4; ++l)
 		{
+
+			// Total weight (actually, occupancy since this is w * dt)
+			double tot_weight {m_weights(i,j,k,l)};
 			int counts {m_counts(i,j,k,l)};
 			if (counts > 0)
 			{
-				m_s(i,j,k,l) /= counts;
+				m_s(i,j,k,l) /= tot_weight;
 			}
 			else
 			{
@@ -589,6 +597,7 @@ namespace Impurity
 		}	
 		}
 	}
+
 
 	ImpurityStats::StatisticsDevice Statistics::to_device(int device_id)
 	{
@@ -980,7 +989,7 @@ namespace Impurity
 	// in a cell, which can get held up in the atomics here.
 	// I am partial to the atomic approach just because it's so much cleaner.
 	void record_stats_cpu(Statistics& imp_stats, const Slots::Slots& slots,
-		const Options::Options& opts, const double imp_time_step)
+		const Options::Options& opts, const double dt)
 	{
 		// Grab raw pointers once outside the parallel region -- avoids
 		// repeated virtual/accessor call overhead inside the hot loop.
@@ -1006,34 +1015,37 @@ namespace Impurity
 			int idx {imp_stats.get_counts().calc_index(slots.tidx()[i],
 				slots.xidx()[i], slots.yidx()[i], slots.zidx()[i])};
 
-			double p_w {slots.weight()[i]};
+			// With weights in [particles/s], this is then number of particles.
+			// We can call this the occupancy.
+			double p_w_dt {slots.weight()[i] * dt};
 
 			#pragma omp atomic update
 			counts_data[idx] += 1;
 
 			#pragma omp atomic update
-			weights_data[idx] += p_w;
+			weights_data[idx] += p_w_dt;
 
 			#pragma omp atomic update
-			vX_data[idx] += slots.vX()[i] * p_w;
+			vX_data[idx] += slots.vX()[i] * p_w_dt;
 
 			#pragma omp atomic update
-			vY_data[idx] += slots.vY()[i] * p_w;
+			vY_data[idx] += slots.vY()[i] * p_w_dt;
 
 			#pragma omp atomic update
-			vZ_data[idx] += slots.vZ()[i] * p_w;
+			vZ_data[idx] += slots.vZ()[i] * p_w_dt;
 
 			#pragma omp atomic update
-			vx_data[idx] += slots.vx()[i] * p_w;
+			vx_data[idx] += slots.vx()[i] * p_w_dt;
 
 			#pragma omp atomic update
-			vy_data[idx] += slots.vy()[i] * p_w;
+			vy_data[idx] += slots.vy()[i] * p_w_dt;
 
 			#pragma omp atomic update
-			vz_data[idx] += slots.vz()[i] * p_w;
+			vz_data[idx] += slots.vz()[i] * p_w_dt;
 
 			#pragma omp atomic update
-			charge_data[idx] += slots.q()[i] * p_w;
+			charge_data[idx] += slots.q()[i] * p_w_dt;
+
 		}
 
 	} // record_stats_cpu

@@ -416,8 +416,10 @@ namespace Slots
 		p.vy = 0.0;
 		p.vz = 0.0;
 		
-		// Start with weight 1.0 by default until we have reason not to
-		p.weight = 1.0;
+		// Particle weights are in units of particles/s, meant to represent a
+		// given source of particles at this location. We need to normalize
+		// by number of particle launched as well.
+		p.weight = 1.0 / opts.imp_num();
 		p.q = opts.imp_init_charge(); 
 
 		return p;
@@ -485,7 +487,7 @@ namespace Slots
 					slots.set_vY(i, p.vY);
 					slots.set_vZ(i, p.vZ);
 					slots.set_q(i, p.q);
-					slots.set_weight(i, 1.0);
+					slots.set_weight(i, p.weight);
 					slots.set_state(i, 0);
 				}
 			}  // i loop

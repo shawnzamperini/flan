@@ -10,13 +10,16 @@ namespace ImpurityStats
 {
 
 	__global__ void record_stats_kernel(StatisticsDevice stats_d, 
-		Slots::SlotsDevice slots_d, double imp_time_step)
+		Slots::SlotsDevice slots_d, double dt)
 	{
 		// Global index
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 		// Avoid out of bounds indexing
 		if (i >= slots_d.N) return;
+
+		// Don't count dead particles
+		if (slots_d.state[i]) return;
 
 		// 4D to 1D index
 		//int Nt {stats_d.Nt};
@@ -27,20 +30,20 @@ namespace ImpurityStats
 			* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
 
 		// Add to stats. Need to use atomicAdd here to avoid a race condition :(
-		double p_w {slots_d.weight[i]};  // Change to float
+		double p_w_dt {slots_d.weight[i] * dt};  // Change to float
 		atomicAdd(&stats_d.counts[idx], 1);
-		atomicAdd(&stats_d.weights[idx], p_w);
-		atomicAdd(&stats_d.vX[idx], slots_d.vX[i] * p_w);
-		atomicAdd(&stats_d.vY[idx], slots_d.vY[i] * p_w);
-		atomicAdd(&stats_d.vZ[idx], slots_d.vZ[i] * p_w);
-		atomicAdd(&stats_d.vx[idx], slots_d.vx[i] * p_w);
-		atomicAdd(&stats_d.vy[idx], slots_d.vy[i] * p_w);
-		atomicAdd(&stats_d.vz[idx], slots_d.vz[i] * p_w);
-		atomicAdd(&stats_d.q[idx],  slots_d.q[i]  * p_w);
+		atomicAdd(&stats_d.weights[idx], p_w_dt);
+		atomicAdd(&stats_d.vX[idx], slots_d.vX[i] * p_w_dt);
+		atomicAdd(&stats_d.vY[idx], slots_d.vY[i] * p_w_dt);
+		atomicAdd(&stats_d.vZ[idx], slots_d.vZ[i] * p_w_dt);
+		atomicAdd(&stats_d.vx[idx], slots_d.vx[i] * p_w_dt);
+		atomicAdd(&stats_d.vy[idx], slots_d.vy[i] * p_w_dt);
+		atomicAdd(&stats_d.vz[idx], slots_d.vz[i] * p_w_dt);
+		atomicAdd(&stats_d.q[idx],  slots_d.q[i]  * p_w_dt);
 	}
 	
 	void record_stats_gpu(StatisticsDevice& stats_d, 
-		const Slots::SlotsDevice& slots_d, double imp_time_step)
+		const Slots::SlotsDevice& slots_d, double dt)
 	{
 
 		// Each stats is assigned to a specific GPU where its data lies
@@ -52,8 +55,7 @@ namespace ImpurityStats
 		// a time"
 		int blockSize = 256;
 		int gridSize = (slots_d.N + blockSize - 1) / blockSize;
-		record_stats_kernel<<<gridSize, blockSize>>>(stats_d, slots_d, 
-			imp_time_step);
+		record_stats_kernel<<<gridSize, blockSize>>>(stats_d, slots_d, dt);
 
 #ifdef DEBUG
 		// Check for errors

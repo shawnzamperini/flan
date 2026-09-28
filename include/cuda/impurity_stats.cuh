@@ -15,6 +15,6 @@ namespace ImpurityStats
 	* @brief Wrapper to call record_stats GPU kernel
 	*/
 	void record_stats_gpu(StatisticsDevice& stats_d, 
-		const Slots::SlotsDevice& slots_d, double imp_time_step);
+		const Slots::SlotsDevice& slots_d, double dt);
 }
 

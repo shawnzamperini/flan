@@ -36,7 +36,7 @@ namespace Collisions
 	/**
 	* Computes the electron Debye length.
 	*
-	* λ_D = sqrt(eps0 kT_e / (n_e e²))
+	* lambda_D = sqrt(eps0 kT_e / (n_e e^2))
 	*
 	* @param te Electron temperature [eV].
 	* @param ne Electron density [m-3].
@@ -52,21 +52,21 @@ namespace Collisions
 
 
 	/**
-	 * Samples a velocity from a drifting Maxwellian distribution.
-	 *
-	 * The distribution has temperature T and bulk velocity
-	 * (uX, uY, uZ).
-	 *
-	 * @param T Temperature [eV].
-	 * @param uX Drift velocity x-component [m/s].
-	 * @param uY Drift velocity y-component [m/s].
-	 * @param uZ Drift velocity z-component [m/s].
-	 * @param m Particle mass [kg].
-	 * @param rng Random number generator.
-	 * @param[out] bkg_vX Sampled x-velocity [m/s].
-	 * @param[out] bkg_vY Sampled y-velocity [m/s].
-	 * @param[out] bkg_vZ Sampled z-velocity [m/s].
-	 */
+	* Samples a velocity from a drifting Maxwellian distribution.
+	*
+	* The distribution has temperature T and bulk velocity
+	* (uX, uY, uZ).
+	*
+	* @param T Temperature [eV].
+	* @param uX Drift velocity x-component [m/s].
+	* @param uY Drift velocity y-component [m/s].
+	* @param uZ Drift velocity z-component [m/s].
+	* @param m Particle mass [kg].
+	* @param rng Random number generator.
+	* @param[out] bkg_vX Sampled x-velocity [m/s].
+	* @param[out] bkg_vY Sampled y-velocity [m/s].
+	* @param[out] bkg_vZ Sampled z-velocity [m/s].
+	*/
 	__device__ __forceinline__
 	void sample_bkg_velocity_cuda(const double T, const double uX, const double uY, 
 		const double uZ, const double m, pcg32& rng, double& bkg_vX, 
@@ -117,17 +117,17 @@ namespace Collisions
 		// but if you want to match analytic fluid results this is often
 		// a built in assumption in those derivations, so you'd swap inst_g
 		// out with mean_g. inst_g is more kinetic/accurate though.
-		const double mean_gX = vX - uX;
-		const double mean_gY = vY - uY;
-		const double mean_gZ = vZ - uZ;
+		//const double mean_gX = vX - uX;
+		//const double mean_gY = vY - uY;
+		//const double mean_gZ = vZ - uZ;
 
 		// Magnitude
-		double mean_g = sqrt(mean_gX * mean_gX + mean_gY * mean_gY +
-				 mean_gZ * mean_gZ);
+		//double mean_g = sqrt(mean_gX * mean_gX + mean_gY * mean_gY +
+		//		 mean_gZ * mean_gZ);
 		double inst_g = sqrt(inst_gX * inst_gX + inst_gY * inst_gY +
 				 inst_gZ * inst_gZ);
 
-		mean_g = fmax(mean_g, 1.0e-3);
+		//mean_g = fmax(mean_g, 1.0e-3);
 		inst_g = fmax(inst_g, 1.0e-3);
 
 		// Optional correction left disabled as in CPU version
@@ -157,17 +157,18 @@ namespace Collisions
 		// Calculate s
 		const double square_term = q * Constants::charge_e * 
 			Constants::charge_e / (Constants::eps0 * mu_ab);
-		//const double s = ln_alpha / (4.0 * Constants::pi) * square_term *
-		//	square_term * ne / (inst_g * inst_g * inst_g) * dt;
+		const double s = ln_alpha / (4.0 * Constants::pi) * square_term *
+			square_term * ne / (inst_g * inst_g * inst_g) * dt;
 
 		// Needed to match assumptions made in the equation for the friction 
-		// force
-		const double s = ln_alpha / (4.0 * Constants::pi) * square_term *
-			square_term * ne / (mean_g * mean_g * mean_g) * dt;
+		// force, maybe sorta? It's confusing
+		//const double s = ln_alpha / (4.0 * Constants::pi) * square_term *
+		//	square_term * ne / (mean_g * mean_g * mean_g) * dt;
+
 
 		// Return as struct
-		//return {s, inst_gX, inst_gY, inst_gZ};
-		return {s, mean_gX, mean_gY, mean_gZ};
+		return {s, inst_gX, inst_gY, inst_gZ};
+		//return {s, mean_gX, mean_gY, mean_gZ};
 
 	}  // nanbu_calc_s_cuda
 
@@ -363,6 +364,7 @@ namespace Collisions
 		// but no reason this can't be expanded for electrons as well. 
 		// Generally leave this commented out unless you are investigating the 
 		// collision model.
+		/*
 		if (!elec)
 		{
 			int Nx {stats_d.Nx};
@@ -370,9 +372,11 @@ namespace Collisions
 			int Nz {stats_d.Nz};
 			int idx {slots_d.tidx[i] * (Nx * Ny * Nz) + slots_d.xidx[i] 
 				* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
-			double p_w {slots_d.weight[i]};  // Change to float
-			atomicAdd(&stats_d.s[idx], s * p_w);
+			double p_w_dt {slots_d.weight[i] * dt};  // Change to float
+
+			atomicAdd(&stats_d.s[idx], s * p_w_dt);
 		}
+		*/
 
 		// Calcluate A (Eq. 13)
 		double A {nanbu_calc_A_cuda(s)};

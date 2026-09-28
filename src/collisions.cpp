@@ -329,7 +329,9 @@ namespace Collisions
 		#pragma omp for
 		for (int i=0; i < slots.N(); ++i)
 		{
-
+			// Skip dead particles
+			if (slots.state()[i] > 0) continue;
+	
 			// A neutral will not experience a Coloumb collision (in fact, will
 			// cause a divide by zero later on in this algorithm), so do nothing
 			// in that case.
@@ -343,12 +345,21 @@ namespace Collisions
 			double vX {slots.vX()[i]};
 			double vY {slots.vY()[i]};
 			double vZ {slots.vZ()[i]};
+			int state {slots.state()[i]};
 			int q {slots.q()[i]};
 
 			// Will always need electron temperature/density. Trilinearly
 			// interpolate in space and then linearly interpolate in time.
 			double ne {bkg.interp_ne(t, x, y, z)}; 
 			double Te {bkg.interp_te(t, x, y, z)}; 
+
+			if (ne < 0) 
+			{
+				std::cout << "error! ne = " << ne << "\n";
+				std::cout << "  txyz = " << t << ", " << x << ", " << y << ", " 
+					<< z << "  state = " << state << '\n';
+			}
+
 
 			// Need to account for this better, just putting it here for now so I
 			// can get this paper submitted :(
@@ -397,12 +408,11 @@ namespace Collisions
 				int zidx {slots.zidx()[i]};
 
 				#pragma omp critical
-				imp_stats.add_s(tidx, xidx, yidx, zidx, s * p_w);
+				imp_stats.add_s(tidx, xidx, yidx, zidx, s * p_w * dt);
 			}
 
 			// Calcluate A (Eq. 13)
 			double A {nanbu_calc_A(s)};
-			//std::cout << "s = " << s << "\tA = " << A << '\n';
 
 			// Calculate deflection angle, chi (Eq. 17)
 			double chi {nanbu_calc_chi(s, A, rng)};

@@ -22,6 +22,8 @@ namespace Options
 
 		opts_h.imp_mass_amu   = m_imp_mass_amu;
 
+		opts_h.imp_num        = m_imp_num;
+
 		opts_h.tstart_opt_int = m_imp_tstart_opt_int;
 		opts_h.tstart_val     = m_imp_tstart_val;
 		opts_h.trange_min     = m_imp_trange_min;
