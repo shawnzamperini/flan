@@ -57,7 +57,8 @@ if(ENABLE_CUDA)
 
     # Needed for atomicAdd(double*, double). Requires CUDA Toolkit 12, 13
 	# abandonded support for these? Should address...
-    set(CMAKE_CUDA_ARCHITECTURES 60 70 80 86)
+    #set(CMAKE_CUDA_ARCHITECTURES 60 70 80 86)
+    set(CMAKE_CUDA_ARCHITECTURES 80 86)
 
     message(STATUS "NVIDIA GPU support enabled")
 else()
