@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(flan VERSION 0.12.0)
+project(flan VERSION 1.0.0)
 
 # ------------------------------------------------------------
 # Build types (Debug, Release, RelWithDebInfo, MinSizeRel)
