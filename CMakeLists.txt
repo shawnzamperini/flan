@@ -133,8 +133,10 @@ if(ENABLE_CUDA)
     target_link_libraries(flan PRIVATE CUDA::cudart)
 
     target_compile_options(flan PRIVATE
-        $<$<CONFIG:Release>:$<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_86>>
-        $<$<CONFIG:RelWithDebInfo>:$<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_86 -lineinfo>>
+#        $<$<CONFIG:Release>:$<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_86>>
+#        $<$<CONFIG:RelWithDebInfo>:$<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_86 -lineinfo>>
+        $<$<CONFIG:Release>:$<$<COMPILE_LANGUAGE:CUDA>:>>
+        $<$<CONFIG:RelWithDebInfo>:$<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>>
         $<$<CONFIG:Debug>:$<$<COMPILE_LANGUAGE:CUDA>:-G -O0>>
     )
 
