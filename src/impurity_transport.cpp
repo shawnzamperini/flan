@@ -361,6 +361,7 @@ namespace ImpurityTransport
 		collision_cpu(slots, bkg, dt, opts, imp_stats, rngs);
 	}
 
+
 	// Main particle following loop
 	void main_loop(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
@@ -392,10 +393,16 @@ namespace ImpurityTransport
 		// Assign to remaining particles
 		int rem_parts {parts_per_rank};
 		
+		// GPU device number
+		int device {};
+
 #ifdef USE_CUDA
 
 		if (opts.use_gpu_int() > 0)
 		{
+			// Get device number, used below so only one GPU prints updates
+			cudaGetDevice(&device);
+
 			// Now subdivide among GPUs on this rank
 			int num_gpus {};
 			cudaGetDeviceCount(&num_gpus);
@@ -544,7 +551,7 @@ namespace ImpurityTransport
 			// User feedback just for rank 0, no MPI communication. The total
 			// number of remaining particles is rem_parts plus the number
 			// actively being followed (alive_slots).
-			if (rank == 0) 
+			if (rank == 0 && device == 0) 
 				prog.update(rem_parts + alive_slots);
 
 #ifdef DEBUG
@@ -714,6 +721,7 @@ namespace ImpurityTransport
 			std::vector<OpenADAS::OpenADASDevice> gpu_oa_rcs;
 			std::vector<Options::OptionsDevice*> gpu_opts;
 			std::vector<pcg32*> gpu_rngs;
+			std::vector<Timer::Timer> gpu_timers;
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
 				gpu_slots.push_back(slots.to_device(dev));
@@ -735,6 +743,9 @@ namespace ImpurityTransport
 				// arrays. 
 				int seed {opts.seed() + rank};
 				gpu_rngs.push_back(init_rngs_cuda(gpu_slots[dev], seed));
+
+				// Each GPU gets it own timer
+				gpu_timers.push_back(Timer::Timer());
 			}
 
 #ifdef DEBUG
@@ -755,9 +766,9 @@ namespace ImpurityTransport
 					std::ref(gpu_stats[dev]), 
 					std::ref(oa_ioniz), std::ref(gpu_oa_izs[dev]), 
 					std::ref(oa_recomb), std::ref(gpu_oa_rcs[dev]), 
-					std::ref(opts), std::ref(timer), std::ref(ioniz_warnings),
-					std::ref(recomb_warnings), std::ref(gpu_rngs[dev]),
-					std::ref(gpu_opts[dev]));
+					std::ref(opts), std::ref(gpu_timers[dev]), 
+					std::ref(ioniz_warnings), std::ref(recomb_warnings), 
+					std::ref(gpu_rngs[dev]), std::ref(gpu_opts[dev]));
 			}
 
 			// Wait for all threads to finish
@@ -770,6 +781,9 @@ namespace ImpurityTransport
 				// Reduce GPU stats
 				std::cout << "Reducing stats...\n";
 				imp_stats.add_stats_device(gpu_stats[dev], dev);
+
+				// Combine timers into initial one
+				timer.merge(gpu_timers[dev]);
 
 				// Free memory of device-side structs
 				Slots::free_slots(gpu_slots[dev], dev);

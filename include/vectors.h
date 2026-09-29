@@ -10,7 +10,9 @@
 #include <iostream>
 #include <vector>
 
+#ifndef __CUDACC__
 #include "mpi.h"
+#endif
 
 namespace Vectors
 {
@@ -162,10 +164,13 @@ namespace Vectors
 		*/
 		void resize(const int dim1, const int dim2, const int dim3);
 
+#ifndef __CUDACC__
 		/**
 		* @brief Broadcast Vector3D to other processes
 		*/
 		void broadcast(MPI_Comm comm);
+#endif
+
 	};
 
 	/**
@@ -347,10 +352,12 @@ namespace Vectors
         void resize(const int dim1, const int dim2, const int dim3,
             const int dim4);
 
+#ifndef __CUDACC__
 		/**
 		* @brief Broadcast Vector4D to other processes
 		*/
 		void broadcast(MPI_Comm comm);
+#endif
 	};
 }
 

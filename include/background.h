@@ -9,8 +9,11 @@
 #include "background_device.h"
 #include "flan_types.h"
 #include "impurity.h"
-#include "mpi.h"
 #include "vectors.h"
+
+#ifndef __CUDACC__
+#include "mpi.h"
+#endif
 
 /**
 * @namespace Background
@@ -400,10 +403,12 @@ namespace Background
 		template <typename T>
 		void set_dims(Vectors::Vector4D<T>& v, const std::string_view data);
 
+#ifndef __CUDACC__
 		/**
 		* @brief MPI broadcast
 		*/
 		void broadcast(MPI_Comm comm);
+#endif
 
 		/**
 		* @brief Copy background data to device
