@@ -540,6 +540,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "imp_max_time") 
+			{
+				auto set_func = std::bind(&Options::set_imp_max_time, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "print_interval") 
 			{
 				auto set_func = std::bind(&Options::set_print_interval, &opts, 

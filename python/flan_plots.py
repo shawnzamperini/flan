@@ -1074,11 +1074,12 @@ class FlanPlots:
 
 		which:	Which velocity to calculate radial/poloidal components
 				for. One of: 
-					ExB, 
-					gradB, 
-					polarization, 
+					ExB 
+					gradB 
+					polarization 
 					curvature
-					actual. 
+					actual 
+					vi
 
 		Returns both the radial and poloidal components as either a 4D (all
 		times, frame = None) or 3D (specific time, frame = integer) array. Slots
@@ -1086,7 +1087,7 @@ class FlanPlots:
 		"""
 
 		# Validate input
-		valid_which = ["actual", "exb", "gradb", "polarization", "curvature"]
+		valid_which = ["actual", "exb", "gradb", "polarization", "curvature", "vi"]
 		if which.lower() not in valid_which:
 			print(f"Error! which = {which} not valid. Valid options: "
 				  + ", ".join(valid_which))
