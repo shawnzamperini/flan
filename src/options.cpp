@@ -203,6 +203,18 @@ namespace Options
 			if (calc_grad_elec == "off") m_calc_grad_elec_int = 0;
 			else if (calc_grad_elec == "on") m_calc_grad_elec_int = 1;
 		}
+	
+	// min_ne
+	void Options::set_min_ne(double min_ne) 
+		{m_min_ne = min_ne;}
+
+	// min_te
+	void Options::set_min_te(double min_te) 
+		{m_min_te = min_te;}
+
+	// min_ti
+	void Options::set_min_ti(double min_ti) 
+		{m_min_ti = min_ti;}
 
 	// tbound_type
 	void Options::set_tbound_type(std::string tbound_type) 
@@ -318,6 +330,14 @@ namespace Options
 	// lcfs_x
 	void Options::set_lcfs_x(double lcfs_x) 
 		{m_lcfs_x = lcfs_x;}
+
+	// lcfs_x
+	void Options::set_lcfs_y(double lcfs_y) 
+		{m_lcfs_y = lcfs_y;}
+
+	// lcfs_x
+	void Options::set_lcfs_z(double lcfs_z) 
+		{m_lcfs_z = lcfs_z;}
 
 	// sep_x_bc_xp_z1
 	void Options::set_sep_x_bc_xp_z1(double sep_x_bc_xp_z1) 
@@ -608,6 +628,10 @@ namespace Options
 			if (imp_iz_recomb == "off") m_imp_iz_recomb_int = 0;
 			else if (imp_iz_recomb == "on") m_imp_iz_recomb_int = 1;
 		}
+
+	// imp_max_time
+	void Options::set_imp_max_time(double imp_max_time) 
+		{m_imp_max_time = imp_max_time;}
 	
 	// print_interval
 	void Options::set_print_interval(int print_interval) 
@@ -656,6 +680,12 @@ namespace Options
 		{return m_gkyl_file_type;}
 	const std::string& Options::gkyl_moment_type() const 
 		{return m_gkyl_moment_type;}
+	double Options::min_ne() const 
+		{return m_min_ne;}
+	double Options::min_te() const 
+		{return m_min_te;}
+	double Options::min_ti() const 
+		{return m_min_ti;}
 	const std::string& Options::min_xbound_type() const 
 		{return m_min_xbound_type;}
 	const std::string& Options::max_xbound_type() const 
@@ -670,6 +700,10 @@ namespace Options
 		{return m_max_zbound_type;}
 	double Options::lcfs_x() const 
 		{return m_lcfs_x;}
+	double Options::lcfs_y() const 
+		{return m_lcfs_y;}
+	double Options::lcfs_z() const 
+		{return m_lcfs_z;}
 	double Options::sep_x_bc_xp_z1() const 
 		{return m_sep_x_bc_xp_z1;}
 	double Options::sep_x_bc_xp_z2() const 
@@ -750,6 +784,8 @@ namespace Options
 		{return m_imp_source_scale_fact;}
 	const std::string& Options::imp_iz_recomb() const 
 		{return m_imp_iz_recomb;}
+	double Options::imp_max_time() const 
+		{return m_imp_max_time;}
 	int Options::print_interval() const 
 		{return m_print_interval;}
 	const std::string& Options::openadas_root() const 

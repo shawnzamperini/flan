@@ -298,8 +298,7 @@ namespace OpenADAS
 	}
 
 
-	double OpenADAS::get_rate_coeff(int charge, double ne, double te)
-		const
+	double OpenADAS::get_rate_coeff(int charge, double ne, double te) const
 	{
 		// Load the values needed to perform a bilinear interpolation. Note
 		// that if ne or te are out of range, it is reassigned to the
@@ -319,27 +318,19 @@ namespace OpenADAS
 		std::tie(te, te0, te1, te0_index, te1_index) = 
 			get_bilinear_interp_vals(m_te, te);
 
-		// Get the value of the rate coefficients that we will be 
-		// interpolating between.
-		double rate0 = m_rates(charge, te0_index, ne0_index);
-		double rate1 = m_rates(charge, te1_index, ne1_index);
+		// Get the four corner values of the interpolation rectangle.
+		// te0, ne0 -> rate00
+		// te1, ne0 -> rate10
+		// te0, ne1 -> rate01
+		// te1, ne1 -> rate11
+		double rate00 = m_rates(charge, te0_index, ne0_index);
+		double rate10 = m_rates(charge, te1_index, ne0_index);
+		double rate01 = m_rates(charge, te0_index, ne1_index);
+		double rate11 = m_rates(charge, te1_index, ne1_index);
 
-		/*
-		std::cout << "te0_index = " << te0_index << '\n';
-		std::cout << "te1_index = " << te1_index << '\n';
-		std::cout << "ne0_index = " << ne0_index << '\n';
-		std::cout << "ne1_index = " << ne1_index << '\n';
-		std::cout << "log10(te0) = " << std::log10(te0) << '\n';
-		std::cout << "log10(te1) = " << std::log10(te1) << '\n';
-		std::cout << "log10(ne0) = " << std::log10(ne0 * 1e-6) << '\n';
-		std::cout << "log10(ne1) = " << std::log10(ne1 * 1e-6) << '\n';
-		std::cout << "log10(rate0) = " << std::log10(rate0 * 1e-6) << '\n';
-		std::cout << "log10(rate1) = " << std::log10(rate1 * 1e-6) << '\n';
-		*/
-
-		// Do a bilinear interpolation. In this case, x=Te, y=ne
-		return Utilities::bilinear_interpolate(te0, ne0, rate0, te1, ne1, 
-			rate1, te, ne);
+		// Perform bilinear interpolation. In this case, x = Te and y = ne.
+		return Utilities::bilinear_interpolate(te0, ne0, te1, ne1,
+			rate00, rate10, rate01, rate11, te, ne);
 	}
 
 #ifndef USE_CUDA

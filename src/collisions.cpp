@@ -353,11 +353,27 @@ namespace Collisions
 			double ne {bkg.interp_ne(t, x, y, z)}; 
 			double Te {bkg.interp_te(t, x, y, z)}; 
 
+			// Don't let it go below a minimum. This can prevent extrapolating
+			// near the edges going below zero.
+			//if (ne < opts.min_ne())
+			//{
+			//	ne = std::max(ne, opts.min_ne());
+			//}
+			//Te = std::max(Te, opts.min_te());
+
+	
+			// This will ultimately cause a crash. I try to put in anough gaurds
+			// to prevent this from happening (e.g., don't interpolate at the
+			// edges of the grid), but it may be able to still slip in and
+			// can be tricky to debug.
 			if (ne < 0) 
 			{
-				std::cout << "error! ne = " << ne << "\n";
-				std::cout << "  txyz = " << t << ", " << x << ", " << y << ", " 
-					<< z << "  state = " << state << '\n';
+				#pragma omp critical
+				{
+					std::cout << "error! ne = " << ne << "\n";
+					std::cout << "  txyz = " << t << ", " << x << ", " << y 
+						<< ", " << z << "  state = " << state << '\n';
+				}
 			}
 
 
@@ -379,7 +395,7 @@ namespace Collisions
 			{
 				mass_kg = opts.gkyl_ion_mass_amu() * Constants::amu_to_kg;	
 				T = bkg.interp_ti(t, x, y, z); 
-				T = std::max(0.1, T);
+				T = std::max(opts.min_ti(), T);
 			}
 
 			// The Nanbu model has three main variables in it:

@@ -4,6 +4,7 @@
 
 #include "background_device.h"
 #include "constants.h"
+#include "options_device.h"
 #include "pcg32.h"
 #include "slots_device.h"
 
@@ -285,7 +286,8 @@ namespace Collisions
 	void nanbu_coll_kernel(Slots::SlotsDevice slots_d, 
 		const Background::BackgroundDevice bkg_d, bool elec, const double dt, 
 		ImpurityStats::StatisticsDevice stats_d, pcg32* rngs_d, 
-		const double elec_mass_amu, const double ion_mass_amu)
+		const double elec_mass_amu, const double ion_mass_amu, 
+		const Options::OptionsDevice* opts_d)
 	{
 		// Derivation and steps taken from:
 		// Nanbu, K. Theory of cumulative small-angle collisions in plasmas. 
@@ -320,10 +322,14 @@ namespace Collisions
 			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx)};
 
 		// Interpolate to get background flow at particle location
-		const double ne {Interpolate::interpolate_field_4d(bkg_d.ne, 
+		double ne {Interpolate::interpolate_field_4d(bkg_d.ne, 
 			stencil_4d, t, x, y, z)};
-		const double Te {Interpolate::interpolate_field_4d(bkg_d.te, 
+		double Te {Interpolate::interpolate_field_4d(bkg_d.te, 
 			stencil_4d, t, x, y, z)};
+
+		// Don't let them go below zero. This can happen near the edge of grids.
+		ne = fmax(ne, opts_d->min_ne);
+		Te = fmax(Te, opts_d->min_te);
 
 		// Load some reusable variables based on which species. If elec = true,
 		// then electrons and ions if not. 
@@ -339,7 +345,7 @@ namespace Collisions
 			mass_kg = ion_mass_amu * Constants::amu_to_kg;	
 			T = Interpolate::interpolate_field_4d(bkg_d.ti, stencil_4d, t, x, 
 				y, z);
-			T = fmax(0.1, T);
+			T = fmax(opts_d->min_ti, T);
 		}
 
 		// The Nanbu model has three main variables in it:
@@ -410,7 +416,8 @@ namespace Collisions
 	void collision_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d, const bool elec, 
 		const double dt, ImpurityStats::StatisticsDevice& imp_stats_d,
-		pcg32* rngs_d, const double elec_mass_amu, const double ion_mass_amu)
+		pcg32* rngs_d, const double elec_mass_amu, const double ion_mass_amu,
+		const Options::OptionsDevice* opts_d)
 	{
 		
 		// Block and grid size
@@ -418,7 +425,7 @@ namespace Collisions
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 
 		nanbu_coll_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, elec, dt, 
-			imp_stats_d, rngs_d, elec_mass_amu, ion_mass_amu);
+			imp_stats_d, rngs_d, elec_mass_amu, ion_mass_amu, opts_d);
 
 #ifdef DEBUG
 		// Check for errors

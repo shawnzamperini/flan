@@ -32,6 +32,7 @@ namespace Options
 		std::string m_use_gpu					   {"off"};
 		int m_seed                                     {4};
 		int m_slot_cap                           {1048576};  
+		int m_print_interval                          {10};
 
 		// General background plasma options
 		std::string m_bkg_source                {"gkeyll"};
@@ -52,6 +53,11 @@ namespace Options
 		std::string m_gkyl_file_type            {"binary"};
 		std::string m_gkyl_moment_type    {"bimaxwellian"};
 		std::string m_calc_grad_elec               {"off"};
+		
+		// General background options
+		double m_min_ne                             {1e15};
+		double m_min_te                              {0.1};
+		double m_min_ti                              {0.1};
 
 		// Geometry options
 		std::string m_tbound_type            {"absorbing"};
@@ -62,6 +68,8 @@ namespace Options
 		std::string m_min_zbound_type        {"absorbing"};
 		std::string m_max_zbound_type        {"absorbing"};
 		double m_lcfs_x                              {0.0};
+		double m_lcfs_y                              {0.0};
+		double m_lcfs_z                              {0.0};
 		double m_imp_xbound_buffer                   {0.0};
 		double m_imp_ybound_buffer                   {0.0};
 		double m_imp_zbound_buffer                   {0.0};
@@ -99,7 +107,7 @@ namespace Options
 		double m_imp_time_step_min                 {1e-12};
 		double m_imp_source_scale_fact               {1.0};
 		std::string m_imp_iz_recomb                 {"on"};
-		int m_print_interval                          {10};
+		double m_imp_max_time                       {1e10};
 
 		// Variance reduction options
 		std::string m_var_red_split                {"off"};
@@ -185,6 +193,9 @@ namespace Options
 		void set_gkyl_file_type(std::string gkyl_file_type);
 		void set_gkyl_moment_type(std::string gkyl_moment_type);
 		void set_calc_grad_elec(std::string calc_grad_elec);
+		void set_min_ne(double min_ne);
+		void set_min_te(double min_te);
+		void set_min_ti(double min_ti);
 		void set_tbound_type(std::string tbound_type);
 		void set_min_xbound_type(std::string min_xbound_type);
 		void set_max_xbound_type(std::string max_xbound_type);
@@ -193,6 +204,8 @@ namespace Options
 		void set_min_zbound_type(std::string min_zbound_type);
 		void set_max_zbound_type(std::string max_zbound_type);
 		void set_lcfs_x(double lcfs_x);
+		void set_lcfs_y(double lcfs_y);
+		void set_lcfs_z(double lcfs_z);
 		void set_sep_x_bc_xp_z1(double sep_x_bc_xp_z1);
 		void set_sep_x_bc_xp_z2(double sep_x_bc_xp_z2);
 		void set_imp_xbound_buffer(double imp_xbound_buffer);
@@ -233,6 +246,7 @@ namespace Options
 		void set_imp_time_step_min(double imp_time_step_min);
 		void set_imp_source_scale_fact(double imp_source_scale_fact);
 		void set_imp_iz_recomb(std::string imp_iz_recomb);
+		void set_imp_max_time(double imp_max_time);
 		void set_print_interval(int print_interval);
 		void set_openadas_root(std::string openadas_root);
 		void set_openadas_year(int openadas_year);
@@ -256,6 +270,9 @@ namespace Options
 		const std::string& gkyl_file_type() const;
 		const std::string& gkyl_moment_type() const;
 		const std::string& calc_grad_elec() const;
+		double min_ne() const;
+		double min_te() const;
+		double min_ti() const;
 		const std::string& tbound_type() const;
 		const std::string& min_xbound_type() const;
 		const std::string& max_xbound_type() const;
@@ -264,6 +281,8 @@ namespace Options
 		const std::string& min_zbound_type() const;
 		const std::string& max_zbound_type() const;
 		double lcfs_x() const;
+		double lcfs_y() const;
+		double lcfs_z() const;
 		double sep_x_bc_xp_z1() const;
 		double sep_x_bc_xp_z2() const;
 		double imp_xbound_buffer() const;
@@ -304,6 +323,7 @@ namespace Options
 		double imp_time_step_min() const;
 		double imp_source_scale_fact() const;
 		const std::string& imp_iz_recomb() const;
+		double imp_max_time() const;
 		int print_interval() const;
 		const std::string& openadas_root() const;
 		int openadas_year() const;

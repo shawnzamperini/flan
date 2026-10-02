@@ -77,7 +77,7 @@ namespace ImpurityTransport
 	
 	// Perform particle step for each particle in slots
 	void step_cpu(Slots::Slots& slots, const Background::Background& bkg, 
-		const Options::Options& opts, const double dt)
+		const Options::Options& opts, const double dt, int& max_time_ctr)
 	{
 
 		#pragma omp parallel for
@@ -106,6 +106,16 @@ namespace ImpurityTransport
 			slots.set_x(i, slots.x()[i] + slots.vx()[i] * dt);
 			slots.set_y(i, slots.y()[i] + slots.vy()[i] * dt);
 			slots.set_z(i, slots.z()[i] + slots.vz()[i] * dt);
+
+			// Check if maximum allowed time has been exceeded, setting to
+			// dead if so and incrementing counter
+			if (slots.t()[i] > opts.imp_max_time())
+			{
+				slots.set_state(i, 1);
+
+				#pragma omp atomic
+				max_time_ctr++;
+			}
 		}
 	}
 
@@ -285,7 +295,7 @@ namespace ImpurityTransport
 	void step_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
-		const Options::Options& opts)
+		const Options::Options& opts, int& max_time_ctr)
 	{
 
 #ifdef USE_CUDA
@@ -298,7 +308,7 @@ namespace ImpurityTransport
 #endif
 
 		// Defined above
-		step_cpu(slots, bkg, opts, opts.imp_time_step());
+		step_cpu(slots, bkg, opts, opts.imp_time_step(), max_time_ctr);
 	}
 
 
@@ -336,7 +346,8 @@ namespace ImpurityTransport
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
 		Impurity::Statistics& imp_stats, 
 		ImpurityStats::StatisticsDevice& imp_stats_d, 
-		const double dt, std::vector<pcg32>& rngs, pcg32* rngs_d)
+		const double dt, std::vector<pcg32>& rngs, pcg32* rngs_d, 
+		const Options::OptionsDevice* opts_d)
 	{
 
 #ifdef USE_CUDA
@@ -344,14 +355,16 @@ namespace ImpurityTransport
 		{
 			// Defined in cuda/collision.cu. First call is for ions (the false)
 			Collisions::collision_gpu(slots_d, bkg_d, false, dt, imp_stats_d,
-				rngs_d, opts.gkyl_elec_mass_amu(), opts.gkyl_ion_mass_amu());
+				rngs_d, opts.gkyl_elec_mass_amu(), opts.gkyl_ion_mass_amu(), 
+				opts_d);
 
 			// friction_force test case only considers ion collisions to compare
 			// against expected flow
 			if (opts.test_opt_int() != 5)
 			{
 				Collisions::collision_gpu(slots_d, bkg_d, true, dt, imp_stats_d,
-					rngs_d, opts.gkyl_elec_mass_amu(), opts.gkyl_ion_mass_amu());
+					rngs_d, opts.gkyl_elec_mass_amu(), opts.gkyl_ion_mass_amu(),
+					opts_d);
 			}
 			return;
 		}
@@ -359,6 +372,29 @@ namespace ImpurityTransport
 
 		// The elec/ion distinction is done within
 		collision_cpu(slots, bkg, dt, opts, imp_stats, rngs);
+	}
+
+	
+	// Prints out warnings if any of the warning counters registered anything.
+	void print_counter_warnings(const Options::Options& opts, 
+		int max_time_ctr, int ioniz_warnings, int recomb_warnings)
+	{
+		// Max time
+		if (max_time_ctr)
+			std::cout << "Warning: " << max_time_ctr << " particles exceeded "
+				<< "maximum alotted time of " << opts.imp_max_time() << " s.\n";
+
+		// Ionization warning
+		if (ioniz_warnings)
+			std::cout << "Warning: Ionization probability was > 1.0 for " 
+				<< ioniz_warnings << " particles. Consider using a smaller "
+				<< "time step.\n";
+
+		// Recombination warning
+		if (recomb_warnings)
+			std::cout << "Warning: Recombination probability was > 1.0 for " 
+				<< recomb_warnings << " particles. Consider using a smaller "
+				<< "time step.\n";
 	}
 
 
@@ -374,7 +410,7 @@ namespace ImpurityTransport
 		const OpenADAS::OpenADASDevice& oa_recomb_d, 
 		Options::Options& opts, Options::OptionsDevice* opts_d, 
 		Timer::Timer& timer, int& ioniz_warnings, int& recomb_warnings, 
-		std::vector<pcg32>& rngs, pcg32* rngs_d)
+		std::vector<pcg32>& rngs, pcg32* rngs_d, int& max_time_ctr)
 	{
 
 		// Rank and number of processes
@@ -482,7 +518,8 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Coll));
 				collision_wrapper(slots, slots_d, bkg, bkg_d, opts,
-					imp_stats, imp_stats_d, opts.imp_time_step(), rngs, rngs_d);
+					imp_stats, imp_stats_d, opts.imp_time_step(), rngs, rngs_d,
+					opts_d);
 			}
 
 #ifdef DEBUG
@@ -503,7 +540,7 @@ namespace ImpurityTransport
 			// Perform particle step
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Step));
-				step_wrapper(slots, slots_d, bkg, bkg_d, opts);
+				step_wrapper(slots, slots_d, bkg, bkg_d, opts, max_time_ctr);
 			}
 
 #ifdef DEBUG
@@ -588,7 +625,8 @@ namespace ImpurityTransport
 		const OpenADAS::OpenADAS& oa_recomb, 
 		const OpenADAS::OpenADASDevice& oa_recomb_d, 
 		Options::Options& opts, Timer::Timer& timer, int& ioniz_warnings, 
-		int& recomb_warnings, pcg32* rngs_d, Options::OptionsDevice* opts_d)
+		int& recomb_warnings, pcg32* rngs_d, Options::OptionsDevice* opts_d,
+		int& max_time_ctr)
 	{
 		// Not used, so just dummying
 		std::vector<pcg32> rngs;
@@ -596,7 +634,7 @@ namespace ImpurityTransport
 		cudaSetDevice(slots_d.device_id);   // THIS THREAD USES THIS GPU
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, opts_d, timer, 
-			ioniz_warnings, recomb_warnings, rngs, rngs_d);
+			ioniz_warnings, recomb_warnings, rngs, rngs_d, max_time_ctr);
 	}
 
 #endif
@@ -655,6 +693,10 @@ namespace ImpurityTransport
 		// is greater than 1 (from too large a time step).
 		int ioniz_warnings {};
 		int recomb_warnings {};
+
+		// Counter to see how many particles exceed the maximum alotted time
+		// (in plasma time)
+		int max_time_ctr {};
 
 		// Slot capacity, 2^20 seems reasonable but can be adjusted. The larger
 		// the better (probably). The motivation for this is to alleviate 
@@ -768,7 +810,8 @@ namespace ImpurityTransport
 					std::ref(oa_recomb), std::ref(gpu_oa_rcs[dev]), 
 					std::ref(opts), std::ref(gpu_timers[dev]), 
 					std::ref(ioniz_warnings), std::ref(recomb_warnings), 
-					std::ref(gpu_rngs[dev]), std::ref(gpu_opts[dev]));
+					std::ref(gpu_rngs[dev]), std::ref(gpu_opts[dev]), 
+					std::ref(max_time_ctr));
 			}
 
 			// Wait for all threads to finish
@@ -794,6 +837,8 @@ namespace ImpurityTransport
 				Options::free_opts(gpu_opts[dev], dev);
 			}
 
+			print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
+				recomb_warnings);
 			return imp_stats;
 		}
 
@@ -830,8 +875,10 @@ namespace ImpurityTransport
 
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, opts_d, timer, 
-			ioniz_warnings, recomb_warnings, rngs, rngs_d);
+			ioniz_warnings, recomb_warnings, rngs, rngs_d, max_time_ctr);
 
+		print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
+			recomb_warnings);
 		return imp_stats;
 	}
 }

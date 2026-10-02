@@ -11,6 +11,10 @@ namespace Options
 		double imp_mass_amu;
 		int imp_num;
 
+		double min_ne;
+		double min_te;
+		double min_ti;
+
 		int tstart_opt_int;
 		double tstart_val;
 		double trange_min;
@@ -30,6 +34,10 @@ namespace Options
 		double zstart_val;
 		double zrange_min;
 		double zrange_max;
+
+		double lcfs_x;
+		double lcfs_y;
+		double lcfs_z;
 
 		int init_charge;
 

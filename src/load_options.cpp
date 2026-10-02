@@ -167,6 +167,27 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "min_ne") 
+			{
+				auto set_func = std::bind(&Options::set_min_ne, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "min_te") 
+			{
+				auto set_func = std::bind(&Options::set_min_te, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "min_ti") 
+			{
+				auto set_func = std::bind(&Options::set_min_ti, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "tbound_type") 
 			{
 				auto set_func = std::bind(&Options::set_tbound_type, &opts, 
@@ -219,6 +240,20 @@ namespace Options
 			else if (key == "lcfs_x") 
 			{
 				auto set_func = std::bind(&Options::set_lcfs_x, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "lcfs_y") 
+			{
+				auto set_func = std::bind(&Options::set_lcfs_y, &opts, 
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "lcfs_z") 
+			{
+				auto set_func = std::bind(&Options::set_lcfs_z, &opts, 
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
 			}

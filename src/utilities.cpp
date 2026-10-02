@@ -16,12 +16,44 @@
 
 namespace Utilities
 {
+
+	/**
+	* Converts a string to an integer.
+	*
+	* The conversion is performed using std::stoi. The input string
+	* must contain a valid integer representation. If the string
+	* cannot be converted or the converted value falls outside the
+	* range of int, std::stoi will throw an exception.
+	*
+	* @param str String containing the integer representation.
+	* @return Integer value represented by the input string.
+	* @throws std::invalid_argument If no valid conversion to int can
+	*         be performed.
+	* @throws std::out_of_range If the converted value is outside the
+	*         range representable by int.
+	*/
 	int str_as_int(const std::string& str)
 	{
 		// Would like to add some exception handling here.
 		return std::stoi(str);
 	}
 
+
+	/**
+	* Converts a string to a double-precision floating-point value.
+	*
+	* The conversion is performed using std::stod. The input string
+	* must contain a valid floating-point representation. If the string
+	* cannot be converted or the converted value falls outside the
+	* range representable by double, std::stod will throw an exception.
+	*
+	* @param str String containing the floating-point representation.
+	* @return Double value represented by the input string.
+	* @throws std::invalid_argument If no valid conversion to double can
+	*         be performed.
+	* @throws std::out_of_range If the converted value is outside the
+	*         range representable by double.
+	*/
 	double str_as_dbl(const std::string& str)
 	{
 		// Would like to add some exception handling here.
@@ -29,6 +61,22 @@ namespace Utilities
 		return std::stod(str);
 	}
 
+
+	/**
+	* Splits a string into whitespace-delimited tokens.
+	*
+	* Consecutive whitespace characters are treated as a single
+	* delimiter, and leading or trailing whitespace is ignored.
+	* The resulting vector contains each extracted token in the
+	* order it appears in the input string.
+	*
+	* Internally, the string is parsed using a std::istringstream
+	* and repeated applications of the stream extraction operator.
+	*
+	* @param str String to split.
+	* @return Vector containing the whitespace-delimited tokens
+	*         extracted from the input string.
+	*/
 	std::vector<std::string> split_str_at_spaces(std::string& str)
 	{
 		// Split the string up into a vector of strings while getting rid of
@@ -44,10 +92,19 @@ namespace Utilities
 			str_vec.push_back(tmp_str);
 		}
 		return str_vec;
-		
 	}
 
-	// Calculate cross product and return array
+
+	/**
+	* Calculates the cross product of two three-dimensional vectors.
+	*
+	* Given vectors a and b, the returned vector is equal to a × b and is
+	* perpendicular to both input vectors according to the right-hand rule.
+	*
+	* @param a First input vector.
+	* @param b Second input vector.
+	* @return Cross product a × b.
+	*/
 	std::array<double, 3> cross_product(const std::array<double, 3>& a, 
 		const std::array<double, 3>& b)
 	{
@@ -59,13 +116,43 @@ namespace Utilities
 		};
 	}
 
-	// Calculate dot product
+
+	/**
+	* Calculates the dot product of two three-dimensional vectors.
+	*
+	* The dot product is equal to the sum of the products of the corresponding
+	* vector components.
+	*
+	* @param a First input vector.
+	* @param b Second input vector.
+	* @return Dot product a · b.
+	*/
 	double dot_product(const std::array<double, 3>& a, 
 		const std::array<double, 3>& b)
 	{
 		return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 	}
 
+
+	/**
+	* Performs bilinear interpolation within a rectangular region in
+	* two-dimensional (x, y) space.
+	*
+	* The function interpolates a value at the coordinates (x, y)
+	* using values defined at the corners of a rectangle bounded by
+	* (x0, y0) and (x1, y1).
+	*
+	* @param x0 Lower x-coordinate of the rectangle.
+	* @param y0 Lower y-coordinate of the rectangle.
+	* @param z0 Value at the lower corner.
+	* @param x1 Upper x-coordinate of the rectangle.
+	* @param y1 Upper y-coordinate of the rectangle.
+	* @param z1 Value at the upper corner.
+	* @param x X-coordinate at which to evaluate the interpolated value.
+	* @param y Y-coordinate at which to evaluate the interpolated value.
+	* @return Bilinearly interpolated value at (x, y).
+	*/
+	/*
 	double bilinear_interpolate(const double x0, const double y0,
 		const double z0, const double x1, const double y1, const double z1,
 		const double x, const double y)
@@ -80,7 +167,97 @@ namespace Utilities
 		// Interpolate along y using the results from above and return
 		return z_x0 + (y - y0) / (y1 - y0) * (z_x1 - z_x0);
 	}
+	*/
 
+
+	/**
+	 * Performs bilinear interpolation within a rectangular region in
+	 * two-dimensional (x, y) space.
+	 *
+	 * The rectangle is defined by the coordinates (x0, y0) and
+	 * (x1, y1), with values specified at each of the four corners.
+	 * Interpolation is performed first along the x direction and then
+	 * along the y direction to obtain the value at (x, y).
+	 *
+	 * Corner indexing follows the usual convention:
+	 *
+	 *   z00 : (x0, y0)
+	 *   z10 : (x1, y0)
+	 *   z01 : (x0, y1)
+	 *   z11 : (x1, y1)
+	 *
+	 * @param x0 Lower x-coordinate of the rectangle.
+	 * @param y0 Lower y-coordinate of the rectangle.
+	 * @param x1 Upper x-coordinate of the rectangle.
+	 * @param y1 Upper y-coordinate of the rectangle.
+	 * @param z00 Value at (x0, y0).
+	 * @param z10 Value at (x1, y0).
+	 * @param z01 Value at (x0, y1).
+	 * @param z11 Value at (x1, y1).
+	 * @param x X-coordinate at which to evaluate the interpolated value.
+	 * @param y Y-coordinate at which to evaluate the interpolated value.
+	 * @return Bilinearly interpolated value at (x, y).
+	 */
+	double bilinear_interpolate(const double x0, const double y0, 
+		const double x1, const double y1, const double z00, const double z10,
+		const double z01, const double z11, const double x, const double y)
+	{
+		// Normalized coordinates.
+		const double tx = (x - x0) / (x1 - x0);
+		const double ty = (y - y0) / (y1 - y0);
+
+		// Interpolate along x at y0.
+		const double z_y0 = z00 + tx * (z10 - z00);
+
+		// Interpolate along x at y1.
+		const double z_y1 = z01 + tx * (z11 - z01);
+
+		// Interpolate along y and return.
+		return z_y0 + ty * (z_y1 - z_y0);
+	}
+
+
+	/**
+	* Performs trilinear interpolation within a rectangular cell in
+	* (x, y, z) space.
+	*
+	* The cell is defined by the coordinates (x0, y0, z0) and
+	* (x1, y1, z1), with values specified at each of the eight cell
+	* corners. Interpolation weights are clamped to the range [0, 1]
+	* to prevent extrapolation beyond the cell boundaries. As a result,
+	* points outside the cell return the value on the nearest cell face,
+	* edge, or corner.
+	*
+	* Corner indexing follows the usual convention:
+	*
+	*   v000 : (x0, y0, z0)
+	*   v100 : (x1, y0, z0)
+	*   v010 : (x0, y1, z0)
+	*   v110 : (x1, y1, z0)
+	*   v001 : (x0, y0, z1)
+	*   v101 : (x1, y0, z1)
+	*   v011 : (x0, y1, z1)
+	*   v111 : (x1, y1, z1)
+	*
+	* @param x0 Lower x-coordinate of the cell.
+	* @param y0 Lower y-coordinate of the cell.
+	* @param z0 Lower z-coordinate of the cell.
+	* @param x1 Upper x-coordinate of the cell.
+	* @param y1 Upper y-coordinate of the cell.
+	* @param z1 Upper z-coordinate of the cell.
+	* @param v000 Field value at (x0, y0, z0).
+	* @param v100 Field value at (x1, y0, z0).
+	* @param v010 Field value at (x0, y1, z0).
+	* @param v110 Field value at (x1, y1, z0).
+	* @param v001 Field value at (x0, y0, z1).
+	* @param v101 Field value at (x1, y0, z1).
+	* @param v011 Field value at (x0, y1, z1).
+	* @param v111 Field value at (x1, y1, z1).
+	* @param x X-coordinate at which to evaluate the field.
+	* @param y Y-coordinate at which to evaluate the field.
+	* @param z Z-coordinate at which to evaluate the field.
+	* @return Interpolated field value.
+	*/
 	double trilinear_interpolate(
 		const double x0, const double y0, const double z0, 
 		const double x1, const double y1, const double z1,
@@ -90,9 +267,16 @@ namespace Utilities
 		const double x, const double y, const double z)
 	{
 		// Normalized coordinates in [0,1]
-		const double tx = (x - x0) / (x1 - x0);
-		const double ty = (y - y0) / (y1 - y0);
-		const double tz = (z - z0) / (z1 - z0);
+		double tx = (x - x0) / (x1 - x0);
+		double ty = (y - y0) / (y1 - y0);
+		double tz = (z - z0) / (z1 - z0);
+
+		// Prevent extrapolating past the cell center values on the edges of 
+		// the grid. If we don't do this, we can get some pretty incorrect 
+		// values.
+		tx = std::clamp(tx, 0.0, 1.0);
+		ty = std::clamp(ty, 0.0, 1.0);
+		tz = std::clamp(tz, 0.0, 1.0);
 
 		// Interpolate along x for the four lower/upper face corners
 		const double c00 = v000 + tx * (v100 - v000);
@@ -108,9 +292,28 @@ namespace Utilities
 		return c0 + tz * (c1 - c0);
 	}
 
-	// Find nearest neighbor index by essentially seeing which half of the
-	// cell a particle is in and returning the index of the neighboring cell
-	// closest to that half. Designed to be run once per x,y,z.
+
+	/**
+	* Returns the index of the nearest neighboring cell center to a
+	* specified cell center index.
+	*
+	* The neighbor is selected based on which side of the cell center
+	* the value lies. If the value is greater than the cell center,
+	* the neighboring index to the right is returned. If the value is
+	* less than or equal to the cell center, the neighboring index to
+	* the left is returned.
+	*
+	* At the edges of the grid, where only one neighboring cell exists,
+	* that neighbor is returned regardless of which side of the cell
+	* center the value lies on.
+	*
+	* @tparam T Data type of the cell center coordinates.
+	* @param val Coordinate value of interest.
+	* @param cell_centers Array of cell center coordinates.
+	* @param idx Index of the reference cell center.
+	* @return Index of the neighboring cell center closest to the side
+	*         of the cell containing val.
+	*/
 	template <typename T>
 	int get_neighbor_index(const double val, 
 		const std::vector<T>& cell_centers, const int idx)
@@ -135,7 +338,20 @@ namespace Utilities
 		return idx + offset;
 	}
 
-	// Create vector of N equally spaced values between a and b
+
+	/**
+	* Creates a vector of N equally spaced values spanning the interval
+	* [a, b].
+	*
+	* The returned vector includes both endpoints when N > 1. If N is
+	* zero, an empty vector is returned. If N is one, the returned
+	* vector contains only a.
+	*
+	* @param a Lower bound of the interval.
+	* @param b Upper bound of the interval.
+	* @param N Number of values to generate.
+	* @return Vector containing N equally spaced values between a and b.
+	*/
 	std::vector<double> linspace(double a, double b, std::size_t N)
 	{
 		std::vector<double> v;
@@ -155,23 +371,27 @@ namespace Utilities
 		return v;
 	}
 
+
+	/**
+	* Finds the indices of the two grid points that bracket a specified
+	* coordinate value.
+	*
+	* For values within the coordinate range, the returned indices
+	* correspond to the nearest lower and upper grid points that
+	* surround x0. For values outside the coordinate range, the first
+	* or last valid interval is returned so that interpolation can
+	* proceed without accessing elements beyond the array bounds.
+	*
+	* The input coordinate array is assumed to be sorted in ascending
+	* order.
+	*
+	* @param x Sorted coordinate array.
+	* @param x0 Coordinate value for which bracketing indices are sought.
+	* @return Pair containing the lower and upper bracketing indices
+	*         {lo, hi}.
+	*/
 	std::pair<int, int> bracket_indices(const std::vector<double>& x, double x0)
 	{
-	/*
-		// Get iterator of the first value that is >= t0
-		auto it = std::lower_bound(x.begin(), x.end(), x0);
-
-		// Convert to an index
-		int i = it - x.begin();
-
-		// If x0 > x[-1], we will return x[-2] and x[-1]. Or, if x0 < x[0], we 
-		// will return x[0] and x[1]
-		int hi = std::min((int)x.size() - 1, i);
-		int lo = std::max(0, hi - 1);
-
-		// Return as pair
-		return {lo, hi};
-	*/
 
 		auto it = std::lower_bound(x.begin(), x.end(), x0);
 		int i = it - x.begin();
@@ -195,20 +415,51 @@ namespace Utilities
 		return {lo, hi};
 	}
 
+
+	/**
+	* Interpolates a value from a 4D field defined on a structured
+	* (t, x, y, z) grid.
+	*
+	* Trilinear interpolation is performed in the spatial dimensions
+	* (x, y, z) at the two time slices that bracket t0, followed by
+	* linear interpolation in time. Spatial coordinates are clamped
+	* to the grid boundaries to prevent extrapolation beyond the edge
+	* cell-center values.
+	*
+	* @tparam T Data type stored in the 4D field.
+	* @param vec4d 4D field to sample.
+	* @param t Time coordinate array.
+	* @param x X coordinate array.
+	* @param y Y coordinate array.
+	* @param z Z coordinate array.
+	* @param t0 Time coordinate at which to evaluate the field.
+	* @param x0 X coordinate at which to evaluate the field.
+	* @param y0 Y coordinate at which to evaluate the field.
+	* @param z0 Z coordinate at which to evaluate the field.
+	* @return Interpolated field value.
+	*/
 	template <typename T>
 	double interp_vec4d(const Vectors::Vector4D<T>& vec4d, 
 		const std::vector<double> t, const std::vector<double> x,
 		const std::vector<double> y, const std::vector<double> z,
 		const double t0, const double x0, const double y0, const double z0)
 	{
+	
+		// Similar to trilinear_interpolate, don't attempt to interpolate past
+		// the last time value (since there's no way we would know what the
+		// value should be). 
+		const double tc = std::clamp(t0, t.front(), t.back());
+
 		// First find the bracketing indices for each dimension
-		auto [it0, it1] = bracket_indices(t, t0);
+		auto [it0, it1] = bracket_indices(t, tc);
 		auto [ix0, ix1] = bracket_indices(x, x0);
 		auto [iy0, iy1] = bracket_indices(y, y0);
 		auto [iz0, iz1] = bracket_indices(z, z0);
 
 		// Then perform trilinear interpolation in x,y,z dimensions at each
-		// time location
+		// time location. trilinear_interpolate prevents from interpolating
+		// outside  x[ix0] to x[ix1], which can happen when you're past the
+		// last cell center on the edge of the grid.
 		double interp_val0 {trilinear_interpolate(
 			x[ix0], y[iy0], z[iz0], 
 			x[ix1], y[iy1], z[iz1], 
@@ -229,11 +480,29 @@ namespace Utilities
 		// Then linearly interpolate in the t dimension with just point-slope
 		// and return the value.
 		double m {(interp_val1 - interp_val0) / (t[it1] - t[it0])};
-		return m * (t0 - t[it1]) + interp_val1; 
+		return m * (tc - t[it1]) + interp_val1; 
 	}
 
 
-	// Function to broadcast a 1D vector to the other processes
+	/**
+	* Broadcasts a vector from a root MPI rank to all other ranks in
+	* the communicator.
+	*
+	* The root rank provides the vector contents and size. The vector
+	* size is first broadcast to all ranks, allowing non-root ranks to
+	* resize their local vectors before the vector data itself is
+	* broadcast.
+	*
+	* The element type T must have a corresponding MPI datatype defined
+	* through mpi_type<T>::type.
+	*
+	* @tparam T Data type stored in the vector.
+	* @param[in,out] v Vector to broadcast. On the root rank, contains
+	*                  the source data. On all other ranks, receives the
+	*                  broadcasted data.
+	* @param root Rank that owns the source vector.
+	* @param comm MPI communicator over which the broadcast is performed.
+	*/
 	template <typename T> 
 	void mpi_broadcast_vector(std::vector<T>& v, int root, MPI_Comm comm)
 	{

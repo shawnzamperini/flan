@@ -2,100 +2,48 @@
 * @file utilities.h
 * @brief Header file for utilities.cpp
 */
-#ifndef UTILITIES_H
-#define UTILITIES_H
+#pragma once
 
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
 
 #include "flan_types.h"
 #include "mpi.h"
 #include "vectors.h"
 
+
 namespace Utilities
 {
-	/**
-	* @brief Convert string to integer
-	* @param str String to convert
-	* @return Return string as integer value
-	*/
+	// Convert a string to an integer
 	int str_as_int(const std::string& str);
 
-	/**
-	* @brief Convert string to double
-	* @param str String to convert
-	* @return Return string as double value
-	*/
+
+	// Convert a string to a double
 	double str_as_dbl(const std::string& str);
 
-	/**
-	* @brief Convert a string into a vector of strings, splitting the string
-	* apart at spaces
-	* @param str The string contianing words separated by spaces
-	* @return Returns vector of strings of each word
-	*/
+
+	// Split string at spaces and return it as a vector
 	std::vector<std::string> split_str_at_spaces(std::string& str);
 
-	/**
-	* @brief Calculate cross product
-	*/
+
+	// Cross product
 	std::array<double, 3> cross_product(const std::array<double, 3>& a, 
 		const std::array<double, 3>& b);
 
-	/**
-	* @brief Calculate cross product
-	*/
+
+	// Dot product
 	double dot_product(const std::array<double, 3>& a, 
 		const std::array<double, 3>& b);
 
-	/**
-	* @brief Perform a bilinear interpolation between z0=f(x0,y0) and 
-	* z1=f(x1,y1) to estimate z=f(x,y).
-	*
-	* @param x0 Value in f(x0,y0)
-	* @param y0 Value in f(x0,y0)
-	* @param z0 Value at f(x0,y0)
-	* @param x1 Value in f(x1,y1)
-	* @param y1 Value in f(x1,y1)
-	* @param z1 Value at f(x1,y1)
-	* @param x Value at f(x,y)
-	* @param y Value at f(x,y)
-	*
-	* @return Returns linearly interpolated estimate of value at f(x,y)
-	*/
-	double bilinear_interpolate(const double x0, const double y0,
-		const double z0, const double x1, const double y1, const double z1,
-		const double x, const double y);
 
-	/**
-	* @brief Perform a trilinear interpolation on a regularly spaced grid for
-	* a value defined in 3D space, z=f(x,y,z).
-	*
-	* @param x0 Value in f(x0,y0,z0)
-	* @param y0 Value in f(x0,y0,z0)
-	* @param z0 Value in f(x0,y0,z0)
-	* @param x1 Value in f(x1,y1,z1)
-	* @param y1 Value in f(x1,y1,z1)
-	* @param z1 Value in f(x1,y1,z1)
-	* @param v000 Value at vertex (0,0,0), normalized coordinates
-	* @param v100 Value at vertex (1,0,0), normalized coordinates
-	* @param v010 Value at vertex (0,1,0), normalized coordinates
-	* @param v110 Value at vertex (1,1,0), normalized coordinates
-	* @param v001 Value at vertex (0,0,1), normalized coordinates
-	* @param v101 Value at vertex (1,0,1), normalized coordinates
-	* @param v011 Value at vertex (0,1,1), normalized coordinates
-	* @param v111 Value at vertex (1,1,1), normalized coordinates
-	* @param x Value at f(x,y,z)
-	* @param y Value at f(x,y,z)
-	* @param z Value at f(x,y,z)
-	*
-	* The two corners of the bounding cell are (x0,y0,z0) and (x1,y1,z1). The 
-	* values at each cell vertex are v000, v100, etc., where the numbers 
-	* indicate the 8 vertices in normalized coordinates.
-	*
-	* @return Trilinearly interpolated value from the vertex values.
-	*/
+	// Bilinear interpolation at (x, y)
+	double bilinear_interpolate(const double x0, const double y0, 
+		const double x1, const double y1, const double z00, const double z10,
+		const double z01, const double z11, const double x, const double y);
+
+
+	// Trilinear interpolation at (x, y, z)
 	double trilinear_interpolate(
 		const double x0, const double y0, const double z0, 
 		const double x1, const double y1, const double z1,
@@ -104,68 +52,35 @@ namespace Utilities
 		const double v011, const double v111,
 		const double x, const double y, const double z);
 
-	/**
-	*
-	*/
+
+	// Get index of nearest neighboring cell center at val in cell idx.
 	template <typename T>
 	int get_neighbor_index(const double val, 
 		const std::vector<T>& cell_centers, const int idx);
 
-	/**
-	* @brief Create vector of N equally spaced values between a and b
-	*
-	* @param a First value of vector
-	* @param b Last value of vector
-	* @param N Number of values in vector
-	*/
+
+	// Create vector of N equally spaced values between a and b
 	std::vector<double> linspace(double a, double b, std::size_t N);
 
-	/**
-	* @brief Interpolate a Vector4D (t,x,y,z) at (t0,x0,y0,z0)
-	*
-	* @param vec4d Vector4D of shape (t,x,y,z) containing values to interpolate
-	*        between.
-	* @param t Array of coordinate for the first dimension
-	* @param x Array of coordinate for the second dimension
-	* @param y Array of coordinate for the third dimension
-	* @param z Array of coordinate for the fourth dimension
-	* @param t0 Coordinate to interpolate at
-	* @param x0 Coordinate to interpolate at
-	* @param y0 Coordinate to interpolate at
-	* @param z0 Coordinate to interpolate at
-	*
-	* @return Interpolated value at (t0,x0,y0,z0) as a double
-	*/
+
+	// Interpolate a Vector4D at (t0, x0, y0, z0)
 	template <typename T>
 	double interp_vec4d(const Vectors::Vector4D<T>& vec4d, 
 		const std::vector<double> t, const std::vector<double> x,
 		const std::vector<double> y, const std::vector<double> z,
 		const double t0, const double x0, const double y0, const double z0);
 
-	/**
-	* @brief Function to broadcast a 1D vector to the other processes
-	*
-	* @param v The vector data to be broadcast
-	* @param root The root process rank containing data to send
-	* @param comm The MPI communicator group
-	*/
+
+	// Finds the indices of the two grid points that bracket a specified
+	// coordinate value.
+	std::pair<int, int> bracket_indices(const std::vector<double>& x, 
+		double x0);
+
+
+	// Broadcast vector from root rank to all other ranks
 	template <typename T>
 	void mpi_broadcast_vector(std::vector<T>& v, int root, MPI_Comm comm);
 
-	/**
-	* @brief Get the two bracketing indices in the sorted x array surrounding 
-	* x0.
-	*
-	* If x0 is less than x[0] then 0 and 1 are returned. Likewise if it
-	* is larger than x[-1] then the last two indices are returned.
-	*
-	* @param x Sorted array of values to search in
-	* @param x0 Value to find bracketing values for
-	*
-	* @return Returns the two bracketing indices as a pair.
-	*/
-	std::pair<int, int> bracket_indices(const std::vector<double>& x, 
-		double x0);
 
 	/**
 	* @brief Return value at x in set of (xarr, yarr) values using linear
@@ -207,5 +122,3 @@ namespace Utilities
 	}
 
 }
-
-#endif

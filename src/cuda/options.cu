@@ -20,6 +20,10 @@ namespace Options
 		opts_h.test_opt_int   = m_test_opt_int;
 		opts_h.bkg_source_int = m_bkg_source_int;
 
+		opts_h.min_ne         = m_min_ne;
+		opts_h.min_te         = m_min_te;
+		opts_h.min_ti         = m_min_ti;
+
 		opts_h.imp_mass_amu   = m_imp_mass_amu;
 
 		opts_h.imp_num        = m_imp_num;
@@ -43,6 +47,10 @@ namespace Options
 		opts_h.zstart_val     = m_imp_zstart_val;
 		opts_h.zrange_min     = m_imp_zrange_min;
 		opts_h.zrange_max     = m_imp_zrange_max;
+
+		opts_h.lcfs_x         = m_lcfs_x;
+		opts_h.lcfs_y         = m_lcfs_y;
+		opts_h.lcfs_z         = m_lcfs_z;
 
 		opts_h.init_charge    = m_imp_init_charge;
 

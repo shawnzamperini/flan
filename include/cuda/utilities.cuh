@@ -89,16 +89,35 @@ namespace Utilities
 	}
 
 
-	// Bilinearly interpolate the values in flattened 2D arr at (x, y)
+	/**
+	* Performs bilinear interpolation on a flattened two-dimensional
+	* lookup table stored in device memory.
+	*
+	* The function locates the grid cell that contains the point
+	* (x, y), computes the interpolation weights in each dimension,
+	* and returns the bilinearly interpolated value. Interpolation
+	* weights are clamped to the range [0, 1] to prevent extrapolation
+	* beyond the boundaries of the tabulated data.
+	*
+	* The table is assumed to be stored in row-major order with
+	* dimensions nx × ny, where the flattened index corresponding to
+	* (ix, iy) is ix * ny + iy.
+	*
+	* @tparam T Floating-point data type used for the table and coordinate 
+	*		  arrays.
+	* @param table Flattened two-dimensional lookup table of size nx * ny.
+	* @param x_grid Monotonically increasing x-coordinate array of length nx.
+	* @param nx Number of x-grid points.
+	* @param y_grid Monotonically increasing y-coordinate array of length ny.
+	* @param ny Number of y-grid points.
+	* @param x X-coordinate at which to evaluate the table.
+	* @param y Y-coordinate at which to evaluate the table.
+	* @return Bilinearly interpolated value at (x, y).
+	*/
 	template <typename T>
-	__device__ inline T bilinear_interp(
-		const T* __restrict__ table,   // flattened 2D array: nx * ny
-		const T* __restrict__ x_grid,  // size nx
-		int nx,
-		const T* __restrict__ y_grid,  // size ny
-		int ny,
-		T x,                           // physical x value
-		T y)                           // physical y value
+	__device__ inline T bilinear_interp(const T* __restrict__ table,
+		const T* __restrict__ x_grid, int nx, const T* __restrict__ y_grid, 
+		int ny, T x, T y)                        
 	{
 		// --- 1. Find bracketing x indices ---
 		int ix = 0;
@@ -121,6 +140,10 @@ namespace Utilities
 
 		T ty = (y - y_grid[iy]) /
 					(y_grid[iy + 1] - y_grid[iy]);
+
+		// Prevent extrapolation past edges
+		tx = fmin((T)1, fmax((T)0, tx));
+		ty = fmin((T)1, fmax((T)0, ty));
 
 		// --- 3. Compute flattened indices ---
 		int idx00 = ix * ny + iy;
@@ -152,27 +175,14 @@ namespace Utilities
 		const double x, const double y, const double z)
 	{
 		// Normalized coordinates in [0,1]
-		const double tx = (x - x0) / dx;  // dx = x1 - x0
-		const double ty = (y - y0) / dy;
-		const double tz = (z - z0) / dz;
+		double tx = (x - x0) / dx;  // dx = x1 - x0
+		double ty = (y - y0) / dy;
+		double tz = (z - z0) / dz;
 
-		// Debug: warn if weights are out of range or invalid
-		/*
-		if (tx < 0.0 || tx > 1.0 || std::isnan(tx) || std::isinf(tx) ||
-			ty < 0.0 || ty > 1.0 || std::isnan(ty) || std::isinf(ty) ||
-			tz < 0.0 || tz > 1.0 || std::isnan(tz) || std::isinf(tz))
-		{
-			printf("TRILINEAR WARNING:\n"
-				   "  tx=%g ty=%g tz=%g\n"
-				   "  x=%g y=%g z=%g\n"
-				   "  x0=%g y0=%g z0=%g\n"
-				   "  dx=%g dy=%g dz=%g\n",
-				   tx, ty, tz,
-				   x, y, z,
-				   x0, y0, z0,
-				   dx, dy, dz);
-		}
-		*/
+		// Prevent extrapolation beyond cell boundaries.
+		tx = fmin(1.0, fmax(0.0, tx));
+		ty = fmin(1.0, fmax(0.0, ty));
+		tz = fmin(1.0, fmax(0.0, tz));
 
 		// Interpolate along x for the four lower/upper face corners
 		const double c00 = v000 + tx * (v100 - v000);
