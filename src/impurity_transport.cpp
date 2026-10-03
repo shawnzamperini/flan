@@ -83,23 +83,38 @@ namespace ImpurityTransport
 		#pragma omp parallel for
 		for (int i=0; i < slots.N(); ++i)
 		{
+			// Don't step dead particles
+			if (slots.state()[i]) continue;
+
 			/*
-			if (i == 0)
+			//if (i == 0)
+			if (slots.iters()[i] > 10000)
 			{
-				std::cout << "t = " << slots.t()[i] << '\n';
-				std::cout << "x = " << slots.x()[i] << '\n';
-				std::cout << "y = " << slots.y()[i] << '\n';
-				std::cout << "z = " << slots.z()[i] << '\n';
-				std::cout << "vx = " << slots.vx()[i] << '\n';
-				std::cout << "vy = " << slots.vy()[i] << '\n';
-				std::cout << "vz = " << slots.vz()[i] << '\n';
-				std::cout << "vX = " << slots.vX()[i] << '\n';
-				std::cout << "vY = " << slots.vY()[i] << '\n';
-				std::cout << "vZ = " << slots.vZ()[i] << '\n';
+				#pragma omp critical
+				{
+					std::cout << "======================\n";
+					std::cout << "i = " << i << '\n';
+					std::cout << "q = " << slots.q()[i] << '\n';
+					std::cout << "tidx = " << slots.tidx()[i] << '\n';
+					std::cout << "xidx = " << slots.xidx()[i] << '\n';
+					std::cout << "yidx = " << slots.yidx()[i] << '\n';
+					std::cout << "zidx = " << slots.zidx()[i] << '\n';
+					std::cout << "t = " << slots.t()[i] << '\n';
+					std::cout << "x = " << slots.x()[i] << '\n';
+					std::cout << "y = " << slots.y()[i] << '\n';
+					std::cout << "z = " << slots.z()[i] << '\n';
+					std::cout << "vx = " << slots.vx()[i] << '\n';
+					std::cout << "vy = " << slots.vy()[i] << '\n';
+					std::cout << "vz = " << slots.vz()[i] << '\n';
+					std::cout << "vX = " << slots.vX()[i] << '\n';
+					std::cout << "vY = " << slots.vY()[i] << '\n';
+					std::cout << "vZ = " << slots.vZ()[i] << '\n';
+				}
 			}
 			*/
 
-			// Update time
+			// Update particle time and time in the background
+			slots.set_pt(i, slots.pt()[i] + dt);
 			slots.set_t(i, slots.t()[i] + dt);
 
 			// Update curvilinear position
@@ -109,13 +124,20 @@ namespace ImpurityTransport
 
 			// Check if maximum allowed time has been exceeded, setting to
 			// dead if so and incrementing counter
-			if (slots.t()[i] > opts.imp_max_time())
+			if (slots.pt()[i] > opts.imp_max_time())
 			{
+				#pragma omp critical
+				{
+					std::cout << "i: " << i << " exceed max time\n";
+				}
 				slots.set_state(i, 1);
 
 				#pragma omp atomic
 				max_time_ctr++;
 			}
+
+			// Update number of iterations (mainly for debugging)
+			slots.set_iters(i, slots.iters()[i] + 1);
 		}
 	}
 
@@ -133,6 +155,7 @@ namespace ImpurityTransport
 		OpenADAS::ioniz_recomb(slots, bkg, oa_ioniz, oa_recomb, dt, 
 			ioniz_warnings, recomb_warnings, rngs);
 	}
+
 
 	void collision_cpu(Slots::Slots& slots, const Background::Background& bkg, 
 		const double dt, const Options::Options& opts, 
@@ -650,7 +673,7 @@ namespace ImpurityTransport
 
 		// Some warnings to include as I still implement things
 		std::cout << "Warning! Need to still implement lcfs_x to divide"
-			<< " core/SOL BCs\n";
+			<< " core/SOL BCs, and max_time is not on GPU yet\n";
 
 		// Rank and number of processes
 		int rank {};

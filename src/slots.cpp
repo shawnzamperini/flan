@@ -21,6 +21,7 @@ namespace Slots
 		: m_N {N}
 	{
 		// Resize particle vectors
+		m_pt.resize(N);
 		m_t.resize(N);
 		m_x.resize(N);
 		m_y.resize(N);
@@ -31,6 +32,7 @@ namespace Slots
 		m_vX.resize(N);
 		m_vY.resize(N);
 		m_vZ.resize(N);
+		m_iters.resize(N);
 		m_tidx.resize(N);
 		m_xidx.resize(N);
 		m_yidx.resize(N);
@@ -48,6 +50,7 @@ namespace Slots
 	int Slots::N() const noexcept {return m_N;}
 	int Slots::Z() const noexcept {return m_Z;}
 	double Slots::mass() const noexcept {return m_mass;}
+	const std::vector<double>& Slots::pt() const noexcept {return m_pt;}
 	const std::vector<double>& Slots::t() const noexcept {return m_t;}
 	const std::vector<double>& Slots::x() const noexcept {return m_x;}
 	const std::vector<double>& Slots::y() const noexcept {return m_y;}
@@ -58,6 +61,7 @@ namespace Slots
 	const std::vector<double>& Slots::vX() const noexcept {return m_vX;}
 	const std::vector<double>& Slots::vY() const noexcept {return m_vY;}
 	const std::vector<double>& Slots::vZ() const noexcept {return m_vZ;}
+	const std::vector<int>& Slots::iters() const noexcept {return m_iters;}
 	const std::vector<int>& Slots::tidx() const noexcept {return m_tidx;}
 	const std::vector<int>& Slots::xidx() const noexcept {return m_xidx;}
 	const std::vector<int>& Slots::yidx() const noexcept {return m_yidx;}
@@ -70,6 +74,7 @@ namespace Slots
 	void Slots::set_Z(int Z) {m_Z = Z;}
 
 	// Element level setters
+	void Slots::set_pt(int i, double val) {m_pt[i] = val;}
 	void Slots::set_t(int i, double val) {m_t[i] = val;}
 	void Slots::set_x(int i, double val) {m_x[i] = val;}
 	void Slots::set_y(int i, double val) {m_y[i] = val;}
@@ -80,13 +85,35 @@ namespace Slots
 	void Slots::set_vX(int i, double val) {m_vX[i] = val;}
 	void Slots::set_vY(int i, double val) {m_vY[i] = val;}
 	void Slots::set_vZ(int i, double val) {m_vZ[i] = val;}
+	void Slots::set_iters(int i, int val) {
+		m_iters[i] = val;
+		if ((m_pt[i]) > 1e-5)
+		{
+			#pragma omp critical
+			{
+			std::cout << "Error! iter++ even though past max_time\n";
+			std::cout << "i = " << i << '\n';
+			std::cout << "pt = " << m_pt[i] << '\n';
+			}
+		}
+			
+	}
 	void Slots::set_tidx(int i, int val) {m_tidx[i] = val;}
 	void Slots::set_xidx(int i, int val) {m_xidx[i] = val;}
 	void Slots::set_yidx(int i, int val) {m_yidx[i] = val;}
 	void Slots::set_zidx(int i, int val) {m_zidx[i] = val;}
 	void Slots::set_weight(int i, double val) {m_weight[i] = val;}
 	void Slots::set_q(int i, int val) {m_q[i] = val;}
-	void Slots::set_state(int i, int val) {m_state[i] = val;}
+	void Slots::set_state(int i, int val) {
+		m_state[i] = val;
+		if (val > 0)
+		{
+			#pragma omp critical
+			{
+				std::cout << "i: " << i << " iters_till_dead: " << m_iters[i] << '\n';
+			}
+		}
+	}
 
 	// I think this should probably be moved to slots.cu...
 	// Copy data to device and return SlotsDevice struct
@@ -472,6 +499,7 @@ namespace Slots
 						continue;
 
 					ParticleInit p = make_new_particle(bkg, opts, rng);
+					slots.set_pt(i, 0.0);  // particle time
 					slots.set_t(i, p.t);
 					slots.set_x(i, p.x);
 					slots.set_y(i, p.y);
