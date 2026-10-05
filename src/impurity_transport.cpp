@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <cstdlib>
 #include <omp.h>
 #include <thread>
@@ -126,10 +127,6 @@ namespace ImpurityTransport
 			// dead if so and incrementing counter
 			if (slots.pt()[i] > opts.imp_max_time())
 			{
-				#pragma omp critical
-				{
-					std::cout << "i: " << i << " exceed max time\n";
-				}
 				slots.set_state(i, 1);
 
 				#pragma omp atomic
@@ -806,7 +803,23 @@ namespace ImpurityTransport
 				// Initialize RNGs for each GPU thread. Uses the just
 				// allocated slots on the GPU. gpu_rngs is a vector of PCG32
 				// arrays. 
-				int seed {opts.seed() + rank};
+				// If seed is negative (default), initialize the base seed from the
+				// clock so each run is different. MPI ranks are distinguished 
+				// through the seed, while threads are distinguished through the 
+				// PCG stream.
+				uint64_t seed {};
+				if (opts.seed() < 0)
+				{
+					// Nanoseconds since epoch, mixed with rank and thread ID
+					seed = static_cast<uint64_t>(
+						std::chrono::high_resolution_clock::now().time_since_epoch()
+						.count()) + rank;
+				}
+				else
+				{
+						seed = static_cast<uint64_t>(opts.seed()) + rank;
+				}
+
 				gpu_rngs.push_back(init_rngs_cuda(gpu_slots[dev], seed));
 
 				// Each GPU gets it own timer
@@ -884,13 +897,49 @@ namespace ImpurityTransport
 		int nthreads = omp_get_max_threads();
 		rngs.reserve(nthreads);
 
-		// Eventually make base_seed an input option
-		for (int tid = 0; tid < nthreads; ++tid) 
+		for (int tid = 0; tid < nthreads; ++tid)
 		{
-			uint64_t seed = opts.seed() + rank;  // unique per rank
-			uint64_t stream = tid;             // unique per thread
+			uint64_t seed {};
+			uint64_t stream {tid}; // unique per thread
+			
+			// If seed is negative (default), initialize the base seed from the
+			// clock so each run is different. MPI ranks are distinguished 
+			// through the seed, while threads are distinguished through the 
+			// PCG stream.
+			if (opts.seed() < 0)
+			{
+				// Nanoseconds since epoch, mixed with rank and thread ID
+				seed = static_cast<uint64_t>(
+					std::chrono::high_resolution_clock::now().time_since_epoch()
+					.count()) + rank;
+			}
+			else
+			{
+					seed = static_cast<uint64_t>(opts.seed()) + rank;
+			}
+		
 			rngs.push_back(pcg32(seed, stream));
 		}
+
+		// Eventually make base_seed an input option
+		/*
+		for (int tid = 0; tid < nthreads; ++tid) 
+		{
+			// If seed is < 0 (default), set to clock time so each run is 
+			// different.
+			uint64_t seed {}
+			if (opts.seed() < 0) 
+			{
+				// Fill in this block
+			}
+			else
+			{
+				seed = opts.seed() + rank;  // unique per rank
+				uint64_t stream = tid;             // unique per thread
+			}
+			rngs.push_back(pcg32(seed, stream));
+		}
+		*/
 
 #ifdef DEBUG
 			std::cout << "Starting main loop (CPU)...\n";

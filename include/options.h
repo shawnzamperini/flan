@@ -30,7 +30,7 @@ namespace Options
 		// Meta options for the simulation
 		std::string m_case_name              {"undefined"};
 		std::string m_use_gpu					   {"off"};
-		int m_seed                                     {4};
+		int m_seed                                    {-1};
 		int m_slot_cap                           {1048576};  
 		int m_print_interval                          {10};
 
