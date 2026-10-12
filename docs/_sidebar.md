@@ -7,7 +7,8 @@
   <li><a href="index.html">Home</a></li>
   <li><a href="getting-started.html">Getting Started</a></li>
   <li><a href="installation.html">Installation</a></li>
-  <li><a href="running-flan.html">Running FLAN</a></li>
+  <li><a href="running-flan.html">Running Flan</a></li>
+  <li><a href="input-options.html">Input Options</a></li>
 </ul>
 
 <strong>Physics</strong>
@@ -22,6 +23,7 @@
   <li><a href="developer/code-structure.html">Code Structure</a></li>
   <li><a href="developer/mpi-parallelism.html">MPI Parallelism</a></li>
   <li><a href="developer/openmp-layout.html">OpenMP Layout</a></li>
+  <li><a href="developer/cuda-layout.html">CUDA Layout</a></li>
   <li><a href="developer/contributing.html">Contributing</a></li>
 </ul>
 

@@ -28,11 +28,12 @@ conda module with `module load conda` and then activating the environment with
 ## Install Flan
 
 Navigate to `flan/build`. This is where Flan will be compiled as a library. 
-Run CMake to create the Makefile, then make and install the library.
+Run CMake to create the Makefile, then make and install the library. On
+Perlmutter you should enable CUDA.
 
 ```bash
 cd build
-cmake ..
+cmake .. -DENABLE_CUDA=ON
 make && make install
 ```
 
