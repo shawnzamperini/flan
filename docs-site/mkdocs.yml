@@ -1,0 +1,47 @@
+site_name: Flan
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+extra_css:
+  #- styles/burger-king.css
+  - styles/halloween.css
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Installation:
+      - Overview: installation/installation.md
+      - Linux: installation/install-linux.md
+      - Perlmutter: installation/install-perlmutter.md
+  - Running Flan:
+      - Overview: running/running-flan.md
+      - Perlmutter: running/running-perlmutter.md
+      - Omega: running/running-omega.md
+  - Input Options: input-options.md
+  - Physics:
+      - Impurity Transport: physics/impurity-transport.md
+      - Collisions: physics/collisions.md
+      - Ionization/Recombination: physics/ionization-recombination.md
+  - Developer:
+      - Code Structure: developer/code-structure.md
+      - MPI Parallelism: developer/mpi-parallelism.md
+      - OpenMP Layout: developer/openmp-layout.md
+      - Contributing: developer/contributing.md
+  - Publications/Presentations: publications.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+
