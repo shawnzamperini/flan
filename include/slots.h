@@ -42,6 +42,7 @@ namespace Slots
 		int m_Z;
 		double m_mass;
 
+        std::vector<double> m_pt;  // particle time
         std::vector<double> m_t;
         std::vector<double> m_x;
         std::vector<double> m_y;
@@ -53,6 +54,7 @@ namespace Slots
         std::vector<double> m_vY;
         std::vector<double> m_vZ;
 
+        std::vector<int> m_iters;
         std::vector<int> m_tidx;
         std::vector<int> m_xidx;
         std::vector<int> m_yidx;
@@ -71,6 +73,7 @@ namespace Slots
         int N() const noexcept;
         int Z() const noexcept;
 		double mass() const noexcept;
+        const std::vector<double>& pt() const noexcept;
         const std::vector<double>& t() const noexcept;
         const std::vector<double>& x() const noexcept;
         const std::vector<double>& y() const noexcept;
@@ -81,6 +84,7 @@ namespace Slots
         const std::vector<double>& vX() const noexcept;
         const std::vector<double>& vY() const noexcept;
         const std::vector<double>& vZ() const noexcept;
+        const std::vector<int>& iters() const noexcept;
         const std::vector<int>& tidx() const noexcept;
         const std::vector<int>& xidx() const noexcept;
         const std::vector<int>& yidx() const noexcept;
@@ -94,6 +98,7 @@ namespace Slots
 		void set_Z(int Z);
 
         // Element-level setters
+        void set_pt(int i, double val);
         void set_t(int i, double val);
         void set_x(int i, double val);
         void set_y(int i, double val);
@@ -104,6 +109,7 @@ namespace Slots
         void set_vX(int i, double val);
         void set_vY(int i, double val);
         void set_vZ(int i, double val);
+        void set_iters(int i, int val);
         void set_tidx(int i, int val);
         void set_xidx(int i, int val);
         void set_yidx(int i, int val);

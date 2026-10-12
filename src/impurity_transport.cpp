@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <cstdlib>
 #include <omp.h>
 #include <thread>
@@ -83,23 +84,38 @@ namespace ImpurityTransport
 		#pragma omp parallel for
 		for (int i=0; i < slots.N(); ++i)
 		{
+			// Don't step dead particles
+			if (slots.state()[i]) continue;
+
 			/*
-			if (i == 0)
+			//if (i == 0)
+			if (slots.iters()[i] > 10000)
 			{
-				std::cout << "t = " << slots.t()[i] << '\n';
-				std::cout << "x = " << slots.x()[i] << '\n';
-				std::cout << "y = " << slots.y()[i] << '\n';
-				std::cout << "z = " << slots.z()[i] << '\n';
-				std::cout << "vx = " << slots.vx()[i] << '\n';
-				std::cout << "vy = " << slots.vy()[i] << '\n';
-				std::cout << "vz = " << slots.vz()[i] << '\n';
-				std::cout << "vX = " << slots.vX()[i] << '\n';
-				std::cout << "vY = " << slots.vY()[i] << '\n';
-				std::cout << "vZ = " << slots.vZ()[i] << '\n';
+				#pragma omp critical
+				{
+					std::cout << "======================\n";
+					std::cout << "i = " << i << '\n';
+					std::cout << "q = " << slots.q()[i] << '\n';
+					std::cout << "tidx = " << slots.tidx()[i] << '\n';
+					std::cout << "xidx = " << slots.xidx()[i] << '\n';
+					std::cout << "yidx = " << slots.yidx()[i] << '\n';
+					std::cout << "zidx = " << slots.zidx()[i] << '\n';
+					std::cout << "t = " << slots.t()[i] << '\n';
+					std::cout << "x = " << slots.x()[i] << '\n';
+					std::cout << "y = " << slots.y()[i] << '\n';
+					std::cout << "z = " << slots.z()[i] << '\n';
+					std::cout << "vx = " << slots.vx()[i] << '\n';
+					std::cout << "vy = " << slots.vy()[i] << '\n';
+					std::cout << "vz = " << slots.vz()[i] << '\n';
+					std::cout << "vX = " << slots.vX()[i] << '\n';
+					std::cout << "vY = " << slots.vY()[i] << '\n';
+					std::cout << "vZ = " << slots.vZ()[i] << '\n';
+				}
 			}
 			*/
 
-			// Update time
+			// Update particle time and time in the background
+			slots.set_pt(i, slots.pt()[i] + dt);
 			slots.set_t(i, slots.t()[i] + dt);
 
 			// Update curvilinear position
@@ -109,13 +125,16 @@ namespace ImpurityTransport
 
 			// Check if maximum allowed time has been exceeded, setting to
 			// dead if so and incrementing counter
-			if (slots.t()[i] > opts.imp_max_time())
+			if (slots.pt()[i] > opts.imp_max_time())
 			{
 				slots.set_state(i, 1);
 
 				#pragma omp atomic
 				max_time_ctr++;
 			}
+
+			// Update number of iterations (mainly for debugging)
+			slots.set_iters(i, slots.iters()[i] + 1);
 		}
 	}
 
@@ -133,6 +152,7 @@ namespace ImpurityTransport
 		OpenADAS::ioniz_recomb(slots, bkg, oa_ioniz, oa_recomb, dt, 
 			ioniz_warnings, recomb_warnings, rngs);
 	}
+
 
 	void collision_cpu(Slots::Slots& slots, const Background::Background& bkg, 
 		const double dt, const Options::Options& opts, 
@@ -650,7 +670,7 @@ namespace ImpurityTransport
 
 		// Some warnings to include as I still implement things
 		std::cout << "Warning! Need to still implement lcfs_x to divide"
-			<< " core/SOL BCs\n";
+			<< " core/SOL BCs, and max_time is not on GPU yet\n";
 
 		// Rank and number of processes
 		int rank {};
@@ -783,7 +803,23 @@ namespace ImpurityTransport
 				// Initialize RNGs for each GPU thread. Uses the just
 				// allocated slots on the GPU. gpu_rngs is a vector of PCG32
 				// arrays. 
-				int seed {opts.seed() + rank};
+				// If seed is negative (default), initialize the base seed from the
+				// clock so each run is different. MPI ranks are distinguished 
+				// through the seed, while threads are distinguished through the 
+				// PCG stream.
+				uint64_t seed {};
+				if (opts.seed() < 0)
+				{
+					// Nanoseconds since epoch, mixed with rank and thread ID
+					seed = static_cast<uint64_t>(
+						std::chrono::high_resolution_clock::now().time_since_epoch()
+						.count()) + rank;
+				}
+				else
+				{
+						seed = static_cast<uint64_t>(opts.seed()) + rank;
+				}
+
 				gpu_rngs.push_back(init_rngs_cuda(gpu_slots[dev], seed));
 
 				// Each GPU gets it own timer
@@ -861,13 +897,49 @@ namespace ImpurityTransport
 		int nthreads = omp_get_max_threads();
 		rngs.reserve(nthreads);
 
-		// Eventually make base_seed an input option
-		for (int tid = 0; tid < nthreads; ++tid) 
+		for (int tid = 0; tid < nthreads; ++tid)
 		{
-			uint64_t seed = opts.seed() + rank;  // unique per rank
-			uint64_t stream = tid;             // unique per thread
+			uint64_t seed {};
+			uint64_t stream {tid}; // unique per thread
+			
+			// If seed is negative (default), initialize the base seed from the
+			// clock so each run is different. MPI ranks are distinguished 
+			// through the seed, while threads are distinguished through the 
+			// PCG stream.
+			if (opts.seed() < 0)
+			{
+				// Nanoseconds since epoch, mixed with rank and thread ID
+				seed = static_cast<uint64_t>(
+					std::chrono::high_resolution_clock::now().time_since_epoch()
+					.count()) + rank;
+			}
+			else
+			{
+					seed = static_cast<uint64_t>(opts.seed()) + rank;
+			}
+		
 			rngs.push_back(pcg32(seed, stream));
 		}
+
+		// Eventually make base_seed an input option
+		/*
+		for (int tid = 0; tid < nthreads; ++tid) 
+		{
+			// If seed is < 0 (default), set to clock time so each run is 
+			// different.
+			uint64_t seed {}
+			if (opts.seed() < 0) 
+			{
+				// Fill in this block
+			}
+			else
+			{
+				seed = opts.seed() + rank;  // unique per rank
+				uint64_t stream = tid;             // unique per thread
+			}
+			rngs.push_back(pcg32(seed, stream));
+		}
+		*/
 
 #ifdef DEBUG
 			std::cout << "Starting main loop (CPU)...\n";

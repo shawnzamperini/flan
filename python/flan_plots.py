@@ -1747,6 +1747,39 @@ class FlanPlots:
 		R_ext = extend_node_grid(R_node_grid)  # shape (Nx+1, Nz+1)
 		Z_ext = extend_node_grid(Z_node_grid)  # shape (Nx+1, Nz+1)
 
+		# --- Resample sim data onto the nodes-file grid -------------------------
+		# Nodes grid is coarser in x (17 cells vs 32), so bin sim cells into node
+		# cells instead of sampling one per node cell, which skips sim columns.
+		ix = np.clip(np.digitize(x, x_nodes) - 1, 0, Nx - 1)
+		data_x = np.zeros((Nx, data_yavg.shape[1]))
+		for i in range(Nx):
+			members = data_yavg[ix == i, :]
+			if members.shape[0] > 0:
+				data_x[i, :] = members.max(axis=0)   # see note below
+			else:
+				i_near = np.argmin(np.abs(x - x_centers[i]))
+				data_x[i, :] = data_yavg[i_near, :]
+
+		# z: nodes grid is finer, so nearest-neighbor is fine
+		j_map = np.argmin(np.abs(z[:, None] - z_centers[None, :]), axis=0)  # (Nz,)
+
+		# Now build the polygon list
+		verts = []
+		for i in range(Nx):
+			for j in range(Nz-1):
+				quad = np.array([
+					[R_ext[i,   j  ], Z_ext[i,   j  ]],
+					[R_ext[i+1, j  ], Z_ext[i+1, j  ]],
+					[R_ext[i+1, j+1], Z_ext[i+1, j+1]],
+					[R_ext[i,   j+1], Z_ext[i,   j+1]],
+				])
+				verts.append(quad)
+
+		# Same i-major, j-minor ordering as verts
+		colors = data_x[:, j_map[:Nz-1]].ravel()
+
+
+		"""
 		# Now build the polygon list
 		verts = []
 		colors = []
@@ -1774,6 +1807,16 @@ class FlanPlots:
 
 		colors = np.array(colors)
 
+		nz = np.argwhere(data_yavg != 0)
+		print(nz)  # (i, j) of the nonzero cells
+		print("np.unique(i_sim):", np.unique(i_sim))
+		print("np.unique(j_sim):", np.unique(j_sim))
+
+		i_map_all = np.array([np.argmin(np.abs(x - xc)) for xc in x_centers])
+		print("sampled x indices:", np.unique(i_map_all))
+		print("index 1 sampled?", 1 in i_map_all)
+		"""
+
 		# Mask out non-positive values for log scale
 		if norm_type == "log":
 			valid = colors > 0
@@ -1789,6 +1832,7 @@ class FlanPlots:
 		if vmax is None and norm_type == "log":
 			vmax = np.nanmax(colors_valid)	
 
+		print("colors.max() = {:.2e}".format(colors.max()))
 		# Create plot and add polygons to plot
 		fig, ax = plt.subplots(figsize=(8, 8))
 		norm = self.get_norm(data_yavg, norm_type, vmin=vmin, vmax=vmax)
@@ -1919,6 +1963,38 @@ class FlanPlots:
 		R_ext = extend_node_grid(R_node_grid)
 		Z_ext = extend_node_grid(Z_node_grid)
 
+		# --- Resample sim data onto the nodes-file grid -------------------------
+		# Nodes grid is coarser in x (17 cells vs 32), so bin sim cells into node
+		# cells instead of sampling one per node cell, which skips sim columns.
+		ix = np.clip(np.digitize(x, x_nodes) - 1, 0, Nx - 1)
+		data_x = np.zeros((Nx, data_yavg.shape[1]))
+		for i in range(Nx):
+			members = data_yavg[ix == i, :]
+			if members.shape[0] > 0:
+				data_x[i, :] = members.max(axis=0)   # see note below
+			else:
+				i_near = np.argmin(np.abs(x - x_centers[i]))
+				data_x[i, :] = data_yavg[i_near, :]
+
+		# z: nodes grid is finer, so nearest-neighbor is fine
+		j_map = np.argmin(np.abs(z[:, None] - z_centers[None, :]), axis=0)  # (Nz,)
+
+		# Now build the polygon list
+		verts = []
+		for i in range(Nx):
+			for j in range(Nz-1):
+				quad = np.array([
+					[R_ext[i,   j  ], Z_ext[i,   j  ]],
+					[R_ext[i+1, j  ], Z_ext[i+1, j  ]],
+					[R_ext[i+1, j+1], Z_ext[i+1, j+1]],
+					[R_ext[i,   j+1], Z_ext[i,   j+1]],
+				])
+				verts.append(quad)
+
+		# Same i-major, j-minor ordering as verts
+		colors = data_x[:, j_map[:Nz-1]].ravel()
+
+		"""
 		# Create vertices of each cell that are used to make the polygons later
 		# Essentially making an irregular grid one cell at a time.
 		verts = []
@@ -1940,6 +2016,7 @@ class FlanPlots:
 				colors.append(data_yavg[i_sim, j_sim])
 
 		colors = np.array(colors)
+		"""
 
 		# Remove <= 0 values if log scale selected by setting them to nan
 		if norm_type == "log":
@@ -2064,6 +2141,7 @@ class FlanPlots:
 				print("Error! own_data in video mode must be shape (t,x,z).")
 				print("own_data.shape = {}".format(own_data.shape))
 
+			"""
 			fig, ax = plt.subplots(figsize=(8, 8))
 
 			# Create a dummy collection so we can create the colorbar once
@@ -2076,7 +2154,13 @@ class FlanPlots:
 			writer = FFMpegWriter(fps=fps, codec="vp8")
 			with writer.saving(fig, output_video, dpi=150):
 				for fr in range(frame_start, frame_end + 1):
+					print("{}/{}".format(fr, frame_end - frame_start)
 					ax.clear()
+
+					if own_data is None:
+						own_data_in = None
+					else:
+						own_data_in = own_data[fr]
 
 					# Redraw frame. Need to be careful with own_data here. If
 					# you're going to use it in video mode you need to provide
@@ -2084,7 +2168,7 @@ class FlanPlots:
 					# frames for the movie.
 					coll = self._draw_single_RZ_frame(ax, data_name, fr, 
 						nodes_path, charge, gfile_path, cmap, norm_type, 
-						show_pol_ang, vmin, vmax, own_data[fr])
+						show_pol_ang, vmin, vmax, own_data_in)
 					cbar = fig.colorbar(coll, ax=ax)
 					cbar.set_label(data_name)
 
@@ -2094,6 +2178,32 @@ class FlanPlots:
 					writer.grab_frame()
 
 			plt.close(fig)
+
+			"""
+			fig, ax = plt.subplots(figsize=(8, 8))
+			cax = fig.add_axes([0.85, 0.15, 0.03, 0.7])   # fixed colorbar axes
+			fig.subplots_adjust(right=0.82)               # leave room for it
+
+			writer = FFMpegWriter(fps=fps, codec="vp8")
+			with writer.saving(fig, output_video, dpi=150):
+				for fr in range(frame_start, frame_end + 1):
+					print("{}/{}".format(fr, frame_end - frame_start))
+					ax.clear()
+					cax.clear()
+
+					own_data_in = None if own_data is None else own_data[fr]
+
+					coll = self._draw_single_RZ_frame(ax, data_name, fr,
+						nodes_path, charge, gfile_path, cmap, norm_type,
+						show_pol_ang, vmin, vmax, own_data_in)
+
+					cbar = fig.colorbar(coll, cax=cax)   # cax=, not ax=
+					cbar.set_label(data_name)
+
+					writer.grab_frame()
+
+			plt.close(fig)
+
 			return
 
 		# ----------------------------------------------------------------------
