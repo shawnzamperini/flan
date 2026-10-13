@@ -1,7 +1,17 @@
 /**
-* @file collisions.cpp
-* @brief Routines for updating particle velocity due to Coloumb collisions via
+* @file  collisions.cpp
+*
+* @brief Routines for updating particle velocity due to Coulomb collisions via
 *        the Nanbu algorithm.
+*
+* Derivation and steps taken from:
+* Nanbu, K. Theory of cumulative small-angle collisions in plasmas.
+* Phys. Rev. E 55, 4642–4652 (1997).
+*
+* Each time step, the cumulative effect of all the small-angle collisions
+* with a background species is replaced by a single deflection of the
+* relative velocity by an angle chi. How collisional the step is is set by
+* s, which sets the shape A(s) of the distribution chi is sampled from.
 */
 #include <array>
 #include <cmath>
@@ -23,6 +33,13 @@
 
 namespace Collisions
 {
+	/**
+	* Calculates the electron Debye length.
+	*
+	* @param te Electron temperature (eV).
+	* @param ne Electron density (m^-3).
+	* @return Debye length (m).
+	*/
 	double calc_debye_length(const double te, const double ne)
 	{
 		return std::sqrt(Constants::eps0 * te * Constants::ev_to_j / 
@@ -30,6 +47,22 @@ namespace Collisions
 	}
 
 
+	/**
+	* Samples the velocity of a background particle from a drifting
+	* Maxwellian.
+	*
+	* Each component is drawn from a normal distribution with a mean equal
+	* to the flow velocity and a standard deviation of sqrt(kT/m). We call
+	* this thermal sampling of the background velocity.
+	*
+	* @param T Temperature of the background species (eV).
+	* @param uX Cartesian X flow velocity of the background species (m/s).
+	* @param uY Cartesian Y flow velocity of the background species (m/s).
+	* @param uZ Cartesian Z flow velocity of the background species (m/s).
+	* @param m Mass of the background species (kg).
+	* @param rng Random number generator for this thread.
+	* @return Sampled velocity {vX, vY, vZ} in Cartesian space (m/s).
+	*/
 	std::tuple<double, double, double> sample_bkg_velocity(
 		const double T, const double uX, const double uY, const double uZ,
 		const double m, pcg32& rng)
@@ -49,7 +82,38 @@ namespace Collisions
 	}
 
 
-	// Calculate s term in Nanbu collision model
+	/**
+	* Calculates the s term in the Nanbu collision model (Eq. 19), which
+	* measures how collisional this time step is.
+	*
+	* The relative velocity g is between the impurity and a background
+	* particle whose velocity is sampled from a drifting Maxwellian (flow
+	* plus thermal sampling) with sample_bkg_velocity. The Coulomb logarithm
+	* uses the Debye length and the expectation value of the impact
+	* parameter b0, and is clamped to be at least 1. The background species
+	* is assumed to be singly charged with ni = ne. An error is printed if
+	* the Coulomb logarithm or s is NaN.
+	*
+	* @param bkg Background plasma, used to interpolate the flow velocity.
+	* @param imp_time_step Time step (s).
+	* @param T Temperature of the background species colliding with the
+	*        impurity (eV).
+	* @param mass_kg Mass of the background species (kg).
+	* @param Te Electron temperature (eV), used for the Debye length.
+	* @param ne Electron density (m^-3).
+	* @param t Time of the particle (s).
+	* @param x Computational x coordinate of the particle.
+	* @param y Computational y coordinate of the particle.
+	* @param z Computational z coordinate of the particle.
+	* @param vX Cartesian X velocity of the impurity (m/s).
+	* @param vY Cartesian Y velocity of the impurity (m/s).
+	* @param vZ Cartesian Z velocity of the impurity (m/s).
+	* @param q Charge state of the impurity. Must not be 0.
+	* @param slots Particle slots, used for the impurity mass.
+	* @param rng Random number generator for this thread.
+	* @return {s, gX, gY, gZ}, where gX, gY and gZ are the Cartesian
+	*         components of the relative velocity (m/s).
+	*/
 	std::tuple<double, double, double, double> nanbu_calc_s(
 		const Background::Background& bkg, 
 		const double imp_time_step, const double T, const double mass_kg, 
@@ -95,19 +159,19 @@ namespace Collisions
 		double inst_gZ {vZ - bkg_vZ};
 
 		// XYZ components of mean relative velocity
-		double mean_gX {vX - uX};
-		double mean_gY {vY - uY};
-		double mean_gZ {vZ - uZ};
+		//double mean_gX {vX - uX};
+		//double mean_gY {vY - uY};
+		//double mean_gZ {vZ - uZ};
 
 		// Magnitude of instantaneous and mean relative velocities.
-		double mean_g {std::sqrt(mean_gX*mean_gX + mean_gY*mean_gY 
-			+ mean_gZ*mean_gZ)};
+		//double mean_g {std::sqrt(mean_gX*mean_gX + mean_gY*mean_gY 
+		//	+ mean_gZ*mean_gZ)};
 		double inst_g {std::sqrt(inst_gX*inst_gX + inst_gY*inst_gY 
 			+ inst_gZ*inst_gZ)};
 
 		// Limit to a sufficiently small number to avoid overflows that can 
 		// occur in std::exp and std::sinh later on.
-		mean_g = std::max(mean_g, 0.001);
+		//mean_g = std::max(mean_g, 0.001);
 		inst_g = std::max(inst_g, 0.001);
 
 		// Scale the instantanous velocity magnitude to equal the mean. 
@@ -187,10 +251,10 @@ namespace Collisions
 				std::cerr << "  inst_gX = " << inst_gX << '\n';
 				std::cerr << "  inst_gY = " << inst_gY << '\n';
 				std::cerr << "  inst_gZ = " << inst_gZ << '\n';
-				std::cerr << "  mean_g = " << mean_g << '\n';
-				std::cerr << "  mean_gX = " << mean_gX << '\n';
-				std::cerr << "  mean_gY = " << mean_gY << '\n';
-				std::cerr << "  mean_gZ = " << mean_gZ << '\n';
+				//std::cerr << "  mean_g = " << mean_g << '\n';
+				//std::cerr << "  mean_gX = " << mean_gX << '\n';
+				//std::cerr << "  mean_gY = " << mean_gY << '\n';
+				//std::cerr << "  mean_gZ = " << mean_gZ << '\n';
 				std::cerr << "  expect_g_sq = " << expect_g_sq << '\n';
 				std::cerr << "  ne = " << ne << '\n';
 				std::cerr << "  charge = " << q << '\n';
@@ -204,7 +268,18 @@ namespace Collisions
 	}
 
 
-	// Calculate A term in Nanbu collision model
+	/**
+	* Calculates the A term in the Nanbu collision model (Eq. 13), which sets
+	* the shape of the distribution the deflection angle is sampled from.
+	*
+	* For s < 0.01 (weakly collisional) A = 1 / s, and for s > 5 (strongly
+	* collisional) A = 3 exp(-s). In between, A is linearly interpolated
+	* from the precomputed table in nanbu_s_a.h, which was calculated using
+	* python/calc_nanbu.py.
+	*
+	* @param s The s term from nanbu_calc_s.
+	* @return The A term.
+	*/
 	double nanbu_calc_A(const double s)
 	{
 		// Not very collisional approximation
@@ -231,7 +306,20 @@ namespace Collisions
 	}
 
 
-	// Calculate chi (deflection angle) in Nanbu collision model
+	/**
+	* Samples the deflection angle chi in the Nanbu collision model (Eq. 17).
+	*
+	* cos(chi) is found by directly inverting the cumulative distribution
+	* built from A, using a uniform random number U. For s < 0.02 the small-s
+	* limit 1 + s ln(U) is used, and for s > 6 the deflection is isotropic,
+	* 2U - 1. cos(chi) is clamped to [-1, 1] to guard against rounding
+	* errors.
+	*
+	* @param s The s term from nanbu_calc_s.
+	* @param A The A term from nanbu_calc_A.
+	* @param rng Random number generator for this thread.
+	* @return Deflection angle chi (radians).
+	*/
 	double nanbu_calc_chi(const double s, const double A, pcg32& rng)
 	{
 		// Random number uniformly distributed between 0-1
@@ -264,7 +352,30 @@ namespace Collisions
 	}
 
 
-	// Calculate post-collision Cartesian velocity components from Nanbu model
+	/**
+	* Calculates the post-collision Cartesian velocity of the impurity in the
+	* Nanbu collision model (Eq. 20a).
+	*
+	* The relative velocity g is rotated by the deflection angle chi about a
+	* random azimuthal angle, uniformly distributed in [0, 2 pi). The case
+	* where g is parallel to X is handled separately to avoid dividing by
+	* zero.
+	*
+	* @param gX Cartesian X component of the relative velocity (m/s).
+	* @param gY Cartesian Y component of the relative velocity (m/s).
+	* @param gZ Cartesian Z component of the relative velocity (m/s).
+	* @param chi Deflection angle from nanbu_calc_chi (radians).
+	* @param mass_a Mass of the impurity (kg).
+	* @param mass_b Mass of the background species (kg).
+	* @param vX Cartesian X velocity of the impurity before the collision
+	*        (m/s).
+	* @param vY Cartesian Y velocity of the impurity before the collision
+	*        (m/s).
+	* @param vZ Cartesian Z velocity of the impurity before the collision
+	*        (m/s).
+	* @param rng Random number generator for this thread.
+	* @return Post-collision velocity {vX, vY, vZ} in Cartesian space (m/s).
+	*/
 	std::tuple<double, double, double> nanbu_post_coll(const double gX,
 		const double gY, const double gZ, const double chi, const double mass_a,
 		const double mass_b, const double vX, const double vY, const double vZ,
@@ -311,6 +422,31 @@ namespace Collisions
 	}
 
 
+	/**
+	* Updates the Cartesian velocity of every particle due to Coulomb
+	* collisions with one background species using the Nanbu model.
+	*
+	* Dead and neutral particles are skipped. For each particle, ne and Te
+	* (and Ti for ions) are interpolated at the particle location, then s,
+	* A and chi are calculated and the velocity is updated with
+	* nanbu_post_coll. Since this happens after the Boris update, the
+	* updated velocity is v at n+1/2. An error is printed if ne < 0 or chi is
+	* NaN.
+	*
+	* For ion collisions, s * weight * dt is also added to imp_stats so the
+	* average s in each cell can be calculated later.
+	*
+	* @param slots Particle slots. The velocities are updated in place.
+	* @param bkg Background plasma.
+	* @param opts Simulation options, used for the background masses
+	*        (gkyl_elec_mass_amu, gkyl_ion_mass_amu) and min_ti.
+	* @param elec If true, collide with electrons (Te). Otherwise collide
+	*        with ions (Ti, limited to at least min_ti).
+	* @param dt Time step (s).
+	* @param imp_stats Impurity statistics, where the s values are summed
+	*        for ion collisions.
+	* @param rngs Random number generators, one per OpenMP thread.
+	*/
 	void nanbu_coll(Slots::Slots& slots, const Background::Background& bkg,
 		const Options::Options& opts, bool elec, const double dt, 
 		Impurity::Statistics& imp_stats, std::vector<pcg32>& rngs)
@@ -377,7 +513,6 @@ namespace Collisions
 				}
 			}
 
-
 			// Need to account for this better, just putting it here for now so I
 			// can get this paper submitted :(
 			//Te = std::max(0.1, Te);
@@ -416,6 +551,7 @@ namespace Collisions
 			// but no reason this can't be expanded for electrons as well. 
 			// Generally leave this commented out unless you are investigating the 
 			// collision model.
+			/*
 			if (!elec)
 			{
 				double p_w {slots.weight()[i]};
@@ -427,6 +563,7 @@ namespace Collisions
 				#pragma omp critical
 				imp_stats.add_s(tidx, xidx, yidx, zidx, s * p_w * dt);
 			}
+			*/
 
 			// Calcluate A (Eq. 13)
 			double A {nanbu_calc_A(s)};

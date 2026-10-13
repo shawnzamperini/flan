@@ -13,6 +13,7 @@ namespace Slots
         int N;
         int Z;
 		double mass;
+        double* pt;
         double* t;
         double* x;
         double* y;
@@ -27,6 +28,7 @@ namespace Slots
         double* vX;
         double* vY;
         double* vZ;
+        int* iters;
         double* weight;
         int* q;
         int* state;

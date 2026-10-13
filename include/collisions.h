@@ -11,10 +11,6 @@
 
 namespace Collisions
 {
-	/**
-	* @brief Update impurity Cartesian velocity according to Nanbu collision
-	* model.
-	*/
 	void nanbu_coll(Slots::Slots& slots, const Background::Background& bkg,
 		const Options::Options& opts, bool elec, const double dt, 
 		Impurity::Statistics& imp_stats, std::vector<pcg32>& rngs);

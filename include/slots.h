@@ -1,3 +1,8 @@
+/**
+* @file slots.h
+* @brief Header file for slots.cpp.
+*/
+
 #pragma once
 
 #include <vector>
@@ -7,11 +12,6 @@
 #include "pcg32.h"
 #include "slots_device.h"
 
-/*
-#ifdef USE_CUDA
-#include "slots_device.cuh"
-#endif
-*/
 
 namespace Slots
 {

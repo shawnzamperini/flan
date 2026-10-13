@@ -1,7 +1,13 @@
 /**
-* @file impurity_stats.cpp
+* @file  impurity_stats.cpp
 *
-* @brief Class related to handling impurity transport statistics
+* @brief Class related to handling impurity transport statistics.
+*
+* During the simulation, each alive particle adds its count, weight * dt,
+* charge and velocities (each multiplied by weight * dt) to the cell and time
+* frame it is in. At the end, the statistics from every thread, GPU and MPI
+* rank are summed and turned into the impurity density and weighted average
+* velocity, charge and Nanbu collisionality in each cell.
 */
 
 #include <cmath>
@@ -26,25 +32,31 @@
 // To-do: Change this namespace to Statistics
 namespace Impurity
 {
-	/** 
+	/**
 	* @class Statistics
-	* @brief Impurity transport statistics class
 	*
 	* Class to hold all the vectors related to tracking the statistics of
-	* an impurity transport simulation.
+	* an impurity transport simulation. Each array is indexed by
+	* (time frame, x cell, y cell, z cell).
 	*/
 
+	/**
+	* Creates an empty Statistics object with no allocated arrays.
+	*/
 	Statistics::Statistics() {};
 
 	/**
-	* @brief Constructor
+	* Creates a Statistics object with zero-initialized arrays of size
+	* dim1 x dim2 x dim3 x dim4.
 	*
-	* @param dim1 Size of first dimension of containing Vector4D's
-	* @param dim2 Size of second dimension of containing Vector4D's
-	* @param dim3 Size of third dimension of containing Vector4D's
-	* @param dim4 Size of fourth dimension of containing Vector4D's
+	* All the arrays are allocated except the density, which is only
+	* allocated in calc_density so it doesn't take up memory for the whole
+	* simulation.
 	*
-	* Zero-initializes the member Vector4D's.
+	* @param dim1 Number of time frames.
+	* @param dim2 Number of grid cells in x.
+	* @param dim3 Number of grid cells in y.
+	* @param dim4 Number of grid cells in z.
 	*/
 	Statistics::Statistics(const int dim1, const int dim2, const int dim3, 
 		const int dim4)
@@ -82,163 +94,218 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Accessor for dim1
+	* Returns the size of the first dimension of the arrays, which is the
+	* number of time frames.
+	*
+	* @return Size of dimension 1.
 	*/
 	const int Statistics::get_dim1() const {return m_dim1;}
+
+	/**
+	* Returns the size of the second dimension of the arrays, which is the
+	* number of grid cells in x.
+	*
+	* @return Size of dimension 2.
+	*/
 	const int Statistics::get_dim2() const {return m_dim2;}
+
+	/**
+	* Returns the size of the third dimension of the arrays, which is the
+	* number of grid cells in y.
+	*
+	* @return Size of dimension 3.
+	*/
 	const int Statistics::get_dim3() const {return m_dim3;}
+
+	/**
+	* Returns the size of the fourth dimension of the arrays, which is the
+	* number of grid cells in z.
+	*
+	* @return Size of dimension 4.
+	*/
 	const int Statistics::get_dim4() const {return m_dim4;}
 
 	/**
-	* @brief Accessor for particle track time
+	* Returns the time (s) along the recorded particle track.
+	*
+	* Only a single particle track is recorded.
+	*
+	* @return Reference to the track values, one per recorded step.
 	*/
 	std::vector<float>& Statistics::get_track_t() {return m_track_t;}
 
 	/**
-	* @brief Accessor for particle track x position
+	* Returns the computational x coordinate along the recorded particle track.
+	*
+	* Only a single particle track is recorded.
+	*
+	* @return Reference to the track values, one per recorded step.
 	*/
 	std::vector<float>& Statistics::get_track_x() {return m_track_x;}
 
 	/**
-	* @brief Accessor for particle track y position
+	* Returns the computational y coordinate along the recorded particle track.
+	*
+	* Only a single particle track is recorded.
+	*
+	* @return Reference to the track values, one per recorded step.
 	*/
 	std::vector<float>& Statistics::get_track_y() {return m_track_y;}
 
 	/**
-	* @brief Accessor for particle track z position
+	* Returns the computational z coordinate along the recorded particle track.
+	*
+	* Only a single particle track is recorded.
+	*
+	* @return Reference to the track values, one per recorded step.
 	*/
 	std::vector<float>& Statistics::get_track_z() {return m_track_z;}
 
 	/**
-	* @brief Accessor for particle track x velocity
+	* Returns the velocity along computational x along the recorded particle
+	* track.
+	*
+	* Only a single particle track is recorded.
+	*
+	* @return Reference to the track values, one per recorded step.
 	*/
 	std::vector<float>& Statistics::get_track_vx() {return m_track_vx;}
 
 	/**
-	* @brief Accessor for particle track y velocity
+	* Returns the velocity along computational y along the recorded particle
+	* track.
+	*
+	* Only a single particle track is recorded.
+	*
+	* @return Reference to the track values, one per recorded step.
 	*/
 	std::vector<float>& Statistics::get_track_vy() {return m_track_vy;}
 
 	/**
-	* @brief Accessor for particle track z velocity
+	* Returns the velocity along computational z along the recorded particle
+	* track.
+	*
+	* Only a single particle track is recorded.
+	*
+	* @return Reference to the track values, one per recorded step.
 	*/
 	std::vector<float>& Statistics::get_track_vz() {return m_track_vz;}
 
 	/**
-	* @brief Accessor for counts data
-	* @return Vector4D<int>
-	* @sa add_counts()
+	* Returns the number of times a particle was recorded in each cell and
+	* time frame. Incremented with add_counts.
 	*
-	* add_counts() is used to increment data in this vector.
+	* @return Reference to the counts array.
 	*/
 	Vectors::Vector4D<int>& Statistics::get_counts() {return m_counts;};
 
 	/**
-	* @brief Accessor for weights data
-	* @return Vector4D<BkgFPType>
-	* @sa add_weights()
+	* Returns the summed weight * dt in each cell and time frame, which is
+	* the occupancy in number of particles. Incremented with add_weights.
 	*
-	* add_weights() is used to add data into this vector
+	* @return Reference to the weights array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_weights() {return m_weights;}
 
 	/**
-	* @brief Accessor for density data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_density()
+	* Returns the impurity density in each cell and time frame (m^-3).
 	*
-	* calc_density() is used to fill this vector. Remains unallocated until
-	* then.
+	* Filled by calc_density, and unallocated until then.
+	*
+	* @return Reference to the density array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_density() {return m_density;}
 
 	/**
-	* @brief Accessor for X velocity data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_vels()
+	* Returns the Cartesian X velocity in each cell and time frame.
 	*
-	* calc_vels() is used to turn the data in this into an actual velocity.
-	* Before doing that it's just a collection of Monte Carlo type values.
+	* During the simulation this is the running sum of velocity * weight *
+	* dt. calc_vels turns it into the weighted average velocity.
+	*
+	* @return Reference to the vX array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vX() {return m_vX;}
 
 	/**
-	* @brief Accessor for Y velocity data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_vels()
+	* Returns the Cartesian Y velocity in each cell and time frame.
 	*
-	* calc_vels() is used to turn the data in this into an actual velocity.
-	* Before doing that it's just a collection of Monte Carlo type values.
+	* During the simulation this is the running sum of velocity * weight *
+	* dt. calc_vels turns it into the weighted average velocity.
+	*
+	* @return Reference to the vY array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vY() {return m_vY;}
 
 	/**
-	* @brief Accessor for Z velocity data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_vels()
+	* Returns the Cartesian Z velocity in each cell and time frame.
 	*
-	* calc_vels() is used to turn the data in this into an actual velocity.
-	* Before doing that it's just a collection of Monte Carlo type values.
+	* During the simulation this is the running sum of velocity * weight *
+	* dt. calc_vels turns it into the weighted average velocity.
+	*
+	* @return Reference to the vZ array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vZ() {return m_vZ;}
 
 	/**
-	* @brief Accessor for x velocity data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_vels()
+	* Returns the velocity along computational x in each cell and time frame.
 	*
-	* calc_vels() is used to turn the data in this into an actual velocity.
-	* Before doing that it's just a collection of Monte Carlo type values.
+	* During the simulation this is the running sum of velocity * weight *
+	* dt. calc_vels turns it into the weighted average velocity.
+	*
+	* @return Reference to the vx array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vx() {return m_vx;}
 
 	/**
-	* @brief Accessor for y velocity data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_vels()
+	* Returns the velocity along computational y in each cell and time frame.
 	*
-	* calc_vels() is used to turn the data in this into an actual velocity.
-	* Before doing that it's just a collection of Monte Carlo type values.
+	* During the simulation this is the running sum of velocity * weight *
+	* dt. calc_vels turns it into the weighted average velocity.
+	*
+	* @return Reference to the vy array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vy() {return m_vy;}
 
 	/**
-	* @brief Accessor for z velocity data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_vels()
+	* Returns the velocity along computational z in each cell and time frame.
 	*
-	* calc_vels() is used to turn the data in this into an actual velocity.
-	* Before doing that it's just a collection of Monte Carlo type values.
+	* During the simulation this is the running sum of velocity * weight *
+	* dt. calc_vels turns it into the weighted average velocity.
+	*
+	* @return Reference to the vz array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_vz() {return m_vz;}
 
 	/**
-	* @brief Accessor for charge data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_charge()
+	* Returns the charge state in each cell and time frame.
 	*
-	* calc_charge() is used to turn the aggregated data into average
-	* charge values at each location.
+	* During the simulation this is the running sum of charge * weight * dt.
+	* calc_charge turns it into the weighted average charge.
+	*
+	* @return Reference to the charge array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_charge() {return m_charge;}
 
 	/**
-	* @brief Accessor for Nanbu collisionality data
-	* @return Vector4D<BkgFPType>
-	* @sa calc_s()
+	* Returns the Nanbu collisionality s in each cell and time frame.
 	*
-	* calc_s() is used to turn the aggregated data into average
-	* s values at each location.
+	* During the simulation this is the running sum of s * weight * dt.
+	* calc_s turns it into the weighted average s.
+	*
+	* @return Reference to the s array.
 	*/
 	Vectors::Vector4D<BkgFPType>& Statistics::get_s() {return m_s;}
 
 	/**
-	* @brief Overload + to add two Statistics together
-	* @param other A Statistics object
-	* @return Statistics object with the summed data
+	* Adds two Statistics objects together.
 	*
-	* The values of counts and weights are added together and returned in
-	* a new Statistics object.
+	* The counts, weights, charge, s and velocity arrays are summed. Right
+	* now only a single particle track is recorded, so the track is copied
+	* from other instead of combined.
+	*
+	* @param other Statistics object to add to this one. Must have the same
+	*        dimensions.
+	* @return New Statistics object holding the sums.
 	*/
 	Statistics Statistics::operator+ (const Statistics& other) const
 	{
@@ -269,12 +336,13 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Increment counts at the specified indices
-	* @param tidx Time index
-	* @param xidx x index
-	* @param yidx y index
-	* @param zidx z index
-	* @param value Number to increment by (usually just 1)
+	* Adds to the counts in a cell and time frame.
+	*
+	* @param tidx Index of the time frame.
+	* @param xidx x index of the grid cell.
+	* @param yidx y index of the grid cell.
+	* @param zidx z index of the grid cell.
+	* @param value Number to add, usually just 1.
 	*/
 	void Statistics::add_counts(const int tidx, const int xidx, 
 		const int yidx, 
@@ -284,12 +352,13 @@ namespace Impurity
 	}
 	
 	/**
-	* @brief Increment weights at the specified indices
-	* @param tidx Time index
-	* @param xidx x index
-	* @param yidx y index
-	* @param zidx z index
-	* @param value Weight to add to the cell
+	* Adds to the weights in a cell and time frame.
+	*
+	* @param tidx Index of the time frame.
+	* @param xidx x index of the grid cell.
+	* @param yidx y index of the grid cell.
+	* @param zidx z index of the grid cell.
+	* @param value Weight to add, usually the particle weight * dt.
 	*/
 	void Statistics::add_weights(const int tidx, const int xidx, 
 		const int yidx, const int zidx, const BkgFPType value)
@@ -298,7 +367,19 @@ namespace Impurity
 	}
 
 	/**
+	* Adds velocities to the running sums in a cell and time frame.
 	*
+	* @param tidx Index of the time frame.
+	* @param xidx x index of the grid cell.
+	* @param yidx y index of the grid cell.
+	* @param zidx z index of the grid cell.
+	* @param vX Cartesian X velocity to add (m/s).
+	* @param vY Cartesian Y velocity to add (m/s).
+	* @param vZ Cartesian Z velocity to add (m/s).
+	* @param vx Velocity along computational x to add.
+	* @param vy Velocity along computational y to add.
+	* @param vz Velocity along computational z to add.
+	* @param bkg Background plasma. Currently unused.
 	*/
 	void Statistics::add_vels(const int tidx, const int xidx, const int yidx,
 		const int zidx, const BkgFPType vX, const BkgFPType vY, 
@@ -318,12 +399,13 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Increment charge at the specified indices
-	* @param tidx Time index
-	* @param xidx x index
-	* @param yidx y index
-	* @param zidx z index
-	* @param value Charge to add to the cell
+	* Adds to the charge in a cell and time frame.
+	*
+	* @param tidx Index of the time frame.
+	* @param xidx x index of the grid cell.
+	* @param yidx y index of the grid cell.
+	* @param zidx z index of the grid cell.
+	* @param value Charge to add, usually the charge * weight * dt.
 	*/
 	void Statistics::add_charge(const int tidx, const int xidx, 
 		const int yidx, const int zidx, const BkgFPType value)
@@ -332,12 +414,13 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Increment Nanbu collisionality strength at the specified indices
-	* @param tidx Time index
-	* @param xidx x index
-	* @param yidx y index
-	* @param zidx z index
-	* @param value s to add to the cell
+	* Adds to the Nanbu collisionality s in a cell and time frame.
+	*
+	* @param tidx Index of the time frame.
+	* @param xidx x index of the grid cell.
+	* @param yidx y index of the grid cell.
+	* @param zidx z index of the grid cell.
+	* @param value s to add, usually s * weight * dt.
 	*/
 	void Statistics::add_s(const int tidx, const int xidx, 
 		const int yidx, const int zidx, const BkgFPType value)
@@ -346,10 +429,14 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Pack all the arrays into a single buffer that can be sent across
-	*        MPI processes
+	* Packs all the arrays into a single buffer that can be sent across MPI
+	* processes.
 	*
-	* @param buf The buffer that will contain all the Vector4Ds in Statistics
+	* The arrays are appended in the order counts, weights, charge, s, vX,
+	* vY, vZ, vx, vy, vz. The counts are converted to double. The track and
+	* density are not included.
+	*
+	* @param buf Buffer to fill. Any previous contents are cleared.
 	*/
 	void Statistics::pack(std::vector<double>& buf) const
 	{
@@ -381,9 +468,13 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Unpack all the arrays that were packed via pack
+	* Unpacks the arrays from a buffer filled by pack, overwriting the
+	* current values.
 	*
-	* @param buf The buffer that contains all the Vector4Ds in Statistics
+	* The arrays must already be allocated with the same dimensions as the
+	* object that was packed.
+	*
+	* @param buf Buffer filled by pack.
 	*/
 	void Statistics::unpack(const std::vector<double>& buf)
 	{
@@ -415,19 +506,20 @@ namespace Impurity
 
 
 	/**
-	* @brief Calculate impurity density from data stored in counts and weights
-	* @param bkg The Background object used in the simulation
-	* @param tot_imp_num The total number of impurity ions followed (primary
-	* and secondary)
-	* @param imp_source_scale_fact A scaling factor related to the impurity
-	* source in units of particles/s.\ Essentially says how many particles a 
-	* single particle represents.
+	* Calculates the impurity density in each cell and time frame from the
+	* weights.
 	*
-	* Calculate the density in each cell using the Monte Carlo counts and
-	* weights. The Background is needed to get the cell volumes. As of now,
-	* imp_source_scale_fact is user supplied, but it hasn't been fully thought
-	* out yet. This only works for uniform Cartesian grids right now, but it
-	* can be generalized.
+	* The weights were accumulated as weight * dt, so they are already in
+	* number of particles, and the particle weights were normalized by the
+	* number of particles when each particle was created. The density is
+	* then just the weight divided by the cell volume in physical space,
+	* J * dx * dy * dz. The density array is allocated here.
+	*
+	* @param bkg Background plasma, used for the grid and Jacobian.
+	* @param tot_imp_num Total number of impurities followed. Currently
+	*        unused.
+	* @param imp_source_scale_fact Number of particles/s a single particle
+	*        represents. Currently unused.
 	*/
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)
@@ -476,7 +568,11 @@ namespace Impurity
 	}
 	
 	/**
-	* @brief Calculate the average velocity in each cell
+	* Converts the summed velocities in each cell and time frame
+	* into weighted average velocities.
+	*
+	* Each sum is divided by the weight in the cell. Cells with no counts
+	* are set to 0. 
 	*/
 	void Statistics::calc_vels()
 	{
@@ -501,6 +597,9 @@ namespace Impurity
 				m_vX(i,j,k,l) /= tot_weight;
 				m_vY(i,j,k,l) /= tot_weight;
 				m_vZ(i,j,k,l) /= tot_weight;
+				m_vx(i,j,k,l) /= tot_weight;
+				m_vy(i,j,k,l) /= tot_weight;
+				m_vz(i,j,k,l) /= tot_weight;
 				
 			}
 			else
@@ -508,6 +607,9 @@ namespace Impurity
 				m_vX(i,j,k,l) = 0.0;
 				m_vY(i,j,k,l) = 0.0;
 				m_vZ(i,j,k,l) = 0.0;
+				m_vx(i,j,k,l) = 0.0;
+				m_vy(i,j,k,l) = 0.0;
+				m_vz(i,j,k,l) = 0.0;
 			}
 		}
 		}
@@ -516,7 +618,11 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Calculate the average charge at each cell location
+	* Converts the summed charge in each cell and time frame into the
+	* weighted average charge.
+	*
+	* Each sum is divided by the weight in the cell. Cells with no counts are
+	* set to 0.
 	*/
 	void Statistics::calc_charge()
 	{
@@ -551,7 +657,11 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Calculate the average s at each cell location
+	* Converts the summed Nanbu collisionality s in each cell and time frame
+	* into the weighted average s.
+	*
+	* Each sum is divided by the weight in the cell. Cells with no counts are
+	* set to 0.
 	*/
 	void Statistics::calc_s()
 	{
@@ -583,6 +693,18 @@ namespace Impurity
 	}
 
 
+	/**
+	* Allocates GPU memory for the statistics arrays and copies them to the
+	* device.
+	*
+	* The counts, weights, velocity, charge and s arrays are copied. The
+	* track and density are not. If GPU support was not compiled in, an
+	* empty StatisticsDevice is returned.
+	*
+	* @param device_id ID of the GPU to allocate the memory on.
+	* @return StatisticsDevice struct holding the device pointers. The memory
+	*         must be released with free_stats.
+	*/
 	ImpurityStats::StatisticsDevice Statistics::to_device(int device_id)
 	{
 
@@ -640,6 +762,16 @@ namespace Impurity
 
 	}
 
+	/**
+	* Copies the statistics from a GPU and adds them to this object.
+	*
+	* Waits for the device to finish, copies each array back to the host and
+	* adds it to the matching array here, printing progress as it goes. Does
+	* nothing if GPU support was not compiled in.
+	*
+	* @param stats_d StatisticsDevice struct returned by to_device.
+	* @param device_id ID of the GPU holding the statistics.
+	*/
 	void Statistics::add_stats_device(ImpurityStats::StatisticsDevice& stats_d,
 		int device_id)
 	{
@@ -701,7 +833,7 @@ namespace Impurity
 
 		// Loop through each dimension
 		std::cout << "Adding to host object...\n";
-		#pragma omp for
+		#pragma omp parallel for
 		for (int i=0; i < m_dim1; ++i)
 		{
 		for (int j {}; j < m_dim2; ++j)
@@ -734,7 +866,15 @@ namespace Impurity
 	}
 
 	/**
-	* @brief Helper function to reduce a Statistic object across MPI ranks
+	* Sums a Statistics object across all MPI ranks.
+	*
+	* The arrays are packed into a buffer, summed onto rank 0 with
+	* MPI_Reduce and unpacked into a new object. With a single process the
+	* object is returned as-is.
+	*
+	* @param local_stats Statistics recorded on this rank.
+	* @return On rank 0, the summed statistics. On other ranks, a
+	*         zero-initialized object with the same dimensions.
 	*/
 	Statistics reduce_stats(const Statistics& local_stats)
 	{
@@ -779,6 +919,16 @@ namespace Impurity
 						  local_stats.get_dim4());
 	}
 
+	/**
+	* Frees the GPU memory held by a StatisticsDevice struct.
+	*
+	* Every array allocated in Statistics::to_device is freed and its pointer
+	* is set to nullptr to avoid accidental reuse. If GPU support was not
+	* compiled in, only the pointers are reset.
+	*
+	* @param stats_d StatisticsDevice struct whose memory is freed.
+	* @param device_id ID of the GPU the memory was allocated on.
+	*/
 	void free_stats(ImpurityStats::StatisticsDevice& stats_d, int device_id)
 	{
 
@@ -965,13 +1115,29 @@ namespace Impurity
 	} // record_stats_cpu
 	*/
 
-	// atomic approach
-	// In my basic testing this approach is much faster than the above
-	// buffered approach, though it's possible the buffered approach wins
-	// ground when there are significantly more particles than grid cell. That's
-	// because in that case particles may be fighting over accumulating stats
-	// in a cell, which can get held up in the atomics here.
-	// I am partial to the atomic approach just because it's so much cleaner.
+	/**
+	* Records the statistics of every alive particle into its cell and time
+	* frame.
+	*
+	* For each particle, the count is incremented and weight * dt (the
+	* occupancy, in number of particles) is added to the weights. The
+	* velocities and charge are added multiplied by weight * dt, so they can
+	* later be turned into weighted averages.
+	*
+	* Every thread writes straight into the shared arrays with atomic
+	* updates. In my basic testing this approach is much faster than the
+	* buffered approach (commented out above), though it's possible the
+	* buffered approach wins ground when there are significantly more
+	* particles than grid cells. That's because in that case particles may
+	* be fighting over accumulating stats in a cell, which can get held up in
+	* the atomics here. I am partial to the atomic approach just because it's
+	* so much cleaner.
+	*
+	* @param imp_stats Statistics to record into.
+	* @param slots Particle slots.
+	* @param opts Simulation options. Currently unused.
+	* @param dt Time step (s).
+	*/
 	void record_stats_cpu(Statistics& imp_stats, const Slots::Slots& slots,
 		const Options::Options& opts, const double dt)
 	{

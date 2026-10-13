@@ -1,8 +1,13 @@
 /**
-* @file boris.cpp
+* @file  boris.cpp
 *
 * @brief Implementation of Boris algorithm for calculating the Lorentz force 
-* on a particle and updating its velocity.
+*        on a particle and updating its velocity.
+*
+* The velocity is updated in Cartesian space (vX, vY, vZ) using the electric
+* and magnetic fields interpolated to the particle location. The velocity in
+* computational coordinates (vx, vy, vz) is then found from the reciprocal
+* basis vectors, which is what is used to move the particle.
 */
 
 #include <cmath>
@@ -20,7 +25,28 @@
 namespace Boris
 {
 
-	// Interpolate the reciprocal basis functions at the impurity location
+	/**
+	* Interpolates the reciprocal (contravariant) basis vectors at the particle
+	* location.
+	*
+	* These convert a Cartesian vector into its computational components,
+	* e.g., vx = dxdX * vX + dxdY * vY + dxdZ * vZ.
+	*
+	* Each of the nine components is trilinearly interpolated between the
+	* centers of the cell containing the particle and its neighboring cells
+	* on the side of the particle, since that is where the basis vectors are
+	* defined.
+	*
+	* @param bkg Background plasma holding the basis vectors.
+	* @param xidx x index of the grid cell containing the particle.
+	* @param yidx y index of the grid cell containing the particle.
+	* @param zidx z index of the grid cell containing the particle.
+	* @param x Computational x coordinate of the particle.
+	* @param y Computational y coordinate of the particle.
+	* @param z Computational z coordinate of the particle.
+	* @return Interpolated components in the order dxdX, dxdY, dxdZ, dydX,
+	*         dydY, dydZ, dzdX, dzdY, dzdZ.
+	*/
 	std::array<double, 9> interp_recp(
 		const Background::Background& bkg, const int xidx, const int yidx, 
 		const int zidx, const double x, const double y, const double z)
@@ -83,7 +109,28 @@ namespace Boris
 	}  // interp_recp
 
 
-	// Interpolate the tangent basis functions at the impurity location
+	/**
+	* Interpolates the tangent (covariant) basis vectors at the particle
+	* location.
+	*
+	* These convert a computational vector into its Cartesian components.
+	* Currently unused.
+	*
+	* Each of the nine components is trilinearly interpolated between the
+	* centers of the cell containing the particle and its neighboring cells
+	* on the side of the particle, since that is where the basis vectors are
+	* defined.
+	*
+	* @param bkg Background plasma holding the basis vectors.
+	* @param xidx x index of the grid cell containing the particle.
+	* @param yidx y index of the grid cell containing the particle.
+	* @param zidx z index of the grid cell containing the particle.
+	* @param x Computational x coordinate of the particle.
+	* @param y Computational y coordinate of the particle.
+	* @param z Computational z coordinate of the particle.
+	* @return Interpolated components in the order dXdx, dYdx, dZdx, dXdy,
+	*         dYdy, dZdy, dXdz, dYdz, dZdz.
+	*/
 	std::array<double, 9> interp_tang(
 		const Background::Background& bkg, const int xidx, const int yidx, 
 		const int zidx, const double x, const double y, const double z)
@@ -145,6 +192,30 @@ namespace Boris
 
 	}  // interp_tang
 
+
+	/**
+	* Advances the velocity of every particle by one time step using the
+	* Boris algorithm.
+	*
+	* The electric and magnetic fields (components and magnitudes) are
+	* trilinearly interpolated in space to the particle location, at the
+	* particle's time frame and a neighboring one, and then linearly
+	* interpolated in time. This keeps the fields continuous at cell
+	* boundaries and between time frames, which avoids numerical diffusion
+	* and unphysical kicks. Each interpolated vector is then rescaled to the
+	* interpolated magnitude so the gyro-orbit is the correct size.
+	*
+	* The standard Boris rotation then updates the Cartesian velocity
+	* (vX, vY, vZ). Velocities are stored at the half time steps before the
+	* position, i.e., x_i = x(t_i) and v_i = v(t_i - dt/2). Finally, the
+	* velocity in computational coordinates (vx, vy, vz) is calculated with
+	* the interpolated reciprocal basis vectors from interp_recp.
+	*
+	* @param slots Particle slots. The velocities are updated in place.
+	* @param bkg Background plasma holding the fields and basis vectors.
+	* @param opts Simulation options. Currently unused.
+	* @param dt Time step (s).
+	*/
 	void update_velocity_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, 
 		const Options::Options& opts,
@@ -154,6 +225,9 @@ namespace Boris
 		#pragma omp parallel for
 		for (int i=0; i < slots.N(); ++i)
 		{
+			// Skip dead particles
+			if (slots.state()[i] > 0) continue;
+
 			// Local variables
 			int tidx {slots.tidx()[i]};
 			int xidx {slots.xidx()[i]};
