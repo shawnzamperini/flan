@@ -1,0 +1,2026 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>File impurity_stats.cpp - Flan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../styles/halloween.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#file-impurity_statscpp" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Flan" class="md-header__button md-logo" aria-label="Flan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Flan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              File impurity_stats.cpp
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Flan" class="md-nav__button md-logo" aria-label="Flan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Flan
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Installation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/install-linux/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/install-perlmutter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Perlmutter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running Flan
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Running Flan
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-flan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-perlmutter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Perlmutter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-omega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Omega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input-options/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Physics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/impurity-transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Impurity Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/collisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/ionization-recombination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ionization/Recombination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/code-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/mpi-parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MPI Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/openmp-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenMP Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/gangster-spongebob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gangster Spongebob
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_6" id="__nav_7_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../namespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../annotated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../namespace_member_functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publications/Presentations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="file-impurity_statscpp">File impurity_stats.cpp</h1>
+<p><a href="../files/"><strong>File List</strong></a> <strong>&gt;</strong> <a href="../dir_68267d1309a1af8e8297ef4c3efbcdba/"><strong>src</strong></a> <strong>&gt;</strong> <a href="../impurity__stats_8cpp/"><strong>impurity_stats.cpp</strong></a></p>
+<p><a href="../impurity__stats_8cpp/">Go to the documentation of this file</a></p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cmath&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iomanip&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;numeric&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;omp.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"background.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"constants.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"flan_types.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"impurity_stats.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"impurity_stats_device.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"options.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"slots.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"vectors.h"</span>
+
+<span class="cp">#ifdef USE_CUDA</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cuda_runtime.h&gt;</span>
+<span class="cp">#endif</span>
+
+<span class="c1">// To-do: Change this namespace to Statistics</span>
+<span class="k">namespace</span><span class="w"> </span><span class="nn">Impurity</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="n">Statistics</span><span class="o">::</span><span class="n">Statistics</span><span class="p">()</span><span class="w"> </span><span class="p">{};</span>
+
+<span class="w">    </span><span class="n">Statistics</span><span class="o">::</span><span class="n">Statistics</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim4</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="n">m_dim1</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">}</span>
+<span class="w">        </span><span class="p">,</span><span class="w"> </span><span class="n">m_dim2</span><span class="w"> </span><span class="p">{</span><span class="n">dim2</span><span class="p">}</span>
+<span class="w">        </span><span class="p">,</span><span class="w"> </span><span class="n">m_dim3</span><span class="w"> </span><span class="p">{</span><span class="n">dim3</span><span class="p">}</span>
+<span class="w">        </span><span class="p">,</span><span class="w"> </span><span class="n">m_dim4</span><span class="w"> </span><span class="p">{</span><span class="n">dim4</span><span class="p">}</span>
+<span class="w">        </span><span class="p">,</span><span class="w"> </span><span class="n">m_counts</span><span class="w"> </span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span><span class="n">dim4</span><span class="p">})</span>
+<span class="w">        </span><span class="p">,</span><span class="w"> </span><span class="n">m_weights</span><span class="w"> </span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span><span class="n">dim4</span><span class="p">})</span>
+<span class="w">        </span><span class="c1">//, m_density (Vectors::Vector4D&lt;BkgFPType&gt; {dim1, dim2, dim3, dim4})</span>
+<span class="w">        </span><span class="p">,</span><span class="w"> </span><span class="n">m_charge</span><span class="w"> </span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span><span class="n">dim4</span><span class="p">})</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// These arrays can take up a lot of space. Could consider an option</span>
+<span class="w">        </span><span class="c1">// to only allocate and track these if requested.</span>
+
+<span class="w">        </span><span class="c1">// Cartesian velocity components</span>
+<span class="w">        </span><span class="n">m_vX</span><span class="p">.</span><span class="n">move_into_data</span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">dim4</span><span class="p">});</span>
+<span class="w">        </span><span class="n">m_vY</span><span class="p">.</span><span class="n">move_into_data</span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">dim4</span><span class="p">});</span>
+<span class="w">        </span><span class="n">m_vZ</span><span class="p">.</span><span class="n">move_into_data</span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">dim4</span><span class="p">});</span>
+
+<span class="w">        </span><span class="c1">// Curvilinear velocity components</span>
+<span class="w">        </span><span class="n">m_vx</span><span class="p">.</span><span class="n">move_into_data</span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">dim4</span><span class="p">});</span>
+<span class="w">        </span><span class="n">m_vy</span><span class="p">.</span><span class="n">move_into_data</span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">dim4</span><span class="p">});</span>
+<span class="w">        </span><span class="n">m_vz</span><span class="p">.</span><span class="n">move_into_data</span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">dim4</span><span class="p">});</span>
+
+<span class="w">        </span><span class="c1">// Collisionality strength from Nanbu model</span>
+<span class="w">        </span><span class="n">m_s</span><span class="p">.</span><span class="n">move_into_data</span><span class="p">(</span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="n">dim1</span><span class="p">,</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">dim4</span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_dim1</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;}</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_dim2</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;}</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_dim3</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;}</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_dim4</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_track_t</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_track_t</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_track_x</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_track_x</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_track_y</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_track_y</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_track_z</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_track_z</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_track_vx</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_track_vx</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_track_vy</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_track_vy</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_track_vz</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_track_vz</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_counts</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_counts</span><span class="p">;};</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_weights</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_weights</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_density</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_density</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_vX</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_vX</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_vY</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_vY</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_vZ</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_vZ</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_vx</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_vx</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_vy</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_vy</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_vz</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_vz</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_charge</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_charge</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">get_s</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="k">return</span><span class="w"> </span><span class="n">m_s</span><span class="p">;}</span>
+
+<span class="w">    </span><span class="n">Statistics</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="k">operator</span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Statistics</span><span class="o">&amp;</span><span class="w"> </span><span class="n">other</span><span class="p">)</span><span class="w"> </span><span class="k">const</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Statistics</span><span class="w"> </span><span class="n">ret_stats</span><span class="w"> </span><span class="p">{</span><span class="n">m_dim1</span><span class="p">,</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">,</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">,</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">};</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_counts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_counts</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_counts</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_weights</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_weights</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_weights</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_charge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_charge</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_charge</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_s</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_s</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_vX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_vX</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_vX</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_vY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_vY</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_vY</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_vZ</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_vZ</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_vZ</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_vx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_vx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_vx</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_vy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_vy</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_vy</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_vz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_vz</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_vz</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Right now we only track a single particle track, so we don't actually</span>
+<span class="w">        </span><span class="c1">// do anything here. This will mean the arrays are empty if there is</span>
+<span class="w">        </span><span class="c1">// more than one thread.</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_track_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_track_t</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_track_x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_track_x</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_track_y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_track_y</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_track_z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_track_z</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_track_vx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_track_vx</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_track_vy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_track_vy</span><span class="p">;</span>
+<span class="w">        </span><span class="n">ret_stats</span><span class="p">.</span><span class="n">m_track_vz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">m_track_vz</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ret_stats</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">add_counts</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="n">m_counts</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">add_weights</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">value</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="n">m_weights</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">add_vels</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">vX</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">vY</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">vZ</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">vx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">vy</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">vz</span><span class="p">,</span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Add velocities to the running total at each cell location</span>
+<span class="w">        </span><span class="n">m_vX</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vX</span><span class="p">;</span>
+<span class="w">        </span><span class="n">m_vY</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vY</span><span class="p">;</span>
+<span class="w">        </span><span class="n">m_vZ</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vZ</span><span class="p">;</span>
+<span class="w">        </span><span class="n">m_vx</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vx</span><span class="p">;</span>
+<span class="w">        </span><span class="n">m_vy</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vy</span><span class="p">;</span>
+<span class="w">        </span><span class="n">m_vz</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vz</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Note that one could add velocity distribution counting for a future</span>
+<span class="w">        </span><span class="c1">// update if the memory load isn't too demanding, but it may be.</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">add_charge</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">value</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="n">m_charge</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">add_s</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="n">value</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="n">m_s</span><span class="p">(</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">pack</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="k">const</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Clear buffer and reserve enough space for all the Vector4Ds</span>
+<span class="w">        </span><span class="n">buf</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+<span class="w">        </span><span class="n">buf</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">m_dim1</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim4</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">9</span><span class="p">);</span><span class="w"> </span><span class="c1">// 9 fields</span>
+
+<span class="w">        </span><span class="c1">// Define a lambda function that breaks down a Vector4D and appends</span>
+<span class="w">        </span><span class="c1">// it to our buffer.</span>
+<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">append</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">v4d</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;</span><span class="w"> </span><span class="n">l</span><span class="o">++</span><span class="p">)</span>
+<span class="w">                </span><span class="n">buf</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">v4d</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">));</span>
+<span class="w">        </span><span class="p">};</span>
+
+<span class="w">        </span><span class="c1">// Append each Vector4D to buffer</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_counts</span><span class="p">);</span><span class="w">   </span><span class="c1">// convert int → double automatically</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_weights</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_charge</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_s</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_vX</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_vY</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_vZ</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_vx</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_vy</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append</span><span class="p">(</span><span class="n">m_vz</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">unpack</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">buf</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Index in the 1D buffer</span>
+<span class="w">        </span><span class="kt">size_t</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Define a lambda function to take element in the buffer and put them</span>
+<span class="w">        </span><span class="c1">// into a Vector4D.</span>
+<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">extract</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">v4d</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;</span><span class="w"> </span><span class="n">l</span><span class="o">++</span><span class="p">)</span>
+<span class="w">                </span><span class="n">v4d</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">buf</span><span class="p">[</span><span class="n">idx</span><span class="o">++</span><span class="p">];</span>
+<span class="w">        </span><span class="p">};</span>
+
+<span class="w">        </span><span class="c1">// Extract Vector4D's from buffer. Order must match that in pack!!!</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_counts</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_weights</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_charge</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_s</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_vX</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_vY</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_vZ</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_vx</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_vy</span><span class="p">);</span>
+<span class="w">        </span><span class="n">extract</span><span class="p">(</span><span class="n">m_vz</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">calc_density</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tot_imp_num</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">imp_source_scale_fact</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Allocate empty density Vector4D. Important we do this here,</span>
+<span class="w">        </span><span class="c1">// since if we do it when ImpurityStats gets constructed that means</span>
+<span class="w">        </span><span class="c1">// an unused allocated Vector4D is held for the enitre simulation.</span>
+<span class="w">        </span><span class="n">m_density</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;</span><span class="p">(</span><span class="n">m_dim1</span><span class="p">,</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">,</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">m_dim4</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// Need to loop through the entire Vector4D. Unconventional </span>
+<span class="w">        </span><span class="c1">// indentation here just to keep it clean.</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">l</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Cell width in each direction </span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">dx</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_grid_x</span><span class="p">()[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_grid_x</span><span class="p">()[</span><span class="n">j</span><span class="p">]};</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">dy</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_grid_y</span><span class="p">()[</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_grid_y</span><span class="p">()[</span><span class="n">k</span><span class="p">]};</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">dz</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_grid_z</span><span class="p">()[</span><span class="n">l</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_grid_z</span><span class="p">()[</span><span class="n">l</span><span class="p">]};</span>
+
+<span class="w">            </span><span class="c1">// Volume in physical space is jacob * dx * dy * dz</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">cell_vol</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_J</span><span class="p">()(</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dy</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dz</span><span class="p">};</span>
+
+<span class="w">            </span><span class="c1">// Normalize each weight value by the volume and total number of</span>
+<span class="w">            </span><span class="c1">// particles launched. This goes from units of (s) to (s/m3). </span>
+<span class="w">            </span><span class="c1">// m_weights is in units of particles/s, so to get total number of</span>
+<span class="w">            </span><span class="c1">// particles (weight -&gt; N) we multiply by dt. </span>
+<span class="w">            </span><span class="c1">//m_density(i,j,k,l) = m_weights(i,j,k,l) / cell_vol </span>
+<span class="w">            </span><span class="c1">//  / tot_imp_num * imp_source_scale_fact;</span>
+
+<span class="w">            </span><span class="c1">// Weights ([particles] since it was accumulated as p_w * dt), so </span>
+<span class="w">            </span><span class="c1">// density is just weight / volume. The weight was already </span>
+<span class="w">            </span><span class="c1">// normalized by the number of particles when the particle was</span>
+<span class="w">            </span><span class="c1">// created.</span>
+<span class="w">            </span><span class="n">m_density</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_weights</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">cell_vol</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span><span class="w">   </span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">calc_vels</span><span class="p">()</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Need to loop through the entire Vector4D. Unconventional </span>
+<span class="w">        </span><span class="c1">// indentation here just to keep it clean.</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">l</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Total weight (actually, occupancy since this is w * dt)</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">tot_weight</span><span class="w"> </span><span class="p">{</span><span class="n">m_weights</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)};</span>
+
+<span class="w">            </span><span class="c1">// Convert each velocity sum in each cell to an average velocity</span>
+<span class="w">            </span><span class="c1">// by dividing it by the weight</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">counts</span><span class="w"> </span><span class="p">{</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">m_counts</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">))};</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">counts</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="n">m_vX</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">/=</span><span class="w"> </span><span class="n">tot_weight</span><span class="p">;</span>
+<span class="w">                </span><span class="n">m_vY</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">/=</span><span class="w"> </span><span class="n">tot_weight</span><span class="p">;</span>
+<span class="w">                </span><span class="n">m_vZ</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">/=</span><span class="w"> </span><span class="n">tot_weight</span><span class="p">;</span>
+
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="k">else</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="n">m_vX</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+<span class="w">                </span><span class="n">m_vY</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+<span class="w">                </span><span class="n">m_vZ</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span><span class="w">   </span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">calc_charge</span><span class="p">()</span>
+<span class="w">    </span><span class="p">{</span>
+
+<span class="w">        </span><span class="c1">// Average charge is just the running sum divided by the number of</span>
+<span class="w">        </span><span class="c1">// counts in the cell.</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">l</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+
+<span class="w">            </span><span class="c1">// Total weight (actually, occupancy since this is w * dt)</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">tot_weight</span><span class="w"> </span><span class="p">{</span><span class="n">m_weights</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)};</span>
+
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">counts</span><span class="w"> </span><span class="p">{</span><span class="n">m_counts</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">counts</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="n">m_charge</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">/=</span><span class="w"> </span><span class="n">tot_weight</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="k">else</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="n">m_charge</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span><span class="w">   </span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">calc_s</span><span class="p">()</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Average s is a weighted average. m_s has accumulated s*w</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">l</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+
+<span class="w">            </span><span class="c1">// Total weight (actually, occupancy since this is w * dt)</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">tot_weight</span><span class="w"> </span><span class="p">{</span><span class="n">m_weights</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)};</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">counts</span><span class="w"> </span><span class="p">{</span><span class="n">m_counts</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">counts</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="n">m_s</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">/=</span><span class="w"> </span><span class="n">tot_weight</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="k">else</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="n">m_s</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span><span class="w">   </span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+
+<span class="w">    </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">to_device</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+
+<span class="w">        </span><span class="c1">// Create empty device-side structure</span>
+<span class="w">        </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="w"> </span><span class="n">stats_d</span><span class="w"> </span><span class="p">{};</span>
+
+<span class="cp">#ifdef USE_CUDA</span>
+
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">device_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">device_id</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">Nt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">Nx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">Ny</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">Nz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="p">{</span><span class="n">m_dim1</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">};</span>
+
+<span class="w">        </span><span class="c1">// GPU allocation</span>
+<span class="w">        </span><span class="n">cudaSetDevice</span><span class="p">(</span><span class="n">device_id</span><span class="p">);</span>
+
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">counts</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">weights</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vX</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vY</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vZ</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vx</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vy</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vz</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">q</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats_d</span><span class="p">.</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+
+<span class="w">        </span><span class="c1">// Copy to device</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">counts</span><span class="p">,</span><span class="w"> </span><span class="n">m_counts</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">weights</span><span class="p">,</span><span class="w"> </span><span class="n">m_weights</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vX</span><span class="p">,</span><span class="w"> </span><span class="n">m_vX</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vY</span><span class="p">,</span><span class="w"> </span><span class="n">m_vY</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vZ</span><span class="p">,</span><span class="w"> </span><span class="n">m_vZ</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vx</span><span class="p">,</span><span class="w"> </span><span class="n">m_vx</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vy</span><span class="p">,</span><span class="w"> </span><span class="n">m_vy</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vz</span><span class="p">,</span><span class="w"> </span><span class="n">m_vz</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">q</span><span class="p">,</span><span class="w"> </span><span class="n">m_charge</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="n">m_s</span><span class="p">.</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+
+<span class="cp">#endif</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">stats_d</span><span class="p">;</span>
+
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">Statistics</span><span class="o">::</span><span class="n">add_stats_device</span><span class="p">(</span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">&amp;</span><span class="w"> </span><span class="n">stats_d</span><span class="p">,</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+
+<span class="cp">#ifdef USE_CUDA</span>
+
+<span class="w">        </span><span class="c1">// Allocate vectors to hold GPU data, these are the middleman</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="p">{</span><span class="n">m_dim1</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">};</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">counts_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">weights_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vX_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vY_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vZ_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vx_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vy_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vz_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">s_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">charge_h</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// Previous errors could cause this to hang, unsure how to handle</span>
+<span class="w">        </span><span class="c1">// this yet</span>
+<span class="w">        </span><span class="n">cudaError_t</span><span class="w"> </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cudaDeviceSynchronize</span><span class="p">();</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">"sync: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">cudaGetErrorString</span><span class="p">(</span><span class="n">err</span><span class="p">));</span>
+
+<span class="w">        </span><span class="c1">// Copy over from GPU to host</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Copying data from GPU #"</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">device_id</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" (N = "</span><span class="w"> </span>
+<span class="w">            </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">")...</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaSetDevice</span><span class="p">(</span><span class="n">device_id</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - counts</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">counts_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">counts</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - weights</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">weights_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">weights</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - vX</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">vX_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vX</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - vY</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">vY_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vY</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - vZ</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">vZ_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vZ</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - vx</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">vx_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vx</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - vy</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">vy_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vy</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - vz</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">vz_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vz</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - Nanbu s</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">s_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - charge</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">charge_h</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stats_d</span><span class="p">.</span><span class="n">q</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// Loop through each dimension</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Adding to host object...</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">        </span><span class="cp">#pragma omp for</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim1</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim2</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">m_dim4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">l</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// 4D to 1D index</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="p">{</span><span class="n">m_counts</span><span class="p">.</span><span class="n">calc_index</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)};</span>
+
+<span class="w">            </span><span class="c1">// Add statistics into this object</span>
+<span class="w">            </span><span class="n">m_counts</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">counts_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_weights</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">weights_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_vX</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vX_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_vY</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vY_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_vZ</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vZ_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_vx</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vx_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_vy</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vy_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_vz</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vz_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_s</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w">  </span><span class="o">+=</span><span class="w"> </span><span class="n">s_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">            </span><span class="n">m_charge</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">charge_h</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="cp">#endif</span>
+
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">Statistics</span><span class="w"> </span><span class="n">reduce_stats</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Statistics</span><span class="o">&amp;</span><span class="w"> </span><span class="n">local_stats</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+
+<span class="w">        </span><span class="c1">// MPI rank</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">nprocs</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">        </span><span class="n">MPI_Comm_rank</span><span class="p">(</span><span class="n">MPI_COMM_WORLD</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">rank</span><span class="p">);</span>
+<span class="w">        </span><span class="n">MPI_Comm_size</span><span class="p">(</span><span class="n">MPI_COMM_WORLD</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">nprocs</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// No reduction needed with a single process, return as-is</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">nprocs</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">local_stats</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Send and recieve buffers</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">sendbuf</span><span class="p">;</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">recvbuf</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Pack up stats local to this rank and resize the recieve buffer to</span>
+<span class="w">        </span><span class="c1">// match</span>
+<span class="w">        </span><span class="n">local_stats</span><span class="p">.</span><span class="n">pack</span><span class="p">(</span><span class="n">sendbuf</span><span class="p">);</span>
+<span class="w">        </span><span class="n">recvbuf</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">sendbuf</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+
+<span class="w">        </span><span class="c1">// Call reduce to add all the Vector4Ds in Statistics together, putting</span>
+<span class="w">        </span><span class="c1">// the result in recvbuf. </span>
+<span class="w">        </span><span class="n">MPI_Reduce</span><span class="p">(</span><span class="n">sendbuf</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">recvbuf</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">sendbuf</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span><span class="w"> </span>
+<span class="w">            </span><span class="n">MPI_DOUBLE</span><span class="p">,</span><span class="w"> </span><span class="n">MPI_SUM</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">MPI_COMM_WORLD</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// Create object to store the summed results and unpack into it</span>
+<span class="w">        </span><span class="c1">// Only rank 0 returns a meaningful object</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">rank</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">Statistics</span><span class="w"> </span><span class="n">global_stats</span><span class="w"> </span><span class="p">{</span><span class="n">local_stats</span><span class="p">.</span><span class="n">get_dim1</span><span class="p">(),</span><span class="w"> </span>
+<span class="w">                </span><span class="n">local_stats</span><span class="p">.</span><span class="n">get_dim2</span><span class="p">(),</span><span class="w"> </span><span class="n">local_stats</span><span class="p">.</span><span class="n">get_dim3</span><span class="p">(),</span><span class="w"> </span>
+<span class="w">                </span><span class="n">local_stats</span><span class="p">.</span><span class="n">get_dim4</span><span class="p">()};</span>
+<span class="w">            </span><span class="n">global_stats</span><span class="p">.</span><span class="n">unpack</span><span class="p">(</span><span class="n">recvbuf</span><span class="p">);</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">global_stats</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// Other ranks return a dummy object</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Statistics</span><span class="p">(</span><span class="n">local_stats</span><span class="p">.</span><span class="n">get_dim1</span><span class="p">(),</span>
+<span class="w">                          </span><span class="n">local_stats</span><span class="p">.</span><span class="n">get_dim2</span><span class="p">(),</span>
+<span class="w">                          </span><span class="n">local_stats</span><span class="p">.</span><span class="n">get_dim3</span><span class="p">(),</span>
+<span class="w">                          </span><span class="n">local_stats</span><span class="p">.</span><span class="n">get_dim4</span><span class="p">());</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">free_stats</span><span class="p">(</span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">&amp;</span><span class="w"> </span><span class="n">stats_d</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+
+<span class="cp">#ifdef USE_CUDA</span>
+
+<span class="w">        </span><span class="n">cudaSetDevice</span><span class="p">(</span><span class="n">device_id</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// Free memory</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">counts</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">weights</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vX</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vY</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vZ</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vx</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vy</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">vz</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">s</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">stats_d</span><span class="p">.</span><span class="n">q</span><span class="p">);</span>
+
+<span class="cp">#endif</span>
+
+<span class="w">        </span><span class="c1">// Set pointers to null to avoid accidental reuse</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">counts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">weights</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vZ</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">vz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">stats_d</span><span class="p">.</span><span class="n">q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="cm">/*</span>
+<span class="cm">    // buffered approach</span>
+<span class="cm">    void record_stats_cpu(Statistics&amp; imp_stats, const Slots::Slots&amp; slots,</span>
+<span class="cm">        const Options::Options&amp; opts, const double imp_time_step)</span>
+<span class="cm">    {</span>
+<span class="cm">        // Number of distinct thread-local arrays we need pointers to.</span>
+<span class="cm">        constexpr int NUM_FIELDS = 9;</span>
+
+<span class="cm">        // Sized to the max threads OpenMP could ever hand us -- allocated once,</span>
+<span class="cm">        // reused every timestep. Each inner vector&lt;double*&gt; holds one pointer</span>
+<span class="cm">        // per thread for that field.</span>
+<span class="cm">        static std::vector&lt;std::vector&lt;double*&gt;&gt; field_ptrs(NUM_FIELDS);</span>
+<span class="cm">        static std::vector&lt;int*&gt; counts_ptrs;  // counts is int, kept separate</span>
+<span class="cm">        static std::size_t grid_size {0};</span>
+<span class="cm">        static int num_threads_used {0};</span>
+
+<span class="cm">        #pragma omp parallel</span>
+<span class="cm">        {</span>
+<span class="cm">            static thread_local std::vector&lt;int&gt; counts_local;</span>
+<span class="cm">            static thread_local std::vector&lt;double&gt; weights_local;</span>
+<span class="cm">            static thread_local std::vector&lt;double&gt; vX_local;</span>
+<span class="cm">            static thread_local std::vector&lt;double&gt; vY_local;</span>
+<span class="cm">            static thread_local std::vector&lt;double&gt; vZ_local;</span>
+<span class="cm">            static thread_local std::vector&lt;double&gt; vx_local;</span>
+<span class="cm">            static thread_local std::vector&lt;double&gt; vy_local;</span>
+<span class="cm">            static thread_local std::vector&lt;double&gt; vz_local;</span>
+<span class="cm">            static thread_local std::vector&lt;double&gt; charge_local;</span>
+
+<span class="cm">            const int tid {omp_get_thread_num()};</span>
+
+<span class="cm">            // First-touch setup: allocate this thread's local buffers, and</span>
+<span class="cm">            // register this thread's pointers into the shared lookup arrays.</span>
+<span class="cm">            // Every thread writes only index [tid] of each pointer array, so</span>
+<span class="cm">            // no two threads ever touch the same slot -- no lock needed here.</span>
+<span class="cm">            if (counts_local.empty())</span>
+<span class="cm">            {</span>
+<span class="cm">                counts_local.resize(imp_stats.get_counts().get_data().size());</span>
+<span class="cm">                weights_local.resize(imp_stats.get_weights().get_data().size());</span>
+<span class="cm">                vX_local.resize(imp_stats.get_vX().get_data().size());</span>
+<span class="cm">                vY_local.resize(imp_stats.get_vY().get_data().size());</span>
+<span class="cm">                vZ_local.resize(imp_stats.get_vZ().get_data().size());</span>
+<span class="cm">                vx_local.resize(imp_stats.get_vx().get_data().size());</span>
+<span class="cm">                vy_local.resize(imp_stats.get_vy().get_data().size());</span>
+<span class="cm">                vz_local.resize(imp_stats.get_vz().get_data().size());</span>
+<span class="cm">                charge_local.resize(imp_stats.get_charge().get_data().size());</span>
+
+<span class="cm">                // One thread (any one -- doesn't matter which) sizes the</span>
+<span class="cm">                // shared pointer/bookkeeping arrays before anyone writes into</span>
+<span class="cm">                // them, so every thread's write below lands in a valid slot.</span>
+<span class="cm">                #pragma omp single</span>
+<span class="cm">                {</span>
+<span class="cm">                    num_threads_used = omp_get_num_threads();</span>
+<span class="cm">                    grid_size = counts_local.size();</span>
+
+<span class="cm">                    counts_ptrs.resize(num_threads_used);</span>
+<span class="cm">                    for (auto&amp; v : field_ptrs) v.resize(num_threads_used);</span>
+<span class="cm">                }</span>
+<span class="cm">                // implicit barrier at the end of "single" -- guarantees the</span>
+<span class="cm">                // resize above has happened before any thread writes its</span>
+<span class="cm">                // pointer into these arrays below.</span>
+
+<span class="cm">                counts_ptrs[tid]   = counts_local.data();</span>
+<span class="cm">                field_ptrs[0][tid] = weights_local.data();</span>
+<span class="cm">                field_ptrs[1][tid] = vX_local.data();</span>
+<span class="cm">                field_ptrs[2][tid] = vY_local.data();</span>
+<span class="cm">                field_ptrs[3][tid] = vZ_local.data();</span>
+<span class="cm">                field_ptrs[4][tid] = vx_local.data();</span>
+<span class="cm">                field_ptrs[5][tid] = vy_local.data();</span>
+<span class="cm">                field_ptrs[6][tid] = vz_local.data();</span>
+<span class="cm">                field_ptrs[7][tid] = charge_local.data();</span>
+<span class="cm">            }</span>
+
+<span class="cm">            // Zero local buffers each timestep</span>
+<span class="cm">            std::fill(counts_local.begin(), counts_local.end(), 0);</span>
+<span class="cm">            std::fill(weights_local.begin(), weights_local.end(), 0.0);</span>
+<span class="cm">            std::fill(vX_local.begin(), vX_local.end(), 0.0);</span>
+<span class="cm">            std::fill(vY_local.begin(), vY_local.end(), 0.0);</span>
+<span class="cm">            std::fill(vZ_local.begin(), vZ_local.end(), 0.0);</span>
+<span class="cm">            std::fill(vx_local.begin(), vx_local.end(), 0.0);</span>
+<span class="cm">            std::fill(vy_local.begin(), vy_local.end(), 0.0);</span>
+<span class="cm">            std::fill(vz_local.begin(), vz_local.end(), 0.0);</span>
+<span class="cm">            std::fill(charge_local.begin(), charge_local.end(), 0.0);</span>
+
+<span class="cm">            // Independent loops, so nowait</span>
+<span class="cm">            #pragma omp for nowait</span>
+<span class="cm">            for (int i = 0; i &lt; slots.N(); ++i)</span>
+<span class="cm">            {</span>
+<span class="cm">                if (slots.state()[i]) continue;</span>
+
+<span class="cm">                int idx {imp_stats.get_counts().calc_index(slots.tidx()[i],</span>
+<span class="cm">                    slots.xidx()[i], slots.yidx()[i], slots.zidx()[i])};</span>
+
+<span class="cm">                double p_w {slots.weight()[i]};</span>
+<span class="cm">                counts_local[idx] += 1;</span>
+<span class="cm">                weights_local[idx] += p_w * imp_time_step;</span>
+
+<span class="cm">                vX_local[idx] += slots.vX()[i] * p_w;</span>
+<span class="cm">                vY_local[idx] += slots.vY()[i] * p_w;</span>
+<span class="cm">                vZ_local[idx] += slots.vZ()[i] * p_w;</span>
+<span class="cm">                vx_local[idx] += slots.vx()[i] * p_w;</span>
+<span class="cm">                vy_local[idx] += slots.vy()[i] * p_w;</span>
+<span class="cm">                vz_local[idx] += slots.vz()[i] * p_w;</span>
+<span class="cm">                charge_local[idx] += slots.q()[i] * p_w;</span>
+<span class="cm">            }</span>
+
+<span class="cm">            // Barrier: every thread must finish its "omp for" (including the</span>
+<span class="cm">            // implicit end-of-for wait would normally happen here, but we used</span>
+<span class="cm">            // nowait above) before the merge below reads any thread's buffer.</span>
+<span class="cm">            #pragma omp barrier</span>
+
+<span class="cm">            // Merge: parallelized over grid index j instead of serialized over</span>
+<span class="cm">            // threads. Each thread sums every other thread's contribution for</span>
+<span class="cm">            // its own slice of j -- so this now gets *cheaper* per thread as</span>
+<span class="cm">            // thread count grows, rather than more expensive.</span>
+<span class="cm">            #pragma omp for schedule(static)</span>
+<span class="cm">            for (std::size_t j = 0; j &lt; grid_size; ++j)</span>
+<span class="cm">            {</span>
+<span class="cm">                int    count_sum  {0};</span>
+<span class="cm">                double weight_sum {0.0}, vX_sum {0.0}, vY_sum {0.0}, vZ_sum {0.0};</span>
+<span class="cm">                double vx_sum {0.0}, vy_sum {0.0}, vz_sum {0.0}, charge_sum {0.0};</span>
+
+<span class="cm">                for (int t = 0; t &lt; num_threads_used; ++t)</span>
+<span class="cm">                {</span>
+<span class="cm">                    count_sum  += counts_ptrs[t][j];</span>
+<span class="cm">                    weight_sum += field_ptrs[0][t][j];</span>
+<span class="cm">                    vX_sum     += field_ptrs[1][t][j];</span>
+<span class="cm">                    vY_sum     += field_ptrs[2][t][j];</span>
+<span class="cm">                    vZ_sum     += field_ptrs[3][t][j];</span>
+<span class="cm">                    vx_sum     += field_ptrs[4][t][j];</span>
+<span class="cm">                    vy_sum     += field_ptrs[5][t][j];</span>
+<span class="cm">                    vz_sum     += field_ptrs[6][t][j];</span>
+<span class="cm">                    charge_sum += field_ptrs[7][t][j];</span>
+<span class="cm">                }</span>
+
+<span class="cm">                imp_stats.get_counts().get_data()[j]  += count_sum;</span>
+<span class="cm">                imp_stats.get_weights().get_data()[j] += weight_sum;</span>
+<span class="cm">                imp_stats.get_vX().get_data()[j]      += vX_sum;</span>
+<span class="cm">                imp_stats.get_vY().get_data()[j]      += vY_sum;</span>
+<span class="cm">                imp_stats.get_vZ().get_data()[j]      += vZ_sum;</span>
+<span class="cm">                imp_stats.get_vx().get_data()[j]      += vx_sum;</span>
+<span class="cm">                imp_stats.get_vy().get_data()[j]      += vy_sum;</span>
+<span class="cm">                imp_stats.get_vz().get_data()[j]      += vz_sum;</span>
+<span class="cm">                imp_stats.get_charge().get_data()[j]  += charge_sum;</span>
+<span class="cm">            }</span>
+<span class="cm">            // implicit barrier at end of this "omp for" -- fine, since this is</span>
+<span class="cm">            // the last thing the parallel region does anyway.</span>
+
+<span class="cm">        } // pragma omp parallel</span>
+
+<span class="cm">    } // record_stats_cpu</span>
+<span class="cm">    */</span>
+
+<span class="w">    </span><span class="c1">// atomic approach</span>
+<span class="w">    </span><span class="c1">// In my basic testing this approach is much faster than the above</span>
+<span class="w">    </span><span class="c1">// buffered approach, though it's possible the buffered approach wins</span>
+<span class="w">    </span><span class="c1">// ground when there are significantly more particles than grid cell. That's</span>
+<span class="w">    </span><span class="c1">// because in that case particles may be fighting over accumulating stats</span>
+<span class="w">    </span><span class="c1">// in a cell, which can get held up in the atomics here.</span>
+<span class="w">    </span><span class="c1">// I am partial to the atomic approach just because it's so much cleaner.</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">record_stats_cpu</span><span class="p">(</span><span class="n">Statistics</span><span class="o">&amp;</span><span class="w"> </span><span class="n">imp_stats</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots</span><span class="p">,</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Grab raw pointers once outside the parallel region -- avoids</span>
+<span class="w">        </span><span class="c1">// repeated virtual/accessor call overhead inside the hot loop.</span>
+<span class="w">        </span><span class="kt">int</span><span class="o">*</span><span class="w">    </span><span class="n">counts_data</span><span class="w">  </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_counts</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+<span class="w">        </span><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">weights_data</span><span class="w"> </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_weights</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+<span class="w">        </span><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">vX_data</span><span class="w">      </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_vX</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+<span class="w">        </span><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">vY_data</span><span class="w">      </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_vY</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+<span class="w">        </span><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">vZ_data</span><span class="w">      </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_vZ</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+<span class="w">        </span><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">vx_data</span><span class="w">      </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_vx</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+<span class="w">        </span><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">vy_data</span><span class="w">      </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_vy</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+<span class="w">        </span><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">vz_data</span><span class="w">      </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_vz</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+<span class="w">        </span><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">charge_data</span><span class="w">  </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_charge</span><span class="p">().</span><span class="n">get_data</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+
+<span class="w">        </span><span class="c1">// No thread-local buffers, no zero-fill, no merge pass. Every thread</span>
+<span class="w">        </span><span class="c1">// writes straight into the shared arrays; atomics make each individual</span>
+<span class="w">        </span><span class="c1">// += race-free. Total work is now O(N particles), not O(grid_size) --</span>
+<span class="w">        </span><span class="c1">// grid cells that see no activity this timestep cost nothing.</span>
+<span class="w">        </span><span class="cp">#pragma omp parallel for schedule(static)</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">N</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">slots</span><span class="p">.</span><span class="n">state</span><span class="p">()[</span><span class="n">i</span><span class="p">])</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="p">{</span><span class="n">imp_stats</span><span class="p">.</span><span class="n">get_counts</span><span class="p">().</span><span class="n">calc_index</span><span class="p">(</span><span class="n">slots</span><span class="p">.</span><span class="n">tidx</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span>
+<span class="w">                </span><span class="n">slots</span><span class="p">.</span><span class="n">xidx</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">yidx</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">zidx</span><span class="p">()[</span><span class="n">i</span><span class="p">])};</span>
+
+<span class="w">            </span><span class="c1">// With weights in [particles/s], this is then number of particles.</span>
+<span class="w">            </span><span class="c1">// We can call this the occupancy.</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">p_w_dt</span><span class="w"> </span><span class="p">{</span><span class="n">slots</span><span class="p">.</span><span class="n">weight</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dt</span><span class="p">};</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">counts_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">weights_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">p_w_dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">vX_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vX</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">p_w_dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">vY_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vY</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">p_w_dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">vZ_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vZ</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">p_w_dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">vx_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vx</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">p_w_dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">vy_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vy</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">p_w_dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">vz_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vz</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">p_w_dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="cp">#pragma omp atomic update</span>
+<span class="w">            </span><span class="n">charge_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">q</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">p_w_dt</span><span class="p">;</span>
+
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="c1">// record_stats_cpu</span>
+
+<span class="p">}</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

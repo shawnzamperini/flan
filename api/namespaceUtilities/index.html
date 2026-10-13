@@ -1,0 +1,1975 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Namespace Utilities - Flan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../styles/halloween.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#namespace-utilities" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Flan" class="md-header__button md-logo" aria-label="Flan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Flan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Namespace Utilities
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Flan" class="md-nav__button md-logo" aria-label="Flan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Flan
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Installation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/install-linux/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/install-perlmutter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Perlmutter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running Flan
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Running Flan
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-flan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-perlmutter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Perlmutter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-omega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Omega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input-options/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Physics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/impurity-transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Impurity Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/collisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/ionization-recombination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ionization/Recombination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/code-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/mpi-parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MPI Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/openmp-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenMP Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/gangster-spongebob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gangster Spongebob
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_6" id="__nav_7_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../namespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../annotated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../namespace_member_functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publications/Presentations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#public-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-functions-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Functions Documentation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public Functions Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#function-bilinear_interp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function bilinear_interp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-bilinear_interpolate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function bilinear_interpolate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-bracket_indices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function bracket_indices
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-calc_3d_index_cuda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function calc_3d_index_cuda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-calc_4d_index_cuda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function calc_4d_index_cuda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-cross_product" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function cross_product
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-cross_product_cuda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function cross_product_cuda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-dot_product" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function dot_product
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-dot_product_cuda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function dot_product_cuda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-get_neighbor_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function get_neighbor_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-get_neighbor_index_cuda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function get_neighbor_index_cuda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-interp_vec4d" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function interp_vec4d
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-linear_interpolate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function linear_interpolate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-linear_interpolate_cuda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function linear_interpolate_cuda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-linspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function linspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-mpi_broadcast_vector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function mpi_broadcast_vector
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-split_str_at_spaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function split_str_at_spaces
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-str_as_dbl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function str_as_dbl
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-str_as_int" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function str_as_int
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-trilinear_interpolate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function trilinear_interpolate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="namespace-utilities">Namespace Utilities</h1>
+<p><a href="../namespaces/"><strong>Namespace List</strong></a> <strong>&gt;</strong> <a href="./"><strong>Utilities</strong></a></p>
+<h2 id="public-functions">Public Functions</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Type</th>
+<th style="text-align: left;">Name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">T</td>
+<td style="text-align: left;"><a href="#function-bilinear_interp"><strong>bilinear_interp</strong></a> (const T *__restrict__ table, const T *__restrict__ x_grid, int nx, const T *__restrict__ y_grid, int ny, T x, T y) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">double</td>
+<td style="text-align: left;"><a href="#function-bilinear_interpolate"><strong>bilinear_interpolate</strong></a> (const double x0, const double y0, const double x1, const double y1, const double z00, const double z10, const double z01, const double z11, const double x, const double y) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">std::pair&lt; int, int &gt;</td>
+<td style="text-align: left;"><a href="#function-bracket_indices"><strong>bracket_indices</strong></a> (const std::vector&lt; double &gt; &amp; x, double x0) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">int</td>
+<td style="text-align: left;"><a href="#function-calc_3d_index_cuda"><strong>calc_3d_index_cuda</strong></a> (int ydim, int zdim, int xidx, int yidx, int zidx) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">int</td>
+<td style="text-align: left;"><a href="#function-calc_4d_index_cuda"><strong>calc_4d_index_cuda</strong></a> (int xdim, int ydim, int zdim, int tidx, int xidx, int yidx, int zidx) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">std::array&lt; double, 3 &gt;</td>
+<td style="text-align: left;"><a href="#function-cross_product"><strong>cross_product</strong></a> (const std::array&lt; double, 3 &gt; &amp; a, const std::array&lt; double, 3 &gt; &amp; b) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">void</td>
+<td style="text-align: left;"><a href="#function-cross_product_cuda"><strong>cross_product_cuda</strong></a> (const double a, const double b, double out) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">double</td>
+<td style="text-align: left;"><a href="#function-dot_product"><strong>dot_product</strong></a> (const std::array&lt; double, 3 &gt; &amp; a, const std::array&lt; double, 3 &gt; &amp; b) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">double</td>
+<td style="text-align: left;"><a href="#function-dot_product_cuda"><strong>dot_product_cuda</strong></a> (const double a, const double b) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">int</td>
+<td style="text-align: left;"><a href="#function-get_neighbor_index"><strong>get_neighbor_index</strong></a> (const double val, const std::vector&lt; T &gt; &amp; cell_centers, const int idx) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">int</td>
+<td style="text-align: left;"><a href="#function-get_neighbor_index_cuda"><strong>get_neighbor_index_cuda</strong></a> (const double val, const double * cell_centers, int idx, int N) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">double</td>
+<td style="text-align: left;"><a href="#function-interp_vec4d"><strong>interp_vec4d</strong></a> (const <a href="../classVectors_1_1Vector4D/"><strong>Vectors::Vector4D</strong></a>&lt; T &gt; &amp; vec4d, const std::vector&lt; double &gt; t, const std::vector&lt; double &gt; x, const std::vector&lt; double &gt; y, const std::vector&lt; double &gt; z, const double t0, const double x0, const double y0, const double z0) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">T</td>
+<td style="text-align: left;"><a href="#function-linear_interpolate"><strong>linear_interpolate</strong></a> (const std::array&lt; T, N &gt; &amp; xarr, const std::array&lt; T, N &gt; &amp; yarr, T x) <br><em>Return value at x in set of (xarr, yarr) values using linear interpolation.</em></td>
+</tr>
+<tr>
+<td style="text-align: right;">T</td>
+<td style="text-align: left;"><a href="#function-linear_interpolate_cuda"><strong>linear_interpolate_cuda</strong></a> (const T(&amp;) xarr, const T(&amp;) yarr, T x) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">std::vector&lt; double &gt;</td>
+<td style="text-align: left;"><a href="#function-linspace"><strong>linspace</strong></a> (double a, double b, std::size_t N) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">void</td>
+<td style="text-align: left;"><a href="#function-mpi_broadcast_vector"><strong>mpi_broadcast_vector</strong></a> (std::vector&lt; T &gt; &amp; v, int root, MPI_Comm comm) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">std::vector&lt; std::string &gt;</td>
+<td style="text-align: left;"><a href="#function-split_str_at_spaces"><strong>split_str_at_spaces</strong></a> (std::string &amp; str) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">double</td>
+<td style="text-align: left;"><a href="#function-str_as_dbl"><strong>str_as_dbl</strong></a> (const std::string &amp; str) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">int</td>
+<td style="text-align: left;"><a href="#function-str_as_int"><strong>str_as_int</strong></a> (const std::string &amp; str) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">double</td>
+<td style="text-align: left;"><a href="#function-trilinear_interpolate"><strong>trilinear_interpolate</strong></a> (const double x0, const double y0, const double z0, const double x1, const double y1, const double z1, const double v000, const double v100, const double v010, const double v110, const double v001, const double v101, const double v011, const double v111, const double x, const double y, const double z) <br></td>
+</tr>
+</tbody>
+</table>
+<h2 id="public-functions-documentation">Public Functions Documentation</h2>
+<h3 id="function-bilinear_interp">function bilinear_interp</h3>
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">bilinear_interp</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">*</span><span class="n">__restrict__</span><span class="w"> </span><span class="n">table</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">*</span><span class="n">__restrict__</span><span class="w"> </span><span class="n">x_grid</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">nx</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">*</span><span class="n">__restrict__</span><span class="w"> </span><span class="n">y_grid</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">ny</span><span class="p">,</span>
+<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">x</span><span class="p">,</span>
+<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">y</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Performs bilinear interpolation on a flattened two-dimensional lookup table stored in device memory.</p>
+<p>The function locates the grid cell that contains the point (x, y), computes the interpolation weights in each dimension, and returns the bilinearly interpolated value. Interpolation weights are clamped to the range [0, 1] to prevent extrapolation beyond the boundaries of the tabulated data.</p>
+<p>The table is assumed to be stored in row-major order with dimensions nx × ny, where the flattened index corresponding to (ix, iy) is ix * ny + iy.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point data type used for the table and coordinate arrays. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>table</code> Flattened two-dimensional lookup table of size nx * ny. </li>
+<li><code>x_grid</code> Monotonically increasing x-coordinate array of length nx. </li>
+<li><code>nx</code> Number of x-grid points. </li>
+<li><code>y_grid</code> Monotonically increasing y-coordinate array of length ny. </li>
+<li><code>ny</code> Number of y-grid points. </li>
+<li><code>x</code> X-coordinate at which to evaluate the table. </li>
+<li><code>y</code> Y-coordinate at which to evaluate the table. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Bilinearly interpolated value at (x, y). </p>
+<hr>
+
+<h3 id="function-bilinear_interpolate">function bilinear_interpolate</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">bilinear_interpolate</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x0</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y0</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x1</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y1</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z00</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z10</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z01</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z11</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Performs bilinear interpolation within a rectangular region in two-dimensional (x, y) space.</p>
+<p>The function interpolates a value at the coordinates (x, y) using values defined at the corners of a rectangle bounded by (x0, y0) and (x1, y1).</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>x0</code> Lower x-coordinate of the rectangle. </li>
+<li><code>y0</code> Lower y-coordinate of the rectangle. </li>
+<li><code>z0</code> Value at the lower corner. </li>
+<li><code>x1</code> Upper x-coordinate of the rectangle. </li>
+<li><code>y1</code> Upper y-coordinate of the rectangle. </li>
+<li><code>z1</code> Value at the upper corner. </li>
+<li><code>x</code> X-coordinate at which to evaluate the interpolated value. </li>
+<li><code>y</code> Y-coordinate at which to evaluate the interpolated value. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Bilinearly interpolated value at (x, y). Performs bilinear interpolation within a rectangular region in two-dimensional (x, y) space.</p>
+<p>The rectangle is defined by the coordinates (x0, y0) and (x1, y1), with values specified at each of the four corners. Interpolation is performed first along the x direction and then along the y direction to obtain the value at (x, y).</p>
+<p>Corner indexing follows the usual convention:</p>
+<p>z00 : (x0, y0) z10 : (x1, y0) z01 : (x0, y1) z11 : (x1, y1)</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>x0</code> Lower x-coordinate of the rectangle. </li>
+<li><code>y0</code> Lower y-coordinate of the rectangle. </li>
+<li><code>x1</code> Upper x-coordinate of the rectangle. </li>
+<li><code>y1</code> Upper y-coordinate of the rectangle. </li>
+<li><code>z00</code> Value at (x0, y0). </li>
+<li><code>z10</code> Value at (x1, y0). </li>
+<li><code>z01</code> Value at (x0, y1). </li>
+<li><code>z11</code> Value at (x1, y1). </li>
+<li><code>x</code> X-coordinate at which to evaluate the interpolated value. </li>
+<li><code>y</code> Y-coordinate at which to evaluate the interpolated value. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Bilinearly interpolated value at (x, y). </p>
+<hr>
+
+<h3 id="function-bracket_indices">function bracket_indices</h3>
+<div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">bracket_indices</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">x</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">x0</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Finds the indices of the two grid points that bracket a specified coordinate value.</p>
+<p>For values within the coordinate range, the returned indices correspond to the nearest lower and upper grid points that surround x0. For values outside the coordinate range, the first or last valid interval is returned so that interpolation can proceed without accessing elements beyond the array bounds.</p>
+<p>The input coordinate array is assumed to be sorted in ascending order.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>x</code> Sorted coordinate array. </li>
+<li><code>x0</code> Coordinate value for which bracketing indices are sought. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Pair containing the lower and upper bracketing indices {lo, hi}. </p>
+<hr>
+
+<h3 id="function-calc_3d_index_cuda">function calc_3d_index_cuda</h3>
+<div class="highlight"><pre><span></span><code><span class="kr">inline</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">calc_3d_index_cuda</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">ydim</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">zdim</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<hr>
+
+<h3 id="function-calc_4d_index_cuda">function calc_4d_index_cuda</h3>
+<div class="highlight"><pre><span></span><code><span class="kr">inline</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">calc_4d_index_cuda</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">xdim</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">ydim</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">zdim</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<hr>
+
+<h3 id="function-cross_product">function cross_product</h3>
+<div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">cross_product</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">b</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Calculates the cross product of two three-dimensional vectors.</p>
+<p>Given vectors a and b, the returned vector is equal to a × b and is perpendicular to both input vectors according to the right-hand rule.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> First input vector. </li>
+<li><code>b</code> Second input vector. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Cross product a × b. </p>
+<hr>
+
+<h3 id="function-cross_product_cuda">function cross_product_cuda</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">cross_product_cuda</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">a</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">b</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">out</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<hr>
+
+<h3 id="function-dot_product">function dot_product</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">dot_product</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">b</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Calculates the dot product of two three-dimensional vectors.</p>
+<p>The dot product is equal to the sum of the products of the corresponding vector components.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> First input vector. </li>
+<li><code>b</code> Second input vector. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Dot product a · b. </p>
+<hr>
+
+<h3 id="function-dot_product_cuda">function dot_product_cuda</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">dot_product_cuda</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">a</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">b</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<hr>
+
+<h3 id="function-get_neighbor_index">function get_neighbor_index</h3>
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">cell_centers</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Returns the index of the nearest neighboring cell center to a specified cell center index.</p>
+<p>The neighbor is selected based on which side of the cell center the value lies. If the value is greater than the cell center, the neighboring index to the right is returned. If the value is less than or equal to the cell center, the neighboring index to the left is returned.</p>
+<p>At the edges of the grid, where only one neighboring cell exists, that neighbor is returned regardless of which side of the cell center the value lies on.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Data type of the cell center coordinates. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>val</code> Coordinate value of interest. </li>
+<li><code>cell_centers</code> Array of cell center coordinates. </li>
+<li><code>idx</code> Index of the reference cell center. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Index of the neighboring cell center closest to the side of the cell containing val. </p>
+<hr>
+
+<h3 id="function-get_neighbor_index_cuda">function get_neighbor_index_cuda</h3>
+<div class="highlight"><pre><span></span><code><span class="kr">inline</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index_cuda</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">cell_centers</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<hr>
+
+<h3 id="function-interp_vec4d">function interp_vec4d</h3>
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">interp_vec4d</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">vec4d</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">t</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">x</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">y</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">z</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">t0</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x0</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y0</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z0</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Interpolates a value from a 4D field defined on a structured (t, x, y, z) grid.</p>
+<p>Trilinear interpolation is performed in the spatial dimensions (x, y, z) at the two time slices that bracket t0, followed by linear interpolation in time. Spatial coordinates are clamped to the grid boundaries to prevent extrapolation beyond the edge cell-center values.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Data type stored in the 4D field. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>vec4d</code> 4D field to sample. </li>
+<li><code>t</code> Time coordinate array. </li>
+<li><code>x</code> X coordinate array. </li>
+<li><code>y</code> Y coordinate array. </li>
+<li><code>z</code> Z coordinate array. </li>
+<li><code>t0</code> Time coordinate at which to evaluate the field. </li>
+<li><code>x0</code> X coordinate at which to evaluate the field. </li>
+<li><code>y0</code> Y coordinate at which to evaluate the field. </li>
+<li><code>z0</code> Z coordinate at which to evaluate the field. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated field value. </p>
+<hr>
+
+<h3 id="function-linear_interpolate">function linear_interpolate</h3>
+<p><em>Return value at x in set of (xarr, yarr) values using linear interpolation.</em> 
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="w"> </span><span class="n">N</span><span class="o">&gt;</span>
+<span class="n">T</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">linear_interpolate</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">xarr</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">yarr</span><span class="p">,</span>
+<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">x</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div></p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>xarr</code> Array of x values </li>
+<li><code>yarr</code> Array of y values </li>
+<li><code>x</code> Value to get y value at</li>
+</ul>
+<p>This is defined in the header file here because otherwise we would need to have definitions in the source file for every N that we use (which is of course silly and not a real option).</p>
+<p><strong>Returns:</strong></p>
+<p>Returns linearly interpolated value at f(x) </p>
+<hr>
+
+<h3 id="function-linear_interpolate_cuda">function linear_interpolate_cuda</h3>
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">N</span><span class="o">&gt;</span>
+<span class="n">T</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">linear_interpolate_cuda</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="p">(</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="n">xarr</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="p">(</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="n">yarr</span><span class="p">,</span>
+<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">x</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<hr>
+
+<h3 id="function-linspace">function linspace</h3>
+<div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">linspace</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">a</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">b</span><span class="p">,</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="w"> </span><span class="n">N</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Creates a vector of N equally spaced values spanning the interval [a, b].</p>
+<p>The returned vector includes both endpoints when N &gt; 1. If N is zero, an empty vector is returned. If N is one, the returned vector contains only a.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> Lower bound of the interval. </li>
+<li><code>b</code> Upper bound of the interval. </li>
+<li><code>N</code> Number of values to generate. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Vector containing N equally spaced values between a and b. </p>
+<hr>
+
+<h3 id="function-mpi_broadcast_vector">function mpi_broadcast_vector</h3>
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
+<span class="kt">void</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">mpi_broadcast_vector</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">v</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">root</span><span class="p">,</span>
+<span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Broadcasts a vector from a root MPI rank to all other ranks in the communicator.</p>
+<p>The root rank provides the vector contents and size. The vector size is first broadcast to all ranks, allowing non-root ranks to resize their local vectors before the vector data itself is broadcast.</p>
+<p>The element type T must have a corresponding MPI datatype defined through mpi_type&lt;T&gt;::type.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Data type stored in the vector. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>v</code> Vector to broadcast. On the root rank, contains the source data. On all other ranks, receives the broadcasted data. </li>
+<li><code>root</code> Rank that owns the source vector. </li>
+<li><code>comm</code> MPI communicator over which the broadcast is performed. </li>
+</ul>
+<hr>
+
+<h3 id="function-split_str_at_spaces">function split_str_at_spaces</h3>
+<div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">split_str_at_spaces</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">str</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Splits a string into whitespace-delimited tokens.</p>
+<p>Consecutive whitespace characters are treated as a single delimiter, and leading or trailing whitespace is ignored. The resulting vector contains each extracted token in the order it appears in the input string.</p>
+<p>Internally, the string is parsed using a std::istringstream and repeated applications of the stream extraction operator.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>str</code> String to split. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Vector containing the whitespace-delimited tokens extracted from the input string. </p>
+<hr>
+
+<h3 id="function-str_as_dbl">function str_as_dbl</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">str_as_dbl</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">str</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Converts a string to a double-precision floating-point value.</p>
+<p>The conversion is performed using std::stod. The input string must contain a valid floating-point representation. If the string cannot be converted or the converted value falls outside the range representable by double, std::stod will throw an exception.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>str</code> String containing the floating-point representation. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Double value represented by the input string. </p>
+<p><strong>Exception:</strong></p>
+<ul>
+<li><code>std::invalid_argument</code> If no valid conversion to double can be performed. </li>
+<li><code>std::out_of_range</code> If the converted value is outside the range representable by double. </li>
+</ul>
+<hr>
+
+<h3 id="function-str_as_int">function str_as_int</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">str_as_int</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">str</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Converts a string to an integer.</p>
+<p>The conversion is performed using std::stoi. The input string must contain a valid integer representation. If the string cannot be converted or the converted value falls outside the range of int, std::stoi will throw an exception.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>str</code> String containing the integer representation. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Integer value represented by the input string. </p>
+<p><strong>Exception:</strong></p>
+<ul>
+<li><code>std::invalid_argument</code> If no valid conversion to int can be performed. </li>
+<li><code>std::out_of_range</code> If the converted value is outside the range representable by int. </li>
+</ul>
+<hr>
+
+<h3 id="function-trilinear_interpolate">function trilinear_interpolate</h3>
+<div class="highlight"><pre><span></span><code><span class="kr">inline</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">trilinear_interpolate</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x0</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y0</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z0</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x1</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y1</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z1</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v000</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v100</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v010</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v110</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v001</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v101</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v011</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v111</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Performs trilinear interpolation within a rectangular cell in (x, y, z) space.</p>
+<p>The cell is defined by the coordinates (x0, y0, z0) and (x1, y1, z1), with values specified at each of the eight cell corners. Interpolation weights are clamped to the range [0, 1] to prevent extrapolation beyond the cell boundaries. As a result, points outside the cell return the value on the nearest cell face, edge, or corner.</p>
+<p>Corner indexing follows the usual convention:</p>
+<p>v000 : (x0, y0, z0) v100 : (x1, y0, z0) v010 : (x0, y1, z0) v110 : (x1, y1, z0) v001 : (x0, y0, z1) v101 : (x1, y0, z1) v011 : (x0, y1, z1) v111 : (x1, y1, z1)</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>x0</code> Lower x-coordinate of the cell. </li>
+<li><code>y0</code> Lower y-coordinate of the cell. </li>
+<li><code>z0</code> Lower z-coordinate of the cell. </li>
+<li><code>x1</code> Upper x-coordinate of the cell. </li>
+<li><code>y1</code> Upper y-coordinate of the cell. </li>
+<li><code>z1</code> Upper z-coordinate of the cell. </li>
+<li><code>v000</code> Field value at (x0, y0, z0). </li>
+<li><code>v100</code> Field value at (x1, y0, z0). </li>
+<li><code>v010</code> Field value at (x0, y1, z0). </li>
+<li><code>v110</code> Field value at (x1, y1, z0). </li>
+<li><code>v001</code> Field value at (x0, y0, z1). </li>
+<li><code>v101</code> Field value at (x1, y0, z1). </li>
+<li><code>v011</code> Field value at (x0, y1, z1). </li>
+<li><code>v111</code> Field value at (x1, y1, z1). </li>
+<li><code>x</code> X-coordinate at which to evaluate the field. </li>
+<li><code>y</code> Y-coordinate at which to evaluate the field. </li>
+<li><code>z</code> Z-coordinate at which to evaluate the field. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated field value. </p>
+<hr>
+
+<hr />
+<p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/cuda/utilities.cu</code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1660 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>File boris.cpp - Flan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../styles/halloween.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#file-boriscpp" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Flan" class="md-header__button md-logo" aria-label="Flan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Flan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              File boris.cpp
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Flan" class="md-nav__button md-logo" aria-label="Flan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Flan
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Installation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/install-linux/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/install-perlmutter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Perlmutter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running Flan
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Running Flan
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-flan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-perlmutter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Perlmutter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../running/running-omega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Omega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input-options/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Physics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/impurity-transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Impurity Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/collisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../physics/ionization-recombination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ionization/Recombination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/code-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/mpi-parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MPI Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/openmp-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenMP Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/gangster-spongebob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gangster Spongebob
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_6" id="__nav_7_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../namespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../annotated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../namespace_member_functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publications/Presentations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="file-boriscpp">File boris.cpp</h1>
+<p><a href="../files/"><strong>File List</strong></a> <strong>&gt;</strong> <a href="../dir_68267d1309a1af8e8297ef4c3efbcdba/"><strong>src</strong></a> <strong>&gt;</strong> <a href="../boris_8cpp/"><strong>boris.cpp</strong></a></p>
+<p><a href="../boris_8cpp/">Go to the documentation of this file</a></p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cmath&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"background.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"boris.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"constants.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"options.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"slots.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"slots_device.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"utilities.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"vectors.h"</span>
+
+<span class="k">namespace</span><span class="w"> </span><span class="nn">Boris</span>
+<span class="p">{</span>
+
+<span class="w">    </span><span class="c1">// Interpolate the reciprocal basis functions at the impurity location</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="o">&gt;</span><span class="w"> </span><span class="n">interp_recp</span><span class="p">(</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Get nearest neighbor indices for each direction. These tell us</span>
+<span class="w">        </span><span class="c1">// which direction we should interpolate towards, i.e., which</span>
+<span class="w">        </span><span class="c1">// rectangle made by the neighboring cell centers our particle</span>
+<span class="w">        </span><span class="c1">// is bounded by.</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">(),</span><span class="w"> </span><span class="n">xidx</span><span class="p">)};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">(),</span><span class="w"> </span><span class="n">yidx</span><span class="p">)};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">z</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">(),</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+
+<span class="w">        </span><span class="c1">// x, y, z coordinates of two bounding vertices to interpolate </span>
+<span class="w">        </span><span class="c1">// between. Note these are not grid vertices, but rather are formed</span>
+<span class="w">        </span><span class="c1">// by cell center coordinates since that's where B/E are assumed</span>
+<span class="w">        </span><span class="c1">// to be defined. It is essentially a cell shifted by dx/2, dy/2</span>
+<span class="w">        </span><span class="c1">// and dz/2 if that helps.</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">()[</span><span class="n">xidx</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">()[</span><span class="n">xidx_neighbor</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">()[</span><span class="n">yidx</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">()[</span><span class="n">yidx_neighbor</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">()[</span><span class="n">zidx</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">()[</span><span class="n">zidx_neighbor</span><span class="p">]};</span>
+
+<span class="w">        </span><span class="c1">// Array of references to each reciprocal basis vector</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">reference_wrapper</span><span class="o">&lt;</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="o">&gt;</span><span class="w"> </span><span class="n">recp_basis</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dxdX</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dxdY</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dxdZ</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dydX</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dydY</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dydZ</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dzdX</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dzdY</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dzdZ</span><span class="p">()};</span>
+
+<span class="w">        </span><span class="c1">// Loop through and interpolate each basis vector</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="o">&gt;</span><span class="w"> </span><span class="n">interp_vals</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">9</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Values at each vertex, 8 total because it's a rectangle.</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v000</span><span class="w"> </span><span class="p">{</span><span class="n">recp_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v100</span><span class="w"> </span><span class="p">{</span><span class="n">recp_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v010</span><span class="w"> </span><span class="p">{</span><span class="n">recp_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v110</span><span class="w"> </span><span class="p">{</span><span class="n">recp_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v001</span><span class="w"> </span><span class="p">{</span><span class="n">recp_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v101</span><span class="w"> </span><span class="p">{</span><span class="n">recp_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v011</span><span class="w"> </span><span class="p">{</span><span class="n">recp_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v111</span><span class="w"> </span><span class="p">{</span><span class="n">recp_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w">  </span>
+<span class="w">                </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+
+<span class="w">            </span><span class="c1">// Perform interpolation, storing value in our local array</span>
+<span class="w">            </span><span class="n">interp_vals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">trilinear_interpolate</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span><span class="w"> </span><span class="n">y0</span><span class="p">,</span><span class="w"> </span><span class="n">z0</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">x1</span><span class="p">,</span><span class="w"> </span><span class="n">y1</span><span class="p">,</span><span class="w"> </span><span class="n">z1</span><span class="p">,</span><span class="w"> </span><span class="n">v000</span><span class="p">,</span><span class="w"> </span><span class="n">v100</span><span class="p">,</span><span class="w"> </span><span class="n">v010</span><span class="p">,</span><span class="w"> </span><span class="n">v110</span><span class="p">,</span><span class="w"> </span><span class="n">v001</span><span class="p">,</span><span class="w"> </span><span class="n">v101</span><span class="p">,</span><span class="w"> </span><span class="n">v011</span><span class="p">,</span><span class="w"> </span><span class="n">v111</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">interp_vals</span><span class="p">;</span>
+
+<span class="w">    </span><span class="p">}</span><span class="w">  </span><span class="c1">// interp_recp</span>
+
+
+<span class="w">    </span><span class="c1">// Interpolate the tangent basis functions at the impurity location</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="o">&gt;</span><span class="w"> </span><span class="n">interp_tang</span><span class="p">(</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Get nearest neighbor indices for each direction. These tell us</span>
+<span class="w">        </span><span class="c1">// which direction we should interpolate towards, i.e., which</span>
+<span class="w">        </span><span class="c1">// rectangle made by the neighboring cell centers our particle</span>
+<span class="w">        </span><span class="c1">// is bounded by.</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">(),</span><span class="w"> </span><span class="n">xidx</span><span class="p">)};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">(),</span><span class="w"> </span><span class="n">yidx</span><span class="p">)};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">z</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">(),</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+
+<span class="w">        </span><span class="c1">// x, y, z coordinates of two bounding vertices to interpolate </span>
+<span class="w">        </span><span class="c1">// between. Note these are not grid vertices, but rather are formed</span>
+<span class="w">        </span><span class="c1">// by cell center coordinates since that's where B/E are assumed</span>
+<span class="w">        </span><span class="c1">// to be defined. It is essentially a cell shifted by dx/2, dy/2</span>
+<span class="w">        </span><span class="c1">// and dz/2 if that helps.</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">()[</span><span class="n">xidx</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">()[</span><span class="n">xidx_neighbor</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">()[</span><span class="n">yidx</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">()[</span><span class="n">yidx_neighbor</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">()[</span><span class="n">zidx</span><span class="p">]};</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">()[</span><span class="n">zidx_neighbor</span><span class="p">]};</span>
+
+<span class="w">        </span><span class="c1">// Array of references to each tangent basis vector</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">reference_wrapper</span><span class="o">&lt;</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="o">&gt;</span><span class="w"> </span><span class="n">tang_basis</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dXdx</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dYdx</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dZdx</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dXdy</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dYdy</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dZdy</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dXdz</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dYdz</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_dZdz</span><span class="p">()};</span>
+
+<span class="w">        </span><span class="c1">// Loop through and interpolate each basis vector</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="o">&gt;</span><span class="w"> </span><span class="n">interp_vals</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">9</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Values at each vertex, 8 total because it's a rectangle.</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v000</span><span class="w"> </span><span class="p">{</span><span class="n">tang_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v100</span><span class="w"> </span><span class="p">{</span><span class="n">tang_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v010</span><span class="w"> </span><span class="p">{</span><span class="n">tang_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v110</span><span class="w"> </span><span class="p">{</span><span class="n">tang_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v001</span><span class="w"> </span><span class="p">{</span><span class="n">tang_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v101</span><span class="w"> </span><span class="p">{</span><span class="n">tang_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v011</span><span class="w"> </span><span class="p">{</span><span class="n">tang_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v111</span><span class="w"> </span><span class="p">{</span><span class="n">tang_basis</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w">  </span>
+<span class="w">                </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+
+<span class="w">            </span><span class="c1">// Perform interpolation, storing value in our local array</span>
+<span class="w">            </span><span class="n">interp_vals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">trilinear_interpolate</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span><span class="w"> </span><span class="n">y0</span><span class="p">,</span><span class="w"> </span><span class="n">z0</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">x1</span><span class="p">,</span><span class="w"> </span><span class="n">y1</span><span class="p">,</span><span class="w"> </span><span class="n">z1</span><span class="p">,</span><span class="w"> </span><span class="n">v000</span><span class="p">,</span><span class="w"> </span><span class="n">v100</span><span class="p">,</span><span class="w"> </span><span class="n">v010</span><span class="p">,</span><span class="w"> </span><span class="n">v110</span><span class="p">,</span><span class="w"> </span><span class="n">v001</span><span class="p">,</span><span class="w"> </span><span class="n">v101</span><span class="p">,</span><span class="w"> </span><span class="n">v011</span><span class="p">,</span><span class="w"> </span><span class="n">v111</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">interp_vals</span><span class="p">;</span>
+
+<span class="w">    </span><span class="p">}</span><span class="w">  </span><span class="c1">// interp_tang</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">update_velocity_cpu</span><span class="p">(</span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span><span class="p">,</span><span class="w"> </span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span><span class="p">,</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+
+<span class="w">        </span><span class="cp">#pragma omp parallel for</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">N</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Local variables</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx</span><span class="w"> </span><span class="p">{</span><span class="n">slots</span><span class="p">.</span><span class="n">tidx</span><span class="p">()[</span><span class="n">i</span><span class="p">]};</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="w"> </span><span class="p">{</span><span class="n">slots</span><span class="p">.</span><span class="n">xidx</span><span class="p">()[</span><span class="n">i</span><span class="p">]};</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="w"> </span><span class="p">{</span><span class="n">slots</span><span class="p">.</span><span class="n">yidx</span><span class="p">()[</span><span class="n">i</span><span class="p">]};</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="w"> </span><span class="p">{</span><span class="n">slots</span><span class="p">.</span><span class="n">zidx</span><span class="p">()[</span><span class="n">i</span><span class="p">]};</span>
+
+<span class="w">            </span><span class="c1">// Get nearest neighbor indices for each direction. These tell us</span>
+<span class="w">            </span><span class="c1">// which direction we should interpolate towards, i.e., which</span>
+<span class="w">            </span><span class="c1">// rectangle made by the neighboring cell centers our particle</span>
+<span class="w">            </span><span class="c1">// is bounded by.</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">slots</span><span class="p">.</span><span class="n">x</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span>
+<span class="w">                </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">(),</span><span class="w"> </span><span class="n">xidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">slots</span><span class="p">.</span><span class="n">y</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span>
+<span class="w">                </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">(),</span><span class="w"> </span><span class="n">yidx</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">get_neighbor_index</span><span class="p">(</span><span class="n">slots</span><span class="p">.</span><span class="n">z</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span>
+<span class="w">                </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">(),</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+
+<span class="w">            </span><span class="c1">// Similarly for t, except we can't use get_neighbor_index since it</span>
+<span class="w">            </span><span class="c1">// uses cell center coordinates, and t is defined at each frame (i.e.,</span>
+<span class="w">            </span><span class="c1">// not between each frame, that would be nonintuitive). So we use a</span>
+<span class="w">            </span><span class="c1">// little SIMD-friendly logic here to assign tidx_neighbor to tidx+1,</span>
+<span class="w">            </span><span class="c1">// and tidx-1 if we're in the last time frame.</span>
+<span class="w">            </span><span class="c1">// at_end = 1 if tidx == ntimes-1, else 0 </span>
+<span class="w">            </span><span class="c1">// If at_end = 0 → i + 1 </span>
+<span class="w">            </span><span class="c1">// If at_end = 1 → i - 1 </span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">at_end</span><span class="w"> </span><span class="p">{(</span><span class="n">tidx</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span>
+<span class="w">                </span><span class="p">(</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_times</span><span class="p">().</span><span class="n">size</span><span class="p">())</span><span class="mi">-1</span><span class="p">)};</span><span class="w"> </span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx_neighbor</span><span class="w"> </span><span class="p">{</span><span class="n">tidx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">at_end</span><span class="p">};</span>
+
+<span class="w">            </span><span class="c1">//std::cout &lt;&lt; "t: " &lt;&lt; tidx &lt;&lt; "\t" &lt;&lt; tidx_neighbor &lt;&lt; "\n";</span>
+<span class="w">            </span><span class="c1">//std::cout &lt;&lt; "x: " &lt;&lt; xidx &lt;&lt; "\t" &lt;&lt; xidx_neighbor &lt;&lt; "\n";</span>
+<span class="w">            </span><span class="c1">//std::cout &lt;&lt; "y: " &lt;&lt; yidx &lt;&lt; "\t" &lt;&lt; yidx_neighbor &lt;&lt; "\n";</span>
+<span class="w">            </span><span class="c1">//std::cout &lt;&lt; "z: " &lt;&lt; zidx &lt;&lt; "\t" &lt;&lt; zidx_neighbor &lt;&lt; "\n";</span>
+
+<span class="w">            </span><span class="c1">// Time between neighboring t frames</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">frame_dt</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_times</span><span class="p">()[</span><span class="n">tidx_neighbor</span><span class="p">]</span><span class="w"> </span>
+<span class="w">                </span><span class="o">-</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_times</span><span class="p">()[</span><span class="n">tidx</span><span class="p">]};</span>
+
+<span class="w">            </span><span class="c1">// Trilinear interpolation to ensure we use a continous B/E in the </span>
+<span class="w">            </span><span class="c1">// algorithm. Without interpolating, the particle will:</span>
+<span class="w">            </span><span class="c1">// a) Fail to follow the parallel direction of the field line due to</span>
+<span class="w">            </span><span class="c1">//    it being discrete in the code (this is called "numerical</span>
+<span class="w">            </span><span class="c1">//    diffusion" and introduces artificial cross-field transport).</span>
+<span class="w">            </span><span class="c1">// b) Experience large "kicks" at cell boundaries where B/E is </span>
+<span class="w">            </span><span class="c1">//    discontinuous, which can introduce artificial drifts.</span>
+<span class="w">            </span><span class="c1">// </span>
+<span class="w">            </span><span class="c1">// The issue in a) generally will still occur since we are still using</span>
+<span class="w">            </span><span class="c1">// an approximation to the field line, but this greatly reduces the</span>
+<span class="w">            </span><span class="c1">// numerical diffusion since B is now continous.</span>
+<span class="w">            </span><span class="c1">//</span>
+<span class="w">            </span><span class="c1">// In the following, we wrap the components into a couple nested arrays</span>
+<span class="w">            </span><span class="c1">// so that we can use a single nested loop to iterate through each </span>
+<span class="w">            </span><span class="c1">// B and E component and not have to write the trilinear interpolation</span>
+<span class="w">            </span><span class="c1">// loop twice for each vector (or even 6 times, one for each vector</span>
+<span class="w">            </span><span class="c1">// component!). It adds a bit of complexity but avoids repeating code.</span>
+
+<span class="w">            </span><span class="c1">// Wrap in convienent array. Need a const reference in reference_wrapper</span>
+<span class="w">            </span><span class="c1">// because bkg.get_bX() returns a const ref. Need to match the getter. </span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">reference_wrapper</span><span class="o">&lt;</span>
+<span class="w">                </span><span class="k">const</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">B</span><span class="w"> </span>
+<span class="w">                </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_bX</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_bY</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_bZ</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_bmag</span><span class="p">()};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">reference_wrapper</span><span class="o">&lt;</span>
+<span class="w">                </span><span class="k">const</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector4D</span><span class="o">&lt;</span><span class="n">BkgFPType</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">E</span><span class="w"> </span>
+<span class="w">                </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_eX</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_eY</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_eZ</span><span class="p">(),</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_emag</span><span class="p">()};</span>
+
+<span class="w">            </span><span class="c1">// And put again into single array so we can make an outer loop out</span>
+<span class="w">            </span><span class="c1">// of these.</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="w"> </span><span class="n">outer</span><span class="w"> </span><span class="p">{</span><span class="o">&amp;</span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">E</span><span class="p">};</span>
+
+<span class="w">            </span><span class="c1">// Similarly, arrays to hold the output local values</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">B_local</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">E_local</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;*</span><span class="w"> </span><span class="n">locals</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="o">&amp;</span><span class="n">B_local</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">E_local</span><span class="p">};</span>
+
+<span class="w">            </span><span class="c1">// x, y, z coordinates of two bounding vertices to interpolate </span>
+<span class="w">            </span><span class="c1">// between. Note these are not grid vertices, but rather are formed</span>
+<span class="w">            </span><span class="c1">// by cell center coordinates since that's where B/E are assumed</span>
+<span class="w">            </span><span class="c1">// to be defined. It is essentially a cell shifted by dx/2, dy/2</span>
+<span class="w">            </span><span class="c1">// and dz/2 if that helps.</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">()[</span><span class="n">xidx</span><span class="p">]};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_x</span><span class="p">()[</span><span class="n">xidx_neighbor</span><span class="p">]};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">()[</span><span class="n">yidx</span><span class="p">]};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_y</span><span class="p">()[</span><span class="n">yidx_neighbor</span><span class="p">]};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z0</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">()[</span><span class="n">zidx</span><span class="p">]};</span>
+<span class="w">            </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z1</span><span class="w"> </span><span class="p">{</span><span class="n">bkg</span><span class="p">.</span><span class="n">get_z</span><span class="p">()[</span><span class="n">zidx_neighbor</span><span class="p">]};</span>
+
+<span class="w">            </span><span class="c1">// Loop through each B/E component, performing a trilinear interpolation</span>
+<span class="w">            </span><span class="c1">// to get the local value of each. First loop is to choose B or E.</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span>
+<span class="w">            </span><span class="p">{</span><span class="w"> </span>
+<span class="w">                </span><span class="c1">// Index out (B or E), dereference and assign to comps. This is </span>
+<span class="w">                </span><span class="c1">// an object the same as B and E above.</span>
+<span class="w">                </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">comps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">outer</span><span class="p">[</span><span class="n">j</span><span class="p">];</span><span class="w"> </span>
+
+<span class="w">                </span><span class="c1">// Get reference to output local values. This is a reference to</span>
+<span class="w">                </span><span class="c1">// an array of 3 doubles, B_local or E_local.</span>
+<span class="w">                </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">locals</span><span class="p">[</span><span class="n">j</span><span class="p">];</span><span class="w"> </span>
+
+<span class="w">                </span><span class="c1">// Loop through each component to get interpolated value for each</span>
+<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span><span class="w"> </span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                    </span><span class="c1">// Values at each vertex, 8 total because it's a rectangle.</span>
+<span class="w">                    </span><span class="kt">double</span><span class="w"> </span><span class="n">v000</span><span class="w"> </span><span class="p">{</span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">                    </span><span class="kt">double</span><span class="w"> </span><span class="n">v100</span><span class="w"> </span><span class="p">{</span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">                    </span><span class="kt">double</span><span class="w"> </span><span class="n">v010</span><span class="w"> </span><span class="p">{</span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">                    </span><span class="kt">double</span><span class="w"> </span><span class="n">v110</span><span class="w"> </span><span class="p">{</span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">zidx</span><span class="p">)};</span>
+<span class="w">                    </span><span class="kt">double</span><span class="w"> </span><span class="n">v001</span><span class="w"> </span><span class="p">{</span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">                    </span><span class="kt">double</span><span class="w"> </span><span class="n">v101</span><span class="w"> </span><span class="p">{</span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">                    </span><span class="kt">double</span><span class="w"> </span><span class="n">v011</span><span class="w"> </span><span class="p">{</span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+<span class="w">                    </span><span class="kt">double</span><span class="w"> </span><span class="n">v111</span><span class="w"> </span><span class="p">{</span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx</span><span class="p">,</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w">   </span>
+<span class="w">                        </span><span class="n">zidx_neighbor</span><span class="p">)};</span>
+
+<span class="w">                    </span><span class="c1">// Perform interpolation, storing value in our local array</span>
+<span class="w">                    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">comp0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">trilinear_interpolate</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span><span class="w"> </span><span class="n">y0</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">z0</span><span class="p">,</span><span class="w"> </span><span class="n">x1</span><span class="p">,</span><span class="w"> </span><span class="n">y1</span><span class="p">,</span><span class="w"> </span><span class="n">z1</span><span class="p">,</span><span class="w"> </span><span class="n">v000</span><span class="p">,</span><span class="w"> </span><span class="n">v100</span><span class="p">,</span><span class="w"> </span><span class="n">v010</span><span class="p">,</span><span class="w"> </span><span class="n">v110</span><span class="p">,</span><span class="w"> </span><span class="n">v001</span><span class="p">,</span><span class="w"> </span><span class="n">v101</span><span class="p">,</span><span class="w"> </span><span class="n">v011</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">v111</span><span class="p">,</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">x</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">y</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">z</span><span class="p">()[</span><span class="n">i</span><span class="p">]);</span>
+
+<span class="w">                    </span><span class="c1">// Now repeat for the previous time index so we can do a simple</span>
+<span class="w">                    </span><span class="c1">// linear interpolation in time. This is critical to get a</span>
+<span class="w">                    </span><span class="c1">// decent estimate of the polarization drift, for instance.</span>
+<span class="w">                    </span><span class="c1">// If we don't do this, the field will be discontinuous each</span>
+<span class="w">                    </span><span class="c1">// time the particle enters a new time frame, causing </span>
+<span class="w">                    </span><span class="c1">// unphysical kicks.</span>
+<span class="w">                    </span><span class="n">v000</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">);</span>
+<span class="w">                    </span><span class="n">v100</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">);</span>
+<span class="w">                    </span><span class="n">v010</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">);</span>
+<span class="w">                    </span><span class="n">v110</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">zidx</span><span class="p">);</span>
+<span class="w">                    </span><span class="n">v001</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span><span class="n">zidx_neighbor</span><span class="p">);</span>
+<span class="w">                    </span><span class="n">v101</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">zidx_neighbor</span><span class="p">);</span>
+<span class="w">                    </span><span class="n">v011</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span><span class="w"> </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">zidx_neighbor</span><span class="p">);</span>
+<span class="w">                    </span><span class="n">v111</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">comps</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">tidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">xidx_neighbor</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">yidx_neighbor</span><span class="p">,</span><span class="w"> </span><span class="n">zidx_neighbor</span><span class="p">);</span>
+
+<span class="w">                    </span><span class="c1">// Interpolate again at new time frame</span>
+<span class="w">                    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">comp1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">trilinear_interpolate</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span><span class="w"> </span><span class="n">y0</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">z0</span><span class="p">,</span><span class="w"> </span><span class="n">x1</span><span class="p">,</span><span class="w"> </span><span class="n">y1</span><span class="p">,</span><span class="w"> </span><span class="n">z1</span><span class="p">,</span><span class="w"> </span><span class="n">v000</span><span class="p">,</span><span class="w"> </span><span class="n">v100</span><span class="p">,</span><span class="w"> </span><span class="n">v010</span><span class="p">,</span><span class="w"> </span><span class="n">v110</span><span class="p">,</span><span class="w"> </span><span class="n">v001</span><span class="p">,</span><span class="w"> </span><span class="n">v101</span><span class="p">,</span><span class="w"> </span><span class="n">v011</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                        </span><span class="n">v111</span><span class="p">,</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">x</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">y</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">z</span><span class="p">()[</span><span class="n">i</span><span class="p">]);</span>
+
+<span class="w">                    </span><span class="c1">// Now linearly interpolate in time (this is just point slope)</span>
+<span class="w">                    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">slope</span><span class="w"> </span><span class="p">{(</span><span class="n">comp1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">comp0</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">frame_dt</span><span class="p">};</span>
+<span class="w">                    </span><span class="n">out</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">slope</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">slots</span><span class="p">.</span><span class="n">t</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">bkg</span><span class="p">.</span><span class="n">get_times</span><span class="p">()[</span><span class="n">tidx</span><span class="p">])</span><span class="w"> </span>
+<span class="w">                        </span><span class="o">+</span><span class="w"> </span><span class="n">comp0</span><span class="p">;</span>
+<span class="w">                </span><span class="p">}</span><span class="w">  </span><span class="c1">// k loop</span>
+
+<span class="w">                </span><span class="c1">// We interpolated the magnitude as well. This is because there is</span>
+<span class="w">                </span><span class="c1">// no guarantee that the interpolated vector will have the same</span>
+<span class="w">                </span><span class="c1">// magnitude (in fact it almost certainly shrinks). We are faced</span>
+<span class="w">                </span><span class="c1">// with a choice:</span>
+<span class="w">                </span><span class="c1">//   a) Leave as-is. B/E are continuous at cell boundaries, but</span>
+<span class="w">                </span><span class="c1">//      the magntiude will be off. The size of the gyro-orbit will</span>
+<span class="w">                </span><span class="c1">//      be affected as a result.</span>
+<span class="w">                </span><span class="c1">//   b) Scale via the interpolated magnitude. B/E will be </span>
+<span class="w">                </span><span class="c1">//      discontinuous at cell boundaries, but definitely not as</span>
+<span class="w">                </span><span class="c1">//      discontinous as without interpolation. Gyro-orbit will</span>
+<span class="w">                </span><span class="c1">//      be more physically correct.</span>
+<span class="w">                </span><span class="c1">// We choose option b), because getting the gyro-orbit correct is</span>
+<span class="w">                </span><span class="c1">// central to Flan. Slight discontinuities are not ideal, but the</span>
+<span class="w">                </span><span class="c1">// particle spends order of magnitude more time not crossing </span>
+<span class="w">                </span><span class="c1">// a boundary, therefore option b) also minimizes numerical</span>
+<span class="w">                </span><span class="c1">// diffusion in that sense as well by ensuring the gyro-orbit is</span>
+<span class="w">                </span><span class="c1">// as correct as possible.</span>
+<span class="w">                </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">out_mag</span><span class="w"> </span><span class="p">{</span><span class="n">std</span><span class="o">::</span><span class="n">sqrt</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">out</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">out</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span>
+<span class="w">                    </span><span class="o">+</span><span class="w"> </span><span class="n">out</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">out</span><span class="p">[</span><span class="mi">2</span><span class="p">])};</span>
+<span class="w">                </span><span class="kt">double</span><span class="w"> </span><span class="n">mask</span><span class="w"> </span><span class="p">{</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">out_mag</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)};</span>
+<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                    </span><span class="c1">// out[3] contains the interpolated magnitude. If out_mag</span>
+<span class="w">                    </span><span class="c1">// is zero, mask will just multiply by zero to force the vector</span>
+<span class="w">                    </span><span class="c1">// to zero. It's a divide-by-zero guard.</span>
+<span class="w">                    </span><span class="n">out</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">out</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">out</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="n">out_mag</span><span class="p">,</span><span class="w"> </span><span class="mf">1e-30</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">mask</span><span class="p">;</span>
+<span class="w">                </span><span class="p">}</span><span class="w">  </span><span class="c1">// k loop</span>
+
+<span class="w">            </span><span class="p">}</span><span class="w">  </span><span class="c1">// j loop</span>
+
+<span class="w">            </span><span class="c1">// Normal Boris algorithm continues</span>
+
+<span class="w">            </span><span class="c1">// Store in local variables for conveinence</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">q_m</span><span class="w"> </span><span class="p">{</span><span class="n">slots</span><span class="p">.</span><span class="n">q</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">-</span><span class="n">Constants</span><span class="o">::</span><span class="n">charge_e</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">mass</span><span class="p">()};</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="p">{</span><span class="n">slots</span><span class="p">.</span><span class="n">vX</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vY</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vZ</span><span class="p">()[</span><span class="n">i</span><span class="p">]};</span>
+
+<span class="w">            </span><span class="c1">// t vector</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="n">t</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">q_m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">B_local</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="c1">// Magnitude of t, squared</span>
+<span class="w">            </span><span class="kt">double</span><span class="w"> </span><span class="n">tmag2</span><span class="w"> </span><span class="p">{</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">t</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">t</span><span class="p">[</span><span class="mi">2</span><span class="p">]};</span>
+
+<span class="w">            </span><span class="c1">// s vector</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="n">s</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">t</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tmag2</span><span class="p">);</span>
+
+<span class="w">            </span><span class="c1">// v minus</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vminus</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="n">vminus</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">v</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">q_m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">E_local</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.5</span><span class="o">*</span><span class="n">dt</span><span class="p">;</span>
+
+<span class="w">            </span><span class="c1">// v prime</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vprime</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vminus_cross_t</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">cross_product</span><span class="p">(</span><span class="n">vminus</span><span class="p">,</span><span class="w">  </span>
+<span class="w">                </span><span class="n">t</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="n">vprime</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vminus</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">vminus_cross_t</span><span class="p">[</span><span class="n">j</span><span class="p">];</span>
+
+<span class="w">            </span><span class="c1">// v plus</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vplus</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="w"> </span><span class="p">,</span><span class="mi">3</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vprime_cross_s</span><span class="w"> </span><span class="p">{</span><span class="n">Utilities</span><span class="o">::</span><span class="n">cross_product</span><span class="p">(</span><span class="n">vprime</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">s</span><span class="p">)};</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">{};</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="n">vplus</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vminus</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">vprime_cross_s</span><span class="p">[</span><span class="n">j</span><span class="p">];</span>
+
+<span class="w">            </span><span class="c1">// v n+1/2</span>
+<span class="w">            </span><span class="c1">// Note we are storing particle velocity at the half time steps before</span>
+<span class="w">            </span><span class="c1">// the position. I.e., xi = x(ti), vi = v(ti - dt/2). </span>
+<span class="w">            </span><span class="n">slots</span><span class="p">.</span><span class="n">set_vX</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">vplus</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">q_m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">E_local</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dt</span><span class="p">);</span>
+<span class="w">            </span><span class="n">slots</span><span class="p">.</span><span class="n">set_vY</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">vplus</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">q_m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">E_local</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dt</span><span class="p">);</span>
+<span class="w">            </span><span class="n">slots</span><span class="p">.</span><span class="n">set_vZ</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">vplus</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">q_m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">E_local</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dt</span><span class="p">);</span>
+
+<span class="w">            </span><span class="c1">// Interpolate reciprocal and tangent basis vector at impurity location</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="o">&gt;</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="w"> </span><span class="p">{</span><span class="n">interp_recp</span><span class="p">(</span><span class="n">bkg</span><span class="p">,</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">xidx</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span>
+<span class="w">                </span><span class="n">slots</span><span class="p">.</span><span class="n">yidx</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">zidx</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">x</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">y</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span>
+<span class="w">                </span><span class="n">slots</span><span class="p">.</span><span class="n">z</span><span class="p">()[</span><span class="n">i</span><span class="p">])};</span>
+
+<span class="w">            </span><span class="c1">//std::array&lt;double, 9&gt; int_tan_bas {interp_tang(imp, bkg, xidx, </span>
+<span class="w">            </span><span class="c1">//  yidx, zidx)};</span>
+
+<span class="w">            </span><span class="c1">// Put basis vectors into arrays for easier manipulation below. Can</span>
+<span class="w">            </span><span class="c1">// either use the interpolated ones or the discrete ones without</span>
+<span class="w">            </span><span class="c1">// interpolation.</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e1 {int_rec_bas[0], int_rec_bas[1], </span>
+<span class="w">            </span><span class="c1">//  int_rec_bas[2]};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e2 {int_rec_bas[3], int_rec_bas[4], </span>
+<span class="w">            </span><span class="c1">//  int_rec_bas[5]};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e3 {int_rec_bas[6], int_rec_bas[7], </span>
+<span class="w">            </span><span class="c1">//  int_rec_bas[8]};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e_1 {int_tan_bas[0], int_tan_bas[1], </span>
+<span class="w">            </span><span class="c1">//  int_tan_bas[2]};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e_2 {int_tan_bas[3], int_tan_bas[4], </span>
+<span class="w">            </span><span class="c1">//  int_tan_bas[5]};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e_3 {int_tan_bas[6], int_tan_bas[7], </span>
+<span class="w">            </span><span class="c1">//  int_tan_bas[8]};</span>
+
+<span class="w">            </span><span class="c1">// Discrete, no interpolation</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e1 {bkg.get_dxdX()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dxdY()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dxdZ()(xidx, yidx, zidx)};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e2 {bkg.get_dydX()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dydY()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dydZ()(xidx, yidx, zidx)};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e3 {bkg.get_dzdX()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dzdY()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dzdZ()(xidx, yidx, zidx)};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e_1 {bkg.get_dXdx()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dYdx()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dZdx()(xidx, yidx, zidx)};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e_2 {bkg.get_dXdy()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dYdy()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dZdy()(xidx, yidx, zidx)};</span>
+<span class="w">            </span><span class="c1">//std::array&lt;double, 3&gt; e_3 {bkg.get_dXdz()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dYdz()(xidx, yidx, zidx),</span>
+<span class="w">            </span><span class="c1">//  bkg.get_dZdz()(xidx, yidx, zidx)};</span>
+
+<span class="w">            </span><span class="c1">// Check that coordinate system is mostly correct</span>
+<span class="w">            </span><span class="cm">/*</span>
+<span class="cm">            std::cout &lt;&lt; "J = " &lt;&lt; Utilities::dot_product(e_1, </span>
+<span class="cm">                Utilities::cross_product(e_2, e_3)) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_1: " &lt;&lt; e_1[0] &lt;&lt; '\t' &lt;&lt; e_1[1] &lt;&lt; '\t' &lt;&lt; e_1[2] &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_2: " &lt;&lt; e_2[0] &lt;&lt; '\t' &lt;&lt; e_2[1] &lt;&lt; '\t' &lt;&lt; e_2[2] &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_3: " &lt;&lt; e_3[0] &lt;&lt; '\t' &lt;&lt; e_3[1] &lt;&lt; '\t' &lt;&lt; e_3[2] &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e1: " &lt;&lt; e1[0] &lt;&lt; '\t' &lt;&lt; e1[1] &lt;&lt; '\t' &lt;&lt; e1[2] &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e2: " &lt;&lt; e2[0] &lt;&lt; '\t' &lt;&lt; e2[1] &lt;&lt; '\t' &lt;&lt; e2[2] &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e3: " &lt;&lt; e3[0] &lt;&lt; '\t' &lt;&lt; e3[1] &lt;&lt; '\t' &lt;&lt; e3[2] &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_1 * e_1 = " &lt;&lt; Utilities::dot_product(e_1, e_1) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_1 * e_2 = " &lt;&lt; Utilities::dot_product(e_1, e_2) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_1 * e_3 = " &lt;&lt; Utilities::dot_product(e_1, e_3) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_2 * e_2 = " &lt;&lt; Utilities::dot_product(e_2, e_2) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_2 * e_3 = " &lt;&lt; Utilities::dot_product(e_2, e_3) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e_3 * e_3 = " &lt;&lt; Utilities::dot_product(e_3, e_3) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e1 * e_1 = " &lt;&lt; Utilities::dot_product(e1, e_1) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e1 * e_2 = " &lt;&lt; Utilities::dot_product(e1, e_2) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e1 * e_3 = " &lt;&lt; Utilities::dot_product(e1, e_3) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e2 * e_1 = " &lt;&lt; Utilities::dot_product(e2, e_1) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e2 * e_2 = " &lt;&lt; Utilities::dot_product(e2, e_2) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e2 * e_3 = " &lt;&lt; Utilities::dot_product(e2, e_3) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e3 * e_1 = " &lt;&lt; Utilities::dot_product(e3, e_1) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e3 * e_2 = " &lt;&lt; Utilities::dot_product(e3, e_2) &lt;&lt; '\n';</span>
+<span class="cm">            std::cout &lt;&lt; "e3 * e_3 = " &lt;&lt; Utilities::dot_product(e3, e_3) &lt;&lt; '\n';</span>
+<span class="cm">            */</span>
+
+<span class="w">            </span><span class="c1">// Calculate velocity vector in computational coordinates using</span>
+<span class="w">            </span><span class="c1">// interpolated reciprocal basis vector.</span>
+<span class="w">            </span><span class="n">slots</span><span class="p">.</span><span class="n">set_vx</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vX</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vY</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vZ</span><span class="p">()[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">            </span><span class="n">slots</span><span class="p">.</span><span class="n">set_vy</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vX</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vY</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vZ</span><span class="p">()[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">            </span><span class="n">slots</span><span class="p">.</span><span class="n">set_vz</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vX</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vY</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="n">int_rec_bas</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">vZ</span><span class="p">()[</span><span class="n">i</span><span class="p">]);</span>
+
+<span class="w">        </span><span class="p">}</span><span class="w">  </span><span class="c1">// i loop, omp parallel for</span>
+<span class="w">    </span><span class="p">}</span><span class="w">  </span><span class="c1">// update_velocity_cpu</span>
+
+<span class="p">}</span><span class="w">  </span><span class="c1">// namespace Boris</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
