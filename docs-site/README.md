@@ -14,6 +14,7 @@ Flan publications and presentations.
 ```
 docs-site/
 ├── mkdocs.yml      # Site config: theme, extensions and the navigation menu
+├── requirements.txt  # Python packages needed to build the docs
 ├── docs/           # Markdown source for every page
 │   ├── index.md
 │   ├── getting-started.md
@@ -25,16 +26,24 @@ docs-site/
 │   ├── developer/
 │   ├── assets/     # Images, including the browser-tab icon (favicon)
 │   └── styles/     # Custom CSS, selected with extra_css in mkdocs.yml
+├── .mkdoxy/        # Generated API Reference Markdown (not committed)
 └── site/           # Built HTML (generated, not committed)
 ```
 
 ## Building the docs
 
-Install MkDocs and the Material theme, preferably in a virtual environment:
+Install MkDocs, the Material theme and the MkDoxy plugin, preferably in a
+virtual environment. `requirements.txt` keeps MkDocs below 2.0, which drops
+support for plugins and themes like the ones this site uses:
 
 ```bash
-pip install mkdocs mkdocs-material
+pip install -r requirements.txt
 ```
+
+[Doxygen](https://www.doxygen.nl/) must also be installed. MkDoxy runs it
+during every build to generate the API Reference section (under Developer)
+from the Doxygen comments in `../src` and `../include`, including the CUDA
+files. The generated Markdown is cached in `.mkdoxy/`, which is not committed.
 
 Then run all of the following commands from inside `docs-site/`.
 

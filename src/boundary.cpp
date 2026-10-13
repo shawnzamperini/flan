@@ -1,8 +1,17 @@
+/**
+* @file  boundary.cpp
+*
+* @brief Routines for handling time and spatial boundary conditions.
+*/
+#include <omp.h>
+#include <vector>
+
 #include "background.h"
 #include "boundary.h"
 #include "options.h"
-#include "random.h"
+#include "pcg32.h"
 #include "slots.h"
+
 
 namespace Boundary
 {
@@ -49,23 +58,34 @@ namespace Boundary
 	// location somewhere else along the core boundary. A residence time
 	// could easily be added to this if it was useful.
 	void core_bc(double& a, double& b, double& c, double a_min,
-		double a_max, double buffer, double b_min, double b_max,
-		double c_min, double c_max, bool max_bound)
+		double a_max, double a_buffer, double b_min, double b_max,
+		double b_buffer, double c_min, double c_max, double c_buffer, 
+		bool max_bound, pcg32& rng)
 	{
-		// Only check the boundary side we were called for
-		const bool hit = max_bound ? (a + buffer) > a_max 
-			: (a - buffer) < a_min;
+		// Only check the boundary side we were called for, accounting for 
+		// a (symmetric) buffer to avoid artificial edge effects.
+		const bool hit = max_bound ? (a + a_buffer) >= a_max 
+			: (a - a_buffer) <= a_min;
 
 		if (hit)
 		{
-			a = max_bound ? a_max - buffer : a_min + buffer;
-			b = Random::get(b_min, b_max);
-			c = Random::get(c_min, c_max);
+			a = max_bound ? a_max - a_buffer : a_min + a_buffer;
+
+			// Particle starts at random a/b locations (accounting for buffers)
+			const double b_lo = b_min + b_buffer;
+			const double b_hi = b_max - b_buffer;
+			b = b_lo + rng.next_double() * (b_hi - b_lo);
+
+			const double c_lo = c_min + c_buffer;
+			const double c_hi = c_max - c_buffer;
+			c = c_lo + rng.next_double() * (c_hi - c_lo);
 		}
 	}
 
+
 	void check_bounds_cpu(Slots::Slots& slots, 
-		const Background::Background& bkg, const Options::Options& opts)
+		const Background::Background& bkg, const Options::Options& opts,
+		std::vector<pcg32>& rngs)
 	{
 
 		// The different bounds are
@@ -73,8 +93,16 @@ namespace Boundary
 		//   1: Periodic
 		//   2: Core (only x,y,z)
 
+		#pragma omp parallel
+		{
+
+		// Grab our RNG for this thread, each thread has it own (and they're
+		// seeded uniquely).
+		const int tid {omp_get_thread_num()};
+		pcg32& rng = rngs[tid];
+
 		// Loop through each slot
-		#pragma omp parallel for
+		#pragma omp for
 		for (int i = 0; i < slots.N(); i++)
 		{
 			// Skip dead particles
@@ -145,7 +173,8 @@ namespace Boundary
 				double ztmp {slots.z()[i]};
 				core_bc(xtmp, ytmp, ztmp, bkg.get_x_min(), bkg.get_x_max(), 
 					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
-					bkg.get_z_min(), bkg.get_z_max(), false);
+					opts.imp_ybound_buffer(), bkg.get_z_min(), bkg.get_z_max(), 
+					opts.imp_zbound_buffer(), false, rng);
 
 				// Write back
 				slots.set_x(i, xtmp);
@@ -187,7 +216,8 @@ namespace Boundary
 				double ztmp {slots.z()[i]};
 				core_bc(xtmp, ytmp, ztmp, bkg.get_x_min(), bkg.get_x_max(), 
 					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
-					bkg.get_z_min(), bkg.get_z_max(), true);
+					opts.imp_ybound_buffer(), bkg.get_z_min(), bkg.get_z_max(), 
+					opts.imp_zbound_buffer(), true, rng);
 
 				// Write back
 				slots.set_x(i, xtmp);
@@ -229,7 +259,8 @@ namespace Boundary
 				double ztmp {slots.z()[i]};
 				core_bc(ytmp, ztmp, xtmp, bkg.get_y_min(), bkg.get_y_max(), 
 					opts.imp_ybound_buffer(), bkg.get_z_min(), bkg.get_z_max(), 
-					bkg.get_x_min(), bkg.get_x_max(), false);
+					opts.imp_zbound_buffer(), bkg.get_x_min(), bkg.get_x_max(), 
+					opts.imp_xbound_buffer(), false, rng);
 
 				// Write back
 				slots.set_x(i, xtmp);
@@ -271,7 +302,8 @@ namespace Boundary
 				double ztmp {slots.z()[i]};
 				core_bc(ytmp, ztmp, xtmp, bkg.get_y_min(), bkg.get_y_max(), 
 					opts.imp_ybound_buffer(), bkg.get_z_min(), bkg.get_z_max(), 
-					bkg.get_x_min(), bkg.get_x_max(), true);
+					opts.imp_zbound_buffer(), bkg.get_x_min(), bkg.get_x_max(), 
+					opts.imp_xbound_buffer(), true, rng);
 
 				// Write back
 				slots.set_x(i, xtmp);
@@ -314,7 +346,8 @@ namespace Boundary
 				double ztmp {slots.z()[i]};
 				core_bc(ztmp, xtmp, ytmp, bkg.get_z_min(), bkg.get_z_max(), 
 					opts.imp_zbound_buffer(), bkg.get_x_min(), bkg.get_x_max(), 
-					bkg.get_y_min(), bkg.get_y_max(), false);
+					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
+					opts.imp_ybound_buffer(), false, rng);
 
 				// Write back
 				slots.set_x(i, xtmp);
@@ -356,7 +389,8 @@ namespace Boundary
 				double ztmp {slots.z()[i]};
 				core_bc(ztmp, xtmp, ytmp, bkg.get_z_min(), bkg.get_z_max(), 
 					opts.imp_zbound_buffer(), bkg.get_x_min(), bkg.get_x_max(), 
-					bkg.get_y_min(), bkg.get_y_max(), true);
+					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
+					opts.imp_ybound_buffer(), true, rng);
 
 				// Write back
 				slots.set_x(i, xtmp);
@@ -365,6 +399,7 @@ namespace Boundary
 			}
 
 		} // slot loop
+		} // omp parallel
 	}  // check_bounds_cpu
 
 }

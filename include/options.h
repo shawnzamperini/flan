@@ -3,6 +3,7 @@
 
 /**
 * @file options.h
+* @brief Header file for options.cpp.
 */
 #include <string>
 #include <tuple>
@@ -152,16 +153,6 @@ namespace Options
 		int m_max_zbound_type_int		{-1};
 		int m_calc_grad_elec_int		{-1};
 
-		/**
-		* @brief Check input against a list of valid options
-		*
-		* @param var String containing variable name
-		* @param value Template parameter of variable value
-		* @param valid_values initializer_list of valid values, 
-		*        e.g., {"on", "off"}
-		*
-		* @return true if valid, false if not
-		*/
 		template <typename T>
 		bool check_input(const std::string& var, const T& value, 
 			std::initializer_list<T> valid_values);

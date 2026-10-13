@@ -1,5 +1,7 @@
 /**
 * @file collisions.cpp
+* @brief Routines for updating particle velocity due to Coloumb collisions via
+*        the Nanbu algorithm.
 */
 #include <array>
 #include <cmath>
@@ -11,7 +13,6 @@
 
 #include "background.h"
 #include "constants.h"
-#include "impurity.h"
 #include "impurity_stats.h"
 #include "nanbu_s_a.h"
 #include "options.h"

@@ -1,3 +1,10 @@
+/**
+* @file boris.cpp
+*
+* @brief Implementation of Boris algorithm for calculating the Lorentz force 
+* on a particle and updating its velocity.
+*/
+
 #include <cmath>
 #include <iostream>
 

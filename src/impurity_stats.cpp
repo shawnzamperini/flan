@@ -13,7 +13,6 @@
 #include "background.h"
 #include "constants.h"
 #include "flan_types.h"
-#include "impurity.h"
 #include "impurity_stats.h"
 #include "impurity_stats_device.h"
 #include "options.h"
@@ -345,21 +344,6 @@ namespace Impurity
 	{
 		m_s(tidx, xidx, yidx, zidx) += value;
 	}
-
-	// Add impurity position to track vectors. This is mainly for testing
-	// that the path of a particle follows a particular route and showing that
-	// the physics is correct.
-	void Statistics::update_track(const Impurity& imp)
-	{
-		m_track_t.push_back(imp.get_t());
-		m_track_x.push_back(imp.get_x());
-		m_track_y.push_back(imp.get_y());
-		m_track_z.push_back(imp.get_z());
-		m_track_vx.push_back(imp.get_vx());
-		m_track_vy.push_back(imp.get_vy());
-		m_track_vz.push_back(imp.get_vz());
-	}
-
 
 	/**
 	* @brief Pack all the arrays into a single buffer that can be sent across

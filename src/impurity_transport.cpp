@@ -1,3 +1,9 @@
+/**
+* @file impurity_transport.cpp
+* @brief Contains main impurity following loop and wrappers for calling the
+*        various steps in following particles.
+*/
+
 #include <algorithm>
 #include <cmath>
 #include <chrono>
@@ -13,7 +19,6 @@
 #include "collisions.h"
 #include "constants.h"
 #include "flan_types.h"
-#include "impurity.h"
 #include "impurity_stats.h"
 #include "impurity_transport.h"
 #include "indices.h"
@@ -22,7 +27,6 @@
 #include "options_device.h"
 #include "particle_progress.h"
 #include "pcg32.h"
-#include "random.h"
 #include "slots.h"
 #include "timer.h"
 #include "utilities.h"
@@ -43,6 +47,28 @@
 
 namespace ImpurityTransport
 {
+	/**
+	* Finds the background time index and spatial cell indices for every
+	* particle in slots (CPU implementation).
+	*
+	* Time and space are handled differently. The background times are
+	* stored at "time centers" rather than on a grid, so the time index is
+	* the index of the background time nearest to the particle's time. The
+	* spatial coordinates are defined by grid edges, so each spatial index
+	* is the index of the cell that contains the particle's x, y and z
+	* coordinates. Particles outside the grid are assigned the first or
+	* last cell in that dimension.
+	*
+	* The indices are written back into slots with set_tidx, set_xidx,
+	* set_yidx and set_zidx. The loop over particles is parallelized with
+	* OpenMP. Every slot is updated, including slots holding dead
+	* particles.
+	*
+	* @param slots Particle slots whose positions are read and whose time
+	*              and cell indices are updated.
+	* @param bkg Background plasma that provides the time array and the
+	*            x, y and z grid edges.
+	*/
 	void find_containing_cell_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg)
 	{
@@ -76,7 +102,25 @@ namespace ImpurityTransport
 	}
 
 	
-	// Perform particle step for each particle in slots
+	/**
+	* Advances every alive particle in slots by one time step (CPU
+	* implementation).
+	*
+	* Each alive particle's time since launch (pt) and background time (t)
+	* are increased by dt, and its x, y and z positions are advanced using
+	* its current velocity. If the particle's time since launch exceeds the
+	* imp_max_time option, the particle is marked dead and max_time_ctr is
+	* incremented. The iteration counter of each stepped particle is also
+	* incremented. Dead particles are skipped. The loop over particles is
+	* parallelized with OpenMP.
+	*
+	* @param slots Particle slots to advance.
+	* @param bkg Background plasma (currently unused).
+	* @param opts Simulation options, used for imp_max_time.
+	* @param dt Time step (s).
+	* @param max_time_ctr Counter of particles that exceeded the maximum
+	*                     allowed time. Incremented atomically.
+	*/
 	void step_cpu(Slots::Slots& slots, const Background::Background& bkg, 
 		const Options::Options& opts, const double dt, int& max_time_ctr)
 	{
@@ -88,8 +132,7 @@ namespace ImpurityTransport
 			if (slots.state()[i]) continue;
 
 			/*
-			//if (i == 0)
-			if (slots.iters()[i] > 10000)
+			if (i == 0)
 			{
 				#pragma omp critical
 				{
@@ -139,8 +182,28 @@ namespace ImpurityTransport
 	}
 
 	
-	// Update particle charges states based on ionization/recombination
-	// probabilities
+	/**
+	* Updates particle charge states from ionization and recombination
+	* probabilities (CPU implementation).
+	*
+	* This is a thin wrapper around OpenADAS::ioniz_recomb, which uses the
+	* OpenADAS rate coefficients and the local background plasma to decide
+	* whether each particle ionizes or recombines during the time step. The
+	* particle charges in slots are modified in place.
+	*
+	* @param slots Particle slots whose charge states are updated.
+	* @param bkg Background plasma that provides the local density and
+	*            temperature.
+	* @param oa_ioniz OpenADAS ionization rate coefficients (SCD).
+	* @param oa_recomb OpenADAS recombination rate coefficients (ACD).
+	* @param opts Simulation options (currently unused).
+	* @param dt Time step (s).
+	* @param ioniz_warnings Counter of particles whose ionization
+	*                       probability exceeded 1.
+	* @param recomb_warnings Counter of particles whose recombination
+	*                        probability exceeded 1.
+	* @param rngs Random number generators, one per OpenMP thread.
+	*/
 	void ioniz_recomb_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const OpenADAS::OpenADAS oa_ioniz,
 		const OpenADAS::OpenADAS oa_recomb, const Options::Options& opts, 
@@ -154,6 +217,25 @@ namespace ImpurityTransport
 	}
 
 
+	/**
+	* Applies Coulomb collisions with the background ions and electrons to
+	* every particle in slots (CPU implementation).
+	*
+	* Particle velocities are updated in place with the Nanbu collision
+	* model. Collisions with the background ions are always applied.
+	* Collisions with the electrons are applied afterwards, except for the
+	* friction_force test case, which only considers ion collisions so the
+	* result can be compared against the expected flow.
+	*
+	* @param slots Particle slots whose velocities are updated.
+	* @param bkg Background plasma that provides the ion and electron
+	*            properties.
+	* @param dt Time step (s).
+	* @param opts Simulation options, used to check the test_opt option.
+	* @param imp_stats Impurity statistics passed through to the collision
+	*                  model.
+	* @param rngs Random number generators, one per OpenMP thread.
+	*/
 	void collision_cpu(Slots::Slots& slots, const Background::Background& bkg, 
 		const double dt, const Options::Options& opts, 
 		Impurity::Statistics& imp_stats, std::vector<pcg32>& rngs)
@@ -176,8 +258,20 @@ namespace ImpurityTransport
 	// Wrapper functions
 	// ------------------
 
-	// Wrapper to choose CPU or GPU implementation for finding containing cell
-	// for each particle in a slot
+	/**
+	* Finds the background time index and spatial cell indices for every
+	* particle, choosing the CPU or GPU implementation.
+	*
+	* If GPU acceleration is on (use_gpu), find_containing_cell_gpu is called
+	* on the device-side slots. Otherwise find_containing_cell_cpu is called
+	* on the host-side slots. The GPU branch only exists in CUDA builds.
+	*
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param bkg Host-side background plasma (used on the CPU path).
+	* @param bkg_d Device-side background plasma (used on the GPU path).
+	* @param opts Simulation options, used to check whether the GPU is on.
+	*/
 	void find_containing_cell_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts)
@@ -196,8 +290,23 @@ namespace ImpurityTransport
 	}
 
 
-	// Wrapper to choose CPU or GPU implementation for recording particle
-	// statistics in the underlying statistics arrays.
+	/**
+	* Records the current particle state in the impurity statistics arrays,
+	* choosing the CPU or GPU implementation.
+	*
+	* If GPU acceleration is on (use_gpu), ImpurityStats::record_stats_gpu
+	* records into the device-side statistics. Otherwise record_stats_cpu
+	* records into the host-side statistics. The GPU branch only exists in
+	* CUDA builds.
+	*
+	* @param imp_stats Host-side impurity statistics (used on the CPU path).
+	* @param imp_stats_d Device-side impurity statistics (used on the GPU
+	*                    path).
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param opts Simulation options, used to check whether the GPU is on.
+	* @param imp_time_step Impurity time step (s).
+	*/
 	void record_stats_wrapper(Impurity::Statistics& imp_stats, 
 		ImpurityStats::StatisticsDevice& imp_stats_d, 
 		const Slots::Slots& slots, const Slots::SlotsDevice& slots_d, 
@@ -218,6 +327,32 @@ namespace ImpurityTransport
 	}
 
 
+	/**
+	* Replaces dead particles in slots with newly launched particles,
+	* choosing the CPU or GPU implementation.
+	*
+	* Dead slots are revived with new particles until either every slot is
+	* occupied or there are no particles left to launch. The number of
+	* particles launched is subtracted from rem_parts. If GPU acceleration
+	* is on (use_gpu), Slots::fill_slots_gpu is called. Otherwise
+	* Slots::fill_slots_cpu is called. The GPU branch only exists in CUDA
+	* builds.
+	*
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param rem_parts Number of particles still waiting to be launched.
+	*                  Reduced by the number of particles launched.
+	* @param bkg Host-side background plasma (used on the CPU path).
+	* @param opts Simulation options.
+	* @param alive_slots Set to the number of alive particles in slots,
+	*                    used for progress printouts.
+	* @param rngs Host-side random number generators, one per OpenMP
+	*             thread (used on the CPU path).
+	* @param rngs_d Device-side random number generators (used on the GPU
+	*               path).
+	* @param opts_d Device-side simulation options (used on the GPU path).
+	* @param bkg_d Device-side background plasma (used on the GPU path).
+	*/
 	void fill_slots_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		int& rem_parts, const Background::Background& bkg, 
 		Options::Options& opts, int& alive_slots, std::vector<pcg32>& rngs,
@@ -240,7 +375,23 @@ namespace ImpurityTransport
 	}
 
 
-	// Update velocity with the Boris algorithm
+	/**
+	* Updates particle velocities with the Boris algorithm, choosing the CPU
+	* or GPU implementation.
+	*
+	* If GPU acceleration is on (use_gpu), Boris::update_velocity_gpu is
+	* called. Otherwise Boris::update_velocity_cpu is called. The GPU branch
+	* only exists in CUDA builds. A negative dt pushes the velocities
+	* backward in time, which main_loop uses to offset the starting
+	* velocities by half a time step.
+	*
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param bkg Host-side background plasma (used on the CPU path).
+	* @param bkg_d Device-side background plasma (used on the GPU path).
+	* @param opts Simulation options.
+	* @param dt Time step to advance the velocities by (s).
+	*/
 	void boris_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
@@ -260,7 +411,24 @@ namespace ImpurityTransport
 	}
 
 
-	// Check if all particles in slots are dead
+	/**
+	* Checks whether the simulation is finished, choosing the CPU or GPU
+	* implementation.
+	*
+	* The simulation is finished when no particles are waiting to be
+	* launched and every particle in slots is dead. If rem_parts is
+	* positive, false is returned without checking slots. If GPU
+	* acceleration is on (use_gpu), Slots::all_dead_gpu is called, which
+	* copies data from the GPU and so implicitly synchronizes it. The GPU
+	* branch only exists in CUDA builds.
+	*
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param opts Simulation options, used to check whether the GPU is on.
+	* @param rem_parts Number of particles still waiting to be launched.
+	* @return True if no particles remain to be launched and every slot is
+	*         dead, false otherwise.
+	*/
 	bool all_dead_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Options::Options& opts, int rem_parts)
 	{
@@ -283,12 +451,30 @@ namespace ImpurityTransport
 	}
 
 
-	// Check if time or spatial bounds have been exceeded and handle 
-	// appropriately
+	/**
+	* Checks whether particles have left the time or spatial bounds of the
+	* background and handles them, choosing the CPU or GPU implementation.
+	*
+	* What happens to a particle that crosses a boundary is set by the
+	* boundary type options (tbound_type, min_xbound_type, max_xbound_type,
+	* etc.). If GPU acceleration is on (use_gpu), Boundary::check_bounds_gpu
+	* is called with the boundary options unpacked from opts. Otherwise
+	* Boundary::check_bounds_cpu is called. The GPU branch only exists in
+	* CUDA builds.
+	*
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param bkg Host-side background plasma (used on the CPU path).
+	* @param bkg_d Device-side background plasma (used on the GPU path).
+	* @param opts Simulation options, which provide the boundary types and
+	*             buffers.
+	* @param rngs_d Device-side random number generators (used on the GPU
+	*               path).
+	*/
 	void check_bounds_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
-		const Options::Options& opts, pcg32* rngs_d)
+		const Options::Options& opts, std::vector<pcg32>& rngs, pcg32* rngs_d)
 	{
 
 #ifdef USE_CUDA
@@ -307,11 +493,27 @@ namespace ImpurityTransport
 #endif
 
 		// Defined in boundary.cpp
-		Boundary::check_bounds_cpu(slots, bkg, opts);
+		Boundary::check_bounds_cpu(slots, bkg, opts, rngs);
 	}
 
 	
-	// Perform particle step
+	/**
+	* Advances every alive particle by one impurity time step, choosing the
+	* CPU or GPU implementation.
+	*
+	* The time step is the imp_time_step option. If GPU acceleration is on
+	* (use_gpu), step_gpu is called. Otherwise step_cpu is called. The GPU
+	* branch only exists in CUDA builds. Only the CPU path checks the
+	* imp_max_time option, so max_time_ctr is not updated on the GPU.
+	*
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param bkg Host-side background plasma (used on the CPU path).
+	* @param bkg_d Device-side background plasma (currently unused).
+	* @param opts Simulation options, which provide the time step.
+	* @param max_time_ctr Counter of particles that exceeded the maximum
+	*                     allowed time (CPU path only).
+	*/
 	void step_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
@@ -332,7 +534,33 @@ namespace ImpurityTransport
 	}
 
 
-	// Check for ionization/recombination
+	/**
+	* Updates particle charge states from ionization and recombination
+	* probabilities, choosing the CPU or GPU implementation.
+	*
+	* The time step is the imp_time_step option. If GPU acceleration is on
+	* (use_gpu), OpenADAS::ioniz_recomb_gpu is called. Otherwise
+	* ioniz_recomb_cpu is called. The GPU branch only exists in CUDA builds.
+	*
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param bkg Host-side background plasma (used on the CPU path).
+	* @param bkg_d Device-side background plasma (used on the GPU path).
+	* @param oa_ioniz Host-side OpenADAS ionization rate coefficients.
+	* @param oa_ioniz_d Device-side OpenADAS ionization rate coefficients.
+	* @param oa_recomb Host-side OpenADAS recombination rate coefficients.
+	* @param oa_recomb_d Device-side OpenADAS recombination rate
+	*                    coefficients.
+	* @param opts Simulation options, which provide the time step.
+	* @param ioniz_warnings Counter of particles whose ionization
+	*                       probability exceeded 1.
+	* @param recomb_warnings Counter of particles whose recombination
+	*                        probability exceeded 1.
+	* @param rngs Host-side random number generators, one per OpenMP
+	*             thread (used on the CPU path).
+	* @param rngs_d Device-side random number generators (used on the GPU
+	*               path).
+	*/
 	void ioniz_recomb_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
@@ -361,6 +589,32 @@ namespace ImpurityTransport
 	}
 
 
+	/**
+	* Applies Coulomb collisions with the background ions and electrons,
+	* choosing the CPU or GPU implementation.
+	*
+	* If GPU acceleration is on (use_gpu), Collisions::collision_gpu is
+	* called once for the ions and once for the electrons. The electron call
+	* is skipped for the friction_force test case, which only considers ion
+	* collisions. Otherwise collision_cpu is called, which makes the same
+	* ion/electron distinction. The GPU branch only exists in CUDA builds.
+	*
+	* @param slots Host-side particle slots (used on the CPU path).
+	* @param slots_d Device-side particle slots (used on the GPU path).
+	* @param bkg Host-side background plasma (used on the CPU path).
+	* @param bkg_d Device-side background plasma (used on the GPU path).
+	* @param opts Simulation options.
+	* @param imp_stats Host-side impurity statistics (used on the CPU
+	*                  path).
+	* @param imp_stats_d Device-side impurity statistics (used on the GPU
+	*                    path).
+	* @param dt Time step (s).
+	* @param rngs Host-side random number generators, one per OpenMP
+	*             thread (used on the CPU path).
+	* @param rngs_d Device-side random number generators (used on the GPU
+	*               path).
+	* @param opts_d Device-side simulation options (used on the GPU path).
+	*/
 	void collision_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
@@ -395,7 +649,23 @@ namespace ImpurityTransport
 	}
 
 	
-	// Prints out warnings if any of the warning counters registered anything.
+	/**
+	* Prints a warning for each warning counter that is nonzero.
+	*
+	* Warnings are printed for particles that exceeded the maximum allowed
+	* time (imp_max_time), and for particles whose ionization or
+	* recombination probability exceeded 1, which suggests the time step is
+	* too large.
+	*
+	* @param opts Simulation options, used for imp_max_time in the warning
+	*             message.
+	* @param max_time_ctr Number of particles that exceeded the maximum
+	*                     allowed time.
+	* @param ioniz_warnings Number of particles whose ionization probability
+	*                       exceeded 1.
+	* @param recomb_warnings Number of particles whose recombination
+	*                        probability exceeded 1.
+	*/
 	void print_counter_warnings(const Options::Options& opts, 
 		int max_time_ctr, int ioniz_warnings, int recomb_warnings)
 	{
@@ -418,7 +688,55 @@ namespace ImpurityTransport
 	}
 
 
-	// Main particle following loop
+	/**
+	* Runs the main particle-following loop until every particle has been
+	* launched and followed until it dies.
+	*
+	* The imp_num particles are split evenly between the MPI ranks, with the
+	* remainder going to the last rank. When running on GPUs, each rank's
+	* share is split again between its GPUs, with the remainder going to
+	* device 0. The slots are then filled, and the starting velocities are
+	* pushed back half a time step as the Boris algorithm requires. Each
+	* iteration of the loop then:
+	*
+	* 1. Updates charge states from ionization/recombination (if
+	*    imp_iz_recomb is on).
+	* 2. Applies collisions (if imp_collisions is on).
+	* 3. Updates velocities with the Boris algorithm.
+	* 4. Advances particle positions.
+	* 5. Checks the time and spatial bounds.
+	* 6. Replaces dead particles with new ones.
+	* 7. Finds the containing cell of each particle.
+	* 8. Records statistics.
+	*
+	* Each step is timed with a scoped timer. Progress is printed by rank 0
+	* and GPU device 0 only.
+	*
+	* @param slots Host-side particle slots.
+	* @param slots_d Device-side particle slots (GPU only).
+	* @param bkg Host-side background plasma.
+	* @param bkg_d Device-side background plasma (GPU only).
+	* @param imp_stats Host-side impurity statistics.
+	* @param imp_stats_d Device-side impurity statistics (GPU only).
+	* @param oa_ioniz Host-side OpenADAS ionization rate coefficients.
+	* @param oa_ioniz_d Device-side OpenADAS ionization rate coefficients
+	*                   (GPU only).
+	* @param oa_recomb Host-side OpenADAS recombination rate coefficients.
+	* @param oa_recomb_d Device-side OpenADAS recombination rate
+	*                    coefficients (GPU only).
+	* @param opts Simulation options.
+	* @param opts_d Device-side simulation options (GPU only).
+	* @param timer Timer that accumulates the time spent in each step.
+	* @param ioniz_warnings Counter of particles whose ionization
+	*                       probability exceeded 1.
+	* @param recomb_warnings Counter of particles whose recombination
+	*                        probability exceeded 1.
+	* @param rngs Host-side random number generators, one per OpenMP
+	*             thread (CPU only).
+	* @param rngs_d Device-side random number generators (GPU only).
+	* @param max_time_ctr Counter of particles that exceeded the maximum
+	*                     allowed time.
+	*/
 	void main_loop(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
@@ -487,7 +805,7 @@ namespace ImpurityTransport
 
 		// If for whatever reason the particle is started outside the grid,
 		// check bounds to make sure it doesn't cause any chaos.
-		check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs_d);
+		check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, rngs_d);
 
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
@@ -570,7 +888,8 @@ namespace ImpurityTransport
 			// Bounds checking
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Bounds));
-				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs_d);
+				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, 
+				rngs_d);
 			}
 
 #ifdef DEBUG
@@ -633,8 +952,38 @@ namespace ImpurityTransport
 
 #ifdef USE_CUDA
 
-	// Function to enable each thread to control each GPU independently to 
-	// allow them to run concurrently. Used when multiple GPUs are available.
+	/**
+	* Runs main_loop on a single GPU from its own host thread.
+	*
+	* follow_impurities starts one of these per GPU so the GPUs run
+	* concurrently. The thread first selects the GPU given by
+	* slots_d.device_id, then calls main_loop with that GPU's device-side
+	* data. An empty host-side RNG vector is passed because it is not used
+	* on the GPU path. Only defined in CUDA builds.
+	*
+	* @param slots Host-side particle slots.
+	* @param slots_d Device-side particle slots for this GPU.
+	* @param bkg Host-side background plasma.
+	* @param bkg_d Device-side background plasma for this GPU.
+	* @param imp_stats Host-side impurity statistics.
+	* @param imp_stats_d Device-side impurity statistics for this GPU.
+	* @param oa_ioniz Host-side OpenADAS ionization rate coefficients.
+	* @param oa_ioniz_d Device-side OpenADAS ionization rate coefficients
+	*                   for this GPU.
+	* @param oa_recomb Host-side OpenADAS recombination rate coefficients.
+	* @param oa_recomb_d Device-side OpenADAS recombination rate
+	*                    coefficients for this GPU.
+	* @param opts Simulation options.
+	* @param timer Timer for this GPU.
+	* @param ioniz_warnings Counter of particles whose ionization
+	*                       probability exceeded 1.
+	* @param recomb_warnings Counter of particles whose recombination
+	*                        probability exceeded 1.
+	* @param rngs_d Device-side random number generators for this GPU.
+	* @param opts_d Device-side simulation options for this GPU.
+	* @param max_time_ctr Counter of particles that exceeded the maximum
+	*                     allowed time.
+	*/
 	void gpu_worker(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d,
@@ -659,6 +1008,36 @@ namespace ImpurityTransport
 
 #endif
 
+	/**
+	* Follows every impurity particle through the background plasma and
+	* returns the accumulated statistics.
+	*
+	* This is the top-level driver for impurity transport. It sets up the
+	* impurity statistics arrays, loads the OpenADAS rate coefficients (one
+	* MPI rank at a time, to avoid every rank reading the same files at
+	* once) and allocates the particle slots, with min(slot_cap, imp_num)
+	* slots. All slots start dead so the first fill launches particles into
+	* them.
+	*
+	* On GPUs, the data is copied to each GPU, a random number generator is
+	* set up for each GPU thread, and gpu_worker runs main_loop on every GPU
+	* concurrently. The statistics and timers from each GPU are then combined
+	* and the device memory is freed. On CPUs, one random number generator
+	* is created per OpenMP thread and main_loop is called directly. If GPU
+	* acceleration was requested in a build without CUDA, it is turned off.
+	*
+	* If the seed option is negative, random number generators are seeded
+	* from the clock so each run is different. Otherwise the seed option is
+	* used. In both cases the MPI rank is added to the seed so each rank
+	* gets a different sequence.
+	*
+	* @param bkg Background plasma to follow the particles through.
+	* @param opts Simulation options. use_gpu may be turned off if Flan was
+	*             built without GPU support.
+	* @param timer Timer that accumulates the time spent in each step.
+	* @return Impurity statistics accumulated from every particle followed
+	*         on this rank.
+	*/
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer)
 	{
@@ -900,7 +1279,7 @@ namespace ImpurityTransport
 		for (int tid = 0; tid < nthreads; ++tid)
 		{
 			uint64_t seed {};
-			uint64_t stream {tid}; // unique per thread
+			uint64_t stream {static_cast<uint64_t>(tid)}; // unique per thread
 			
 			// If seed is negative (default), initialize the base seed from the
 			// clock so each run is different. MPI ranks are distinguished 
@@ -921,26 +1300,6 @@ namespace ImpurityTransport
 			rngs.push_back(pcg32(seed, stream));
 		}
 
-		// Eventually make base_seed an input option
-		/*
-		for (int tid = 0; tid < nthreads; ++tid) 
-		{
-			// If seed is < 0 (default), set to clock time so each run is 
-			// different.
-			uint64_t seed {}
-			if (opts.seed() < 0) 
-			{
-				// Fill in this block
-			}
-			else
-			{
-				seed = opts.seed() + rank;  // unique per rank
-				uint64_t stream = tid;             // unique per thread
-			}
-			rngs.push_back(pcg32(seed, stream));
-		}
-		*/
-
 #ifdef DEBUG
 			std::cout << "Starting main loop (CPU)...\n";
 #endif
@@ -951,6 +1310,7 @@ namespace ImpurityTransport
 
 		print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
 			recomb_warnings);
+
 		return imp_stats;
-	}
-}
+	}  // follow_impurities
+}  // namespace ImpurityTransport

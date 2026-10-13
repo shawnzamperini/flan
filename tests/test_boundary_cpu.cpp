@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "boundary.h"
+#include "pcg32.h"
 
 
 // Test asborbing boundary kills particle
@@ -32,8 +33,11 @@ TEST(Boundary, CoreHit)
 	// definition. We are checking a (12.0) against amin and amax (0.0, 10.0). 
 	// We are looking at the maximum bound (true). If a goes past the bound, 
 	// then it is placed on that bound and b and c are randomized between
-	// their respective bounds (0.0 and 5.0 for both). 
+	// their respective bounds (0.0 and 5.0 for both). All the buffers are 
+	// zero here.
     double a = 12.0, b = 1.0, c = 2.0;
-    Boundary::core_bc(a, b, c, 0.0, 10.0, 0.0, 0.0, 5.0, 0.0, 5.0, true);
+    pcg32 rng(4, 0);
+    Boundary::core_bc(a, b, c, 0.0, 10.0, 0.0, 0.0, 5.0, 0.0, 0.0, 5.0, 0.0,
+		true, rng);
     EXPECT_LE(a, 10.0);
 }

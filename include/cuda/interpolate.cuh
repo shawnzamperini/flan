@@ -42,19 +42,19 @@ namespace Interpolate
 	__device__ __forceinline__
 	InterpolationStencil build_stencil_3d(
 		const Background::BackgroundDevice& bkg_d, int xidx, 
-		int yidx, int zidx)
+		int yidx, int zidx, const double x, const double y, const double z)
 	{
 		InterpolationStencil s;
 
 		// Neighbor indices
 		const int xidx_neighbor = Utilities::get_neighbor_index_cuda(
-				d_x[xidx], d_x, xidx, bkg_d.xdim);
+				x, d_x, xidx, bkg_d.xdim);
 
 		const int yidx_neighbor = Utilities::get_neighbor_index_cuda(
-				d_y[yidx], d_y, yidx, bkg_d.ydim);
+				y, d_y, yidx, bkg_d.ydim);
 
 		const int zidx_neighbor = Utilities::get_neighbor_index_cuda(
-				d_z[zidx], d_z, zidx, bkg_d.zdim);
+				z, d_z, zidx, bkg_d.zdim);
 
 		s.xidx_neighbor = xidx_neighbor;
 		s.yidx_neighbor = yidx_neighbor;
@@ -113,22 +113,19 @@ namespace Interpolate
 	__device__ __forceinline__
 	InterpolationStencil build_stencil_4d(
 		const Background::BackgroundDevice& bkg_d, int tidx, int xidx, 
-		int yidx, int zidx)
+		int yidx, int zidx, const double x, const double y, const double z)
 	{
 		InterpolationStencil s;
 
 		// Neighbor indices
 		const int xidx_neighbor =
-			Utilities::get_neighbor_index_cuda(
-				d_x[xidx], d_x, xidx, bkg_d.xdim);
+			Utilities::get_neighbor_index_cuda(x, d_x, xidx, bkg_d.xdim);
 
 		const int yidx_neighbor =
-			Utilities::get_neighbor_index_cuda(
-				d_y[yidx], d_y, yidx, bkg_d.ydim);
+			Utilities::get_neighbor_index_cuda(y, d_y, yidx, bkg_d.ydim);
 
 		const int zidx_neighbor =
-			Utilities::get_neighbor_index_cuda(
-				d_z[zidx], d_z, zidx, bkg_d.zdim);
+			Utilities::get_neighbor_index_cuda(z, d_z, zidx, bkg_d.zdim);
 
 		// Time neighbor
 		const int at_end = (tidx == static_cast<int>(bkg_d.tdim) - 1);

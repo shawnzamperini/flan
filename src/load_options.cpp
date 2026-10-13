@@ -1,3 +1,8 @@
+/**
+* @file load_options.cpp
+* @brief Routines to handle loading input options into an Options object.
+*/
+
 #include <iostream>
 
 #include "flan_types.h"  // For Inputs type

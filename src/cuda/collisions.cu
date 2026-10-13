@@ -319,7 +319,8 @@ namespace Collisions
 		// Interpolate for ne, Te
 		// Get interpolation stencil at this location for 4D arrays
 		Interpolate::InterpolationStencil stencil_4d
-			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx)};
+			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, x, y, 
+			z)};
 
 		// Interpolate to get background flow at particle location
 		double ne {Interpolate::interpolate_field_4d(bkg_d.ne, 

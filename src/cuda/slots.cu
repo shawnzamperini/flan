@@ -103,7 +103,8 @@ namespace Slots
 		else if (opts_d->imp_temp_start_opt_int == 1)
 		{
 			Interpolate::InterpolationStencil stencil_4d
-				{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx)};
+				{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, 
+				x, y, z)};
 
 			start_temp = Interpolate::interpolate_field_4d(bkg_d.ti, 
 				stencil_4d, t, x, y, z);

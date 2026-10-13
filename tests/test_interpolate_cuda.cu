@@ -24,7 +24,8 @@ void test_interp_3d_kernel(Background::BackgroundDevice bkg_d,
 	int zidx {Indices::get_nearest_cell_index_cuda(d_grid_z, bkg_d.zdim+1, 
 		test_z)};
 
-    auto s = Interpolate::build_stencil_3d(bkg_d, xidx, yidx, zidx);
+    auto s = Interpolate::build_stencil_3d(bkg_d, xidx, yidx, zidx, test_x, 
+		test_y, test_z);
 
     result[0] = Interpolate::interpolate_field_3d(field, s, test_x, test_y, 
 		test_z);
@@ -44,7 +45,8 @@ void test_interp_4d_kernel(Background::BackgroundDevice bkg_d,
 	int zidx {Indices::get_nearest_cell_index_cuda(d_grid_z, bkg_d.zdim+1, 
 		test_z)};
 
-    auto s = Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx);
+    auto s = Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, 
+		test_x, test_y, test_z);
 
     result[0] = Interpolate::interpolate_field_4d(field, s, test_t, test_x, 
 		test_y, test_z);
@@ -92,10 +94,10 @@ TEST(Interpolate3D, LinearField)
 	// Copy to device
 	Background::BackgroundDevice bkg_d {bkg.to_device()};
 
-	// Interpolates at (x, y, z) = (0.025, 0.01, 0.01) which equals
-	// 0.025 + 2*0.01 + 3*0.01 = 0.224
+	// Interpolates at (x, y, z) = (0.023, 0.01, 0.007) which equals
+	// 0.023 + 2*0.01 + 3*0.007 = 0.064
 	double test_x {0.023};
-	double test_y {0.09};
+	double test_y {0.01};
 	double test_z {0.007};
 	double* d_result {};
 	cudaMalloc(&d_result, sizeof(double));
@@ -159,11 +161,11 @@ TEST(Interpolate4D, LinearField)
 	// Copy to device
 	Background::BackgroundDevice bkg_d {bkg.to_device()};
 
-	// Interpolates at (t, x, y, z) = (0.000020, 025, 0.01, 0.01) which equals
-	// 0.000020 + 0.025 + 2*0.01 + 3*0.01 = 0.22402
+	// Interpolates at (t, x, y, z) = (0.000020, 0.023, 0.01, 0.007) which 
+	// equals 0.000020 + 0.023 + 2*0.01 + 3*0.007 = 0.06402
 	double test_t {0.000020};
 	double test_x {0.023};
-	double test_y {0.09};
+	double test_y {0.01};
 	double test_z {0.007};
 	double* d_result {};
 	cudaMalloc(&d_result, sizeof(double));

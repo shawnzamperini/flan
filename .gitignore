@@ -60,6 +60,7 @@ tests/flan_setup.sh*
 # MkDocs / documentation
 ############################
 docs-site/site
+docs-site/.mkdoxy/
 docs/html*
 docs/latex*
 Doxyfile.bak

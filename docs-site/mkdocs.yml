@@ -41,9 +41,34 @@ nav:
       - OpenMP Layout: developer/openmp-layout.md
       - Contributing: developer/contributing.md
       - Gangster Spongebob: developer/gangster-spongebob.md
+      - API Reference:
+          - Namespaces: api/namespaces.md
+          - Classes: api/annotated.md
+          - Functions: api/namespace_member_functions.md
+          - Files: api/files.md
   - Publications/Presentations: publications.md
 
 markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
 
+
+# API reference generated from the Doxygen comments in the source code. Needs
+# Doxygen installed. Paths are relative to docs-site/, so run mkdocs from here.
+plugins:
+  - search
+  - mkdoxy:
+      projects:
+        api:
+          src-dirs: ../src ../include
+          full-doc: True
+          doxy-cfg:
+            FILE_PATTERNS: "*.cpp *.h *.cu *.cuh"
+            RECURSIVE: True
+            EXCLUDE: "../src/tmp ../include/tmp ../include/boris_old.cpp"
+            EXTENSION_MAPPING: "cu=C++ cuh=C++"
+            EXTRACT_ALL: True
+            ENABLE_PREPROCESSING: True
+            MACRO_EXPANSION: True
+            PREDEFINED: "USE_CUDA __global__= __device__= __host__= __forceinline__="
+      save-api: .mkdoxy

@@ -11,7 +11,6 @@
 
 #include "background.h"
 #include "flan_types.h"
-#include "impurity.h"
 #include "impurity_stats_device.h"
 #include "options.h"
 #include "slots.h"
@@ -111,9 +110,6 @@ namespace Impurity
 		void add_s(const int tidx, const int xidx, const int yidx, 
 			const int zidx, const BkgFPType value);
 
-		// Update particle track.
-		void update_track(const Impurity& imp);
- 
 		// Pack all the arrays into a single buffer that can be sent across
 		// MPI processes
 		void pack(std::vector<double>& buf) const;

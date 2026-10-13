@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "background.h"
-#include "impurity.h"
 #include "openadas_device.h"
 #include "pcg32.h"
 #include "slots.h"
@@ -95,16 +94,6 @@ namespace OpenADAS
 		OpenADASDevice to_device(int device_id);
 	};
 
-	/**
-	* @brief Calculate ionization and recombination probabilities
-	* @return Returns a pair of doubles representing the probabilities of each
-	*	process occurring (ionization, recombination).
-	*/
-	//std::pair<double, double> calc_ioniz_recomb_probs(
-	//	Impurity::Impurity& imp, const Background::Background& bkg,
-	//	const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
-	//	const double imp_time_step, const int tidx, const int xidx, 
-	//	const int yidx, const int zidx);
 
 	/**
 	* @brief Handle impurity ion ionization and recombination

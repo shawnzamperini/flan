@@ -4,7 +4,6 @@
 */
 
 #include "background.h"
-#include "impurity.h"
 #include "impurity_stats.h"
 #include "options.h"
 #include "pcg32.h"

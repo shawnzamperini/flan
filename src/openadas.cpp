@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "background.h"
-#include "impurity.h"
 #include "openadas.h"
 #include "openadas_device.h"
 #include "pcg32.h"
@@ -352,11 +351,6 @@ namespace OpenADAS
 
 #endif
 
-	//std::pair<double, double> calc_ioniz_recomb_probs(
-	//	Impurity::Impurity& imp, const Background::Background& bkg,
-	//	const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
-	//	const double imp_time_step, const int tidx, const int xidx, 
-	//	const int yidx, const int zidx)
 	std::pair<double, double> calc_ioniz_recomb_probs(
 		const Background::Background& bkg,
 		const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb, 
