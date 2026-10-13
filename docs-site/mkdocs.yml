@@ -2,6 +2,7 @@ site_name: Flan
 
 theme:
   name: material
+  favicon: assets/images/favicon.png
   palette:
     - scheme: default
       primary: custom
@@ -39,6 +40,7 @@ nav:
       - MPI Parallelism: developer/mpi-parallelism.md
       - OpenMP Layout: developer/openmp-layout.md
       - Contributing: developer/contributing.md
+      - Gangster Spongebob: developer/gangster-spongebob.md
   - Publications/Presentations: publications.md
 
 markdown_extensions:
