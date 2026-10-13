@@ -1,43 +1,50 @@
-#include <iostream>
-#include <tuple>
-
 #include "flan.h"
-#include "flan_types.h"
 #include "mpi.h"
 
-
-// Function definitions go here (don't forget to make a pointer below)
-std::tuple<double, double, double> mapc2p(double xc, double yc, double zc)
-{
-	// Default template where the computational coordinates are already
-	// in physical (Cartesian) coordinates. Modify as needed based on the
-	// Gkeyll simulation.
-	double xp {xc};
-	double yp {yc};
-	double zp {zc};
-
-	std::cout << "Using passed in mapc2p\n";
-
-	// Return as three-tuple of doubles.
-	return std::make_tuple(xp, yp, zp);
-}
 
 Inputs create_inputs()
 {
 	Inputs inpts;
 	
-	// Int, double and string input options go here
+	// Small selection of options to get started with. See documentation for 
+	// list of all options: https://shawnzamperini.github.io/flan/input-options/
+	
+	// Meta options
+	inpts["use_gpu"] = "off";  // off, cuda
 	inpts["case_name"] = "flan_case_name";
-	inpts["gkyl_dir"] = "/path/to/gkyl/case";
-	inpts["gkyl_casename"] = "name_of_gkyl_case";
-	inpts["gkyl_frame_start"] = 0;
-	inpts["gkyl_frame_end"] = 10;
+	
+	// Impurity options
+	inpts["imp_num"] = 100000000;
+	inpts["imp_time_step"] = 1e-8;
+	inpts["imp_collisions"] = "nanbu";  // off, nanbu
 
-	// Pointers to functions go here
-	Mapc2p_ptr mapc2p_ptr {&mapc2p};
+	//   |  Z |  Mass  |
+	//He |  2 |   4.00 |
+	//inpts["imp_atom_num"] = 2; inpts["imp_mass_amu"] = 4.00;
+	//Li |  3 |   6.94 |
+	//inpts["imp_atom_num"] = 3; inpts["imp_mass_amu"] = 6.94;
+	//B  |  5 |  10.81 |
+	//inpts["imp_atom_num"] = 5; inpts["imp_mass_amu"] = 10.81;
+	//C  |  6 |  12.01 |
+	//inpts["imp_atom_num"] = 6; inpts["imp_mass_amu"] = 12.01;
+	//Ne | 10 |  20.18 |
+	//inpts["imp_atom_num"] = 10; inpts["imp_mass_amu"] = 20.18;
+	//Si | 14 |  20.85 |
+	//inpts["imp_atom_num"] = 14; inpts["imp_mass_amu"] = 20.85;
+	//Fe | 26 |  55.85 |
+	//inpts["imp_atom_num"] = 26; inpts["imp_mass_amu"] = 55.85;
+	//Mo | 42 |  95.95 |
+	//inpts["imp_atom_num"] = 42; inpts["imp_mass_amu"] = 95.95;
+	//Xe | 54 | 131.29 |
+	//inpts["imp_atom_num"] = 54; inpts["imp_mass_amu"] = 131.29;
+	//W  | 74 | 183.84 |
+	inpts["imp_atom_num"] = 74; inpts["imp_mass_amu"] = 183.84;
 
-	// Function pointer input options go here
-	inpts["mapc2p"] = mapc2p_ptr;
+	// Atomic physics
+	inpts["imp_iz_recomb"] = "on";
+	inpts["openadas_root"] = "/global/homes/z/zamp/flansoft/openadas";
+	inpts["openadas_year"] = 89;  // 50 for tungsten, 89 for everything else
+
 
 	return inpts;
 }
