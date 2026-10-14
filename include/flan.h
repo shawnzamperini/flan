@@ -1,9 +1,9 @@
-#ifndef FLAN_H
-#define FLAN_H
-
 /**
 * @file flan.h
+* @brief Header file for flan.cpp.
 */
+#pragma once
+
 #include "flan_types.h" // For Inputs type
 
 /**
@@ -13,5 +13,3 @@
 *        control a Flan simulation.
 */
 void flan(const Inputs& inpts);
-
-#endif

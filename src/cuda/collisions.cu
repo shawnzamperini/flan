@@ -1,3 +1,18 @@
+/**
+* @file  collisions.cu
+*
+* @brief CUDA routines for updating particle velocity due to Coulomb
+*        collisions via the Nanbu algorithm.
+*
+* GPU version of collisions.cpp. Derivation and steps taken from:
+* Nanbu, K. Theory of cumulative small-angle collisions in plasmas.
+* Phys. Rev. E 55, 4642–4652 (1997).
+*
+* Each time step, the cumulative effect of all the small-angle collisions
+* with a background species is replaced by a single deflection of the
+* relative velocity by an angle chi. How collisional the step is is set by
+* s, which sets the shape A(s) of the distribution chi is sampled from.
+*/
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <math.h>
@@ -16,7 +31,10 @@
 
 namespace Collisions
 {
-	// Simple struct to hold values returned from calc_s.
+	/**
+	* Values returned from nanbu_calc_s_cuda: the s term and the Cartesian
+	* components of the relative velocity (m/s).
+	*/
 	struct NanbuSResult
 	{
 		double s;
@@ -25,7 +43,9 @@ namespace Collisions
 		double gZ;
 	};
 
-	// Simple struct to hold three floats
+	/**
+	* Simple struct to hold the three components of a vector.
+	*/
 	struct Vec3d
 	{
 		double x;
@@ -35,14 +55,12 @@ namespace Collisions
 
 
 	/**
-	* Computes the electron Debye length.
+	* Calculates the electron Debye length,
+	* lambda_D = sqrt(eps0 kTe / (ne e^2)).
 	*
-	* lambda_D = sqrt(eps0 kT_e / (n_e e^2))
-	*
-	* @param te Electron temperature [eV].
-	* @param ne Electron density [m-3].
-	*
-	* @return Debye length [m].
+	* @param te Electron temperature (eV).
+	* @param ne Electron density (m^-3).
+	* @return Debye length (m).
 	*/
 	__device__ __forceinline__
 	double calc_debye_length_cuda(const double te, const double ne)
@@ -53,20 +71,22 @@ namespace Collisions
 
 
 	/**
-	* Samples a velocity from a drifting Maxwellian distribution.
+	* Samples the velocity of a background particle from a drifting
+	* Maxwellian.
 	*
-	* The distribution has temperature T and bulk velocity
-	* (uX, uY, uZ).
+	* Each component is drawn from a normal distribution with a mean equal
+	* to the flow velocity and a standard deviation of sqrt(kT/m). We call
+	* this thermal sampling of the background velocity.
 	*
-	* @param T Temperature [eV].
-	* @param uX Drift velocity x-component [m/s].
-	* @param uY Drift velocity y-component [m/s].
-	* @param uZ Drift velocity z-component [m/s].
-	* @param m Particle mass [kg].
-	* @param rng Random number generator.
-	* @param[out] bkg_vX Sampled x-velocity [m/s].
-	* @param[out] bkg_vY Sampled y-velocity [m/s].
-	* @param[out] bkg_vZ Sampled z-velocity [m/s].
+	* @param T Temperature of the background species (eV).
+	* @param uX Cartesian X flow velocity of the background species (m/s).
+	* @param uY Cartesian Y flow velocity of the background species (m/s).
+	* @param uZ Cartesian Z flow velocity of the background species (m/s).
+	* @param m Mass of the background species (kg).
+	* @param rng Random number generator for this particle.
+	* @param[out] bkg_vX Sampled Cartesian X velocity (m/s).
+	* @param[out] bkg_vY Sampled Cartesian Y velocity (m/s).
+	* @param[out] bkg_vZ Sampled Cartesian Z velocity (m/s).
 	*/
 	__device__ __forceinline__
 	void sample_bkg_velocity_cuda(const double T, const double uX, const double uY, 
@@ -85,7 +105,44 @@ namespace Collisions
 	}
 
 
-	// Calculate s term in Nanbu collision model
+	/**
+	* Calculates the s term in the Nanbu collision model (Eq. 19), which
+	* measures how collisional this time step is.
+	*
+	* The relative velocity g is between the impurity and a background
+	* particle whose velocity is sampled from a drifting Maxwellian (flow
+	* plus thermal sampling) with sample_bkg_velocity_cuda. The Coulomb
+	* logarithm uses the Debye length and the expectation value of the
+	* impact parameter b0, and is clamped to be at least 1. The background
+	* species is assumed to be singly charged with ni = ne. A message is
+	* printed if the Coulomb logarithm is NaN.
+	*
+	* @param bkg_d Background plasma on the device.
+	* @param dt Time step (s).
+	* @param T Temperature of the background species colliding with the
+	*        impurity (eV).
+	* @param mass_kg Mass of the background species (kg).
+	* @param Te Electron temperature (eV), used for the Debye length.
+	* @param ne Electron density (m^-3).
+	* @param tidx Index of the time frame. Currently unused.
+	* @param xidx x index of the grid cell. Currently unused.
+	* @param yidx y index of the grid cell. Currently unused.
+	* @param zidx z index of the grid cell. Currently unused.
+	* @param t Time of the particle (s).
+	* @param x Computational x coordinate of the particle.
+	* @param y Computational y coordinate of the particle.
+	* @param z Computational z coordinate of the particle.
+	* @param vX Cartesian X velocity of the impurity (m/s).
+	* @param vY Cartesian Y velocity of the impurity (m/s).
+	* @param vZ Cartesian Z velocity of the impurity (m/s).
+	* @param q Charge state of the impurity.
+	* @param imp_mass Mass of the impurity (kg).
+	* @param rng Random number generator for this particle.
+	* @param stencil_4d Interpolation stencil at the particle location, used
+	*        to interpolate the flow velocity.
+	* @return The s term and the Cartesian components of the relative
+	*         velocity (m/s).
+	*/
 	__device__ __forceinline__
 	NanbuSResult nanbu_calc_s_cuda(const Background::BackgroundDevice& bkg_d,
 		const double dt, const double T, const double mass_kg, const double Te,
@@ -174,7 +231,18 @@ namespace Collisions
 	}  // nanbu_calc_s_cuda
 
 
-	// Calculate A term in Nanbu collision model
+	/**
+	* Calculates the A term in the Nanbu collision model (Eq. 13), which sets
+	* the shape of the distribution the deflection angle is sampled from.
+	*
+	* For s < 0.01 (weakly collisional) A = 1 / s, and for s > 5 (strongly
+	* collisional) A = 3 exp(-s). In between, A is linearly interpolated
+	* from the precomputed table in nanbu_s_a.cuh, which was calculated
+	* using python/calc_nanbu.py.
+	*
+	* @param s The s term from nanbu_calc_s_cuda.
+	* @return The A term.
+	*/
 	__device__
 	double nanbu_calc_A_cuda(const double s)
 	{
@@ -201,6 +269,20 @@ namespace Collisions
 	}  // nanbu_calc_A
 
 
+	/**
+	* Samples the deflection angle chi in the Nanbu collision model (Eq. 17).
+	*
+	* cos(chi) is found by directly inverting the cumulative distribution
+	* built from A, using a uniform random number U. For s < 0.02 the small-s
+	* limit 1 + s ln(U) is used, and for s > 6 the deflection is isotropic,
+	* 2U - 1. cos(chi) is clamped to [-1, 1] to guard against rounding
+	* errors.
+	*
+	* @param s The s term from nanbu_calc_s_cuda.
+	* @param A The A term from nanbu_calc_A_cuda.
+	* @param rng Random number generator for this particle.
+	* @return Deflection angle chi (radians).
+	*/
 	__device__ 
 	double nanbu_calc_chi_cuda(const double s, const double A, pcg32& rng)
 	{
@@ -230,7 +312,30 @@ namespace Collisions
 	}  // nanbu_calc_chi_cuda
 
 	
-	// Calculate post-collision Cartesian velocity components from Nanbu model
+	/**
+	* Calculates the post-collision Cartesian velocity of the impurity in the
+	* Nanbu collision model (Eq. 20a).
+	*
+	* The relative velocity g is rotated by the deflection angle chi about a
+	* random azimuthal angle, uniformly distributed in [0, 2 pi). The case
+	* where g is parallel to X is handled separately to avoid dividing by
+	* zero.
+	*
+	* @param gX Cartesian X component of the relative velocity (m/s).
+	* @param gY Cartesian Y component of the relative velocity (m/s).
+	* @param gZ Cartesian Z component of the relative velocity (m/s).
+	* @param chi Deflection angle from nanbu_calc_chi_cuda (radians).
+	* @param mass_a Mass of the impurity (kg).
+	* @param mass_b Mass of the background species (kg).
+	* @param vX Cartesian X velocity of the impurity before the collision
+	*        (m/s).
+	* @param vY Cartesian Y velocity of the impurity before the collision
+	*        (m/s).
+	* @param vZ Cartesian Z velocity of the impurity before the collision
+	*        (m/s).
+	* @param rng Random number generator for this particle.
+	* @return Post-collision velocity in Cartesian space (m/s).
+	*/
 	__device__ 
 	Vec3d nanbu_post_coll_cuda(const double gX, const double gY,
 		const double gZ, const double chi, const double mass_a, 
@@ -282,6 +387,31 @@ namespace Collisions
 	}  // nanbu_post_coll_cuda
 
 
+	/**
+	* Kernel that updates the Cartesian velocity of each particle due to
+	* Coulomb collisions with one background species using the Nanbu model.
+	*
+	* One thread handles one slot, and dead particles are skipped. ne, Te
+	* (and Ti for ions) are interpolated at the particle location and held
+	* at or above min_ne, min_te and min_ti. Then s, A and chi are calculated
+	* and the velocity is updated with nanbu_post_coll_cuda. Since this
+	* happens after the Boris update, the updated velocity is v at n+1/2. A
+	* message is printed if chi is NaN.
+	*
+	* @param slots_d Particle slots on the device. The velocities are
+	*        updated in place.
+	* @param bkg_d Background plasma on the device.
+	* @param elec If true, collide with electrons (Te). Otherwise collide
+	*        with ions (Ti).
+	* @param dt Time step (s).
+	* @param stats_d Impurity statistics on the device. Currently unused,
+	*        since recording s is commented out.
+	* @param rngs_d Random number generators on the device, one per slot.
+	* @param elec_mass_amu Electron mass (amu).
+	* @param ion_mass_amu Main ion mass (amu).
+	* @param opts_d Simulation options on the device, used for min_ne,
+	*        min_te and min_ti.
+	*/
 	__global__
 	void nanbu_coll_kernel(Slots::SlotsDevice slots_d, 
 		const Background::BackgroundDevice bkg_d, bool elec, const double dt, 
@@ -302,6 +432,11 @@ namespace Collisions
 		// If particle isn't alive then skip
 		if (slots_d.state[i] > 0) return;
 
+		// Neutral particles do not scatter, so skip. Without this you will
+		// get an crash (or hang) anyways.
+		int q {slots_d.q[i]};
+		if (q == 0) return;
+
 		// Local variables
 		int tidx {slots_d.tidx[i]};
 		int xidx {slots_d.xidx[i]};
@@ -314,7 +449,6 @@ namespace Collisions
 		double vX {slots_d.vX[i]};
 		double vY {slots_d.vY[i]};
 		double vZ {slots_d.vZ[i]};
-		int q {slots_d.q[i]};
 
 		// Interpolate for ne, Te
 		// Get interpolation stencil at this location for 4D arrays
@@ -414,6 +548,25 @@ namespace Collisions
 	}  // nanbu_coll
 
 
+	/**
+	* Launches nanbu_coll_kernel to update the velocity of every particle on
+	* the GPU due to collisions with one background species.
+	*
+	* Uses blocks of 256 threads, one thread per slot. The launch is
+	* asynchronous, except in DEBUG builds, where it waits for the kernel to
+	* finish and prints any error.
+	*
+	* @param slots_d Particle slots on the device.
+	* @param bkg_d Background plasma on the device.
+	* @param elec If true, collide with electrons. Otherwise collide with
+	*        ions.
+	* @param dt Time step (s).
+	* @param imp_stats_d Impurity statistics on the device.
+	* @param rngs_d Random number generators on the device, one per slot.
+	* @param elec_mass_amu Electron mass (amu).
+	* @param ion_mass_amu Main ion mass (amu).
+	* @param opts_d Simulation options on the device.
+	*/
 	void collision_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d, const bool elec, 
 		const double dt, ImpurityStats::StatisticsDevice& imp_stats_d,

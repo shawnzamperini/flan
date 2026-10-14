@@ -1,3 +1,7 @@
+/**
+* @file variance_reduction.cpp
+* @brief Not implemented, but could be if necessary.
+*/
 #include "variance_reduction.h"
 
 

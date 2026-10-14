@@ -1,3 +1,8 @@
+/**
+* @file impurity_stats_device.h
+* @brief Contains struct to hold impurity statistics data for device-side 
+*        access.
+*/
 #pragma once
 
 namespace ImpurityStats

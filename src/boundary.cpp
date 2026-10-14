@@ -1,6 +1,5 @@
 /**
 * @file  boundary.cpp
-*
 * @brief Routines for handling time and spatial boundary conditions.
 */
 #include <omp.h>

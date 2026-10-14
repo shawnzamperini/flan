@@ -1132,20 +1132,6 @@ namespace ImpurityTransport
 			std::cout << "GPU acceleration is off. Turn on with "
 				<< "use_gpu = \"cuda\"\n";
 		}
-#else
-
-		// Turn off GPU option if it was turned on for a CPU-only build.
-		if (opts.use_gpu_int() > 0)
-		{
-			std::cout << "GPU acceleration requested (use_gpu = " 
-				<< opts.use_gpu() << ") but Flan was built without GPU "
-				"support. Turning off.";
-			opts.set_use_gpu("off");
-		}
-
-#endif
-		
-#ifdef USE_CUDA
 
 		if (opts.use_gpu_int() > 0)
 		{

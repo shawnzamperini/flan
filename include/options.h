@@ -1,5 +1,4 @@
-#ifndef OPTIONS_H
-#define OPTIONS_H
+#pragma once
 
 /**
 * @file options.h
@@ -359,5 +358,3 @@ namespace Options
 	// Free options on device
 	void free_opts(OptionsDevice* opts_d, int device_id = 0);
 }
-
-#endif

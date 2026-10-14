@@ -513,10 +513,11 @@ namespace Collisions
 				}
 			}
 
-			// Need to account for this better, just putting it here for now so I
-			// can get this paper submitted :(
-			//Te = std::max(0.1, Te);
-			//ne = std::max(1e16, ne);
+			// Don't let values go too low. Could happen with interpolation
+			// near the edge of a grid, though we try to prevent that from
+			// happening in the inteprolation functions.
+			Te = std::max(opts.min_te(), Te);
+			ne = std::max(opts.min_ne(), ne);
 
 			// Load some reusable variables based on which species. If elec = true,
 			// then electrons and ions if not. 

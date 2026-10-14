@@ -1,3 +1,7 @@
+/**
+* @file background_device.h
+* @brief Contains struct to hold Background data for device-side access.
+*/
 #pragma once 
 
 namespace Background

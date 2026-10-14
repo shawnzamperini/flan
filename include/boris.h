@@ -1,3 +1,7 @@
+/**
+* @file boris.h
+* @brief Header file for boris.cpp.
+*/
 #pragma once
 
 #include "background.h"

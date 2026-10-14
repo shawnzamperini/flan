@@ -1,8 +1,20 @@
+/**
+* @file  timer.cpp
+*
+* @brief Timers for measuring how long each section of the code takes.
+*
+* Each Section has its own Accumulator holding the total time and number of
+* calls. A section is timed either with a ScopedTimer, which times until it
+* goes out of scope, or with Timer::start and Timer::stop. A summary of every
+* section is printed at the end of the simulation.
+*/
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "timer.h"
@@ -14,6 +26,15 @@ namespace Timer
 	// ScopedTimer
 	// ---------------------------------------------------------------
 
+	/**
+	* Starts timing a section.
+	*
+	* If the section is already being timed, an error is printed and the
+	* section is marked as not running, so neither this timer nor the one
+	* already running records a duration.
+	*
+	* @param acc Accumulator of the section to time, from Timer::acc.
+	*/
 	ScopedTimer::ScopedTimer(Accumulator& acc)
 		: m_acc(acc)
 	{
@@ -28,14 +49,19 @@ namespace Timer
 		m_acc.start = std::chrono::high_resolution_clock::now();
 	}
 
+	/**
+	* Stops timing the section, adding the elapsed time to its total and
+	* incrementing its number of calls.
+	*/
 	ScopedTimer::~ScopedTimer()
 	{
-		// If start() above bailed out due to a re-entrancy error, don't
+		// If the constructor above bailed out due to a re-entrancy error, don't
 		// record a bogus (or negative) duration.
 		if (!m_acc.running) return;
 
 		auto dur {std::chrono::high_resolution_clock::now() - m_acc.start};
-		m_acc.total_us += std::chrono::duration<double, std::micro>(dur).count();
+		m_acc.total_us += std::chrono::duration<double, std::micro>(dur)
+			.count();
 		m_acc.calls++;
 		m_acc.running = false;
 	}
@@ -44,16 +70,37 @@ namespace Timer
 	// Timer
 	// ---------------------------------------------------------------
 
+	/**
+	* Returns the accumulator for a section. Use with ScopedTimer.
+	*
+	* @param s Section to get the accumulator for.
+	* @return Reference to the section's accumulator.
+	*/
 	Accumulator& Timer::acc(Section s)
 	{
 		return m_acc[static_cast<std::size_t>(s)];
 	}
 
+	/**
+	* Returns the accumulator for a section, read-only.
+	*
+	* @param s Section to get the accumulator for.
+	* @return Const reference to the section's accumulator.
+	*/
 	const Accumulator& Timer::acc(Section s) const
 	{
 		return m_acc[static_cast<std::size_t>(s)];
 	}
 
+	/**
+	* Starts timing a section manually, for cases where scoping a
+	* ScopedTimer isn't convenient. Prefer ScopedTimer where possible.
+	*
+	* If the section is already being timed, an error is printed and the
+	* running timer is left alone.
+	*
+	* @param s Section to start timing.
+	*/
 	void Timer::start(Section s)
 	{
 		Accumulator& a {acc(s)};
@@ -67,6 +114,14 @@ namespace Timer
 		a.start = std::chrono::high_resolution_clock::now();
 	}
 
+	/**
+	* Stops timing a section started with start, adding the elapsed time to
+	* its total and incrementing its number of calls.
+	*
+	* If the section was not started, an error is printed.
+	*
+	* @param s Section to stop timing.
+	*/
 	void Timer::stop(Section s)
 	{
 		Accumulator& a {acc(s)};
@@ -82,6 +137,12 @@ namespace Timer
 		a.running = false;
 	}
 
+	/**
+	* Adds another Timer's total times and number of calls into this one,
+	* e.g., to combine the timers from each GPU.
+	*
+	* @param other Timer to merge into this one.
+	*/
 	void Timer::merge(const Timer& other)
 	{
 		// Sum every field for every section. Because this loops over the
@@ -98,6 +159,14 @@ namespace Timer
 		}
 	}
 
+	/**
+	* Formats a number in fixed-point notation with the given number of
+	* decimal places.
+	*
+	* @param value Number to format.
+	* @param precision Number of decimal places.
+	* @return The formatted number.
+	*/
 	std::string Timer::string_precision(double value, int precision)
 	{
 		std::ostringstream oss;
@@ -105,6 +174,15 @@ namespace Timer
 		return oss.str();
 	}
 
+	/**
+	* Formats a duration as a human readable string, choosing the largest
+	* unit (hrs, min, s, ms or us) that gives a value of at least 1.
+	*
+	* Uses 2 decimal places, or 4 for microseconds.
+	*
+	* @param time_us Duration (us).
+	* @return The formatted duration with its unit, e.g., "1.50 min".
+	*/
 	std::string Timer::format_time(double time_us)
 	{
 		// Choose the largest unit that gives a value >= 1.0
@@ -130,6 +208,12 @@ namespace Timer
 		}
 	}
 
+	/**
+	* Returns the name of a section as printed in the summary.
+	*
+	* @param s Section to get the name of.
+	* @return Name of the section, or "Unknown".
+	*/
 	const char* Timer::section_name(Section s)
 	{
 		switch (s)
@@ -151,6 +235,13 @@ namespace Timer
 		}
 	}
 
+	/**
+	* Prints a summary of the time spent in each section to stdout.
+	*
+	* Each row shows the section name, indented to show which sections are
+	* part of another, followed by its total time, its number of calls and
+	* the average time per call. The times are lined up in a column.
+	*/
 	void Timer::print_summary() const
 	{
 		// (section, indent) pairs in the order/nesting we want to print.
@@ -161,6 +252,7 @@ namespace Timer
 			{Section::Imp,       "    "},
 			{Section::Boris,     "      "},
 			{Section::IonRec,    "      "},
+			{Section::Step,		 "      "},
 			{Section::Coll,      "      "},
 			{Section::FindCell,  "      "},
 			{Section::FillSlots, "      "},
@@ -169,7 +261,7 @@ namespace Timer
 			{Section::Record,    "      "},
 			{Section::Save,      "    "},
 		};
- 
+
 		// Pass 1: build the label ("<indent><name>:") and time strings for
 		// every row, and track the widest of each so column 2 (time) lines
 		// up regardless of how long the section name or its indent is.
@@ -177,20 +269,20 @@ namespace Timer
 		std::vector<std::string> times;
 		std::size_t label_width {0};
 		std::size_t time_width {0};
- 
+
 		for (const auto& [section, indent] : rows)
 		{
 			const Accumulator& a {acc(section)};
- 
+
 			std::string label {indent + section_name(section) + ":"};
 			label_width = std::max(label_width, label.size());
 			labels.push_back(std::move(label));
- 
+
 			std::string time_str {format_time(a.total_us)};
 			time_width = std::max(time_width, time_str.size());
 			times.push_back(std::move(time_str));
 		}
- 
+
 		// Pass 2: print with the label left-aligned and the time
 		// right-aligned, so the numbers form a straight column.
 		std::cout << "Time Summary (MPI Rank 0)\n";
@@ -198,12 +290,12 @@ namespace Timer
 		{
 			const auto& [section, indent] {rows[i]};
 			const Accumulator& a {acc(section)};
- 
+
 			std::cout << std::left << std::setw(static_cast<int>(label_width))
 				<< labels[i] << "  "
 				<< std::right << std::setw(static_cast<int>(time_width))
 				<< times[i];
- 
+
 			std::cout << "  (" << a.calls << " call"
 				<< (a.calls == 1 ? "" : "s");
 			if (a.calls > 0)
@@ -214,5 +306,4 @@ namespace Timer
 			std::cout << ")\n";
 		}
 	}
-
 }

@@ -1,3 +1,9 @@
+/**
+* @file variance_reduction.h
+* @brief Header file for variance_reduction.cpp.
+*/
+#pragma once
+
 namespace VarianceReduction
 {
 	// This code has been removed because it relied on the old Impurity class

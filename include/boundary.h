@@ -1,3 +1,9 @@
+/**
+* @file boundary.h
+* @brief Header file for boundary.cpp.
+*/
+#pragma once
+
 #include <vector>
 
 #include "background.h"

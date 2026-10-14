@@ -1,3 +1,7 @@
+/**
+* @file impurity_transport.h
+* @brief Header file for impurity_transport.cpp.
+*/
 #pragma once
 
 #include "background.h"

@@ -1,3 +1,7 @@
+/**
+* @file timer.h
+* @brief Header file for timer.cpp.
+*/
 #ifndef TIMER_H
 #define TIMER_H
 
