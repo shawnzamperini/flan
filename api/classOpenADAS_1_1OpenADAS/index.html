@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-functions-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1256,7 +1267,7 @@
 
 <h1 id="class-openadasopenadas">Class OpenADAS::OpenADAS</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceOpenADAS/"><strong>OpenADAS</strong></a> <strong>&gt;</strong> <a href="./"><strong>OpenADAS</strong></a></p>
-<p><em>Class to read and store ionization/recombination rates from</em> <a href="./"><em><strong>OpenADAS</strong></em></a> <em>.</em></p>
+<p><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;openadas.h&gt;</code></li>
 </ul>
@@ -1271,11 +1282,11 @@
 <tbody>
 <tr>
 <td style="text-align: right;"></td>
-<td style="text-align: left;"><a href="#function-openadas-12"><strong>OpenADAS</strong></a> () <br><em>Empty constructor.</em></td>
+<td style="text-align: left;"><a href="#function-openadas-12"><strong>OpenADAS</strong></a> () <br></td>
 </tr>
 <tr>
 <td style="text-align: right;"></td>
-<td style="text-align: left;"><a href="#function-openadas-22"><strong>OpenADAS</strong></a> (const std::string_view openadas_root, const int openadas_year, const int imp_atom_num, const std::string_view rate_type) <br><em>Constructor.</em></td>
+<td style="text-align: left;"><a href="#function-openadas-22"><strong>OpenADAS</strong></a> (const std::string_view openadas_root, const int openadas_year, const int imp_atom_num, const std::string_view rate_type) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">std::tuple&lt; double, double, double, int, int &gt;</td>
@@ -1283,7 +1294,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">std::string</td>
-<td style="text-align: left;"><a href="#function-get_openadas_path"><strong>get_openadas_path</strong></a> (const std::string_view openadas_root, const int openadas_year, const int imp_atom_num, const std::string_view rate_type) <br><em>Construct full path to an</em> <a href="./"><em><strong>OpenADAS</strong></em></a> <em>data file.</em></td>
+<td style="text-align: left;"><a href="#function-get_openadas_path"><strong>get_openadas_path</strong></a> (const std::string_view openadas_root, const int openadas_year, const int imp_atom_num, const std::string_view rate_type) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
@@ -1291,7 +1302,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-read_rate_coefficients"><strong>read_rate_coefficients</strong></a> (std::ifstream &amp; openadas_stream) <br><em>Read in data from an</em> <a href="./"><em><strong>OpenADAS</strong></em></a> <em>file, storing it internally to the class.</em></td>
+<td style="text-align: left;"><a href="#function-read_rate_coefficients"><strong>read_rate_coefficients</strong></a> (std::ifstream &amp; openadas_stream) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;"><a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADASDevice</strong></a></td>
@@ -1299,28 +1310,30 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Class to read and store the ionization and recombination rate coefficients from <a href="./"><strong>OpenADAS</strong></a>. </p>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
 <h3 id="function-openadas-12">function OpenADAS [1/2]</h3>
-<p><em>Empty constructor.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADAS</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Creates an empty <a href="./"><strong>OpenADAS</strong></a> object with no rate coefficients loaded. </p>
 <hr>
 
 <h3 id="function-openadas-22">function OpenADAS [2/2]</h3>
-<p><em>Constructor.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADAS</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">openadas_root</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">openadas_year</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">imp_atom_num</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">rate_type</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Creates an <a href="./"><strong>OpenADAS</strong></a> object and loads the rate coefficients from the matching <a href="./"><strong>OpenADAS</strong></a> file.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>openadas_root</code> Full path to the directory containing <a href="./"><strong>OpenADAS</strong></a> data </li>
-<li><code>openadas_year</code> The year of the <a href="./"><strong>OpenADAS</strong></a> data to load </li>
-<li><code>imp_atom_num</code> Atomic number of the ion to load data for </li>
-<li><code>rate_type</code> One of "acd" (recombination) or "scd" (ionization) </li>
+<li><code>openadas_root</code> Full path to the directory containing the <a href="./"><strong>OpenADAS</strong></a> data. </li>
+<li><code>openadas_year</code> Year of the <a href="./"><strong>OpenADAS</strong></a> data to load, e.g., 50. </li>
+<li><code>imp_atom_num</code> Atomic number of the impurity to load data for. </li>
+<li><code>rate_type</code> Either "scd" (ionization) or "acd" (recombination). </li>
 </ul>
 <hr>
 
@@ -1330,26 +1343,36 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">value</span>
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Finds the two neighboring values in a sorted vector that bound a value, for use in a bilinear interpolation.</p>
+<p>Values outside the range of vec are clamped to its minimum or maximum, so the rates are never extrapolated.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>vec</code> Sorted vector of values, e.g., the <a href="./"><strong>OpenADAS</strong></a> densities. </li>
+<li><code>value</code> Value to find the bounding values of. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>{value, value0, value1, index0, index1}, where value is clamped to the range of vec, value0 and value1 are the bounding values and index0 and index1 are their indices. </p>
 <hr>
 
 <h3 id="function-get_openadas_path">function get_openadas_path</h3>
-<p><em>Construct full path to an</em> <a href="./"><em><strong>OpenADAS</strong></em></a> <em>data file.</em>
 <div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">get_openadas_path</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">openadas_root</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">openadas_year</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">imp_atom_num</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">rate_type</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Assembles the full path to an <a href="./"><strong>OpenADAS</strong></a> data file, e.g., [openadas_root]/scd50/scd50_w.dat.</p>
+<p>An error is printed if rate_type is not "scd" or "acd", or if there is no <a href="./"><strong>OpenADAS</strong></a> data for imp_atom_num. Supported elements are H through Ne, Al, Si, Cl, Ar, Fe, Kr, Mo, Xe and W.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>openadas_root</code> Full path to the directory containing <a href="./"><strong>OpenADAS</strong></a> data </li>
-<li><code>openadas_year</code> The year of the <a href="./"><strong>OpenADAS</strong></a> data to load </li>
-<li><code>imp_atom_num</code> Atomic number of the ion to load data for </li>
-<li><code>rate_type</code> One of "acd" (recombination) or "scd" (ionization)</li>
+<li><code>openadas_root</code> Full path to the directory containing the <a href="./"><strong>OpenADAS</strong></a> data. </li>
+<li><code>openadas_year</code> Year of the <a href="./"><strong>OpenADAS</strong></a> data to load, e.g., 50. </li>
+<li><code>imp_atom_num</code> Atomic number of the impurity to load data for. </li>
+<li><code>rate_type</code> Either "scd" (ionization) or "acd" (recombination). </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>Returns string containing the full path to the <a href="./"><strong>OpenADAS</strong></a> file that data is being read in from. </p>
+<p>Full path to the <a href="./"><strong>OpenADAS</strong></a> file. </p>
 <hr>
 
 <h3 id="function-get_rate_coeff">function get_rate_coeff</h3>
@@ -1359,17 +1382,28 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">te</span>
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the rate coefficient for a charge state, bilinearly interpolated in Te and ne.</p>
+<p>ne and Te outside the range of the <a href="./"><strong>OpenADAS</strong></a> data are clamped to the minimum or maximum value, so the rates are never extrapolated.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>charge</code> Index of the rate coefficient table. For ionization this is the charge, and for recombination the charge - 1. </li>
+<li><code>ne</code> Electron density (m^-3). </li>
+<li><code>te</code> Electron temperature (eV). </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Rate coefficient (m^3/s). </p>
 <hr>
 
 <h3 id="function-read_rate_coefficients">function read_rate_coefficients</h3>
-<p><em>Read in data from an</em> <a href="./"><em><strong>OpenADAS</strong></em></a> <em>file, storing it internally to the class.</em>
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">read_rate_coefficients</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">ifstream</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">openadas_stream</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Reads in the header, densities, temperatures and rate coefficients from an <a href="./"><strong>OpenADAS</strong></a> file, storing them in the class.</p>
+<p>The densities and temperatures are stored in the file as log10(ne [cm^-3]) and log10(Te [eV]), and the rate coefficients as log10(rate [cm^3/s]). They are converted to ne (m^-3), Te (eV) and rate (m^3/s). The rates are stored with dimensions (charge, Te, ne). An error is printed if there are fewer than two densities or temperatures, since the bilinear interpolation needs at least two of each.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>openadas_stream</code> A filestream object of the <a href="./"><strong>OpenADAS</strong></a> file </li>
+<li><code>openadas_stream</code> Open file stream of the <a href="./"><strong>OpenADAS</strong></a> file. </li>
 </ul>
 <hr>
 
@@ -1435,6 +1469,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

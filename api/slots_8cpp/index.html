@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,8 +1173,9 @@
 
 <h1 id="file-slotscpp">File slots.cpp</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_68267d1309a1af8e8297ef4c3efbcdba/"><strong>src</strong></a> <strong>&gt;</strong> <a href="./"><strong>slots.cpp</strong></a></p>
-<p><a href="../slots_8cpp_source/">Go to the source code of this file</a></p>
+<p><em>Storage for the particles being followed and routines to create new particles and move them to and from the GPU.</em> <a href="#detailed-description">More...</a></p>
 <ul>
+<li><code>#include &lt;algorithm&gt;</code></li>
 <li><code>#include &lt;array&gt;</code></li>
 <li><code>#include &lt;iostream&gt;</code></li>
 <li><code>#include &lt;omp.h&gt;</code></li>
@@ -1190,6 +1202,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>A <a href="../namespaceSlots/"><strong>Slots</strong></a> object holds a fixed number of particle "slots". Each slot holds one particle that is followed until it dies, at which point the slot is refilled with a new particle by fill_slots_cpu (or its CUDA version) until the requested number of particles has been followed. The reason for this layout is to enable a structure of arrays (SoA) memeory layout, which is more efficient memory-wise. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/slots.cpp</code></p>
 
@@ -1245,6 +1259,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

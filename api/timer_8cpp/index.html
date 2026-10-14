@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,13 +1173,15 @@
 
 <h1 id="file-timercpp">File timer.cpp</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_68267d1309a1af8e8297ef4c3efbcdba/"><strong>src</strong></a> <strong>&gt;</strong> <a href="./"><strong>timer.cpp</strong></a></p>
-<p><a href="../timer_8cpp_source/">Go to the source code of this file</a></p>
+<p><em>Timers for measuring how long each section of the code takes.</em> <a href="#detailed-description">More...</a></p>
 <ul>
+<li><code>#include &lt;algorithm&gt;</code></li>
 <li><code>#include &lt;iomanip&gt;</code></li>
 <li><code>#include &lt;iostream&gt;</code></li>
 <li><code>#include &lt;sstream&gt;</code></li>
 <li><code>#include &lt;stdexcept&gt;</code></li>
 <li><code>#include &lt;string&gt;</code></li>
+<li><code>#include &lt;utility&gt;</code></li>
 <li><code>#include &lt;vector&gt;</code></li>
 <li><code>#include "timer.h"</code></li>
 </ul>
@@ -1187,6 +1200,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Each Section has its own Accumulator holding the total time and number of calls. A section is timed either with a ScopedTimer, which times until it goes out of scope, or with Timer::start and Timer::stop. A summary of every section is printed at the end of the simulation. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/timer.cpp</code></p>
 
@@ -1242,6 +1257,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

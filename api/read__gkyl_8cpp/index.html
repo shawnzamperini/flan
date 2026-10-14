@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,8 +1173,7 @@
 
 <h1 id="file-read_gkylcpp">File read_gkyl.cpp</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_68267d1309a1af8e8297ef4c3efbcdba/"><strong>src</strong></a> <strong>&gt;</strong> <a href="./"><strong>read_gkyl.cpp</strong></a></p>
-<p><a href="../read__gkyl_8cpp_source/">Go to the source code of this file</a></p>
-<p><em>Routines handling reading in a plasma background from Gkeyll.</em> </p>
+<p><em>Routines handling reading in a plasma background from Gkeyll.</em> <a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;cmath&gt;</code></li>
 <li><code>#include &lt;filesystem&gt;</code></li>
@@ -1198,6 +1208,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>The Gkeyll data is read through read_gkyl.py, a python interface to postgkyl, which saves each dataset to a binary file named bkg_from_pgkyl_*.bin along with a few .csv files holding the times, grid and interpolation settings. These files are then read in here. If a file already exists from a previous run it is loaded directly instead of calling read_gkyl.py again, so delete the files to regenerate the background. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/read_gkyl.cpp</code></p>
 
@@ -1253,6 +1265,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

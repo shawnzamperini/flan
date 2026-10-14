@@ -705,6 +705,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ionization/Recombination
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -721,6 +739,103 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rate-coefficients" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate coefficients
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rate coefficients">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#charge-state-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Charge-state update
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Charge-state update">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#neutrals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neutrals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-the-time-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing the time step
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-the-model-is-valid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When the model is valid
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1142,6 +1257,92 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rate-coefficients" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate coefficients
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rate coefficients">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#charge-state-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Charge-state update
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Charge-state update">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#neutrals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neutrals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-the-time-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing the time step
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-the-model-is-valid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When the model is valid
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1158,7 +1359,113 @@
 
 
 <h1 id="ionization-and-recombination">Ionization and Recombination</h1>
-<p><em>This page is under construction.</em></p>
+<p>As an impurity moves through the plasma, its charge state changes through
+electron-impact ionization and recombination. Flan models both as random events
+whose probabilities come from OpenADAS rate coefficients. They are turned on with
+<code>imp_iz_recomb = "on"</code>, and are applied once per time step, at the start of
+each pass through the main loop (see
+<a href="../impurity-transport/#the-main-loop">Impurity Transport</a>).</p>
+<h2 id="rate-coefficients">Rate coefficients</h2>
+<p>The rate coefficients come from the OpenADAS database
+(<a href="https://open.adas.ac.uk">open.adas.ac.uk</a>), in ADF11 format:</p>
+<ul>
+<li><strong>SCD</strong> files: effective ionization rate coefficients, <span class="arithmatex">\(S_Z(n_e, T_e)\)</span>, for
+  <span class="arithmatex">\(Z \to Z+1\)</span>.</li>
+<li><strong>ACD</strong> files: effective recombination rate coefficients,
+  <span class="arithmatex">\(\alpha_{Z}(n_e, T_e)\)</span>, for <span class="arithmatex">\(Z \to Z-1\)</span>.</li>
+</ul>
+<p>These are <em>effective</em> (collisional-radiative) coefficients. They depend on
+both <span class="arithmatex">\(n_e\)</span> and <span class="arithmatex">\(T_e\)</span>, and they include the effect of the excited-state populations.
+Recombination includes radiative, dielectronic and three-body
+recombination.</p>
+<p>Each file is read from</p>
+<div class="highlight"><pre><span></span><code>[openadas_root]/scd[openadas_year]/scd[openadas_year]_[element].dat
+[openadas_root]/acd[openadas_year]/acd[openadas_year]_[element].dat
+</code></pre></div>
+<p>where <code>openadas_root</code> and <code>openadas_year</code> are input options (<code>openadas_year</code>
+defaults to <code>50</code>) and the element is chosen with <code>imp_atom_num</code>. For example,
+tungsten with the default year reads <code>scd50/scd50_w.dat</code> and <code>acd50/acd50_w.dat</code>.
+The supported elements are H through Ne, Al, Si, Cl, Ar, Fe, Kr, Mo, Xe and W.</p>
+<p>The files store <span class="arithmatex">\(\log_{10}\)</span> of the densities (cm<span class="arithmatex">\(^{-3}\)</span>), temperatures (eV) and
+rate coefficients (cm<span class="arithmatex">\(^3\)</span>/s). These are converted to m<span class="arithmatex">\(^{-3}\)</span>, eV and m<span class="arithmatex">\(^3\)</span>/s
+when they are read in (<code>OpenADAS::read_rate_coefficients</code> in <code>src/openadas.cpp</code>).</p>
+<h3 id="interpolation">Interpolation</h3>
+<p>For each particle, <span class="arithmatex">\(n_e\)</span> and <span class="arithmatex">\(T_e\)</span> are interpolated to the particle's position and
+time, the same way as in the <a href="../impurity-transport/#field-interpolation">Boris push</a>.
+The rate coefficient for the particle's charge state is then bilinearly
+interpolated in <span class="arithmatex">\((T_e, n_e)\)</span> from the table.</p>
+<p>If <span class="arithmatex">\(n_e\)</span> or <span class="arithmatex">\(T_e\)</span> fall outside the range of the OpenADAS data, they are clamped
+to the nearest edge of the table. The rates are never extrapolated.</p>
+<h2 id="charge-state-update">Charge-state update</h2>
+<p>During one time step <span class="arithmatex">\(\Delta t\)</span>, a particle in charge state <span class="arithmatex">\(Z\)</span> ionizes with
+probability</p>
+<div class="arithmatex">\[
+P_\text{iz} = S_Z(n_e, T_e)\, n_e\, \Delta t
+\]</div>
+<p>and recombines with probability</p>
+<div class="arithmatex">\[
+P_\text{rec} = \alpha_Z(n_e, T_e)\, n_e\, \Delta t.
+\]</div>
+<p>Two uniform random numbers <span class="arithmatex">\(U_1, U_2 \in [0, 1)\)</span> are drawn, and the charge
+becomes</p>
+<div class="arithmatex">\[
+Z \to Z + [U_1 &lt; P_\text{iz}] - [U_2 &lt; P_\text{rec}],
+\]</div>
+<p>where <span class="arithmatex">\([\cdot]\)</span> is 1 if the condition is true and 0 otherwise. If both events
+happen in the same step they cancel and the charge state is unchanged, so the
+charge changes by at most one per step.</p>
+<p>A fully stripped ion (<span class="arithmatex">\(Z\)</span> equal to the atomic number) can't ionize, so
+<span class="arithmatex">\(P_\text{iz} = 0\)</span>. The velocity is not changed by an ionization or recombination
+event. The new charge simply takes effect in the next Boris push and collision
+step.</p>
+<p>The CPU version is <code>OpenADAS::ioniz_recomb</code> (<code>src/openadas.cpp</code>), and the GPU
+version is <code>ioniz_recomb_kernel</code> (<code>src/cuda/openadas.cu</code>).</p>
+<h3 id="neutrals">Neutrals</h3>
+<div class="admonition note">
+<p class="admonition-title">Neutrals are handled correctly</p>
+<p>A neutral (<span class="arithmatex">\(Z = 0\)</span>) can ionize to <span class="arithmatex">\(Z = 1\)</span> using the <span class="arithmatex">\(Z = 0 \to 1\)</span> SCD
+coefficient, but it can't recombine, so <span class="arithmatex">\(P_\text{rec} = 0\)</span>. Once it's
+ionized, it is pushed by the fields and starts to undergo collisions. See
+<a href="../impurity-transport/#neutrals">Impurity Transport</a> and
+<a href="../collisions/#neutrals">Collisions</a>.</p>
+</div>
+<h2 id="choosing-the-time-step">Choosing the time step</h2>
+<p><span class="arithmatex">\(P = R\, n_e\, \Delta t\)</span> is the first-order expansion of the exact
+probability <span class="arithmatex">\(1 - e^{-R\, n_e\, \Delta t}\)</span>, and it's only accurate when <span class="arithmatex">\(P \ll 1\)</span>.
+The update also allows at most one ionization or recombination per step. Both
+mean the time step must be short compared to the ionization and recombination
+times, <span class="arithmatex">\(1/(S_Z n_e)\)</span> and <span class="arithmatex">\(1/(\alpha_Z n_e)\)</span>.</p>
+<p>If <span class="arithmatex">\(P &gt; 1\)</span>, the event always happens and the true rate is underestimated. Flan
+counts how often this happens, and prints a warning at the end of the run:</p>
+<div class="highlight"><pre><span></span><code>Warning: Ionization probability was &gt; 1.0 for N particles. Consider using a smaller time step.
+</code></pre></div>
+<p>(and similarly for recombination). The counter is incremented each time step that the
+probability is above 1, so <span class="arithmatex">\(N\)</span> counts particle-steps rather than unique particles. If these warnings
+show up for more than a handful of particle-steps, reduce <code>imp_time_step</code>. This is most
+likely for low charge states in hot, dense plasma, where ionization is fastest.</p>
+<h2 id="when-the-model-is-valid">When the model is valid</h2>
+<p><strong>Valid when:</strong></p>
+<ul>
+<li><strong>The time step resolves the atomic time scales</strong>, i.e., <span class="arithmatex">\(P \ll 1\)</span> (see above).</li>
+<li><strong>The plasma is within the range of the OpenADAS tables.</strong> Outside the table,
+  the edge values are used, which can be a poor approximation, e.g., at
+  temperatures far below the lowest tabulated <span class="arithmatex">\(T_e\)</span>.</li>
+<li><strong>The electrons are close to Maxwellian.</strong> The ADAS coefficients are
+  averaged over a Maxwellian electron distribution at <span class="arithmatex">\(T_e\)</span>.</li>
+<li><strong>The excited states are in quasi-steady state.</strong> The effective coefficients
+  assume that excited-state populations relax much faster than the plasma
+  conditions change along the impurity's path. This usually holds, though
+  long-lived metastable states can violate it.</li>
+</ul>
+<p><strong>Not included:</strong></p>
+<ul>
+<li><strong>Charge-exchange recombination</strong> with background neutrals, e.g., <span class="arithmatex">\(W^{Z+} + D^0
+  \to W^{(Z-1)+} + D^+\)</span>, which can be important in regions with a high neutral density.</li>
+<li><strong>Ionization by ions or photons.</strong> Only electron-impact ionization is
+  included.</li>
+<li><strong>More than one charge change per step.</strong> See
+  <a href="#choosing-the-time-step">Choosing the time step</a>.</li>
+</ul>
 
 
 
@@ -1212,6 +1519,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

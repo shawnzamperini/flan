@@ -1247,7 +1247,7 @@
 </tr>
 <tr>
 <td style="text-align: right;"><a href="../classBackground_1_1Background/"><strong>Background</strong></a></td>
-<td style="text-align: left;"><a href="#function-read_bkg"><strong>read_bkg</strong></a> (const <a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a> &amp; opts) <br><em>Read in plasma background.</em></td>
+<td style="text-align: left;"><a href="#function-read_bkg"><strong>read_bkg</strong></a> (const <a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a> &amp; opts) <br></td>
 </tr>
 </tbody>
 </table>
@@ -1261,17 +1261,18 @@
 <hr>
 
 <h3 id="function-read_bkg">function read_bkg</h3>
-<p><em>Read in plasma background.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">Background</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">read_bkg</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Reads in the plasma background from the source chosen by the bkg_source option.</p>
+<p>"test" loads a hardcoded test background with <a href="../namespaceTest/#function-read_test"><strong>Test::read_test</strong></a>, and "gkeyll" loads a Gkeyll simulation with <a href="../namespaceGkyl/#function-read_gkyl"><strong>Gkyl::read_gkyl</strong></a>. SOLEDGE3X backgrounds (control integer 2) are not implemented yet. If the source is not implemented or not recognized, an error is printed and an empty <a href="./"><strong>Background</strong></a> is returned.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>opts</code> The <a href="../namespaceOptions/"><strong>Options</strong></a> object controlling the simulation</li>
+<li><code>opts</code> Simulation options. </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>A <a href="./"><strong>Background</strong></a> object </p>
+<p><a href="./"><strong>Background</strong></a> object holding the plasma background. </p>
 <hr>
 
 <hr />
@@ -1329,6 +1330,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

@@ -1421,7 +1421,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-nanbu_coll"><strong>nanbu_coll</strong></a> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a> &amp; slots, const <a href="../classBackground_1_1Background/"><strong>Background::Background</strong></a> &amp; bkg, const <a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a> &amp; opts, bool elec, const double dt, <a href="../classImpurity_1_1Statistics/"><strong>Impurity::Statistics</strong></a> &amp; imp_stats, std::vector&lt; <a href="../structpcg32/"><strong>pcg32</strong></a> &gt; &amp; rngs) <br><em>Update impurity Cartesian velocity according to</em> <a href="../namespaceNanbu/"><em><strong>Nanbu</strong></em></a> <em>collision model.</em></td>
+<td style="text-align: left;"><a href="#function-nanbu_coll"><strong>nanbu_coll</strong></a> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a> &amp; slots, const <a href="../classBackground_1_1Background/"><strong>Background::Background</strong></a> &amp; bkg, const <a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a> &amp; opts, bool elec, const double dt, <a href="../classImpurity_1_1Statistics/"><strong>Impurity::Statistics</strong></a> &amp; imp_stats, std::vector&lt; <a href="../structpcg32/"><strong>pcg32</strong></a> &gt; &amp; rngs) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1452,6 +1452,14 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">ne</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Calculates the electron Debye length.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>te</code> Electron temperature (eV). </li>
+<li><code>ne</code> Electron density (m^-3). </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Debye length (m). </p>
 <hr>
 
 <h3 id="function-calc_debye_length_cuda">function calc_debye_length_cuda</h3>
@@ -1460,15 +1468,14 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">ne</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
-<p>Computes the electron Debye length.</p>
-<p>lambda_D = sqrt(eps0 kT_e / (n_e e^2))</p>
+<p>Calculates the electron Debye length, lambda_D = sqrt(eps0 kTe / (ne e^2)).</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>te</code> Electron temperature [eV]. </li>
-<li><code>ne</code> Electron density [m-3].</li>
+<li><code>te</code> Electron temperature (eV). </li>
+<li><code>ne</code> Electron density (m^-3). </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>Debye length [m]. </p>
+<p>Debye length (m). </p>
 <hr>
 
 <h3 id="function-collision_gpu">function collision_gpu</h3>
@@ -1484,6 +1491,20 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Launches nanbu_coll_kernel to update the velocity of every particle on the GPU due to collisions with one background species.</p>
+<p>Uses blocks of 256 threads, one thread per slot. The launch is asynchronous, except in DEBUG builds, where it waits for the kernel to finish and prints any error.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+<li><code>elec</code> If true, collide with electrons. Otherwise collide with ions. </li>
+<li><code>dt</code> Time step (s). </li>
+<li><code>imp_stats_d</code> <a href="../namespaceImpurity/"><strong>Impurity</strong></a> statistics on the device. </li>
+<li><code>rngs_d</code> Random number generators on the device, one per slot. </li>
+<li><code>elec_mass_amu</code> Electron mass (amu). </li>
+<li><code>ion_mass_amu</code> Main ion mass (amu). </li>
+<li><code>opts_d</code> Simulation options on the device. </li>
+</ul>
 <hr>
 
 <h3 id="function-nanbu_calc_a">function nanbu_calc_A</h3>
@@ -1491,6 +1512,14 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">s</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Calculates the A term in the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision model (Eq. 13), which sets the shape of the distribution the deflection angle is sampled from.</p>
+<p>For s &lt; 0.01 (weakly collisional) A = 1 / s, and for s &gt; 5 (strongly collisional) A = 3 exp(-s). In between, A is linearly interpolated from the precomputed table in <a href="../nanbu__s__a_8h/"><strong>nanbu_s_a.h</strong></a>, which was calculated using python/calc_nanbu.py.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>s</code> The s term from nanbu_calc_s. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The A term. </p>
 <hr>
 
 <h3 id="function-nanbu_calc_a_cuda">function nanbu_calc_A_cuda</h3>
@@ -1498,6 +1527,14 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">s</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Calculates the A term in the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision model (Eq. 13), which sets the shape of the distribution the deflection angle is sampled from.</p>
+<p>For s &lt; 0.01 (weakly collisional) A = 1 / s, and for s &gt; 5 (strongly collisional) A = 3 exp(-s). In between, A is linearly interpolated from the precomputed table in <a href="../nanbu__s__a_8cuh/"><strong>nanbu_s_a.cuh</strong></a>, which was calculated using python/calc_nanbu.py.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>s</code> The s term from nanbu_calc_s_cuda. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The A term. </p>
 <hr>
 
 <h3 id="function-nanbu_calc_chi">function nanbu_calc_chi</h3>
@@ -1507,6 +1544,16 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Samples the deflection angle chi in the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision model (Eq. 17).</p>
+<p>cos(chi) is found by directly inverting the cumulative distribution built from A, using a uniform random number U. For s &lt; 0.02 the small-s limit 1 + s ln(U) is used, and for s &gt; 6 the deflection is isotropic, 2U - 1. cos(chi) is clamped to [-1, 1] to guard against rounding errors.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>s</code> The s term from nanbu_calc_s. </li>
+<li><code>A</code> The A term from nanbu_calc_A. </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Deflection angle chi (radians). </p>
 <hr>
 
 <h3 id="function-nanbu_calc_chi_cuda">function nanbu_calc_chi_cuda</h3>
@@ -1516,6 +1563,16 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Samples the deflection angle chi in the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision model (Eq. 17).</p>
+<p>cos(chi) is found by directly inverting the cumulative distribution built from A, using a uniform random number U. For s &lt; 0.02 the small-s limit 1 + s ln(U) is used, and for s &gt; 6 the deflection is isotropic, 2U - 1. cos(chi) is clamped to [-1, 1] to guard against rounding errors.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>s</code> The s term from nanbu_calc_s_cuda. </li>
+<li><code>A</code> The A term from nanbu_calc_A_cuda. </li>
+<li><code>rng</code> Random number generator for this particle. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Deflection angle chi (radians). </p>
 <hr>
 
 <h3 id="function-nanbu_calc_s">function nanbu_calc_s</h3>
@@ -1538,6 +1595,29 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Calculates the s term in the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision model (Eq. 19), which measures how collisional this time step is.</p>
+<p>The relative velocity g is between the impurity and a background particle whose velocity is sampled from a drifting Maxwellian (flow plus thermal sampling) with sample_bkg_velocity. The Coulomb logarithm uses the Debye length and the expectation value of the impact parameter b0, and is clamped to be at least 1. The background species is assumed to be singly charged with ni = ne. An error is printed if the Coulomb logarithm or s is NaN.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma, used to interpolate the flow velocity. </li>
+<li><code>imp_time_step</code> Time step (s). </li>
+<li><code>T</code> Temperature of the background species colliding with the impurity (eV). </li>
+<li><code>mass_kg</code> Mass of the background species (kg). </li>
+<li><code>Te</code> Electron temperature (eV), used for the Debye length. </li>
+<li><code>ne</code> Electron density (m^-3). </li>
+<li><code>t</code> Time of the particle (s). </li>
+<li><code>x</code> Computational x coordinate of the particle. </li>
+<li><code>y</code> Computational y coordinate of the particle. </li>
+<li><code>z</code> Computational z coordinate of the particle. </li>
+<li><code>vX</code> Cartesian X velocity of the impurity (m/s). </li>
+<li><code>vY</code> Cartesian Y velocity of the impurity (m/s). </li>
+<li><code>vZ</code> Cartesian Z velocity of the impurity (m/s). </li>
+<li><code>q</code> Charge state of the impurity. Must not be 0. </li>
+<li><code>slots</code> Particle slots, used for the impurity mass. </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>{s, gX, gY, gZ}, where gX, gY and gZ are the Cartesian components of the relative velocity (m/s). </p>
 <hr>
 
 <h3 id="function-nanbu_calc_s_cuda">function nanbu_calc_s_cuda</h3>
@@ -1565,10 +1645,37 @@
 <span class="w">    </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="w"> </span><span class="n">stencil_4d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Calculates the s term in the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision model (Eq. 19), which measures how collisional this time step is.</p>
+<p>The relative velocity g is between the impurity and a background particle whose velocity is sampled from a drifting Maxwellian (flow plus thermal sampling) with sample_bkg_velocity_cuda. The Coulomb logarithm uses the Debye length and the expectation value of the impact parameter b0, and is clamped to be at least 1. The background species is assumed to be singly charged with ni = ne. A message is printed if the Coulomb logarithm is NaN.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+<li><code>dt</code> Time step (s). </li>
+<li><code>T</code> Temperature of the background species colliding with the impurity (eV). </li>
+<li><code>mass_kg</code> Mass of the background species (kg). </li>
+<li><code>Te</code> Electron temperature (eV), used for the Debye length. </li>
+<li><code>ne</code> Electron density (m^-3). </li>
+<li><code>tidx</code> Index of the time frame. Currently unused. </li>
+<li><code>xidx</code> x index of the grid cell. Currently unused. </li>
+<li><code>yidx</code> y index of the grid cell. Currently unused. </li>
+<li><code>zidx</code> z index of the grid cell. Currently unused. </li>
+<li><code>t</code> Time of the particle (s). </li>
+<li><code>x</code> Computational x coordinate of the particle. </li>
+<li><code>y</code> Computational y coordinate of the particle. </li>
+<li><code>z</code> Computational z coordinate of the particle. </li>
+<li><code>vX</code> Cartesian X velocity of the impurity (m/s). </li>
+<li><code>vY</code> Cartesian Y velocity of the impurity (m/s). </li>
+<li><code>vZ</code> Cartesian Z velocity of the impurity (m/s). </li>
+<li><code>q</code> Charge state of the impurity. </li>
+<li><code>imp_mass</code> Mass of the impurity (kg). </li>
+<li><code>rng</code> Random number generator for this particle. </li>
+<li><code>stencil_4d</code> Interpolation stencil at the particle location, used to interpolate the flow velocity. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The s term and the Cartesian components of the relative velocity (m/s). </p>
 <hr>
 
 <h3 id="function-nanbu_coll">function nanbu_coll</h3>
-<p><em>Update impurity Cartesian velocity according to</em> <a href="../namespaceNanbu/"><em><strong>Nanbu</strong></em></a> <em>collision model.</em>
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Collisions</span><span class="o">::</span><span class="n">nanbu_coll</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span><span class="p">,</span>
@@ -1578,7 +1685,20 @@
 <span class="w">    </span><span class="n">Impurity</span><span class="o">::</span><span class="n">Statistics</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">imp_stats</span><span class="p">,</span>
 <span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rngs</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Updates the Cartesian velocity of every particle due to Coulomb collisions with one background species using the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> model.</p>
+<p>Dead and neutral particles are skipped. For each particle, ne and Te (and Ti for ions) are interpolated at the particle location, then s, A and chi are calculated and the velocity is updated with nanbu_post_coll. Since this happens after the <a href="../namespaceBoris/"><strong>Boris</strong></a> update, the updated velocity is v at n+1/2. An error is printed if ne &lt; 0 or chi is NaN.</p>
+<p>For ion collisions, s * weight * dt is also added to imp_stats so the average s in each cell can be calculated later.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots</code> Particle slots. The velocities are updated in place. </li>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma. </li>
+<li><code>opts</code> Simulation options, used for the background masses (gkyl_elec_mass_amu, gkyl_ion_mass_amu) and min_ti. </li>
+<li><code>elec</code> If true, collide with electrons (Te). Otherwise collide with ions (Ti, limited to at least min_ti). </li>
+<li><code>dt</code> Time step (s). </li>
+<li><code>imp_stats</code> <a href="../namespaceImpurity/"><strong>Impurity</strong></a> statistics, where the s values are summed for ion collisions. </li>
+<li><code>rngs</code> Random number generators, one per OpenMP thread. </li>
+</ul>
 <hr>
 
 <h3 id="function-nanbu_coll_kernel">function nanbu_coll_kernel</h3>
@@ -1594,6 +1714,20 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that updates the Cartesian velocity of each particle due to Coulomb collisions with one background species using the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> model.</p>
+<p>One thread handles one slot, and dead particles are skipped. ne, Te (and Ti for ions) are interpolated at the particle location and held at or above min_ne, min_te and min_ti. Then s, A and chi are calculated and the velocity is updated with nanbu_post_coll_cuda. Since this happens after the <a href="../namespaceBoris/"><strong>Boris</strong></a> update, the updated velocity is v at n+1/2. A message is printed if chi is NaN.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. The velocities are updated in place. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+<li><code>elec</code> If true, collide with electrons (Te). Otherwise collide with ions (Ti). </li>
+<li><code>dt</code> Time step (s). </li>
+<li><code>stats_d</code> <a href="../namespaceImpurity/"><strong>Impurity</strong></a> statistics on the device. Currently unused, since recording s is commented out. </li>
+<li><code>rngs_d</code> Random number generators on the device, one per slot. </li>
+<li><code>elec_mass_amu</code> Electron mass (amu). </li>
+<li><code>ion_mass_amu</code> Main ion mass (amu). </li>
+<li><code>opts_d</code> Simulation options on the device, used for min_ne, min_te and min_ti. </li>
+</ul>
 <hr>
 
 <h3 id="function-nanbu_post_coll">function nanbu_post_coll</h3>
@@ -1610,6 +1744,23 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Calculates the post-collision Cartesian velocity of the impurity in the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision model (Eq. 20a).</p>
+<p>The relative velocity g is rotated by the deflection angle chi about a random azimuthal angle, uniformly distributed in [0, 2 pi). The case where g is parallel to X is handled separately to avoid dividing by zero.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>gX</code> Cartesian X component of the relative velocity (m/s). </li>
+<li><code>gY</code> Cartesian Y component of the relative velocity (m/s). </li>
+<li><code>gZ</code> Cartesian Z component of the relative velocity (m/s). </li>
+<li><code>chi</code> Deflection angle from nanbu_calc_chi (radians). </li>
+<li><code>mass_a</code> Mass of the impurity (kg). </li>
+<li><code>mass_b</code> Mass of the background species (kg). </li>
+<li><code>vX</code> Cartesian X velocity of the impurity before the collision (m/s). </li>
+<li><code>vY</code> Cartesian Y velocity of the impurity before the collision (m/s). </li>
+<li><code>vZ</code> Cartesian Z velocity of the impurity before the collision (m/s). </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Post-collision velocity {vX, vY, vZ} in Cartesian space (m/s). </p>
 <hr>
 
 <h3 id="function-nanbu_post_coll_cuda">function nanbu_post_coll_cuda</h3>
@@ -1626,6 +1777,23 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Calculates the post-collision Cartesian velocity of the impurity in the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision model (Eq. 20a).</p>
+<p>The relative velocity g is rotated by the deflection angle chi about a random azimuthal angle, uniformly distributed in [0, 2 pi). The case where g is parallel to X is handled separately to avoid dividing by zero.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>gX</code> Cartesian X component of the relative velocity (m/s). </li>
+<li><code>gY</code> Cartesian Y component of the relative velocity (m/s). </li>
+<li><code>gZ</code> Cartesian Z component of the relative velocity (m/s). </li>
+<li><code>chi</code> Deflection angle from nanbu_calc_chi_cuda (radians). </li>
+<li><code>mass_a</code> Mass of the impurity (kg). </li>
+<li><code>mass_b</code> Mass of the background species (kg). </li>
+<li><code>vX</code> Cartesian X velocity of the impurity before the collision (m/s). </li>
+<li><code>vY</code> Cartesian Y velocity of the impurity before the collision (m/s). </li>
+<li><code>vZ</code> Cartesian Z velocity of the impurity before the collision (m/s). </li>
+<li><code>rng</code> Random number generator for this particle. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Post-collision velocity in Cartesian space (m/s). </p>
 <hr>
 
 <h3 id="function-sample_bkg_velocity">function sample_bkg_velocity</h3>
@@ -1638,6 +1806,19 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Samples the velocity of a background particle from a drifting Maxwellian.</p>
+<p>Each component is drawn from a normal distribution with a mean equal to the flow velocity and a standard deviation of sqrt(kT/m). We call this thermal sampling of the background velocity.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>T</code> Temperature of the background species (eV). </li>
+<li><code>uX</code> Cartesian X flow velocity of the background species (m/s). </li>
+<li><code>uY</code> Cartesian Y flow velocity of the background species (m/s). </li>
+<li><code>uZ</code> Cartesian Z flow velocity of the background species (m/s). </li>
+<li><code>m</code> Mass of the background species (kg). </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Sampled velocity {vX, vY, vZ} in Cartesian space (m/s). </p>
 <hr>
 
 <h3 id="function-sample_bkg_velocity_cuda">function sample_bkg_velocity_cuda</h3>
@@ -1653,19 +1834,19 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg_vZ</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
-<p>Samples a velocity from a drifting Maxwellian distribution.</p>
-<p>The distribution has temperature T and bulk velocity (uX, uY, uZ).</p>
+<p>Samples the velocity of a background particle from a drifting Maxwellian.</p>
+<p>Each component is drawn from a normal distribution with a mean equal to the flow velocity and a standard deviation of sqrt(kT/m). We call this thermal sampling of the background velocity.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>T</code> Temperature [eV]. </li>
-<li><code>uX</code> Drift velocity x-component [m/s]. </li>
-<li><code>uY</code> Drift velocity y-component [m/s]. </li>
-<li><code>uZ</code> Drift velocity z-component [m/s]. </li>
-<li><code>m</code> Particle mass [kg]. </li>
-<li><code>rng</code> Random number generator. </li>
-<li><code>bkg_vX</code> Sampled x-velocity [m/s]. </li>
-<li><code>bkg_vY</code> Sampled y-velocity [m/s]. </li>
-<li><code>bkg_vZ</code> Sampled z-velocity [m/s]. </li>
+<li><code>T</code> Temperature of the background species (eV). </li>
+<li><code>uX</code> Cartesian X flow velocity of the background species (m/s). </li>
+<li><code>uY</code> Cartesian Y flow velocity of the background species (m/s). </li>
+<li><code>uZ</code> Cartesian Z flow velocity of the background species (m/s). </li>
+<li><code>m</code> Mass of the background species (kg). </li>
+<li><code>rng</code> Random number generator for this particle. </li>
+<li><code>bkg_vX</code> Sampled Cartesian X velocity (m/s). </li>
+<li><code>bkg_vY</code> Sampled Cartesian Y velocity (m/s). </li>
+<li><code>bkg_vZ</code> Sampled Cartesian Z velocity (m/s). </li>
 </ul>
 <hr>
 
@@ -1724,6 +1905,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

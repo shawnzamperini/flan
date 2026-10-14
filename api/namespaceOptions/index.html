@@ -1286,7 +1286,7 @@
 <tbody>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-assign_option"><strong>assign_option</strong></a> (std::function&lt; void(T)&gt; set_func, auto var, const std::string_view var_name) <br><em>Assign value to</em> <a href="./"><em><strong>Options</strong></em></a> <em>object. Overwrites defaults.</em></td>
+<td style="text-align: left;"><a href="#function-assign_option"><strong>assign_option</strong></a> (std::function&lt; void(T)&gt; set_func, auto var, const std::string_view var_name) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1298,29 +1298,39 @@
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-load_input"><strong>load_input</strong></a> (<a href="../classOptions_1_1Options/"><strong>Options</strong></a> &amp; opts, const <a href="../flan__types_8h/#typedef-inputs"><strong>Inputs</strong></a> &amp; inpts) <br><em>Loads inputs from</em> <a href="../flan__types_8h/#typedef-inputs"><em><strong>Inputs</strong></em></a> <em>inpts object into</em><a href="./"><em><strong>Options</strong></em></a> <em>opts.</em></td>
+<td style="text-align: left;"><a href="#function-load_input"><strong>load_input</strong></a> (<a href="../classOptions_1_1Options/"><strong>Options</strong></a> &amp; opts, const <a href="../flan__types_8h/#typedef-inputs"><strong>Inputs</strong></a> &amp; inpts) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;"><a href="../classOptions_1_1Options/"><strong>Options</strong></a></td>
-<td style="text-align: left;"><a href="#function-load_options"><strong>load_options</strong></a> (const <a href="../flan__types_8h/#typedef-inputs"><strong>Inputs</strong></a> &amp; inpts) <br><em>Controlling function for moving input options (inpts) into an</em> <a href="./"><em><strong>Options</strong></em></a> <em>class object.</em></td>
+<td style="text-align: left;"><a href="#function-load_options"><strong>load_options</strong></a> (const <a href="../flan__types_8h/#typedef-inputs"><strong>Inputs</strong></a> &amp; inpts) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">bool</td>
-<td style="text-align: left;"><a href="#function-var_correct_type"><strong>var_correct_type</strong></a> (auto var, const std::string_view var_name) <br><em>Checks if variant (var) is of the correct type.</em></td>
+<td style="text-align: left;"><a href="#function-var_correct_type"><strong>var_correct_type</strong></a> (auto var, const std::string_view var_name) <br></td>
 </tr>
 </tbody>
 </table>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
 <h3 id="function-assign_option">function assign_option</h3>
-<p><em>Assign value to</em> <a href="./"><em><strong>Options</strong></em></a> <em>object. Overwrites defaults.</em>
 <div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
 <span class="kt">void</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">assign_option</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">void</span><span class="p">(</span><span class="n">T</span><span class="p">)</span><span class="o">&gt;</span><span class="w"> </span><span class="n">set_func</span><span class="p">,</span>
 <span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">var</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">var_name</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
-<p>Uses a set function (set_func) from our <a href="./"><strong>Options</strong></a> object to set the value stored in the variant (var). If the data in var is not of type T, then the value is not stored and an error is printed. </p>
+</code></pre></div>
+<p>Sets an option to the value stored in a variant, overwriting the default.</p>
+<p>If the value in var is not of type T, the value is not stored and an error is printed.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Expected type of the value: int, double, std::string or Mapc2p_ptr. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>set_func</code> Setter from the <a href="./"><strong>Options</strong></a> object, bound to the object with std::bind. </li>
+<li><code>var</code> Variant holding the value of the input option. </li>
+<li><code>var_name</code> Name of the input option, used in the error messages. </li>
+</ul>
 <hr>
 
 <h3 id="function-crosscheck_options">function crosscheck_options</h3>
@@ -1328,6 +1338,12 @@
 <span class="w">    </span><span class="n">Options</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Checks that the options are compatible with each other, changing them if needed.</p>
+<p>Currently this only checks that <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collisions are used with BiMaxwellian moments from Gkeyll. If not, a warning is printed and collisions are turned off. Placeholders are left for checks of particle splitting and the variable time step.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>opts</code> <a href="./"><strong>Options</strong></a> object to check and modify in place. </li>
+</ul>
 <hr>
 
 <h3 id="function-free_opts">function free_opts</h3>
@@ -1339,48 +1355,55 @@
 <hr>
 
 <h3 id="function-load_input">function load_input</h3>
-<p><em>Loads inputs from</em> <a href="../flan__types_8h/#typedef-inputs"><em><strong>Inputs</strong></em></a> <em>inpts object into</em><a href="./"><em><strong>Options</strong></em></a> <em>opts.</em>
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">load_input</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">Options</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Inputs</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">inpts</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Loads each input option into an <a href="./"><strong>Options</strong></a> object, overwriting the default value.</p>
+<p>Each option name is matched to its setter in <a href="./"><strong>Options</strong></a> and the value is set with assign_option. An error is printed for an option name that is not recognized, or a value of the wrong type, and that option is left unchanged.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>opts</code> An <a href="./"><strong>Options</strong></a> object. Generally should be passed in right after constructing it. </li>
-<li><code>inpts</code> An <a href="../flan__types_8h/#typedef-inputs"><strong>Inputs</strong></a> object that is assembled in a given simulation's input file </li>
+<li><code>opts</code> <a href="./"><strong>Options</strong></a> object to load the options into. Generally should be passed in right after constructing it. </li>
+<li><code>inpts</code> Input options assembled in a simulation's input file. </li>
 </ul>
 <hr>
 
 <h3 id="function-load_options">function load_options</h3>
-<p><em>Controlling function for moving input options (inpts) into an</em> <a href="./"><em><strong>Options</strong></em></a> <em>class object.</em>
 <div class="highlight"><pre><span></span><code><span class="n">Options</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">load_options</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Inputs</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">inpts</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Creates an <a href="./"><strong>Options</strong></a> object from the input options.</p>
+<p>Starts from an <a href="./"><strong>Options</strong></a> object with the default values, then overwrites them with any options given in inpts. Finally the options are checked to be compatible with each other with crosscheck_options, which may change some of them.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>inpts</code> Object of type <a href="../flan__types_8h/#typedef-inputs"><strong>Inputs</strong></a> that is assembled in a given simulation's input file</li>
+<li><code>inpts</code> Input options assembled in a simulation's input file. </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>Returns an <a href="./"><strong>Options</strong></a> object with all values from inpts written into it. If a parameter is not in inpts, the defaults are used. </p>
+<p><a href="./"><strong>Options</strong></a> object with the values from inpts. <a href="./"><strong>Options</strong></a> that are not in inpts keep their default values. </p>
 <hr>
 
 <h3 id="function-var_correct_type">function var_correct_type</h3>
-<p><em>Checks if variant (var) is of the correct type.</em> 
 <div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
 <span class="kt">bool</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">var_correct_type</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">var</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">var_name</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Checks if the value in a variant is of the expected type.</p>
+<p>If not, an error is printed saying which type was expected.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Expected type of the value: int, double, std::string or Mapc2p_ptr. </li>
+</ul>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>var</code> A variant object that contains all the types used among the various input objects. See Inputs in <a href="../flan__types_8h/"><strong>flan_types.h</strong></a>. </li>
-<li><code>var_name</code> string_view of the variant name.</li>
+<li><code>var</code> Variant holding the value of an input option. See Inputs in <a href="../flan__types_8h/"><strong>flan_types.h</strong></a>. </li>
+<li><code>var_name</code> Name of the input option, used in the error message. </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>Returns true if the variant (var) is of type T, false if not. </p>
+<p>True if the value in var is of type T, false if not. </p>
 <hr>
 
 <hr />
@@ -1438,6 +1461,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

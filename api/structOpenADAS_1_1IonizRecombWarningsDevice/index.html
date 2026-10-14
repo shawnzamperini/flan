@@ -19,7 +19,7 @@
     
     
       
-        <title>File impurity_transport.cu - Flan</title>
+        <title>Struct OpenADAS::IonizRecombWarningsDevice - Flan</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#file-impurity_transportcu" class="md-skip">
+        <a href="#struct-openadasionizrecombwarningsdevice" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              File impurity_transport.cu
+              Struct OpenADAS::IonizRecombWarningsDevice
             
           </span>
         </div>
@@ -1126,6 +1126,86 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#public-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-attributes-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Attributes Documentation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public Attributes Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#variable-device_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        variable device_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variable-ioniz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        variable ioniz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variable-recomb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        variable recomb
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1141,113 +1221,56 @@
 
 
 
-<h1 id="file-impurity_transportcu">File impurity_transport.cu</h1>
-<p><a href="../files/"><strong>File List</strong></a> <strong>&gt;</strong> <a href="../dir_adb0e0080591d240f7507da3cc422fe2/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="../impurity__transport_8cu/"><strong>impurity_transport.cu</strong></a></p>
-<p><a href="../impurity__transport_8cu/">Go to the documentation of this file</a></p>
-<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cuda_runtime.h&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cstdio&gt;</span>
-
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;curand_kernel.h&gt;</span>
-
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">"background_device.h"</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">"openadas_device.h"</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">"pcg32.h"</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">"slots_device.h"</span>
-
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">"device_constants.cuh"</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">"indices.cuh"</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">"utilities.cuh"</span>
-
-<span class="k">namespace</span><span class="w"> </span><span class="nn">ImpurityTransport</span>
-<span class="p">{</span>
-
-<span class="w">    </span><span class="n">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">find_containing_cell_kernel</span><span class="p">(</span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span><span class="w"> </span>
-<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">)</span>
-<span class="w">    </span><span class="p">{</span>
-
-<span class="w">        </span><span class="c1">// Global index</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
-
-<span class="w">        </span><span class="c1">// Don't try and access beyond the number of slots (segfault)</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">slots_d</span><span class="p">.</span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
-
-<span class="w">        </span><span class="c1">// If particle isn't alive then skip</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">slots_d</span><span class="p">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
-
-<span class="w">        </span><span class="c1">// d_t in constant memory, included from cuda/device_constants.cuh and</span>
-<span class="w">        </span><span class="c1">// lives in Background namespace.</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">tidx</span><span class="w"> </span><span class="p">{</span><span class="n">Indices</span><span class="o">::</span><span class="n">get_nearest_index_cuda</span><span class="p">(</span><span class="n">d_t</span><span class="p">,</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">.</span><span class="n">tdim</span><span class="p">,</span><span class="w"> </span>
-<span class="w">            </span><span class="n">slots_d</span><span class="p">.</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">])};</span>
-
-<span class="w">        </span><span class="c1">// Likewise, d_grid_x is in constant memory and they have shape dim+1</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="w"> </span><span class="p">{</span><span class="n">Indices</span><span class="o">::</span><span class="n">get_nearest_cell_index_cuda</span><span class="p">(</span><span class="n">d_grid_x</span><span class="p">,</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">.</span><span class="n">xdim</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span>
-<span class="w">            </span><span class="n">slots_d</span><span class="p">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])};</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="w"> </span><span class="p">{</span><span class="n">Indices</span><span class="o">::</span><span class="n">get_nearest_cell_index_cuda</span><span class="p">(</span><span class="n">d_grid_y</span><span class="p">,</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">.</span><span class="n">ydim</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span>
-<span class="w">            </span><span class="n">slots_d</span><span class="p">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])};</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="w"> </span><span class="p">{</span><span class="n">Indices</span><span class="o">::</span><span class="n">get_nearest_cell_index_cuda</span><span class="p">(</span><span class="n">d_grid_z</span><span class="p">,</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">.</span><span class="n">zdim</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span>
-<span class="w">            </span><span class="n">slots_d</span><span class="p">.</span><span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">])};</span>
-
-<span class="w">        </span><span class="c1">// Update indices</span>
-<span class="w">        </span><span class="n">slots_d</span><span class="p">.</span><span class="n">tidx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tidx</span><span class="p">;</span>
-<span class="w">        </span><span class="n">slots_d</span><span class="p">.</span><span class="n">xidx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">xidx</span><span class="p">;</span>
-<span class="w">        </span><span class="n">slots_d</span><span class="p">.</span><span class="n">yidx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">yidx</span><span class="p">;</span>
-<span class="w">        </span><span class="n">slots_d</span><span class="p">.</span><span class="n">zidx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">zidx</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-
-<span class="w">    </span><span class="c1">// Find what cell all the particles in slots_d are in, updating the</span>
-<span class="w">    </span><span class="c1">// indices accordingly (GPU)</span>
-<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">find_containing_cell_gpu</span><span class="p">(</span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span><span class="w"> </span>
-<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">)</span>
-<span class="w">    </span><span class="p">{</span>
-
-<span class="w">        </span><span class="c1">// Block and grid size</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">blockSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">256</span><span class="p">;</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">gridSize</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">slots_d</span><span class="p">.</span><span class="n">N</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">blockSize</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">blockSize</span><span class="p">;</span>
-
-<span class="w">        </span><span class="c1">// Call kernel to update indices (tidx, xidx, ...) in slots_d</span>
-<span class="w">        </span><span class="n">find_containing_cell_kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">gridSize</span><span class="p">,</span><span class="w"> </span><span class="n">blockSize</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">slots_d</span><span class="p">,</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-
-
-<span class="w">    </span><span class="c1">// Step particles</span>
-<span class="w">    </span><span class="n">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">step_kernel</span><span class="p">(</span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Global index</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
-
-<span class="w">        </span><span class="c1">// Don't try and access beyond the number of slots (segfault)</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">slots_d</span><span class="p">.</span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
-
-<span class="w">        </span><span class="c1">// If particle isn't alive then skip</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">slots_d</span><span class="p">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
-
-<span class="w">        </span><span class="n">slots_d</span><span class="p">.</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">dt</span><span class="p">;</span>
-<span class="w">        </span><span class="n">slots_d</span><span class="p">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots_d</span><span class="p">.</span><span class="n">vx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dt</span><span class="p">;</span>
-<span class="w">        </span><span class="n">slots_d</span><span class="p">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots_d</span><span class="p">.</span><span class="n">vy</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dt</span><span class="p">;</span>
-<span class="w">        </span><span class="n">slots_d</span><span class="p">.</span><span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">slots_d</span><span class="p">.</span><span class="n">vz</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dt</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-
-<span class="w">    </span><span class="c1">// Wrapper to call step_kernel</span>
-<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">step_gpu</span><span class="p">(</span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Block and grid size</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">blockSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">256</span><span class="p">;</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">gridSize</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">slots_d</span><span class="p">.</span><span class="n">N</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">blockSize</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">blockSize</span><span class="p">;</span>
-
-<span class="w">        </span><span class="n">step_kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">gridSize</span><span class="p">,</span><span class="w"> </span><span class="n">blockSize</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">slots_d</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">);</span>
-
-<span class="cp">#ifdef DEBUG</span>
-<span class="w">        </span><span class="c1">// Check for errors</span>
-<span class="w">        </span><span class="n">cudaError_t</span><span class="w"> </span><span class="n">err</span><span class="w"> </span><span class="p">{</span><span class="n">cudaDeviceSynchronize</span><span class="p">()};</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">cudaSuccess</span><span class="p">)</span>
-<span class="w">            </span><span class="n">printf</span><span class="p">(</span><span class="s">"step_kernel error: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">cudaGetErrorString</span><span class="p">(</span><span class="n">err</span><span class="p">));</span>
-<span class="cp">#endif</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="p">}</span><span class="w"> </span><span class="c1">// namespace ImpurityTransport</span>
+<h1 id="struct-openadasionizrecombwarningsdevice">Struct OpenADAS::IonizRecombWarningsDevice</h1>
+<p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceOpenADAS/"><strong>OpenADAS</strong></a> <strong>&gt;</strong> <a href="./"><strong>IonizRecombWarningsDevice</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
+<ul>
+<li><code>#include &lt;openadas_device.h&gt;</code></li>
+</ul>
+<h2 id="public-attributes">Public Attributes</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Type</th>
+<th style="text-align: left;">Name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">int</td>
+<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>   = <code>{}</code><br></td>
+</tr>
+<tr>
+<td style="text-align: right;">int *</td>
+<td style="text-align: left;"><a href="#variable-ioniz"><strong>ioniz</strong></a>   = <code>{}</code><br></td>
+</tr>
+<tr>
+<td style="text-align: right;">int *</td>
+<td style="text-align: left;"><a href="#variable-recomb"><strong>recomb</strong></a>   = <code>{}</code><br></td>
+</tr>
+</tbody>
+</table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Device-side counters of how many times the ionization or recombination probability exceeded 1.</p>
+<p>Allocated once per GPU with alloc_warnings, incremented by ioniz_recomb_kernel every time step, read back with add_warnings_to_host at the end of the run and freed with free_warnings. </p>
+<h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
+<h3 id="variable-device_id">variable device_id</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">IonizRecombWarningsDevice</span><span class="o">::</span><span class="n">device_id</span><span class="p">;</span>
 </code></pre></div>
+<hr>
+
+<h3 id="variable-ioniz">variable ioniz</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">IonizRecombWarningsDevice</span><span class="o">::</span><span class="n">ioniz</span><span class="p">;</span>
+</code></pre></div>
+<hr>
+
+<h3 id="variable-recomb">variable recomb</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">IonizRecombWarningsDevice</span><span class="o">::</span><span class="n">recomb</span><span class="p">;</span>
+</code></pre></div>
+<hr>
+
+<hr />
+<p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/include/openadas_device.h</code></p>
 
 
 
@@ -1301,6 +1324,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

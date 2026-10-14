@@ -1245,7 +1245,7 @@
 <tbody>
 <tr>
 <td style="text-align: right;">class</td>
-<td style="text-align: left;"><a href="../classImpurity_1_1Statistics/"><strong>Statistics</strong></a> <br><a href="./"><em><strong>Impurity</strong></em></a> <em>transport statistics class.</em></td>
+<td style="text-align: left;"><a href="../classImpurity_1_1Statistics/"><strong>Statistics</strong></a> <br></td>
 </tr>
 </tbody>
 </table>
@@ -1272,7 +1272,7 @@
 </tr>
 <tr>
 <td style="text-align: right;"><a href="../classImpurity_1_1Statistics/"><strong>Statistics</strong></a></td>
-<td style="text-align: left;"><a href="#function-reduce_stats"><strong>reduce_stats</strong></a> (const <a href="../classImpurity_1_1Statistics/"><strong>Statistics</strong></a> &amp; local_stats) <br><em>Helper function to reduce a Statistic object across MPI ranks.</em></td>
+<td style="text-align: left;"><a href="#function-reduce_stats"><strong>reduce_stats</strong></a> (const <a href="../classImpurity_1_1Statistics/"><strong>Statistics</strong></a> &amp; local_stats) <br></td>
 </tr>
 </tbody>
 </table>
@@ -1283,6 +1283,13 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Frees the GPU memory held by a StatisticsDevice struct.</p>
+<p>Every array allocated in <a href="../classImpurity_1_1Statistics/#function-to_device"><strong>Statistics::to_device</strong></a> is freed and its pointer is set to nullptr to avoid accidental reuse. If GPU support was not compiled in, only the pointers are reset.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>stats_d</code> StatisticsDevice struct whose memory is freed. </li>
+<li><code>device_id</code> ID of the GPU the memory was allocated on. </li>
+</ul>
 <hr>
 
 <h3 id="function-free_stats_d">function free_stats_d</h3>
@@ -1301,14 +1308,31 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Records the statistics of every alive particle into its cell and time frame.</p>
+<p>For each particle, the count is incremented and weight * dt (the occupancy, in number of particles) is added to the weights. The velocities and charge are added multiplied by weight * dt, so they can later be turned into weighted averages.</p>
+<p>Every thread writes straight into the shared arrays with atomic updates. In my basic testing this approach is much faster than the buffered approach (commented out above), though it's possible the buffered approach wins ground when there are significantly more particles than grid cells. That's because in that case particles may be fighting over accumulating stats in a cell, which can get held up in the atomics here. I am partial to the atomic approach just because it's so much cleaner.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>imp_stats</code> <a href="../classImpurity_1_1Statistics/"><strong>Statistics</strong></a> to record into. </li>
+<li><code>slots</code> Particle slots. </li>
+<li><code>opts</code> Simulation options. Currently unused. </li>
+<li><code>dt</code> Time step (s). </li>
+</ul>
 <hr>
 
 <h3 id="function-reduce_stats">function reduce_stats</h3>
-<p><em>Helper function to reduce a Statistic object across MPI ranks.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">Statistics</span><span class="w"> </span><span class="n">Impurity</span><span class="o">::</span><span class="n">reduce_stats</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Statistics</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">local_stats</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Sums a <a href="../classImpurity_1_1Statistics/"><strong>Statistics</strong></a> object across all MPI ranks.</p>
+<p>The arrays are packed into a buffer, summed onto rank 0 with MPI_Reduce and unpacked into a new object. With a single process the object is returned as-is.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>local_stats</code> <a href="../classImpurity_1_1Statistics/"><strong>Statistics</strong></a> recorded on this rank. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>On rank 0, the summed statistics. On other ranks, a zero-initialized object with the same dimensions. </p>
 <hr>
 
 <hr />
@@ -1366,6 +1390,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

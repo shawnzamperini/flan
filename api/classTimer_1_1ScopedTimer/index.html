@@ -1289,6 +1289,12 @@
 <span class="w">    </span><span class="n">Accumulator</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">acc</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Starts timing a section.</p>
+<p>If the section is already being timed, an error is printed and the section is marked as not running, so neither this timer nor the one already running records a duration.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>acc</code> <a href="../structTimer_1_1Accumulator/"><strong>Accumulator</strong></a> of the section to time, from <a href="../classTimer_1_1Timer/#function-acc-12"><strong>Timer::acc</strong></a>. </li>
+</ul>
 <hr>
 
 <h3 id="function-scopedtimer-23">function ScopedTimer [2/3]</h3>
@@ -1322,6 +1328,7 @@
 <h3 id="function-scopedtimer">function ~ScopedTimer</h3>
 <div class="highlight"><pre><span></span><code><span class="n">Timer</span><span class="o">::</span><span class="n">ScopedTimer</span><span class="o">::~</span><span class="n">ScopedTimer</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
 </code></pre></div>
+<p>Stops timing the section, adding the elapsed time to its total and incrementing its number of calls. </p>
 <hr>
 
 <hr />
@@ -1379,6 +1386,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

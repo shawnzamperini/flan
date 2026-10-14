@@ -1154,6 +1154,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1173,7 +1184,7 @@
 
 <h1 id="file-collisionscu">File collisions.cu</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_adb0e0080591d240f7507da3cc422fe2/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>collisions.cu</strong></a></p>
-<p><a href="../collisions_8cu_source/">Go to the source code of this file</a></p>
+<p><em>CUDA routines for updating particle velocity due to Coulomb collisions via the</em> <a href="../namespaceNanbu/"><em><strong>Nanbu</strong></em></a> <em>algorithm.</em><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;cuda_runtime.h&gt;</code></li>
 <li><code>#include &lt;cstdio&gt;</code></li>
@@ -1222,6 +1233,9 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>GPU version of <a href="../collisions_8cpp/"><strong>collisions.cpp</strong></a>. Derivation and steps taken from: <a href="../namespaceNanbu/"><strong>Nanbu</strong></a>, K. Theory of cumulative small-angle collisions in plasmas. Phys. Rev. E 55, 4642–4652 (1997).</p>
+<p>Each time step, the cumulative effect of all the small-angle collisions with a background species is replaced by a single deflection of the relative velocity by an angle chi. How collisional the step is is set by s, which sets the shape A(s) of the distribution chi is sampled from. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/cuda/collisions.cu</code></p>
 
@@ -1277,6 +1291,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

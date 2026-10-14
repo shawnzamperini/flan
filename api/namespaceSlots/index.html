@@ -1469,6 +1469,17 @@
 <span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rngs</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Replaces dead particles with new ones, as long as there are particles remaining to be followed.</p>
+<p>The dead slots are counted first. The number refilled is the smaller of the dead count and rem_parts, and rem_parts is reduced by that number. Each refilled slot gets a new particle from make_new_particle, using the random number generator of the thread doing the work, with its particle time reset to 0 and its state set to alive.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots</code> Particle slots to refill. </li>
+<li><code>rem_parts</code> Number of particles still to be followed. Reduced by the number of particles created, and never goes below 0. </li>
+<li><code>alive_slots</code> Set to the number of alive slots after refilling. </li>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma. </li>
+<li><code>opts</code> Simulation options. </li>
+<li><code>rngs</code> Random number generators, one per OpenMP thread. </li>
+</ul>
 <hr>
 
 <h3 id="function-fill_slots_gpu">function fill_slots_gpu</h3>
@@ -1508,6 +1519,13 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Frees the GPU memory held by a <a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> struct.</p>
+<p>Every device array allocated in Slots::to_device is freed. The particle array pointers and all_dead are then set to nullptr. Does nothing if GPU support was not compiled in.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> <a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> struct whose memory is freed. </li>
+<li><code>device_id</code> ID of the GPU the memory was allocated on. </li>
+</ul>
 <hr>
 
 <h3 id="function-get_birth_vxyz">function get_birth_vXYZ</h3>
@@ -1542,6 +1560,25 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Picks the starting Cartesian velocity of a new particle.</p>
+<p>For the test backgrounds (bkg_source = "test") the velocity is fixed by the test case: 10,000 m/s in Y for the gyrate, ExB, grad-B and polarization tests, 30,000 m/s along the field line (in the X-Y plane, at angle z) for the curvature test, and at rest for the friction test.</p>
+<p>Otherwise each component is sampled from a Maxwellian with zero mean and sigma = sqrt(kT/m), giving an isotropic velocity distribution. The temperature is imp_temp_start_val if imp_temp_start_opt is "single_value", or the main ion temperature in the particle's cell if it is "ti". The ion temperature is the cell value, not interpolated.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma, used for the ion temperature. </li>
+<li><code>opts</code> Simulation options. </li>
+<li><code>t</code> Starting time of the particle (s). Currently unused. </li>
+<li><code>x</code> Starting computational x coordinate. Currently unused. </li>
+<li><code>y</code> Starting computational y coordinate. Currently unused. </li>
+<li><code>z</code> Starting computational z coordinate. Only used by the curvature test, where z is the toroidal angle. </li>
+<li><code>tidx</code> Index of the nearest background time frame. </li>
+<li><code>xidx</code> x index of the grid cell containing the particle. </li>
+<li><code>yidx</code> y index of the grid cell containing the particle. </li>
+<li><code>zidx</code> z index of the grid cell containing the particle. </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Starting velocity {vX, vY, vZ} in Cartesian space (m/s). </p>
 <hr>
 
 <h3 id="function-get_birth_val">function get_birth_val</h3>
@@ -1555,6 +1592,20 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Picks the starting value of t, x, y or z for a new particle based on the input options.</p>
+<p>The same function is used for each coordinate, with the matching imp_*start_opt option deciding where the particle starts: 0: At start_val. 1: Uniformly random between range_min and range_max. 2: Uniformly random over the full simulation volume, between bkg_min and bkg_max. Any other value returns 0.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>start_opt_int</code> Control integer of the imp_*start_opt option. </li>
+<li><code>start_val</code> Starting value used when start_opt_int is 0. </li>
+<li><code>range_min</code> Lower end of the range used when start_opt_int is 1. </li>
+<li><code>range_max</code> Upper end of the range used when start_opt_int is 1. </li>
+<li><code>bkg_min</code> Minimum of the simulation volume, used when start_opt_int is 2. </li>
+<li><code>bkg_max</code> Maximum of the simulation volume, used when start_opt_int is 2. </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Starting value of the coordinate. </p>
 <hr>
 
 <h3 id="function-get_birth_val_cuda">function get_birth_val_cuda</h3>
@@ -1577,6 +1628,16 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Creates a new particle at its starting time, location and velocity.</p>
+<p>The starting t, x, y and z come from get_birth_val using the imp_*start_opt options. The time index and grid cell indices are then found, the same as in <a href="../impurity__transport_8cpp/"><strong>impurity_transport.cpp</strong></a>, and the Cartesian velocity comes from get_birth_vXYZ. The computational velocity is set to zero, since it gets set on the first call to Boris::update_velocity. The weight is 1 / imp_num and the charge is imp_init_charge.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma. </li>
+<li><code>opts</code> Simulation options. </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The new particle. </p>
 <hr>
 
 <h3 id="function-make_new_particle_cuda">function make_new_particle_cuda</h3>
@@ -1643,6 +1704,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

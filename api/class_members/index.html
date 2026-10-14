@@ -1490,7 +1490,7 @@
 <li><strong>dZdx</strong> (<a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a>)</li>
 <li><strong>dZdy</strong> (<a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a>)</li>
 <li><strong>dZdz</strong> (<a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a>)</li>
-<li><strong>device_id</strong> (<a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a>, <a href="../structImpurityStats_1_1StatisticsDevice/"><strong>ImpurityStats::StatisticsDevice</strong></a>, <a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADAS::OpenADASDevice</strong></a>, <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a>)</li>
+<li><strong>device_id</strong> (<a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a>, <a href="../structImpurityStats_1_1StatisticsDevice/"><strong>ImpurityStats::StatisticsDevice</strong></a>, <a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>OpenADAS::IonizRecombWarningsDevice</strong></a>, <a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADAS::OpenADASDevice</strong></a>, <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a>)</li>
 <li><strong>dxdX</strong> (<a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a>)</li>
 <li><strong>dxdY</strong> (<a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a>)</li>
 <li><strong>dxdZ</strong> (<a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a>)</li>
@@ -1660,6 +1660,7 @@
 <li><strong>interp_uZ</strong> (<a href="../classBackground_1_1Background/"><strong>Background::Background</strong></a>)</li>
 <li><strong>idx0</strong> (<a href="../structInterpolate_1_1InterpolationStencil/"><strong>Interpolate::InterpolationStencil</strong></a>)</li>
 <li><strong>idx1</strong> (<a href="../structInterpolate_1_1InterpolationStencil/"><strong>Interpolate::InterpolationStencil</strong></a>)</li>
+<li><strong>ioniz</strong> (<a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>OpenADAS::IonizRecombWarningsDevice</strong></a>)</li>
 <li><strong>imp_atom_num</strong> (<a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a>)</li>
 <li><strong>imp_collisions</strong> (<a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a>)</li>
 <li><strong>imp_collisions_int</strong> (<a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a>)</li>
@@ -1702,7 +1703,7 @@
 <li><strong>imp_zstart_val</strong> (<a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a>)</li>
 <li><strong>initialize_control_ints</strong> (<a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a>)</li>
 <li><strong>init_charge</strong> (<a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a>)</li>
-<li><strong>iters</strong> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a>)</li>
+<li><strong>iters</strong> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a>, <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a>)</li>
 <li><strong>inc</strong> (<a href="../structpcg32/"><strong>pcg32</strong></a>)</li>
 </ul>
 <h2 id="j">j</h2>
@@ -2044,7 +2045,7 @@
 <li><strong>pack</strong> (<a href="../classImpurity_1_1Statistics/"><strong>Impurity::Statistics</strong></a>)</li>
 <li><strong>print_interval</strong> (<a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a>)</li>
 <li><strong>ParticleProgress</strong> (<a href="../structParticleProgress/"><strong>ParticleProgress</strong></a>)</li>
-<li><strong>pt</strong> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a>)</li>
+<li><strong>pt</strong> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a>, <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a>)</li>
 <li><strong>print_summary</strong> (<a href="../classTimer_1_1Timer/"><strong>Timer::Timer</strong></a>)</li>
 <li><strong>pcg32</strong> (<a href="../structpcg32/"><strong>pcg32</strong></a>)</li>
 </ul>
@@ -2054,6 +2055,7 @@
 </ul>
 <h2 id="r">r</h2>
 <ul>
+<li><strong>recomb</strong> (<a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>OpenADAS::IonizRecombWarningsDevice</strong></a>)</li>
 <li><strong>read_rate_coefficients</strong> (<a href="../classOpenADAS_1_1OpenADAS/"><strong>OpenADAS::OpenADAS</strong></a>)</li>
 <li><strong>rates</strong> (<a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADAS::OpenADASDevice</strong></a>)</li>
 <li><strong>running</strong> (<a href="../structTimer_1_1Accumulator/"><strong>Timer::Accumulator</strong></a>)</li>
@@ -2335,6 +2337,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

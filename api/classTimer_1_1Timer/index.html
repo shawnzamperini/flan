@@ -1343,6 +1343,13 @@
 <span class="w">    </span><span class="n">Section</span><span class="w"> </span><span class="n">s</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns the accumulator for a section. Use with <a href="../classTimer_1_1ScopedTimer/"><strong>ScopedTimer</strong></a>.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>s</code> Section to get the accumulator for. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Reference to the section's accumulator. </p>
 <hr>
 
 <h3 id="function-acc-22">function acc [2/2]</h3>
@@ -1350,6 +1357,13 @@
 <span class="w">    </span><span class="n">Section</span><span class="w"> </span><span class="n">s</span>
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the accumulator for a section, read-only.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>s</code> Section to get the accumulator for. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Const reference to the section's accumulator. </p>
 <hr>
 
 <h3 id="function-merge">function merge</h3>
@@ -1357,11 +1371,18 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Timer</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">other</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Adds another <a href="./"><strong>Timer</strong></a>'s total times and number of calls into this one, e.g., to combine the timers from each GPU.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>other</code> <a href="./"><strong>Timer</strong></a> to merge into this one. </li>
+</ul>
 <hr>
 
 <h3 id="function-print_summary">function print_summary</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Timer</span><span class="o">::</span><span class="n">Timer</span><span class="o">::</span><span class="n">print_summary</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Prints a summary of the time spent in each section to stdout.</p>
+<p>Each row shows the section name, indented to show which sections are part of another, followed by its total time, its number of calls and the average time per call. The times are lined up in a column. </p>
 <hr>
 
 <h3 id="function-start">function start</h3>
@@ -1369,6 +1390,12 @@
 <span class="w">    </span><span class="n">Section</span><span class="w"> </span><span class="n">s</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Starts timing a section manually, for cases where scoping a <a href="../classTimer_1_1ScopedTimer/"><strong>ScopedTimer</strong></a> isn't convenient. Prefer <a href="../classTimer_1_1ScopedTimer/"><strong>ScopedTimer</strong></a> where possible.</p>
+<p>If the section is already being timed, an error is printed and the running timer is left alone.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>s</code> Section to start timing. </li>
+</ul>
 <hr>
 
 <h3 id="function-stop">function stop</h3>
@@ -1376,6 +1403,12 @@
 <span class="w">    </span><span class="n">Section</span><span class="w"> </span><span class="n">s</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Stops timing a section started with start, adding the elapsed time to its total and incrementing its number of calls.</p>
+<p>If the section was not started, an error is printed.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>s</code> Section to stop timing. </li>
+</ul>
 <hr>
 <h2 id="public-static-functions-documentation">Public Static Functions Documentation</h2>
 <h3 id="function-format_time">function format_time</h3>
@@ -1383,6 +1416,14 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">time_us</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Formats a duration as a human readable string, choosing the largest unit (hrs, min, s, ms or us) that gives a value of at least 1.</p>
+<p>Uses 2 decimal places, or 4 for microseconds.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>time_us</code> Duration (us). </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The formatted duration with its unit, e.g., "1.50 min". </p>
 <hr>
 
 <hr />
@@ -1440,6 +1481,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

@@ -1916,6 +1916,9 @@
 <h3 id="function-n">function N</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">N</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the number of particle slots.</p>
+<p><strong>Returns:</strong></p>
+<p>Number of slots. </p>
 <hr>
 
 <h3 id="function-slots">function Slots</h3>
@@ -1923,31 +1926,52 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Creates a <a href="./"><strong>Slots</strong></a> object with room for N particles.</p>
+<p>Every per-particle vector is resized to N. The values are zero initialized, so every slot starts with state 0 (alive). The mass and atomic number are not set here, use set_mass and set_Z.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>N</code> Number of particle slots. </li>
+</ul>
 <hr>
 
 <h3 id="function-z">function Z</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">Z</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the atomic number of the impurity. All particles share the same atomic number.</p>
+<p><strong>Returns:</strong></p>
+<p>Atomic number. </p>
 <hr>
 
 <h3 id="function-iters">function iters</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">iters</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the number of time steps each particle has taken.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-mass">function mass</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">mass</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the mass of the impurity. All particles share the same mass.</p>
+<p><strong>Returns:</strong></p>
+<p><a href="../namespaceImpurity/"><strong>Impurity</strong></a> mass (kg). </p>
 <hr>
 
 <h3 id="function-pt">function pt</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">pt</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the time each particle has been followed since it was born (s).</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-q">function q</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">q</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the charge state of each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-set_z">function set_Z</h3>
@@ -1955,6 +1979,11 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">Z</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the atomic number of the impurity, shared by all particles.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>Z</code> Atomic number. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_iters">function set_iters</h3>
@@ -1963,6 +1992,12 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the iters value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Number of time steps taken to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_mass">function set_mass</h3>
@@ -1970,6 +2005,11 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">mass</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the mass of the impurity, shared by all particles.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>mass</code> <a href="../namespaceImpurity/"><strong>Impurity</strong></a> mass (kg). </li>
+</ul>
 <hr>
 
 <h3 id="function-set_pt">function set_pt</h3>
@@ -1978,6 +2018,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the pt value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Time since birth to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_q">function set_q</h3>
@@ -1986,6 +2032,12 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the q value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Charge state to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_state">function set_state</h3>
@@ -1994,6 +2046,12 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the state value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> State to store in slot i, where 0 is alive and anything greater than 0 is dead. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_t">function set_t</h3>
@@ -2002,6 +2060,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the t value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Simulation time to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_tidx">function set_tidx</h3>
@@ -2010,6 +2074,12 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the tidx value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Index of the nearest background time frame to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_vx">function set_vX</h3>
@@ -2018,6 +2088,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the vX value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Cartesian X velocity (m/s) to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_vy">function set_vY</h3>
@@ -2026,6 +2102,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the vY value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Cartesian Y velocity (m/s) to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_vz">function set_vZ</h3>
@@ -2034,6 +2116,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the vZ value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Cartesian Z velocity (m/s) to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_vx_1">function set_vx</h3>
@@ -2042,6 +2130,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the vx value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Velocity along computational x to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_vy_1">function set_vy</h3>
@@ -2050,6 +2144,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the vy value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Velocity along computational y to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_vz_1">function set_vz</h3>
@@ -2058,6 +2158,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the vz value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Velocity along computational z to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_weight">function set_weight</h3>
@@ -2066,6 +2172,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the weight value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Monte Carlo weight to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_x">function set_x</h3>
@@ -2074,6 +2186,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the x value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Computational x coordinate to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_xidx">function set_xidx</h3>
@@ -2082,6 +2200,12 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the xidx value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> x index of the containing grid cell to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_y">function set_y</h3>
@@ -2090,6 +2214,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the y value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Computational y coordinate to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_yidx">function set_yidx</h3>
@@ -2098,6 +2228,12 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the yidx value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> y index of the containing grid cell to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_z_1">function set_z</h3>
@@ -2106,6 +2242,12 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the z value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> Computational z coordinate to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-set_zidx">function set_zidx</h3>
@@ -2114,21 +2256,36 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">val</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Sets the zidx value of a single slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index of the slot. </li>
+<li><code>val</code> z index of the containing grid cell to store in slot i. </li>
+</ul>
 <hr>
 
 <h3 id="function-state">function state</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">state</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the state of each particle, where 0 is alive and anything greater than 0 is dead.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-t">function t</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">t</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the simulation time of each particle (s).</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-tidx">function tidx</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">tidx</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the index of the background time frame nearest to each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-to_device">function to_device</h3>
@@ -2136,6 +2293,15 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span><span class="o">=</span><span class="mi">0</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Allocates GPU memory for the particles and copies them to the device.</p>
+<p>I think this should probably be moved to <a href="../slots_8cu/"><strong>slots.cu</strong></a>...</p>
+<p>The per-particle arrays are allocated and copied, except pt and iters, which are not stored on the device. The work arrays used by the GPU kernels (all_dead, counter, alive, num_dead and dead_indices) are also allocated, and all_dead is initialized to false. If GPU support was not compiled in, an error is printed and an empty <a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> is returned.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>device_id</code> ID of the GPU to allocate the memory on. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p><a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> struct holding the device pointers. The memory must be released with free_slots. </p>
 <hr>
 
 <h3 id="function-to_host">function to_host</h3>
@@ -2143,76 +2309,125 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Copies the particles from the device back into a new host <a href="./"><strong>Slots</strong></a> object.</p>
+<p>The mass and the per-particle arrays on the device are copied back. pt, iters and the atomic number are not stored on the device, so they are left at zero in the returned object. The device memory is not freed, use free_slots for that. If GPU support was not compiled in, only N and the mass are set.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> <a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> struct returned by to_device. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Host <a href="./"><strong>Slots</strong></a> object holding a copy of the device data. </p>
 <hr>
 
 <h3 id="function-vx">function vX</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">vX</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the Cartesian X velocity of each particle (m/s).</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-vy">function vY</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">vY</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the Cartesian Y velocity of each particle (m/s).</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-vz">function vZ</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">vZ</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the Cartesian Z velocity of each particle (m/s).</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-vx_1">function vx</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">vx</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the velocity of each particle along computational x.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-vy_1">function vy</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">vy</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the velocity of each particle along computational y.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-vz_1">function vz</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">vz</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the velocity of each particle along computational z.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-weight">function weight</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">weight</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the Monte Carlo weight of each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-x">function x</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">x</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the computational x coordinate of each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-xidx">function xidx</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">xidx</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the x index of the grid cell containing each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-y">function y</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">y</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the computational y coordinate of each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-yidx">function yidx</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">yidx</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the y index of the grid cell containing each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-z_1">function z</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">z</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the computational z coordinate of each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-zidx">function zidx</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::</span><span class="n">zidx</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the z index of the grid cell containing each particle.</p>
+<p><strong>Returns:</strong></p>
+<p>Vector of length <a href="./#function-n"><strong>N()</strong></a> with one entry per slot. </p>
 <hr>
 
 <h3 id="function-slots_1">function ~Slots</h3>
 <div class="highlight"><pre><span></span><code><span class="n">Slots</span><span class="o">::</span><span class="n">Slots</span><span class="o">::~</span><span class="n">Slots</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
 </code></pre></div>
+<p>Destroys the <a href="./"><strong>Slots</strong></a> object.</p>
+<p>Not actually needed because we use std::vector, which frees itself automatically. GPU memory must be freed with free_slots. </p>
 <hr>
 
 <hr />
@@ -2270,6 +2485,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

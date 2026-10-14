@@ -1277,6 +1277,21 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Interpolates the reciprocal (contravariant) basis vectors at the particle location.</p>
+<p>These convert a Cartesian vector into its computational components, e.g., vx = dxdX * vX + dxdY * vY + dxdZ * vZ.</p>
+<p>Each of the nine components is trilinearly interpolated between the centers of the cell containing the particle and its neighboring cells on the side of the particle, since that is where the basis vectors are defined.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma holding the basis vectors. </li>
+<li><code>xidx</code> x index of the grid cell containing the particle. </li>
+<li><code>yidx</code> y index of the grid cell containing the particle. </li>
+<li><code>zidx</code> z index of the grid cell containing the particle. </li>
+<li><code>x</code> Computational x coordinate of the particle. </li>
+<li><code>y</code> Computational y coordinate of the particle. </li>
+<li><code>z</code> Computational z coordinate of the particle. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated components in the order dxdX, dxdY, dxdZ, dydX, dydY, dydZ, dzdX, dzdY, dzdZ. </p>
 <hr>
 
 <h3 id="function-interp_tang">function interp_tang</h3>
@@ -1290,6 +1305,21 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Interpolates the tangent (covariant) basis vectors at the particle location.</p>
+<p>These convert a computational vector into its Cartesian components. Currently unused.</p>
+<p>Each of the nine components is trilinearly interpolated between the centers of the cell containing the particle and its neighboring cells on the side of the particle, since that is where the basis vectors are defined.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma holding the basis vectors. </li>
+<li><code>xidx</code> x index of the grid cell containing the particle. </li>
+<li><code>yidx</code> y index of the grid cell containing the particle. </li>
+<li><code>zidx</code> z index of the grid cell containing the particle. </li>
+<li><code>x</code> Computational x coordinate of the particle. </li>
+<li><code>y</code> Computational y coordinate of the particle. </li>
+<li><code>z</code> Computational z coordinate of the particle. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated components in the order dXdx, dYdx, dZdx, dXdy, dYdy, dZdy, dXdz, dYdz, dZdz. </p>
 <hr>
 
 <h3 id="function-update_velocity_cpu">function update_velocity_cpu</h3>
@@ -1300,6 +1330,16 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Advances the velocity of every particle by one time step using the <a href="./"><strong>Boris</strong></a> algorithm.</p>
+<p>The electric and magnetic fields (components and magnitudes) are trilinearly interpolated in space to the particle location, at the particle's time frame and a neighboring one, and then linearly interpolated in time. This keeps the fields continuous at cell boundaries and between time frames, which avoids numerical diffusion and unphysical kicks. Each interpolated vector is then rescaled to the interpolated magnitude so the gyro-orbit is the correct size.</p>
+<p>The standard <a href="./"><strong>Boris</strong></a> rotation then updates the Cartesian velocity (vX, vY, vZ). Velocities are stored at the half time steps before the position, i.e., x_i = x(t_i) and v_i = v(t_i - dt/2). Finally, the velocity in computational coordinates (vx, vy, vz) is calculated with the interpolated reciprocal basis vectors from interp_recp.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots</code> Particle slots. The velocities are updated in place. </li>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma holding the fields and basis vectors. </li>
+<li><code>opts</code> Simulation options. Currently unused. </li>
+<li><code>dt</code> Time step (s). </li>
+</ul>
 <hr>
 
 <h3 id="function-update_velocity_gpu">function update_velocity_gpu</h3>
@@ -1375,6 +1415,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>

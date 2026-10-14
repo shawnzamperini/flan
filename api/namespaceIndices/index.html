@@ -1258,6 +1258,19 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">value</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns the index of the grid cell containing value.</p>
+<p>A value exactly on the edge between two cells is placed in the lower cell. Values outside the grid return the index of the first or last cell.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point data type of the grid edges and value. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>grid_edges</code> Sorted grid edges, one more than the number of cells. </li>
+<li><code>value</code> Value to find the containing cell for. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Index of the cell containing value, between 0 and grid_edges.size() - 2. </p>
 <hr>
 
 <h3 id="function-get_nearest_cell_index_cuda">function get_nearest_cell_index_cuda</h3>
@@ -1277,6 +1290,19 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">value</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns the index of the value in a sorted vector that is nearest to value.</p>
+<p>Used to find the nearest background time frame. If value is exactly halfway between two values, the lower index is returned. Values outside the range of vec return the index of the first or last element.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point data type of the vector and value. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>vec</code> Sorted vector of values, e.g., the background times. </li>
+<li><code>value</code> Value to find the nearest index for. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Index of the nearest value in vec. </p>
 <hr>
 
 <h3 id="function-get_nearest_index_cuda">function get_nearest_index_cuda</h3>
@@ -1344,6 +1370,10 @@
     
     
       <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
       
     
   </body>
