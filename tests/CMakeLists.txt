@@ -49,7 +49,7 @@ target_link_libraries(test_boris_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_openadas_cpu PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 
 target_link_libraries(test_fill_slots_cuda PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
-target_link_libraries(test_openadas_cuda PRIVATE flan gtest_main)
+target_link_libraries(test_openadas_cuda PRIVATE flan gtest_main CUDA::cudart)
 target_link_libraries(test_all_dead_cuda PRIVATE flan gtest_main)
 target_link_libraries(test_boris_cuda PRIVATE flan gtest_main)
 target_link_libraries(test_neighbor_index_cuda PRIVATE flan gtest_main)

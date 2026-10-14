@@ -78,7 +78,7 @@ namespace OpenADAS
 	__device__ inline const double* get_charge_slice(
 		const OpenADASDevice& oa_d, int charge_state)
 	{
-		int charge_index = charge_state - oa_d.charge_low;
+		int charge_index = charge_state;
 
 		// Clamp to valid range
 		if (charge_index < 0) charge_index = 0;
@@ -116,18 +116,20 @@ namespace OpenADAS
 		// Bilinear interpolation over the 2D slice for this charge state
 		// Caller must select the correct charge slice. No point in calculating
 		// if the particle can't ionize or recombine so put in an if statement.
+		// Te must be passed into bilinear_interp first, then ne, to match the
+		// order of the indexing of the underlying 1D arrays.
 		// TEMPORARY: Casting ne, Te to double just to start but should modify
 		// eventually settle on float
 		double ioniz_rate {can_ionize ? 
-			Utilities::bilinear_interp(iz_rate_q, oa_ioniz_d.ne, 
-			oa_ioniz_d.ndens, oa_ioniz_d.te, oa_ioniz_d.ntemp, 
-			static_cast<double>(ne), static_cast<double>(te))
+			Utilities::bilinear_interp(iz_rate_q, oa_ioniz_d.te, 
+			oa_ioniz_d.ntemp, oa_ioniz_d.ne, oa_ioniz_d.ndens, 
+			static_cast<double>(te), static_cast<double>(ne))
 			: 0.0};
 		double recomb_rate {can_recomb ? 
 			Utilities::bilinear_interp(rc_rate_q, 
-			oa_recomb_d.ne, oa_recomb_d.ndens, oa_recomb_d.te, 
-			oa_recomb_d.ntemp,
-			static_cast<double>(ne), static_cast<double>(te))
+			oa_recomb_d.te, oa_recomb_d.ntemp, oa_recomb_d.ne, 
+			oa_recomb_d.ndens,
+			static_cast<double>(te), static_cast<double>(ne))
 			: 0.0};
 
 		// Compute probabilities
@@ -347,29 +349,66 @@ namespace OpenADAS
 	}
 
 
-	// Wrapper to call ionization/recombination kernel
+	// Allocate the ionization/recombination warning counters on a GPU and
+	// zero them. Done once per run, not every time step.
+	IonizRecombWarningsDevice alloc_warnings(int device_id)
+	{
+		IonizRecombWarningsDevice warnings_d {};
+		cudaSetDevice(device_id);
+		warnings_d.device_id = device_id;
+		cudaMalloc(&warnings_d.ioniz, sizeof(int));
+		cudaMalloc(&warnings_d.recomb, sizeof(int));
+		cudaMemset(warnings_d.ioniz, 0, sizeof(int));
+		cudaMemset(warnings_d.recomb, 0, sizeof(int));
+		return warnings_d;
+	}
+
+
+	// Copy the warning counts from the GPU and add them to the host counters
+	void add_warnings_to_host(const IonizRecombWarningsDevice& warnings_d,
+		int& ioniz_warnings, int& recomb_warnings)
+	{
+		cudaSetDevice(warnings_d.device_id);
+
+		int num_warnings {};
+		cudaMemcpy(&num_warnings, warnings_d.ioniz, sizeof(int), 
+			cudaMemcpyDeviceToHost);
+		ioniz_warnings += num_warnings;
+
+		num_warnings = 0;
+		cudaMemcpy(&num_warnings, warnings_d.recomb, sizeof(int), 
+			cudaMemcpyDeviceToHost);
+		recomb_warnings += num_warnings;
+	}
+
+
+	// Free the warning counters
+	void free_warnings(IonizRecombWarningsDevice& warnings_d)
+	{
+		cudaSetDevice(warnings_d.device_id);
+		cudaFree(warnings_d.ioniz);
+		warnings_d.ioniz = nullptr;
+		cudaFree(warnings_d.recomb);
+		warnings_d.recomb = nullptr;
+	}
+
+
+	// Wrapper to call ionization/recombination kernel. The warning counters
+	// are allocated once (alloc_warnings) and accumulate over the whole run,
+	// so this is just a kernel launch with no allocations or copies.
 	void ioniz_recomb_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d,
 		const OpenADASDevice& oa_ioniz_d, 
 		const OpenADASDevice& oa_recomb_d, const double dt,
-		int& ioniz_warnings, int& recomb_warnings, pcg32* rngs_d)
+		const IonizRecombWarningsDevice& warnings_d, pcg32* rngs_d)
 	{
-
-		// Counter for ionization/recombination warnings
-		int* d_ioniz_warnings;
-		int* d_recomb_warnings;
-		cudaMalloc(&d_ioniz_warnings, sizeof(int));
-		cudaMalloc(&d_recomb_warnings, sizeof(int));
-		cudaMemset(d_ioniz_warnings, 0, sizeof(int));
-		cudaMemset(d_recomb_warnings, 0, sizeof(int));
-
 		// Block and grid size
 		int blockSize = 256;
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 
 		ioniz_recomb_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, 
-			oa_ioniz_d, oa_recomb_d, dt, rngs_d, d_ioniz_warnings, 
-			d_recomb_warnings);
+			oa_ioniz_d, oa_recomb_d, dt, rngs_d, warnings_d.ioniz, 
+			warnings_d.recomb);
 
 #ifdef DEBUG
 		// Check for errors
@@ -377,18 +416,6 @@ namespace OpenADAS
 		if (err != cudaSuccess)
 			printf("ioniz_recomb_kernel error: %s\n", cudaGetErrorString(err));
 #endif
-
-		// Retrieve how many times the warning was incremented for each
-		int num_warnings = 0;
-		cudaMemcpy(&num_warnings, d_ioniz_warnings, sizeof(int), 
-			cudaMemcpyDeviceToHost);
-		ioniz_warnings += num_warnings;
-
-		num_warnings = 0;
-		cudaMemcpy(&num_warnings, d_recomb_warnings, sizeof(int), 
-			cudaMemcpyDeviceToHost);
-		recomb_warnings += num_warnings;
 	}
-
 
 }  // namespace OpenADAS

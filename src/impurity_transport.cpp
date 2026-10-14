@@ -205,8 +205,8 @@ namespace ImpurityTransport
 	* @param rngs Random number generators, one per OpenMP thread.
 	*/
 	void ioniz_recomb_cpu(Slots::Slots& slots, 
-		const Background::Background& bkg, const OpenADAS::OpenADAS oa_ioniz,
-		const OpenADAS::OpenADAS oa_recomb, const Options::Options& opts, 
+		const Background::Background& bkg, const OpenADAS::OpenADAS& oa_ioniz,
+		const OpenADAS::OpenADAS& oa_recomb, const Options::Options& opts, 
 		const double dt, int& ioniz_warnings, int& recomb_warnings, 
 		std::vector<pcg32>& rngs)
 	{
@@ -556,6 +556,9 @@ namespace ImpurityTransport
 	*                       probability exceeded 1.
 	* @param recomb_warnings Counter of particles whose recombination
 	*                        probability exceeded 1.
+	* @param warnings_d Device-side warning counters (used on the GPU path,
+	*                   where ioniz_warnings and recomb_warnings are not
+	*                   updated).
 	* @param rngs Host-side random number generators, one per OpenMP
 	*             thread (used on the CPU path).
 	* @param rngs_d Device-side random number generators (used on the GPU
@@ -570,6 +573,7 @@ namespace ImpurityTransport
 		const OpenADAS::OpenADASDevice& oa_recomb_d,
 		const Options::Options& opts,
 		int& ioniz_warnings, int& recomb_warnings,  
+		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
 		std::vector<pcg32>& rngs, pcg32* rngs_d)
 	{
 
@@ -578,7 +582,7 @@ namespace ImpurityTransport
 		{
 			// Defined in openadas.cu
 			OpenADAS::ioniz_recomb_gpu(slots_d, bkg_d, oa_ioniz_d, oa_recomb_d, 
-				opts.imp_time_step(), ioniz_warnings, recomb_warnings, rngs_d);
+				opts.imp_time_step(), warnings_d, rngs_d);
 			return;
 		}
 #endif
@@ -731,6 +735,10 @@ namespace ImpurityTransport
 	*                       probability exceeded 1.
 	* @param recomb_warnings Counter of particles whose recombination
 	*                        probability exceeded 1.
+	* @param warnings_d Device-side warning counters (GPU only). On the GPU
+	*                   path, ioniz_warnings and recomb_warnings are not
+	*                   updated here; the counts are read back at the end of
+	*                   the run.
 	* @param rngs Host-side random number generators, one per OpenMP
 	*             thread (CPU only).
 	* @param rngs_d Device-side random number generators (GPU only).
@@ -748,6 +756,7 @@ namespace ImpurityTransport
 		const OpenADAS::OpenADASDevice& oa_recomb_d, 
 		Options::Options& opts, Options::OptionsDevice* opts_d, 
 		Timer::Timer& timer, int& ioniz_warnings, int& recomb_warnings, 
+		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
 		std::vector<pcg32>& rngs, pcg32* rngs_d, int& max_time_ctr)
 	{
 
@@ -841,7 +850,7 @@ namespace ImpurityTransport
 				Timer::ScopedTimer t(timer.acc(Timer::Section::IonRec));
 				ioniz_recomb_wrapper(slots, slots_d, bkg, bkg_d, oa_ioniz,
 					oa_ioniz_d, oa_recomb, oa_recomb_d, opts, ioniz_warnings,
-					recomb_warnings, rngs, rngs_d);
+					recomb_warnings, warnings_d, rngs, rngs_d);
 			}
 
 			// Variance reduction
@@ -979,6 +988,8 @@ namespace ImpurityTransport
 	*                       probability exceeded 1.
 	* @param recomb_warnings Counter of particles whose recombination
 	*                        probability exceeded 1.
+	* @param warnings_d Device-side ionization/recombination warning
+	*                   counters for this GPU.
 	* @param rngs_d Device-side random number generators for this GPU.
 	* @param opts_d Device-side simulation options for this GPU.
 	* @param max_time_ctr Counter of particles that exceeded the maximum
@@ -994,7 +1005,9 @@ namespace ImpurityTransport
 		const OpenADAS::OpenADAS& oa_recomb, 
 		const OpenADAS::OpenADASDevice& oa_recomb_d, 
 		Options::Options& opts, Timer::Timer& timer, int& ioniz_warnings, 
-		int& recomb_warnings, pcg32* rngs_d, Options::OptionsDevice* opts_d,
+		int& recomb_warnings, 
+		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
+		pcg32* rngs_d, Options::OptionsDevice* opts_d,
 		int& max_time_ctr)
 	{
 		// Not used, so just dummying
@@ -1003,7 +1016,8 @@ namespace ImpurityTransport
 		cudaSetDevice(slots_d.device_id);   // THIS THREAD USES THIS GPU
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, opts_d, timer, 
-			ioniz_warnings, recomb_warnings, rngs, rngs_d, max_time_ctr);
+			ioniz_warnings, recomb_warnings, warnings_d, rngs, rngs_d, 
+			max_time_ctr);
 	}
 
 #endif
@@ -1148,6 +1162,7 @@ namespace ImpurityTransport
 			std::vector<OpenADAS::OpenADASDevice> gpu_oa_rcs;
 			std::vector<Options::OptionsDevice*> gpu_opts;
 			std::vector<pcg32*> gpu_rngs;
+			std::vector<OpenADAS::IonizRecombWarningsDevice> gpu_warnings;
 			std::vector<Timer::Timer> gpu_timers;
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
@@ -1156,6 +1171,7 @@ namespace ImpurityTransport
 				gpu_bkgs.push_back(bkg.to_device(dev));
 				gpu_oa_izs.push_back(oa_ioniz.to_device(dev));
 				gpu_oa_rcs.push_back(oa_recomb.to_device(dev));
+				gpu_warnings.push_back(OpenADAS::alloc_warnings(dev));
 
 				// Note that we are storing OptionsDevice* here. It's treated
 				// differently since there aren't arrays to be copied, so 
@@ -1211,6 +1227,7 @@ namespace ImpurityTransport
 					std::ref(oa_recomb), std::ref(gpu_oa_rcs[dev]), 
 					std::ref(opts), std::ref(gpu_timers[dev]), 
 					std::ref(ioniz_warnings), std::ref(recomb_warnings), 
+					std::ref(gpu_warnings[dev]),
 					std::ref(gpu_rngs[dev]), std::ref(gpu_opts[dev]), 
 					std::ref(max_time_ctr));
 			}
@@ -1236,6 +1253,13 @@ namespace ImpurityTransport
 				OpenADAS::free_oa(gpu_oa_izs[dev], dev);
 				OpenADAS::free_oa(gpu_oa_rcs[dev], dev);
 				Options::free_opts(gpu_opts[dev], dev);
+
+				// Add up the warnings from each GPU and free the counters.
+				// Done here, after the threads have joined, so that only one
+				// thread ever writes to ioniz_warnings/recomb_warnings.
+				OpenADAS::add_warnings_to_host(gpu_warnings[dev], 
+					ioniz_warnings, recomb_warnings);
+				OpenADAS::free_warnings(gpu_warnings[dev]);
 			}
 
 			print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
@@ -1251,6 +1275,7 @@ namespace ImpurityTransport
 		Background::BackgroundDevice bkg_d {};
 		OpenADAS::OpenADASDevice oa_ioniz_d {};
 		OpenADAS::OpenADASDevice oa_recomb_d {};
+		OpenADAS::IonizRecombWarningsDevice warnings_d {};
 		Options::OptionsDevice* opts_d {};
 		pcg32* rngs_d {};
 
@@ -1292,7 +1317,8 @@ namespace ImpurityTransport
 
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, opts_d, timer, 
-			ioniz_warnings, recomb_warnings, rngs, rngs_d, max_time_ctr);
+			ioniz_warnings, recomb_warnings, warnings_d, rngs, rngs_d, 
+			max_time_ctr);
 
 		print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
 			recomb_warnings);
