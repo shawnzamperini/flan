@@ -1,3 +1,8 @@
+/**
+* @file  boris.cuh
+*
+* @brief Header file for boris.cu
+*/
 #include <cuda_runtime.h>
 
 #include "background_device.h"

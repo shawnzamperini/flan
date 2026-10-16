@@ -174,6 +174,19 @@ namespace OpenADAS
 		m_charge_low = Utilities::str_as_int(header[3]);
 		m_charge_high = Utilities::str_as_int(header[4]);
 
+		// The rate coefficients are indexed assuming the file covers every
+		// charge state, i.e., IZ1 runs from 1 to Z. Slice 0 is then
+		// W0 --> W1+ for ionization and W1+ --> W0 for recombination, which
+		// is why get_rate_coeff and get_charge_slice index ionization by q
+		// and recombination by q-1. A partial file would shift every rate.
+		if (m_charge_low != 1 || m_charge_high != m_atomic_number)
+		{
+			std::cerr << "Error! The OpenADAS file covers charges "
+				<< m_charge_low << " to " << m_charge_high << ", but Flan "
+				<< "expects 1 to " << m_atomic_number << ". The rate "
+				<< "coefficients will be indexed incorrectly!\n";
+		}
+
 		// We need at least two ne and te values in order to do a bilinear
 		// interpolation of the rate coefficients later in the program.
 		if (m_ndens < 2)

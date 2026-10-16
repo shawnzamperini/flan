@@ -1,4 +1,17 @@
-#include <cuda_runtime.h> 
+/**
+* @file  openadas.cu
+*
+* @brief CUDA routines for copying the OpenADAS rate coefficients to a GPU
+*        and updating particle charge states due to ionization and
+*        recombination.
+*
+* GPU version of the ionization/recombination routines in openadas.cpp.
+* Each time step, ne and Te are interpolated at each particle's location
+* (trilinear in space, linear in time), and the rate coefficients are
+* bilinearly interpolated in Te and ne. Each particle can then ionize or
+* recombine with a probability of rate * ne * dt.
+*/
+#include <cuda_runtime.h>
 
 #include "background_device.h"
 #include "openadas.h"
@@ -7,15 +20,27 @@
 #include "slots_device.h"
 
 
-#include "device_constants.cuh"
+#include "interpolate.cuh"
 #include "utilities.cuh"
 
 
 namespace OpenADAS
 {
 
-	// Copy background data to device, returning an OpenADASDevice object with
-	// pointers to memory location on device.
+	/**
+	* Copies the OpenADAS rate coefficient data to a GPU.
+	*
+	* The scalar metadata (atomic number, table dimensions and charge
+	* range) is copied into the returned struct, and the Te grid, ne grid
+	* and flattened rate coefficient table are allocated on the device and
+	* copied over. The rates are stored by charge, then Te, then ne, so
+	* each charge state is a contiguous ntemp * ndens slice. The returned
+	* struct must be freed with free_oa. If USE_CUDA is not defined,
+	* nothing is copied and a zero-initialized struct is returned.
+	*
+	* @param device_id ID of the GPU to copy the data to.
+	* @return Struct holding the metadata and device pointers to the data.
+	*/
 	OpenADASDevice OpenADAS::to_device(int device_id)
 	{
 		OpenADASDevice oa_d {};
@@ -57,7 +82,13 @@ namespace OpenADAS
 	}  // to_device
 
 
-	// Free up memory from device-side OpenADASDevice object
+	/**
+	* Frees the device memory allocated by OpenADAS::to_device.
+	*
+	* @param oa_d Device-side OpenADAS struct. The pointers are set to
+	*        nullptr.
+	* @param device_id ID of the GPU the data was copied to.
+	*/
 	void free_oa(OpenADASDevice& oa_d, int device_id)
 	{
 		cudaSetDevice(device_id);
@@ -73,8 +104,19 @@ namespace OpenADAS
 	}  // free_oa
 
 
-	// Grab slice in OpenADASDevice.rates array the corresponds to the
-	// indicated charge
+	/**
+	* Returns a pointer to the start of the 2D (Te, ne) slice of the rate
+	* coefficient table for a given charge index.
+	*
+	* The charge index is clamped to [0, charge_high - charge_low], so an
+	* out-of-range index (e.g., -1 for recombination of a neutral) still
+	* returns a valid pointer. The caller is responsible for not using the
+	* rate in that case.
+	*
+	* @param oa_d Device-side OpenADAS struct.
+	* @param charge_state Index of the charge state slice to return.
+	* @return Pointer to the ntemp * ndens slice for this charge state.
+	*/
 	__device__ inline const double* get_charge_slice(
 		const OpenADASDevice& oa_d, int charge_state)
 	{
@@ -90,7 +132,29 @@ namespace OpenADAS
 	}
 
 
-	// Calculate the ionization/recombination probabilities at a given ne/Te
+	/**
+	* Calculates the probabilities of a particle ionizing and recombining
+	* during one time step.
+	*
+	* The rate coefficients are bilinearly interpolated in Te and ne, and
+	* the probability is rate * ne * dt. The ionization rate for charge q
+	* is at charge index q (q -> q+1), and the recombination rate is at
+	* charge index q-1 (q -> q-1). A fully stripped particle (q = Z) can't
+	* ionize and a neutral (q = 0) can't recombine, so those
+	* probabilities are zero. The probabilities are not capped at 1.
+	*
+	* @param oa_ioniz_d Device-side OpenADAS struct with the ionization
+	*        (SCD) rate coefficients.
+	* @param oa_recomb_d Device-side OpenADAS struct with the
+	*        recombination (ACD) rate coefficients.
+	* @param ne Electron density at the particle location (m^-3).
+	* @param te Electron temperature at the particle location (eV).
+	* @param dt Time step (s).
+	* @param q Charge state of the particle.
+	* @param Z Atomic number of the impurity.
+	* @param[out] ioniz_prob Probability of ionizing this time step.
+	* @param[out] recomb_prob Probability of recombining this time step.
+	*/
 	__device__ void calc_ioniz_recomb_probs(
 		const OpenADASDevice& oa_ioniz_d,
 		const OpenADASDevice& oa_recomb_d, const float ne, 
@@ -139,7 +203,34 @@ namespace OpenADAS
 	}
 
 
-	// Kernel for updating particle charge based on ionization/recombination
+	/**
+	* Kernel that updates the charge state of each particle due to
+	* ionization and recombination.
+	*
+	* One thread handles one slot, and dead particles are skipped. ne and
+	* Te are interpolated at the particle location (trilinear in space
+	* between the neighboring cell centers, then linear in time), and the
+	* ionization and recombination probabilities are calculated with
+	* calc_ioniz_recomb_probs. Each is compared to its own uniform random
+	* number, so the charge changes by +1, -1 or 0 (if the particle both
+	* ionizes and recombines, the two cancel). A warning counter is
+	* incremented each time a probability exceeds 1, since that means dt
+	* is too large.
+	*
+	* @param slots_d Particle slots on the device. The charge states are
+	*        updated in place.
+	* @param bkg_d Background plasma on the device.
+	* @param oa_ioniz_d Device-side OpenADAS struct with the ionization
+	*        rate coefficients.
+	* @param oa_recomb_d Device-side OpenADAS struct with the
+	*        recombination rate coefficients.
+	* @param dt Time step (s).
+	* @param rngs_d Random number generators on the device, one per slot.
+	* @param d_ioniz_warnings Device counter of ionization probabilities
+	*        greater than 1.
+	* @param d_recomb_warnings Device counter of recombination
+	*        probabilities greater than 1.
+	*/
 	__global__ void ioniz_recomb_kernel(Slots::SlotsDevice slots_d, 
 		const Background::BackgroundDevice bkg_d, 
 		OpenADASDevice oa_ioniz_d, 
@@ -155,13 +246,6 @@ namespace OpenADAS
 		// If particle isn't alive then skip
 		if (slots_d.state[i] > 0) return;
 
-		// ---------------------------------------------------------------
-		// The following algorithm is similar to that in boris.cu. It 
-		// interpolates background values in time (linear) and space 
-		// (trilinear). The main difference is we are just interpolating
-		// different background fields (ne & Te instead of B & E). 
-		// ---------------------------------------------------------------
-
 		// Local variables
 		int tidx {slots_d.tidx[i]};
 		int xidx {slots_d.xidx[i]};
@@ -176,155 +260,25 @@ namespace OpenADAS
 		int q {slots_d.q[i]};
 		int Z {slots_d.Z};
 
-		// Get nearest neighbor indices for each direction. These tell us
-		// which direction we should interpolate towards, i.e., which
-		// rectangle made by the neighboring cell centers our particle
-		// is bounded by.
-		// d_x is a global constant defined in cuda/device_constants.h.
-		const int xidx_neighbor {Utilities::get_neighbor_index_cuda(x, 
-			d_x, xidx, bkg_d.xdim)};
-		const int yidx_neighbor {Utilities::get_neighbor_index_cuda(y, 
-			d_y, yidx, bkg_d.ydim)};
-		const int zidx_neighbor {Utilities::get_neighbor_index_cuda(z, 
-			d_z, zidx, bkg_d.zdim)};
+		// Get interpolation stencil at this location for 4D arrays
+		Interpolate::InterpolationStencil stencil_4d 
+			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, x, y,
+			z)};
 
-		// Similarly for t, except we can't use get_neighbor_index since it
-		// uses cell center coordinates, and t is defined at each frame (i.e.,
-		// not between each frame, that would be nonintuitive). So we use a
-		// little SIMD-friendly logic here to assign tidx_neighbor to tidx+1,
-		// and tidx-1 if we're in the last time frame.
-		// at_end = 1 if tidx == ntimes-1, else 0 
-		// If at_end = 0 → i + 1 
-		// If at_end = 1 → i - 1 
-		const int at_end {(tidx == static_cast<int>(bkg_d.tdim) - 1)}; 
-		const int tidx_neighbor {tidx + 1 - 2 * at_end};
-
-		// 4D -> 1D index for indexing background arrays in bkg_d. 
-		// _0 is at tidx, and _1 is at tidx_neighbor
-		int idx000_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx, xidx, yidx, zidx)};
-		int idx001_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx, xidx, yidx, zidx_neighbor)};
-		int idx010_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx, xidx, yidx_neighbor, zidx)};
-		int idx011_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx, xidx, yidx_neighbor, zidx_neighbor)};
-		int idx100_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx, xidx_neighbor, yidx, zidx)};
-		int idx101_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx, xidx_neighbor, yidx, zidx_neighbor)};
-		int idx110_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx, xidx_neighbor, yidx_neighbor, zidx)};
-		int idx111_0_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx, xidx_neighbor, yidx_neighbor, zidx_neighbor)};
-
-		int idx000_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx_neighbor, xidx, yidx, zidx)};
-		int idx001_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx_neighbor, xidx, yidx, zidx_neighbor)};
-		int idx010_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx_neighbor, xidx, yidx_neighbor, zidx)};
-		int idx011_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx_neighbor, xidx, yidx_neighbor, zidx_neighbor)};
-		int idx100_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx_neighbor, xidx_neighbor, yidx, zidx)};
-		int idx101_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx_neighbor, xidx_neighbor, yidx, zidx_neighbor)};
-		int idx110_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx_neighbor, xidx_neighbor, yidx_neighbor, zidx)};
-		int idx111_1_4d {Utilities::calc_4d_index_cuda(bkg_d.xdim, bkg_d.ydim, 
-			bkg_d.zdim, tidx_neighbor, xidx_neighbor, yidx_neighbor, 
-			zidx_neighbor)};
-
-		// Group into an array, can help reduce register pressure
-		int idx0_4d[8] = {idx000_0_4d, idx001_0_4d, idx010_0_4d, idx011_0_4d,
-						idx100_0_4d, idx101_0_4d, idx110_0_4d, idx111_0_4d};
-		int idx1_4d[8] = {idx000_1_4d, idx001_1_4d, idx010_1_4d, idx011_1_4d,
-						idx100_1_4d, idx101_1_4d, idx110_1_4d, idx111_1_4d};
-
-		// x, y, z coordinates of two bounding vertices to interpolate 
-		// between. Note these are not grid vertices, but rather are formed
-		// by cell center coordinates since that's where B/E are assumed
-		// to be defined. It is essentially a cell shifted by dx/2, dy/2
-		// and dz/2 if that helps.
-		const double t0 {d_t[tidx]};
-		const double t1 {d_t[tidx_neighbor]};
-		const double x0 {d_x[xidx]};
-		const double x1 {d_x[xidx_neighbor]};
-		const double y0 {d_y[yidx]};
-		const double y1 {d_y[yidx_neighbor]};
-		const double z0 {d_z[zidx]};
-		const double z1 {d_z[zidx_neighbor]};
-
-		// Distance between neighbors
-		const double dx {x1 - x0};
-		const double dy {y1 - y0};
-		const double dz {z1 - z0};
-
-		// Time between neighboring t frames
-		const double frame_dt {t1 - t0};
-
-		// Array to hold field component and reciprocal basis vector pointers
-		// 0: ne
-		// 1: Te
-		// We use restrict since these arrays never overlap in memory with
-		// another pointer, and allows the compiler to optimize the arrays.
-		double* __restrict__ field_ptrs[2];  
-
-		// 4D arrays
-		field_ptrs[0] = bkg_d.ne;
-		field_ptrs[1] = bkg_d.te;
-
-		// Array to hold all 8 values at the vertices
-		double verts0[8];
-		double verts1[8];
-
-		// This will hold the interpolated field values
-		double intrp_field[2];
-
-		// j = 0 = ne, j = 1 = Te
-		for (int j = 0; j < 2; ++j)
-		{
-
-			// Calculate the 8 indices at tidx and tidx_neighbor. 
-			// pragma unroll just tells the compiler to break this loop 
-			// down into 8x2 individual statements. This lets it use the 
-			// register more efficiently and removes loop overhead.
-			#pragma unroll
-			for (int l = 0; l < 8; ++l)
-			{
-
-				// 4D arrays
-				verts0[l] = field_ptrs[j][idx0_4d[l]];
-				verts1[l] = field_ptrs[j][idx1_4d[l]];
-			}
-
-			// Trilinear interpolation at the particle location for this
-			// field component, comp0, and then comp1 is the same just
-			// at the next time index. I've lined the indices of v up with
-			// the corresponding ones from the trilinear_interpolate 
-			// signature.
-			double comp0 {Utilities::trilinear_interpolate(x0, y0, z0, 
-				dx, dy, dz, verts0[0], verts0[4], verts0[2], verts0[6], 
-				verts0[1], verts0[5], verts0[3], verts0[7], x, y, z)};
-
-			double comp1 {Utilities::trilinear_interpolate(x0, y0, z0, 
-				dx, dy, dz, verts1[0], verts1[4], verts1[2], verts1[6], 
-				verts1[1], verts1[5], verts1[3], verts1[7], x, y, z)};
-
-			// Now linearly interpolate in time (this is just point slope)
-			const double slope {(comp1 - comp0) / frame_dt};
-			intrp_field[j] = slope * (t - t0) + comp0;
-		}
+		// Interpolate ne, Te at the particle location
+		const double ne {Interpolate::interpolate_field_4d(bkg_d.ne,
+				stencil_4d, t, x, y, z)};
+		const double te {Interpolate::interpolate_field_4d(bkg_d.te,
+				stencil_4d, t, x, y, z)};
 
 		// Variables to store ionization/recombination probabilities
 		float ioniz_prob {};
 		float recomb_prob {};
 
 		// Get ionization/recombination probabilities. Values are updated
-		// in-place. intrp_field[0] = ne, intrp_field[1] = Te.
-		calc_ioniz_recomb_probs(oa_ioniz_d, oa_recomb_d, intrp_field[0], 
-			intrp_field[1], dt, q, Z, ioniz_prob, recomb_prob);
+		// in-place.
+		calc_ioniz_recomb_probs(oa_ioniz_d, oa_recomb_d, ne, te, dt, q, Z, 
+			ioniz_prob, recomb_prob);
 
 		// Increment warnings if either probability is greater than 1. We
 		// could easily do this without if statements, but in this case these
