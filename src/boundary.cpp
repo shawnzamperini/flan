@@ -1,6 +1,14 @@
 /**
 * @file  boundary.cpp
 * @brief Routines for handling time and spatial boundary conditions.
+*
+* Each time step, every particle is checked against the time boundary and
+* the minimum and maximum x, y and z boundaries. Each boundary can be
+* absorbing (the particle is killed), periodic (the particle is wrapped to
+* the other side) or, for the spatial boundaries, core (the particle is put
+* back at the boundary at a random location along it). The simulation
+* bounds are the first and last background times and the outer cell edges.
+* The GPU version is in cuda/boundary.cu.
 */
 #include <omp.h>
 #include <vector>
@@ -15,13 +23,22 @@
 namespace Boundary
 {
 
-	// Absorbing boundary condition. Check is value is outside the bound.
-	// max_bound = true indicates that bound is a maximum, and that we are
-	// checking if value >= bound. Likewise, max_bound = false checks if
-	// value =< bound. buffer extends the boundary so that it triggers sooner.
-	// This is because sometimes the plasma can behave oddly right at the
-	// boundaries, so this can circumvent it. This function is written this way 
-	// to be SIMD/vectorizable friendly for the compiler (no if's).
+	/**
+	* Checks if a value is outside an absorbing boundary.
+	*
+	* max_bound = true means bound is a maximum and the check is
+	* a + buffer >= bound. max_bound = false means bound is a minimum and
+	* the check is a - buffer <= bound. The buffer makes the boundary
+	* trigger sooner, since the plasma can behave oddly right at the
+	* boundaries. Written without branches so it is SIMD friendly.
+	*
+	* @param a Value to check (e.g., the particle's x coordinate).
+	* @param bound Boundary value.
+	* @param max_bound If true, bound is a maximum. Otherwise it is a
+	*        minimum.
+	* @param buffer Distance the boundary is moved inward. Defaults to 0.
+	* @return 1 if the particle is outside the boundary (dead), else 0.
+	*/
 	int absorbing_bc(double a, double bound, bool max_bound,
 		double buffer)
 	{
@@ -36,9 +53,20 @@ namespace Boundary
 		return static_cast<int>(dead);
 	}
 
-	// Periodic boundary condition. This type of BC will never kill a particle,
-	// just loop it around to the other side. This function returns the new
-	// looped value, or just the same value if a BC was not encountered.
+	/**
+	* Applies a periodic boundary condition.
+	*
+	* A periodic boundary never kills a particle. A value above amax has
+	* the domain length (amax - amin) subtracted, and a value below amin has
+	* it added. Only a single wrap is done, so a particle is assumed to
+	* move less than one domain length per time step. Written without
+	* branches so it is SIMD friendly.
+	*
+	* @param a Value to check (e.g., the particle's y coordinate).
+	* @param amin Minimum of the domain.
+	* @param amax Maximum of the domain.
+	* @return The wrapped value, or a unchanged if it is inside the domain.
+	*/
 	double periodic_bc(double a, double amin, double amax)
 	{
 		const double L = amax - amin;
@@ -50,12 +78,33 @@ namespace Boundary
 		return a - gt * L + lt * L;
 	}
 
-	// Core boundary condition. The coordinate being checked against is a. b
-	// and c are the other two coordinates. If a core condition is met, b is
-	// moved to a random value between b_min/b_max, likewise for c. This is
-	// essentially like entering the core and then popping out at a random
-	// location somewhere else along the core boundary. A residence time
-	// could easily be added to this if it was useful.
+	/**
+	* Applies a core boundary condition.
+	*
+	* The coordinate being checked is a, and b and c are the other two
+	* coordinates. If a is past the boundary (moved inward by a_buffer), a
+	* is put back on the buffered boundary, and b and c are moved to
+	* uniformly random values between their buffered minimums and
+	* maximums. This is like the particle entering the core and popping
+	* back out somewhere else along the core boundary. A residence time
+	* could be added if it was useful.
+	*
+	* @param[in,out] a Coordinate checked against the boundary.
+	* @param[in,out] b First of the other two coordinates.
+	* @param[in,out] c Second of the other two coordinates.
+	* @param a_min Minimum of a.
+	* @param a_max Maximum of a.
+	* @param a_buffer Distance the a boundary is moved inward.
+	* @param b_min Minimum of b.
+	* @param b_max Maximum of b.
+	* @param b_buffer Buffer on each side of the b range.
+	* @param c_min Minimum of c.
+	* @param c_max Maximum of c.
+	* @param c_buffer Buffer on each side of the c range.
+	* @param max_bound If true, check the a_max side. Otherwise check the
+	*        a_min side.
+	* @param rng Random number generator for this thread.
+	*/
 	void core_bc(double& a, double& b, double& c, double a_min,
 		double a_max, double a_buffer, double b_min, double b_max,
 		double b_buffer, double c_min, double c_max, double c_buffer, 
@@ -70,7 +119,7 @@ namespace Boundary
 		{
 			a = max_bound ? a_max - a_buffer : a_min + a_buffer;
 
-			// Particle starts at random a/b locations (accounting for buffers)
+			// Particle starts at random b/c locations (accounting for buffers)
 			const double b_lo = b_min + b_buffer;
 			const double b_hi = b_max - b_buffer;
 			b = b_lo + rng.next_double() * (b_hi - b_lo);
@@ -82,6 +131,28 @@ namespace Boundary
 	}
 
 
+	/**
+	* Checks every alive particle against the time and spatial boundaries
+	* and applies the boundary conditions (CPU implementation).
+	*
+	* The boundaries are checked in the order t, then min/max x, y and z.
+	* Each boundary type is an integer from the *bound_type options:
+	* 0 = absorbing, 1 = periodic and 2 = core (x, y and z only). An
+	* absorbing boundary sets the slot's state and skips the remaining
+	* checks as soon as the particle is dead. For a core boundary in x, y
+	* and z are randomized, in y, z and x are randomized, and in z, x and y
+	* are randomized. The spatial buffers are the imp_*bound_buffer
+	* options, and the time boundary has no buffer. The loop over particles
+	* is parallelized with OpenMP.
+	*
+	* @param slots Particle slots. The state, t and positions are updated
+	*        in place.
+	* @param bkg Background plasma, used for the simulation bounds.
+	* @param opts Simulation options, used for the boundary types and
+	*        buffers.
+	* @param rngs Random number generators, one per OpenMP thread, used by
+	*        the core boundary.
+	*/
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
 		std::vector<pcg32>& rngs)
@@ -95,7 +166,7 @@ namespace Boundary
 		#pragma omp parallel
 		{
 
-		// Grab our RNG for this thread, each thread has it own (and they're
+		// Grab our RNG for this thread, each thread has its own (and they're
 		// seeded uniquely).
 		const int tid {omp_get_thread_num()};
 		pcg32& rng = rngs[tid];
@@ -401,4 +472,4 @@ namespace Boundary
 		} // omp parallel
 	}  // check_bounds_cpu
 
-}
+}  // namespace Boundary

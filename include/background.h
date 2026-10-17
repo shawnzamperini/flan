@@ -4,6 +4,7 @@
 */
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "background_device.h"
@@ -297,8 +298,8 @@ namespace Background
 		BkgFPType interp_uZ(const double t0, const double x0, 
 			const double y0, const double z0) const;
 
-		bool check_dim(const int m_dim, const int in_dim, 
-			const std::string_view data, const int dim_num);
+		std::string check_dim(const int m_dim, const int in_dim, 
+			const int dim_num);
 
 		template <typename T>
 		void set_dims(Vectors::Vector4D<T>& v, const std::string_view data);

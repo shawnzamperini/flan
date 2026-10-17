@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+* @file  load_options.h
+*
+* @brief Header file for load_options.cpp
+*/
 #include "flan_types.h" // For Inputs type
 #include "options.h"
 

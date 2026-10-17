@@ -135,42 +135,6 @@ namespace Utilities
 
 
 	/**
-	* Performs bilinear interpolation within a rectangular region in
-	* two-dimensional (x, y) space.
-	*
-	* The function interpolates a value at the coordinates (x, y)
-	* using values defined at the corners of a rectangle bounded by
-	* (x0, y0) and (x1, y1).
-	*
-	* @param x0 Lower x-coordinate of the rectangle.
-	* @param y0 Lower y-coordinate of the rectangle.
-	* @param z0 Value at the lower corner.
-	* @param x1 Upper x-coordinate of the rectangle.
-	* @param y1 Upper y-coordinate of the rectangle.
-	* @param z1 Value at the upper corner.
-	* @param x X-coordinate at which to evaluate the interpolated value.
-	* @param y Y-coordinate at which to evaluate the interpolated value.
-	* @return Bilinearly interpolated value at (x, y).
-	*/
-	/*
-	double bilinear_interpolate(const double x0, const double y0,
-		const double z0, const double x1, const double y1, const double z1,
-		const double x, const double y)
-	{
-
-		// Interpolate along x at y0
-		double z_x0 {z0 + (x - x0) / (x1 - x0) * (z1 - z0)};
-
-		// Interpolate along x at y1
-		double z_x1 {z0 + (x - x0) / (x1 - x0) * (z1 - z0)};
-
-		// Interpolate along y using the results from above and return
-		return z_x0 + (y - y0) / (y1 - y0) * (z_x1 - z_x0);
-	}
-	*/
-
-
-	/**
 	 * Performs bilinear interpolation within a rectangular region in
 	 * two-dimensional (x, y) space.
 	 *

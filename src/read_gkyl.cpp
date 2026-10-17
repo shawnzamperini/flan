@@ -25,6 +25,7 @@
 
 #include "background.h"
 #include "constants.h"
+#include "errors.h"
 #include "flan_types.h"
 #include "options.h"
 #include "read_gkyl.h"
@@ -450,10 +451,10 @@ namespace Gkyl
 	* postgkyl and create files that are easily read in by Flan.
 	*
 	* The path is stored in the READ_GKYL_PY environment variable, which is
-	* set before Flan is run. If it is not set, an error is printed.
+	* set before Flan is run. If it is not set, the run is stopped with
+	* Errors::fatal_error, since the background can't be read without it.
 	*
-	* @return Full path to read_gkyl.py, or an empty string if READ_GKYL_PY
-	*         is not set.
+	* @return Full path to read_gkyl.py.
 	*/
 	std::string get_read_gkyl_py()
 	{
@@ -463,12 +464,11 @@ namespace Gkyl
 		}
 		else
 		{
-			std::cerr << "Error! READ_GKYL_PY is not set. Please set this "
-				<< "to the full path to the read_gkyl.py script. E.g.:\n"
-				<< "  READ_GKYL_PY=/path/to/flan/python/read_gkyl.py\n";
-			std::cerr << "This error probably means you forgot to activate "
-				<< "the flan conda environment.\n";
-			return std::string {};
+			Errors::fatal_error("READ_GKYL_PY is not set. Please set this "
+				"to the full path to the read_gkyl.py script. E.g.:\n"
+				"  READ_GKYL_PY=/path/to/flan/python/read_gkyl.py\n"
+				"This error probably means you forgot to activate the flan "
+				"conda environment.");
 		}
 	}
 
@@ -528,8 +528,9 @@ namespace Gkyl
 	*
 	* Lines starting with # are comments. The first line holds the number
 	* of grid edges in x, y and z. Then all the x values are listed, then the
-	* y values, then the z values, one per line. An error is printed if
-	* there are not 3 dimensions or there are too many values.
+	* y values, then the z values, one per line. The run is stopped with
+	* Errors::fatal_error if there are not 3 dimensions or there are too
+	* many values.
 	*
 	* @return Tuple of the grid edges in x, y and z.
 	*/
@@ -574,12 +575,13 @@ namespace Gkyl
 					// went wrong.
 					if (dims.size() != 3)
 					{
-						std::cerr << "Error! More than 3 dimensions were read"
-							<< " in from " << filename << ". Check that this "
-							<< " file is being generated correctly.\n";
-						std::cerr << "dims: ";
-						for (auto i : dims) std::cerr << i << " ";
-						std::cerr << '\n';
+						std::ostringstream msg {};
+						msg << "Expected 3 grid dimensions in " << filename 
+							<< " but read " << dims.size() << ". Check that "
+							<< "this file is being generated correctly.\n"
+							<< "  dims:";
+						for (auto i : dims) msg << ' ' << i;
+						Errors::fatal_error(msg.str());
 					}
 
 					// ngrid is the total number of points in the file. The
@@ -609,12 +611,13 @@ namespace Gkyl
 					// we need to read in, something went wrong.
 					if (count >= dims[0] + dims[1] + dims[2])
 					{
-						std::cerr << "Error! There appears to be too many "
-							<< "values in " << filename << ". Check that "
-							<< "this file is being generated correctly.\n";
-						std::cerr << "count = " << count << "dims = "
-							<< dims[0] << ", " << dims[1] << ", " << dims[2]
-							<< '\n';
+						std::ostringstream msg {};
+						msg << "There appear to be too many values in " 
+							<< filename << ". Check that this file is being "
+							<< "generated correctly.\n"
+							<< "  count = " << count << ", dims = " << dims[0]
+							<< ", " << dims[1] << ", " << dims[2];
+						Errors::fatal_error(msg.str());
 					}
 
 					++count;
@@ -1474,11 +1477,10 @@ namespace Gkyl
 	* electric field from the potential gradient.
 	*
 	* The path is stored in the CALC_ELEC_FIELD_PY environment variable. If
-	* it is not set, an error is printed. Currently unused, since
-	* calc_gradients calculates the electric field directly.
+	* it is not set, the run is stopped with Errors::fatal_error. Currently
+	* unused, since calc_gradients calculates the electric field directly.
 	*
-	* @return Full path to calc_elec_field.py, or an empty string if
-	*         CALC_ELEC_FIELD_PY is not set.
+	* @return Full path to calc_elec_field.py.
 	*/
 	std::string get_calc_elec_field_py()
 	{
@@ -1488,12 +1490,11 @@ namespace Gkyl
 		}
 		else
 		{
-			std::cerr << "Error! CALC_ELEC_FIELD_PY is not set. Please set "
-				<< "this to the full path to the calc_elec_field.py script. "
-				<< "E.g.:\n"
-				<< "  CALC_ELEC_FIELD_PY=/path/to/flan/python/"
-				<< "calc_elec_field.py\n";
-			return std::string {};
+			Errors::fatal_error("CALC_ELEC_FIELD_PY is not set. Please set "
+				"this to the full path to the calc_elec_field.py script. "
+				"E.g.:\n"
+				"  CALC_ELEC_FIELD_PY=/path/to/flan/python/"
+				"calc_elec_field.py");
 		}
 	}
 
@@ -2062,7 +2063,8 @@ namespace Gkyl
 		std::ofstream XYZ_file {"bkg_from_pgkyl_cell_XYZ.csv"};
 		if (!XYZ_file)
 		{
-			std::cerr << "Error creating bkg_from_pgkyl_cell_XYZ.csv!\n";
+			Errors::fatal_error("Could not create "
+				"bkg_from_pgkyl_cell_XYZ.csv.");
 		}
 
 		// Print header info
@@ -2246,7 +2248,8 @@ namespace Gkyl
 
 	/**
 	* Checks that the number of frames in the loaded background matches that
-	* requested for the simulation, printing an error if not.
+	* requested for the simulation, stopping the run with
+	* Errors::fatal_error if not.
 	*
 	* This only needs to be run once. It is useful if the user is reusing an
 	* already calculated background, but changed the frames in the input
@@ -2270,10 +2273,10 @@ namespace Gkyl
 
 		if (trange != gkyl_arr.get_dim1())
 		{
-			std::cerr << "Error! Number of time frames in loaded background "
-				<< "(" << gkyl_arr.get_dim1() << ") is different from the "
-				<< "requested range (" << trange << "). Delete all background "
-				<< "files and rerun.\n";
+			Errors::fatal_error("Number of time frames in loaded background "
+				"(" + std::to_string(gkyl_arr.get_dim1()) + ") is different "
+				"from the requested range (" + std::to_string(trange) + "). "
+				"Delete all background files and rerun.");
 		}
 	}
 }

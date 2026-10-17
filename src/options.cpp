@@ -6,7 +6,9 @@
 #include <string>
 #include <tuple>
 #include <initializer_list>
+#include <sstream>
 
+#include "errors.h"
 #include "options.h"
 #include "options_device.h"
 
@@ -1468,6 +1470,16 @@ namespace Options
 		{return m_gkyl_moment_type;}
 
 	/**
+	* Returns the calc_grad_elec option.
+	*
+	* Whether to calculate the electric field gradient.
+	*
+	* @return Value of the calc_grad_elec option.
+	*/
+	const std::string& Options::calc_grad_elec() const 
+		{return m_calc_grad_elec;}
+
+	/**
 	* Returns the min_ne option.
 	*
 	* Lower limit on the electron density (m^-3).
@@ -1497,6 +1509,16 @@ namespace Options
 	*/
 	double Options::min_ti() const 
 		{return m_min_ti;}
+
+	/**
+	* Returns the tbound_type option.
+	*
+	* Boundary condition at the start and end of the background time range.
+	*
+	* @return Value of the tbound_type option.
+	*/
+	const std::string& Options::tbound_type() const 
+		{return m_tbound_type;}
 
 	/**
 	* Returns the min_xbound_type option.
@@ -2060,9 +2082,8 @@ namespace Options
 	* Returns a control integer after checking that it was set.
 	*
 	* Control integers start at -1, meaning not set. If control_int is still
-	* negative, an error is printed. This usually means the option's setter
-	* is missing from initialize_control_ints. The value is returned either
-	* way.
+	* negative, the run is stopped with Errors::fatal_error. This usually
+	* means the option's setter is missing from initialize_control_ints.
 	*
 	* @param var_name Name of the option the control integer belongs to (for
 	*                 the error message).
@@ -2077,9 +2098,9 @@ namespace Options
 			// If you encounter this error, then it probably means the control
 			// integer was not being set at the beginning within 
 			// initialize_control_ints. Easy mistake to make.
-			std::cerr << "Error! Control integer for " << var_name 
-				<< " was never set! This is a programming error, contact a "
-				<< "developer. See initialize_control_ints for details.\n";
+			Errors::fatal_error("Control integer for " + var_name 
+				+ " was never set! This is a programming error, contact a "
+				"developer. See initialize_control_ints for details.");
 		}
 		return control_int;
 	}
@@ -2430,7 +2451,7 @@ namespace Options
 	*/
 	void free_opts(OptionsDevice* opts_d, int device_id)
 	{
-		std::cerr << "Error! Options::free_bkg was called but GPU support"
+		std::cerr << "Error! Options::free_opts was called but GPU support"
 				  << " was not compiled in.\n";
 	}
 
@@ -2439,14 +2460,16 @@ namespace Options
 	/**
 	* Checks a value against a list of valid values for an option.
 	*
-	* If the value is not in the list, an error naming the option and the
-	* value is printed.
+	* If the value is not in the list, the run is stopped with
+	* Errors::fatal_error, naming the option, the value and the valid
+	* values. Running on with the default instead would silently ignore
+	* what the user asked for.
 	*
 	* @tparam T Type of the option value.
 	* @param var Name of the option (for the error message).
 	* @param value Value to check.
 	* @param valid_values List of valid values, e.g., {"on", "off"}.
-	* @return True if the value is valid, false otherwise.
+	* @return True if the value is valid. Doesn't return otherwise.
 	*/
 	template <typename T>
 	bool Options::check_input(const std::string& var, const T& value, 
@@ -2461,9 +2484,11 @@ namespace Options
 			}
 		}
 
-		// If allowed value not found, print error
-		std::cerr << "Error! Value for " << var << " not recognized: "
-			<< value << '\n';
-		return false;
+		// If allowed value not found, stop the run, listing the valid values
+		std::ostringstream msg {};
+		msg << "Value for " << var << " not recognized: " << value 
+			<< ". Valid values are:";
+		for (const auto& v : valid_values) msg << ' ' << v;
+		Errors::fatal_error(msg.str());
 	}
 }

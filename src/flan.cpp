@@ -2,6 +2,9 @@
 * @file  flan.cpp
 *
 * @brief Entry point and top level control of Flan library.
+*
+* An input file builds an Inputs map and calls flan with it, between
+* MPI_Init and MPI_Finalize (see regression/blank_input_file.cpp).
 */
 #include <cmath>
 #include <fstream>
@@ -25,6 +28,29 @@
 #include "timer.h"
 #include "vectors.h"
 
+/**
+* Runs a Flan simulation with the given input options.
+*
+* The steps are:
+*
+* 1. Load the options from inpts, filling in defaults for any not given
+*    (Options::load_options).
+* 2. Read the background plasma on rank 0 (Background::read_bkg) and
+*    broadcast it to every rank.
+* 3. Follow the impurities on every rank
+*    (ImpurityTransport::follow_impurities).
+* 4. Combine the statistics from every rank onto rank 0
+*    (Impurity::reduce_stats), and calculate the density, velocities,
+*    charge and Nanbu s from them.
+* 5. Save the results on rank 0 (SaveResults::save_results) and print the
+*    timing summary.
+*
+* MPI must already be initialized when flan is called, and the caller
+* finalizes it afterwards. Every rank must call flan.
+*
+* @param inpts Input options from the input file. Options not in inpts keep
+*        their default values.
+*/
 void flan(const Inputs& inpts)
 {
 	// MPI rank and number of processes
@@ -70,7 +96,8 @@ R"(
 	if (rank == 0) std::cout << "Loading input...\n";
 	Options::Options opts {Options::load_options(inpts)};
 
-	// Load plasma background. Returns a Background class option.
+	// Load plasma background on rank 0. The other ranks get it from the
+	// broadcast below.
 	timer.start(Timer::Section::Read);
 	Background::Background bkg {};
 	if (rank == 0) bkg = Background::read_bkg(opts);
@@ -118,7 +145,7 @@ R"(
 	}
 
 	// End total timer, then print summary just for MPI rank 0. It should be
-	// about the same for the all the other ranks. This is also going to give
+	// about the same for all the other ranks. This is also going to give
 	// you the wall time effectively, which is what we're after.
 	timer.stop(Timer::Section::Total);
 	if (rank == 0)
@@ -126,4 +153,4 @@ R"(
 		timer.print_summary();
 	}
 
-}
+}  // flan

@@ -1,3 +1,13 @@
+/**
+* @file  impurity_stats.cu
+*
+* @brief CUDA routines for recording the impurity statistics on a GPU.
+*
+* GPU version of record_stats_cpu in impurity_stats.cpp. Each time step,
+* every alive particle adds its contribution to the statistics arrays of
+* the cell and time frame it's in. Many particles can be in the same cell,
+* so the additions are atomic.
+*/
 #include <cuda_runtime.h> 
 #include <cstdio>
 
@@ -9,6 +19,21 @@
 namespace ImpurityStats
 {
 
+	/**
+	* Kernel that adds each alive particle to the statistics of its cell
+	* and time frame, one thread per slot.
+	*
+	* The count is incremented and weight * dt (the occupancy, in number of
+	* particles) is added to the weights. The Cartesian and computational
+	* velocities and the charge are added multiplied by weight * dt, so they
+	* can later be turned into weighted averages. Dead slots are skipped.
+	* The cell and time frame are the particle's tidx, xidx, yidx and zidx,
+	* so find_containing_cell_gpu must have been called first.
+	*
+	* @param[in,out] stats_d Impurity statistics on the device. Added to.
+	* @param slots_d Particle slots on the device.
+	* @param dt Time step (s).
+	*/
 	__global__ void record_stats_kernel(StatisticsDevice stats_d, 
 		Slots::SlotsDevice slots_d, double dt)
 	{
@@ -21,7 +46,7 @@ namespace ImpurityStats
 		// Don't count dead particles
 		if (slots_d.state[i]) return;
 
-		// 4D to 1D index
+		// 4D to 1D index, same as calc_4d_index_cuda
 		//int Nt {stats_d.Nt};
 		int Nx {stats_d.Nx};
 		int Ny {stats_d.Ny};
@@ -29,7 +54,8 @@ namespace ImpurityStats
 		int idx {slots_d.tidx[i] * (Nx * Ny * Nz) + slots_d.xidx[i] 
 			* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
 
-		// Add to stats. Need to use atomicAdd here to avoid a race condition :(
+		// Add to stats. atomicAdd is needed since other particles may be
+		// adding to the same cell at the same time.
 		double p_w_dt {slots_d.weight[i] * dt};  // Change to float
 		atomicAdd(&stats_d.counts[idx], 1);
 		atomicAdd(&stats_d.weights[idx], p_w_dt);
@@ -42,6 +68,19 @@ namespace ImpurityStats
 		atomicAdd(&stats_d.q[idx],  slots_d.q[i]  * p_w_dt);
 	}
 	
+	/**
+	* Launches record_stats_kernel to add every alive particle on the GPU to
+	* the impurity statistics.
+	*
+	* GPU version of record_stats_cpu. Uses blocks of 256 threads, one
+	* thread per slot. The launch is asynchronous, except in DEBUG builds,
+	* where it waits for the kernel to finish and prints any error.
+	*
+	* @param[in,out] stats_d Impurity statistics on the device. Added to.
+	* @param slots_d Particle slots on the device, on the same GPU as
+	*        stats_d.
+	* @param dt Time step (s).
+	*/
 	void record_stats_gpu(StatisticsDevice& stats_d, 
 		const Slots::SlotsDevice& slots_d, double dt)
 	{
@@ -64,6 +103,6 @@ namespace ImpurityStats
 			printf("record_stats_kernel error: %s\n", cudaGetErrorString(err));
 #endif
 
-	}
+	}  // record_stats_gpu
 
-}
+}  // namespace ImpurityStats

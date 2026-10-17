@@ -300,7 +300,10 @@ namespace Collisions
 			// Use interpolation function to find A value from precomputed 
 			// arrays of A(s) values found in nanbu_s_a.h. These values were 
 			// calculated using python/calc_nanbu.py.
-			return Utilities::linear_interpolate(Nanbu::s, Nanbu::A, s);
+			// We use the uniform interpolate since it's a lot faster, just
+			// kinda leaving this comment here to point that out.
+			//return Utilities::linear_interpolate(Nanbu::s, Nanbu::A, s);
+			return Utilities::linear_interpolate_uniform(Nanbu::s, Nanbu::A, s);
 		}
 
 	}

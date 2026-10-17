@@ -238,24 +238,14 @@ namespace Boris
 			// which direction we should interpolate towards, i.e., which
 			// rectangle made by the neighboring cell centers our particle
 			// is bounded by.
+			const int tidx_neighbor {Utilities::get_neighbor_index(slots.t()[i], 
+				bkg.get_times(), tidx)};
 			const int xidx_neighbor {Utilities::get_neighbor_index(slots.x()[i], 
 				bkg.get_x(), xidx)};
 			const int yidx_neighbor {Utilities::get_neighbor_index(slots.y()[i], 
 				bkg.get_y(), yidx)};
 			const int zidx_neighbor {Utilities::get_neighbor_index(slots.z()[i], 
 				bkg.get_z(), zidx)};
-
-			// Similarly for t, except we can't use get_neighbor_index since it
-			// uses cell center coordinates, and t is defined at each frame (i.e.,
-			// not between each frame, that would be nonintuitive). So we use a
-			// little SIMD-friendly logic here to assign tidx_neighbor to tidx+1,
-			// and tidx-1 if we're in the last time frame.
-			// at_end = 1 if tidx == ntimes-1, else 0 
-			// If at_end = 0 → i + 1 
-			// If at_end = 1 → i - 1 
-			const int at_end {(tidx == static_cast<int>
-				(bkg.get_times().size())-1)}; 
-			const int tidx_neighbor {tidx + 1 - 2 * at_end};
 
 			//std::cout << "t: " << tidx << "\t" << tidx_neighbor << "\n";
 			//std::cout << "x: " << xidx << "\t" << xidx_neighbor << "\n";

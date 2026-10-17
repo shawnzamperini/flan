@@ -399,9 +399,9 @@ namespace Slots
 	*
 	* I think this should probably be moved to slots.cu...
 	*
-	* The per-particle arrays are allocated and copied, except pt and iters,
+	* The per-particle arrays are allocated and copied, except iters,
 	* which are not stored on the device. The work arrays used by the GPU
-	* kernels (all_dead, counter, alive, num_dead and dead_indices) are also
+	* kernels (all_dead, num_dead and dead_indices) are also
 	* allocated, and all_dead is initialized to false. If GPU support was not
 	* compiled in, an error is printed and an empty SlotsDevice is returned.
 	*
@@ -446,12 +446,12 @@ namespace Slots
 		cudaMalloc(&slots_d.q, m_N * sizeof(int));
 		cudaMalloc(&slots_d.state, m_N * sizeof(int));
 		cudaMalloc(&slots_d.all_dead, sizeof(bool));
-		cudaMalloc(&slots_d.counter, sizeof(int));
-		cudaMalloc(&slots_d.alive, sizeof(int));
 		cudaMalloc(&slots_d.num_dead, sizeof(int));
 		cudaMalloc(&slots_d.dead_indices, m_N * sizeof(int));
 
 		// Copy to device
+		cudaMemcpy(slots_d.pt, m_pt.data(), m_N * sizeof(double), 
+			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.t, m_t.data(), m_N * sizeof(double), 
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.x, m_x.data(), m_N * sizeof(double), 
@@ -503,7 +503,7 @@ namespace Slots
 	/**
 	* Copies the particles from the device back into a new host Slots object.
 	*
-	* The mass and the per-particle arrays on the device are copied back. pt,
+	* The mass and the per-particle arrays on the device are copied back.
 	* iters and the atomic number are not stored on the device, so they are
 	* left at zero in the returned object. The device memory is not freed,
 	* use free_slots for that. If GPU support was not compiled in, only N and
@@ -599,8 +599,6 @@ namespace Slots
 		cudaFree(slots_d.q);
 		cudaFree(slots_d.state);
 		cudaFree(slots_d.all_dead);
-		cudaFree(slots_d.counter);
-		cudaFree(slots_d.alive);
 		cudaFree(slots_d.num_dead);
 		cudaFree(slots_d.dead_indices);
 
@@ -624,8 +622,6 @@ namespace Slots
 		slots_d.q = nullptr;
 		slots_d.state = nullptr;
 		slots_d.all_dead = nullptr;
-		slots_d.counter = nullptr;
-		slots_d.alive = nullptr;
 		slots_d.num_dead = nullptr;
 		slots_d.dead_indices = nullptr;
 #endif
@@ -695,20 +691,26 @@ namespace Slots
 	* Otherwise each component is sampled from a Maxwellian with zero mean
 	* and sigma = sqrt(kT/m), giving an isotropic velocity distribution. The
 	* temperature is imp_temp_start_val if imp_temp_start_opt is
-	* "single_value", or the main ion temperature in the particle's cell if
-	* it is "ti". The ion temperature is the cell value, not interpolated.
+	* "single_value", or the main ion temperature interpolated at the
+	* particle location with Background::interp_ti if it is "main_ion".
+	* The interpolated ion temperature is held at or above min_ti, since it
+	* can go negative near the grid edges.
 	*
 	* @param bkg Background plasma, used for the ion temperature.
 	* @param opts Simulation options.
-	* @param t Starting time of the particle (s). Currently unused.
-	* @param x Starting computational x coordinate. Currently unused.
-	* @param y Starting computational y coordinate. Currently unused.
-	* @param z Starting computational z coordinate. Only used by the
-	*        curvature test, where z is the toroidal angle.
-	* @param tidx Index of the nearest background time frame.
+	* @param t Starting time of the particle (s).
+	* @param x Starting computational x coordinate.
+	* @param y Starting computational y coordinate.
+	* @param z Starting computational z coordinate. In the curvature test,
+	*        z is the toroidal angle.
+	* @param tidx Index of the nearest background time frame. Currently
+	*        unused.
 	* @param xidx x index of the grid cell containing the particle.
+	*        Currently unused.
 	* @param yidx y index of the grid cell containing the particle.
+	*        Currently unused.
 	* @param zidx z index of the grid cell containing the particle.
+	*        Currently unused.
 	* @param rng Random number generator for this thread.
 	* @return Starting velocity {vX, vY, vZ} in Cartesian space (m/s).
 	*/
@@ -758,7 +760,10 @@ namespace Slots
 
 		// Start at main ion temperature
 		else if (opts.imp_temp_start_opt_int() == 1)
+		{
 			start_temp = bkg.interp_ti(t, x, y, z); 
+			start_temp = std::max(start_temp, opts.min_ti());
+		}
 
 		// Sample from a Maxwellian with sigma = sqrt(kT/m) and mean = 0 for an
 		// isotropic velocity distribution. T [eV], m [kg]

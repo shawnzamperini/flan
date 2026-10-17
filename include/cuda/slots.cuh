@@ -1,11 +1,24 @@
 #pragma once
 
+/**
+* @file  slots.cuh
+*
+* @brief Header file for slots.cu
+*/
 #include "slots_device.h"
 
 namespace Slots
 {
 
-	// Structure to hold initialized particle
+	/**
+	* A newly created particle, returned by make_new_particle_cuda and then
+	* written into a slot.
+	*
+	* t is in s, x, y and z are computational coordinates, vx, vy and vz
+	* are computational velocities, vX, vY and vZ are Cartesian velocities
+	* (m/s), weight is the particle weight, the idx members are the time and
+	* cell indices and q is the charge state.
+	*/
 	struct ParticleInitDevice {
 		double t, x, y, z;
 		double vx, vy, vz;
@@ -14,24 +27,10 @@ namespace Slots
 		int tidx, xidx, yidx, zidx, q;
 	};
 
-	/**
-	* @brief Replace dead particles with alive ones, as long as remaining 
-	*   particles are greater than zero (GPU).
-	*
-	* @param slots Slots object to swap out dead particles in
-	* @param rem_parts Number of remaining alive particles to track
-	*/
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d, 
 		const Background::BackgroundDevice& bkg_d);
 
-	/**
-	* @brief Check if slots contain all dead particles
-	*
-	* @param slots_d Device-side slots struct to check
-	*
-	* @return true if all dead, false if not
-	*/
 	bool all_dead_gpu(SlotsDevice& slots_d);
 	
 }

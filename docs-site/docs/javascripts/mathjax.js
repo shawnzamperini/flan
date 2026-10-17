@@ -1,0 +1,21 @@
+// MathJax configuration for pymdownx.arithmatex (generic mode)
+window.MathJax = {
+  tex: {
+    inlineMath: [["\\(", "\\)"]],
+    displayMath: [["\\[", "\\]"]],
+    processEscapes: true,
+    processEnvironments: true
+  },
+  options: {
+    ignoreHtmlClass: ".*|",
+    processHtmlClass: "arithmatex"
+  }
+};
+
+// Re-typeset when navigating with Material's instant loading
+document$.subscribe(() => {
+  MathJax.startup.output.clearCache();
+  MathJax.typesetClear();
+  MathJax.texReset();
+  MathJax.typesetPromise();
+});

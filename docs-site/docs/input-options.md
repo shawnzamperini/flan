@@ -11,13 +11,20 @@ inpts["imp_mass_amu"] = 183.84;
 Any option you don't set uses the default value listed below. The options
 are grouped by what they control.
 
+!!! note "Mistakes in options stop the run"
+    Flan stops with an error before the simulation starts if an option name
+    isn't recognized (e.g., a typo), a value has the wrong type, or a string
+    option has a value that isn't one of its valid values. The type must
+    match the table exactly. For example, `inpts["imp_num"] = 1e4` is a
+    double, so use `inpts["imp_num"] = 10000` for an int option.
+
 ## Simulation
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `case_name` | string | `"undefined"` | Name of the simulation case. The results are saved to `<case_name>.nc`. |
 | `use_gpu` | string | `"off"` | Whether to run the simulation on GPUs. Valid values: `"off"`, `"cuda"`. |
-| `seed` | int | `4` | Base seed for the random number generators. A negative value seeds them from the clock so each run is different. The MPI rank is added to the seed so each rank gets a different sequence. |
+| `seed` | int | `-1` | Base seed for the random number generators. A negative value (the default) seeds them from the clock so each run is different. Set it to 0 or above to make a run repeatable. The MPI rank is added to the seed so each rank gets a different sequence. |
 | `slot_cap` | int | `1048576` | Maximum number of particle slots, i.e., the most particles followed at once. The number of slots used is the smaller of this and `imp_num`. |
 | `print_interval` | int | `10` | Number of progress updates printed while particles are followed. For example, 10 prints an update every 10% of particles. |
 
@@ -28,7 +35,7 @@ are grouped by what they control.
 | `bkg_source` | string | `"gkeyll"` | Source of the background plasma, either a built-in test background or a Gkeyll simulation. Valid values: `"test"`, `"gkeyll"`. |
 | `min_ne` | float | `1e15` | Lower limit on the electron density (m^-3). |
 | `min_te` | float | `0.1` | Lower limit on the electron temperature (eV). |
-| `min_ti` | float | `0.1` | Lower limit on the ion temperature (eV), applied when calculating collisions with the background ions. |
+| `min_ti` | float | `0.1` | Lower limit on the ion temperature (eV), applied when calculating collisions with the background ions and when sampling starting velocities with `imp_temp_start_opt = "main_ion"`. |
 
 ## Testing
 
@@ -72,6 +79,13 @@ are grouped by what they control.
 | `imp_zbound_buffer` | float | `0.0` | Buffer distance at the z boundaries. With an absorbing boundary, a particle is absorbed once it is within this distance of the boundary. |
 | `sep_x_bc_xp_z1` | float | `0.0` | First z value for the separatrix x boundary condition near the X-point. |
 | `sep_x_bc_xp_z2` | float | `0.0` | Second z value for the separatrix x boundary condition near the X-point. |
+
+!!! note "Periodic boundaries must be periodic on both sides"
+    A periodic boundary wraps a particle around to the other side of the
+    domain, so it only makes sense if both the minimum and maximum
+    boundaries in that direction are periodic. If only one side of x, y or z
+    is set to `"periodic"`, Flan prints a warning and sets both sides to
+    `"periodic"`.
 
 ## Impurity properties
 

@@ -87,9 +87,9 @@ Before the push, $\mathbf{E}$ and $\mathbf{B}$ are found at the particle's posit
 
 1. Each Cartesian component, and the magnitude, is trilinearly interpolated in
    space between the centers of the cell containing the particle and its
-   neighbors on the particle's side. This is done for the particle's
-   background time frame and the next one (the previous one if the particle is in the last
-   frame).
+   neighbors on the particle's side. This is done for the particle's nearest
+   background time frame and the neighboring frame on the particle's side in
+   time, so the particle's time is always between the two frames.
 2. The two values are linearly interpolated in time to the particle's time.
 3. The interpolated vector is rescaled to the interpolated magnitude.
 
@@ -151,7 +151,7 @@ The CPU version is `Boris::update_velocity_cpu` in `src/boris.cpp`, parallelized
 over particles with OpenMP. The GPU version is `update_velocity_kernel` in
 `src/cuda/boris.cu`, with one thread per particle. The two use the same push.
 The GPU version builds the interpolation stencils with the helpers in
-`src/cuda/interpolate.cu`. The core of the push is:
+`include/cuda/interpolate.cuh`. The core of the push is:
 
 ```cpp
 // Charge state times the (positive) elementary charge, divided by mass

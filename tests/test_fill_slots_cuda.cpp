@@ -42,6 +42,7 @@ TEST(FillSlotsCUDA, RevivesDeadParticles)
 
 	// Copy back to host, copies slots_d into slots. Free memory on GPU.
 	slots = slots.to_host(slots_d);
+	free_rngs(rngs_d, slots_d.device_id);
 	Slots::free_slots(slots_d);
 	Options::free_opts(opts_d);
 

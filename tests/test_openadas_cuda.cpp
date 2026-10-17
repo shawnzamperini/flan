@@ -25,6 +25,7 @@ namespace
 	{
 		int ioniz_warnings {};
 		int recomb_warnings {};
+		int max_time_warnings {};
 	};
 
 	// Loads the fake ADAS files in root, copies everything to the GPU, takes
@@ -55,7 +56,11 @@ namespace
 
 		StepResult res {};
 		OpenADAS::add_warnings_to_host(warnings_d, res.ioniz_warnings,
-			res.recomb_warnings);
+			res.recomb_warnings, res.max_time_warnings);
+
+		// Only step_gpu counts particles past imp_max_time, so this should
+		// still be zero
+		EXPECT_EQ(res.max_time_warnings, 0);
 
 		// The kernel launches are asynchronous now, so check here that they
 		// all ran without error.

@@ -1,17 +1,10 @@
 #include <iostream>
 #include <cmath>
-#include <tuple>
 
 #include "flan.h"
 #include "flan_types.h"
+#include "mpi.h"
 
-
-// mapc2p (slated for depreciation)
-std::tuple<double, double, double> mapc2p(double xc, double yc, double zc)
-{
-	std::cout << "Don't use me!\n";
-	return {0, 0 ,0};
-}
 
 Inputs create_inputs()
 {
@@ -21,10 +14,9 @@ Inputs create_inputs()
 	inpts["bkg_source"] = "test";
 	inpts["case_name"] = "gradb";
 	inpts["test_opt"] = "gradb";
-	inpts["save_track"] = "on";  // Needed for validating tests
 
 	// Impurity and transport options
-	inpts["imp_num"] = 1;  // Only 1 particle for drift tests
+	inpts["imp_num"] = 100;
 
 	/*
 	   |  Z |  Mass  |
@@ -68,19 +60,19 @@ Inputs create_inputs()
 	// Miscellanous
 	inpts["print_interval"] = 10;
 
-	// Pointers to functions go here
-	Mapc2p_ptr mapc2p_ptr {&mapc2p};
-
-	// Function pointer input options go here
-	inpts["mapc2p"] = mapc2p_ptr;
-
 	return inpts;
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
-	// Run Flan
+	// Initialize MPI
+	MPI_Init(&argc, &argv);
+
+	// Bundle up inputs and run Flan
 	Inputs inpts {create_inputs()};
 	flan(inpts);
+
+	// Finalize MPI
+	MPI_Finalize();
 }

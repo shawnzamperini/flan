@@ -1,3 +1,16 @@
+/**
+* @file  slots.cu
+*
+* @brief CUDA routines for filling particle slots with new particles and
+*        checking if every slot is dead.
+*
+* GPU version of the slot routines in slots.cpp. Each time step, the
+* indices of the dead slots are gathered into a compact list with a
+* warp-level stream compaction, and then one thread per dead slot creates a
+* new particle there, as long as there are particles left to launch. New
+* particles start according to the imp_*start_opt and imp_temp_start_opt
+* options.
+*/
 #include <cstdio>
 
 #include "background_device.h"
@@ -14,7 +27,9 @@
 namespace Slots
 {
 
-	// Simple struct to hold three floats
+	/**
+	* Simple struct to hold the three components of a vector.
+	*/
 	struct Vec3d
 	{
 		double x;
@@ -22,7 +37,29 @@ namespace Slots
 		double z;
 	};
 
-	// Function to decide starting t,x,y,z based on input options
+	/**
+	* Picks the starting value of one coordinate (t, x, y or z) of a new
+	* particle.
+	*
+	* start_opt_int is the control integer of the imp_*start_opt option
+	* deciding where the particle starts:
+	*   0: At start_val.
+	*   1: Uniformly random between range_min and range_max.
+	*   2: Uniformly random over the full simulation volume, between bkg_min
+	*      and bkg_max.
+	* Any other value returns 0.
+	*
+	* @param start_opt_int Control integer of the imp_*start_opt option.
+	* @param start_val Starting value used when start_opt_int is 0.
+	* @param range_min Lower end of the range used when start_opt_int is 1.
+	* @param range_max Upper end of the range used when start_opt_int is 1.
+	* @param bkg_min Minimum of the simulation volume, used when start_opt_int
+	*        is 2.
+	* @param bkg_max Maximum of the simulation volume, used when start_opt_int
+	*        is 2.
+	* @param rng Random number generator for this thread.
+	* @return Starting value of the coordinate.
+	*/
 	__device__
 	double get_birth_val_cuda(const int start_opt_int, const double start_val, 
 		const double range_min, const double range_max, const double bkg_min, 
@@ -53,6 +90,37 @@ namespace Slots
 	}
 
 
+	/**
+	* Picks the starting Cartesian velocity of a new particle.
+	*
+	* For the test backgrounds (bkg_source = "test") the velocity is fixed
+	* by the test case: 10,000 m/s in Y for the gyrate, ExB, grad-B and
+	* polarization tests, 30,000 m/s along the field line (in the X-Y plane,
+	* at angle z) for the curvature test, and at rest for the friction test.
+	*
+	* Otherwise each component is sampled from a Maxwellian with zero mean
+	* and sigma = sqrt(kT/m), giving an isotropic velocity distribution. The
+	* temperature is imp_temp_start_val if imp_temp_start_opt is
+	* "single_value", or the main ion temperature interpolated (trilinear
+	* in space, linear in time) at the particle location if it is
+	* "main_ion". The interpolated ion temperature is held at or above
+	* min_ti, since it can go negative near the grid edges.
+	*
+	* @param bkg_d Background plasma on the device, used for the ion
+	*        temperature.
+	* @param t Starting time of the particle (s).
+	* @param x Starting computational x coordinate.
+	* @param y Starting computational y coordinate.
+	* @param z Starting computational z coordinate. In the curvature test,
+	*        z is the toroidal angle.
+	* @param tidx Index of the nearest background time frame.
+	* @param xidx x index of the grid cell containing the particle.
+	* @param yidx y index of the grid cell containing the particle.
+	* @param zidx z index of the grid cell containing the particle.
+	* @param rng Random number generator for this thread.
+	* @param opts_d Simulation options on the device.
+	* @return Starting velocity {vX, vY, vZ} in Cartesian space (m/s).
+	*/
 	__device__
 	Vec3d get_birth_vXYZ(const Background::BackgroundDevice bkg_d, 
 		const double t, const double x, const double y, const double z, 
@@ -104,10 +172,13 @@ namespace Slots
 		{
 			Interpolate::InterpolationStencil stencil_4d
 				{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, 
-				x, y, z)};
+				t, x, y, z)};
 
 			start_temp = Interpolate::interpolate_field_4d(bkg_d.ti, 
 				stencil_4d, t, x, y, z);
+
+			// Limit to minimum value
+			start_temp = fmax(start_temp, opts_d->min_ti);
 		}
 
 		// Sample from a Maxwellian with sigma = sqrt(kT/m) and mean = 0 for an
@@ -123,30 +194,40 @@ namespace Slots
 	}
 
 	
-	// Initialize a new particle and return it. Important to pass the rng in
-	// as a reference since we change its state each time we pull a random
-	// number
-	__device__ 
-	ParticleInitDevice make_new_particle_cuda(pcg32* rngs_d, 
+	/**
+	* Creates a new particle based on the input options.
+	*
+	* The starting t, x, y and z come from get_birth_val_cuda, the indices
+	* of the nearest time frame and the containing grid cell are found, and
+	* the starting Cartesian velocity comes from get_birth_vXYZ. The
+	* computational velocities are left at zero, since they are set on the
+	* first Boris update. The weight is 1 / imp_num and the charge is
+	* init_charge.
+	*
+	* @param rng_d Random number generator of the slot the particle goes
+	*        into.
+	* @param opts_d Simulation options on the device.
+	* @param bkg_d Background plasma on the device.
+	* @return The new particle.
+	*/
+	__device__
+	ParticleInitDevice make_new_particle_cuda(pcg32& rng, 
 		const Options::OptionsDevice* opts_d, 
 		const Background::BackgroundDevice& bkg_d)
 	{
-
-		// Global thread index
-		int i  = blockIdx.x * blockDim.x + threadIdx.x;
 
 		ParticleInitDevice p;
 
 		// Create a new particle based on input options.
 		// d_x_min/max, etc. are defined in device_constants.cuh
 		p.t = get_birth_val_cuda(opts_d->tstart_opt_int, opts_d->tstart_val, 
-			opts_d->trange_min, opts_d->trange_max, d_t_min, d_t_max, rngs_d[i]);
+			opts_d->trange_min, opts_d->trange_max, d_t_min, d_t_max, rng);
 		p.x = get_birth_val_cuda(opts_d->xstart_opt_int, opts_d->xstart_val, 
-			opts_d->xrange_min, opts_d->xrange_max, d_x_min, d_x_max, rngs_d[i]);
+			opts_d->xrange_min, opts_d->xrange_max, d_x_min, d_x_max, rng);
 		p.y = get_birth_val_cuda(opts_d->ystart_opt_int, opts_d->ystart_val, 
-			opts_d->yrange_min, opts_d->yrange_max, d_y_min, d_y_max, rngs_d[i]);
+			opts_d->yrange_min, opts_d->yrange_max, d_y_min, d_y_max, rng);
 		p.z = get_birth_val_cuda(opts_d->zstart_opt_int, opts_d->zstart_val, 
-			opts_d->zrange_min, opts_d->zrange_max, d_z_min, d_z_max, rngs_d[i]);
+			opts_d->zrange_min, opts_d->zrange_max, d_z_min, d_z_max, rng);
 
 		// Get indices, same process as in impurity_transport.cu
 		p.tidx = Indices::get_nearest_index_cuda(d_t, bkg_d.tdim, p.t);
@@ -159,7 +240,7 @@ namespace Slots
 
 		// Get starting vX, vY, vZ into struct
 		Vec3d vXYZ {get_birth_vXYZ(bkg_d, p.t, p.x, p.y, p.z, p.tidx, p.xidx, 
-			p.yidx, p.zidx, rngs_d[i], opts_d)};
+			p.yidx, p.zidx, rng, opts_d)};
 		p.vX = vXYZ.x;
 		p.vY = vXYZ.y;
 		p.vZ = vXYZ.z;
@@ -179,7 +260,26 @@ namespace Slots
 	}
 
 	
-	// Kernel to compact dead cells at warp level (what?). 
+	/**
+	* Kernel that gathers the indices of every dead slot into a compact
+	* list.
+	*
+	* This is a warp-level stream compaction. Each warp votes on which of
+	* its lanes hold a dead slot (__ballot_sync), lane 0 reserves room for
+	* that many indices in dead_indices with a single atomicAdd on
+	* num_dead, and each dead lane then writes its slot index at its offset
+	* within the warp's reserved block. Using one atomic per warp instead of
+	* one per thread keeps contention low. The order of the indices between
+	* warps is not deterministic.
+	*
+	* @param state State of each slot, where 0 is alive and anything else
+	*        is dead.
+	* @param dead_indices Output list of dead slot indices. Must be able to
+	*        hold N indices.
+	* @param num_dead Device counter of dead slots. Must be zeroed before
+	*        the launch. Holds the number of dead slots afterward.
+	* @param N Number of slots.
+	*/
 	__global__ void compact_dead_slots(const int* __restrict__ state,
 		int* __restrict__ dead_indices, int* __restrict__ num_dead, int N)
 	{
@@ -262,19 +362,30 @@ namespace Slots
 
 
 	/**
-	* @brief GPU kernel to fill slots, replacing dead particles with alive ones.
+	* Kernel that fills dead slots with new particles.
 	*
-	* We choose to copy slots_d to the kernel each time this is called since
-	* the copy time is << kernel launch time, and copying results in clearer
-	* code.
+	* One thread handles one entry of the dead slot list from
+	* compact_dead_slots, so only the first min(num_dead, rem_parts) dead
+	* slots are filled. Each creates a new particle with
+	* make_new_particle_cuda and writes it into the slot, marking it alive.
+	* The cell indices are set to 0 here and assigned afterward by
+	* find_containing_cell_gpu.
+	*
+	* slots_d is passed by value each time since the copy time is much less
+	* than the kernel launch time, and it makes for clearer code.
+	*
+	* @param slots_d Particle slots on the device. The dead slots are
+	*        overwritten in place.
+	* @param bkg_d Background plasma on the device.
+	* @param rem_parts Number of particles left to launch.
+	* @param rngs_d Random number generators on the device.
+	* @param opts_d Simulation options on the device.
 	*/
 	__global__ void fill_slots_kernel(SlotsDevice slots_d, 
 		Background::BackgroundDevice bkg_d, int rem_parts, pcg32* rngs_d, 
 		const Options::OptionsDevice* opts_d)
 	{
 		// Global index
-		//int i = blockIdx.x * blockDim.x + threadIdx.x;
-		//if (i >= slots_d.N) return;
 		int idx = blockIdx.x * blockDim.x + threadIdx.x;
 		if (idx >= *slots_d.num_dead) return;
 		if (idx >= rem_parts) return;
@@ -282,27 +393,11 @@ namespace Slots
 		// Pick slot index only from those that have been found to be dead.
 		int i = slots_d.dead_indices[idx];
 
-		// Skip alive slots and add to count of alive slots (used in progress
-		// print out). This atomicAdd isn't a big deal for warp divergence
-		// since this thread is already exiting early compared to those that
-		// continue past this loop.
-		//if (slots_d.state[i] == 0) 
-		//{
-		//	atomicAdd(slots_d.alive, 1);
-		//	return;
-		//}
-
-		// Atomically claim a particle index. This prevents the race condition
-		// in which multiple threads grab the same index.
-		//int idx2 = atomicAdd(slots_d.counter, 1);
-
-		// If we ran out of particles, stop
-		//if (idx2 >= rem_parts) return;
-
 		// Create a new particle (device-side initializer)
-		ParticleInitDevice p = make_new_particle_cuda(rngs_d, opts_d, bkg_d);
+		ParticleInitDevice p = make_new_particle_cuda(rngs_d[i], opts_d, bkg_d);
 
 		// Write particle data
+		slots_d.pt[i] = 0.0;
 		slots_d.t[i]  = p.t;
 
 		slots_d.x[i]  = p.x;
@@ -321,7 +416,7 @@ namespace Slots
 
 		slots_d.q[i] = p.q;
 
-		// These get assigned in main_loop
+		// These get assigned in find_containing_cell_gpu
 		slots_d.tidx[i] = 0;
 		slots_d.xidx[i] = 0;
 		slots_d.yidx[i] = 0;
@@ -329,11 +424,17 @@ namespace Slots
 
 		// Mark slot alive
 		slots_d.state[i] = 0;
-
-		// Newly alive, count it
-		//atomicAdd(slots_d.alive, 1);
 	}
 
+	/**
+	* Kernel that sets all_dead to false if any slot holds an alive
+	* particle.
+	*
+	* all_dead must be set to true before the launch. One thread checks
+	* one slot.
+	*
+	* @param slots_d Particle slots on the device.
+	*/
 	__global__ void all_dead_kernel(SlotsDevice slots_d)
 	{
 		// Global index
@@ -342,12 +443,31 @@ namespace Slots
 
 		// If a single thread has an alive particle (state = 0), then all_dead
 		// must be false. This is technically a race condition, but we allow
-		// it since only one thread needs to write false for 
+		// it since every thread that writes is writing the same value (false).
 		if (slots_d.state[i] == 0) *slots_d.all_dead = false;
 	}
 
-	// Replace dead particles with alive ones, as long as remaining particles
-	// are greater than zero.
+	/**
+	* Replaces dead particles with new ones, as long as there are particles
+	* left to launch.
+	*
+	* Runs compact_dead_slots to gather the dead slot indices, copies the
+	* number of dead slots back to the host (which waits for the kernel to
+	* finish), and then launches fill_slots_kernel with one thread per dead
+	* slot. Both use blocks of 256 threads. The fill kernel launch is
+	* asynchronous, except in DEBUG builds, where it waits for the kernel to
+	* finish and prints any error. The number of filled slots is
+	* min(rem_parts, num_dead), so the counts are updated on the host
+	* without waiting for it.
+	*
+	* @param slots_d Particle slots on the device.
+	* @param rem_parts Number of particles left to launch. Decreased by the
+	*        number of slots filled.
+	* @param[out] alive_slots Number of alive slots after filling.
+	* @param rngs_d Random number generators on the device.
+	* @param opts_d Simulation options on the device.
+	* @param bkg_d Background plasma on the device.
+	*/
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d,
 		const Background::BackgroundDevice& bkg_d)
@@ -371,17 +491,20 @@ namespace Slots
 		cudaMemcpy(&num_dead, slots_d.num_dead, sizeof(*slots_d.num_dead), 
 			cudaMemcpyDeviceToHost);
 
-		// Set counter and number of alive slots to zero
-		cudaMemset(slots_d.counter, 0, sizeof(*slots_d.counter));
-		//cudaMemset(slots_d.alive, 0, sizeof(*slots_d.alive));
-
 		int rem_initial {rem_parts};
 
 		// Call GPU kernel to fill slots.
 		int fillBlock = 256;
 		int fillGrid  = (num_dead + fillBlock - 1) / fillBlock;
-		fill_slots_kernel<<<fillGrid, fillBlock>>>(slots_d, bkg_d, rem_parts, 
+		fill_slots_kernel<<<fillGrid, fillBlock>>>(slots_d, bkg_d, rem_parts,
 			rngs_d, opts_d);
+
+#ifdef DEBUG
+		// Check for errors. This also catches errors from compact_dead_slots.
+		cudaError_t err {cudaDeviceSynchronize()};
+		if (err != cudaSuccess)
+			printf("fill_slots_kernel error: %s\n", cudaGetErrorString(err));
+#endif
 
 		// Retrieve how many particles were actually filled
 		int filled {std::min(rem_initial, num_dead)};
@@ -394,6 +517,17 @@ namespace Slots
 	}
 
 
+	/**
+	* Checks if every slot holds a dead particle.
+	*
+	* Sets all_dead to true on the device, launches all_dead_kernel (blocks
+	* of 256 threads, one thread per slot) and copies the result back,
+	* which waits for the kernel to finish. In DEBUG builds, any kernel
+	* error is printed.
+	*
+	* @param slots_d Particle slots on the device.
+	* @return true if every slot is dead, false if not.
+	*/
 	bool all_dead_gpu(SlotsDevice& slots_d)
 	{
 
@@ -415,6 +549,13 @@ namespace Slots
 		int blockSize = 256;
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 		all_dead_kernel<<<gridSize, blockSize>>>(slots_d);
+
+#ifdef DEBUG
+		// Check for errors
+		cudaError_t err {cudaDeviceSynchronize()};
+		if (err != cudaSuccess)
+			printf("all_dead_kernel error: %s\n", cudaGetErrorString(err));
+#endif
 
 		// Copy all_dead back to host and return
 		bool all_dead;

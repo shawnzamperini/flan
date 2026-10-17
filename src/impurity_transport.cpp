@@ -503,28 +503,36 @@ namespace ImpurityTransport
 	*
 	* The time step is the imp_time_step option. If GPU acceleration is on
 	* (use_gpu), step_gpu is called. Otherwise step_cpu is called. The GPU
-	* branch only exists in CUDA builds. Only the CPU path checks the
-	* imp_max_time option, so max_time_ctr is not updated on the GPU.
+	* branch only exists in CUDA builds. Both paths kill particles that
+	* have been followed for longer than the imp_max_time option and count
+	* them. The CPU path adds to max_time_ctr directly. The GPU path counts
+	* them in warnings_d.max_time on the device, which is added to
+	* max_time_ctr with OpenADAS::add_warnings_to_host after the run.
 	*
 	* @param slots Host-side particle slots (used on the CPU path).
 	* @param slots_d Device-side particle slots (used on the GPU path).
 	* @param bkg Host-side background plasma (used on the CPU path).
 	* @param bkg_d Device-side background plasma (currently unused).
 	* @param opts Simulation options, which provide the time step.
+	* @param opts_d Device-side simulation options (used on the GPU path).
+	* @param warnings_d Device-side warning counters for this GPU (used on
+	*                   the GPU path).
 	* @param max_time_ctr Counter of particles that exceeded the maximum
 	*                     allowed time (CPU path only).
 	*/
 	void step_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
-		const Options::Options& opts, int& max_time_ctr)
+		const Options::Options& opts, const Options::OptionsDevice* opts_d,
+		const OpenADAS::IonizRecombWarningsDevice& warnings_d, 
+		int& max_time_ctr)
 	{
 
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
 			// Defined in impurity_transport.cu
-			step_gpu(slots_d, opts.imp_time_step());
+			step_gpu(slots_d, opts.imp_time_step(), opts_d, warnings_d.max_time);
 			return;
 		}
 #endif
@@ -887,7 +895,8 @@ namespace ImpurityTransport
 			// Perform particle step
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Step));
-				step_wrapper(slots, slots_d, bkg, bkg_d, opts, max_time_ctr);
+				step_wrapper(slots, slots_d, bkg, bkg_d, opts, opts_d, 
+					warnings_d, max_time_ctr);
 			}
 
 #ifdef DEBUG
@@ -1063,7 +1072,7 @@ namespace ImpurityTransport
 
 		// Some warnings to include as I still implement things
 		std::cout << "Warning! Need to still implement lcfs_x to divide"
-			<< " core/SOL BCs, and max_time is not on GPU yet\n";
+			<< " core/SOL BCs\n";
 
 		// Rank and number of processes
 		int rank {};
@@ -1186,19 +1195,20 @@ namespace ImpurityTransport
 				// arrays. 
 				// If seed is negative (default), initialize the base seed from the
 				// clock so each run is different. MPI ranks are distinguished 
-				// through the seed, while threads are distinguished through the 
-				// PCG stream.
+				// through the seed, threads are distinguished through the 
+				// PCG stream, and GPU are distinguished by the number (dev).
 				uint64_t seed {};
 				if (opts.seed() < 0)
 				{
 					// Nanoseconds since epoch, mixed with rank and thread ID
 					seed = static_cast<uint64_t>(
 						std::chrono::high_resolution_clock::now().time_since_epoch()
-						.count()) + rank;
+						.count()) + rank * num_gpus + dev;
 				}
 				else
 				{
-						seed = static_cast<uint64_t>(opts.seed()) + rank;
+						seed = static_cast<uint64_t>(opts.seed()) + rank 
+							* num_gpus + dev;
 				}
 
 				gpu_rngs.push_back(init_rngs_cuda(gpu_slots[dev], seed));
@@ -1253,12 +1263,13 @@ namespace ImpurityTransport
 				OpenADAS::free_oa(gpu_oa_izs[dev], dev);
 				OpenADAS::free_oa(gpu_oa_rcs[dev], dev);
 				Options::free_opts(gpu_opts[dev], dev);
+				free_rngs(gpu_rngs[dev], dev);
 
 				// Add up the warnings from each GPU and free the counters.
 				// Done here, after the threads have joined, so that only one
 				// thread ever writes to ioniz_warnings/recomb_warnings.
 				OpenADAS::add_warnings_to_host(gpu_warnings[dev], 
-					ioniz_warnings, recomb_warnings);
+					ioniz_warnings, recomb_warnings, max_time_ctr);
 				OpenADAS::free_warnings(gpu_warnings[dev]);
 			}
 

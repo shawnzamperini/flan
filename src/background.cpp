@@ -3,10 +3,12 @@
 *
 * @brief Contains class definition for a loaded in Gkeyll background plasma. 
 */
+#include <string>
 #include <vector>
 
 #include "background.h"
 #include "background_device.h"
+#include "errors.h"
 #include "flan_types.h"
 #include "mpi.h"
 #include "utilities.h"
@@ -288,39 +290,27 @@ namespace Background
 	* Checks that a new dimension matches the dimension already stored.
 	*
 	* A stored dimension of 0 means it has not been set yet, so any new
-	* dimension is accepted. Otherwise the two must be equal. A mismatch
-	* means the data is not being read in correctly or is from different
-	* Gkeyll runs, and an error message with both values is printed.
+	* dimension is accepted. Otherwise the two must be equal.
 	*
 	* @param m_dim Dimension currently stored in the Background.
 	* @param in_dim Dimension of the data being loaded.
-	* @param data Name of the data being loaded (for the error message).
-	* @param dim_num Which dimension (1-4) is being checked (for the error
+	* @param dim_num Which dimension (1-4) is being checked (for the
 	*                message).
-	* @return True if the dimensions are consistent, false otherwise.
+	* @return Empty if the dimensions are consistent. Otherwise a line
+	*         describing the mismatch, for set_dims to put in its error
+	*         message.
 	*/
-	bool Background::check_dim(const int m_dim, const int in_dim,
-		const std::string_view data, const int dim_num)
+	std::string Background::check_dim(const int m_dim, const int in_dim,
+		const int dim_num)
 	{
 		// Assume a zero dimension value just means it's not set.
-		if (m_dim != 0)
+		if (m_dim != 0 && m_dim != in_dim)
 		{
-			if (m_dim != in_dim)
-			{
-				std::cerr << "Error! In Background, " << data << " has"
-					<< " different dimensions from what already has been"
-					<< " set. This indicates the data is not being read"
-					<< " in correctly or is from different Gkeyll runs."
-					<< '\n';
-				std::cerr << "  Previous dim: m_dim" << dim_num << " = "
-					<< m_dim << '\n';
-				std::cerr << "  New dim:     in_dim" << dim_num << " = "
-					<< in_dim << '\n';
-
-				return false;
-			}
+			return "\n  dim" + std::to_string(dim_num) + ": already set to "
+				+ std::to_string(m_dim) + ", but this data has " 
+				+ std::to_string(in_dim);
 		}
-		return true;
+		return {};
 	}
 
 	/**
@@ -329,8 +319,9 @@ namespace Background
 	*
 	* Each of the four dimensions of v is checked with check_dim. If all
 	* four are consistent, they become the stored dimensions. If any are
-	* not, an error message is printed and the stored dimensions are left
-	* unchanged. The program is not stopped.
+	* not, the run is stopped with Errors::fatal_error, listing every
+	* dimension that doesn't match. A mismatch means the data is not being
+	* read in correctly or is from different Gkeyll runs.
 	*
 	* @tparam T Data type stored in the Vector4D.
 	* @param v Vector4D whose dimensions are checked.
@@ -340,31 +331,27 @@ namespace Background
 	void Background::set_dims(Vectors::Vector4D<T>& v,
 		const std::string_view data)
 	{
-		// Check dimensions first, printing errors if something ain't
-		// right.
-		bool dim_good1 {check_dim(m_dim1, v.get_dim1(), data, 1)};
-		bool dim_good2 {check_dim(m_dim2, v.get_dim2(), data, 2)};
-		bool dim_good3 {check_dim(m_dim3, v.get_dim3(), data, 3)};
-		bool dim_good4 {check_dim(m_dim4, v.get_dim4(), data, 4)};
+		// Check dimensions first, collecting a line for each one that
+		// doesn't match.
+		const std::string mismatches {check_dim(m_dim1, v.get_dim1(), 1)
+			+ check_dim(m_dim2, v.get_dim2(), 2)
+			+ check_dim(m_dim3, v.get_dim3(), 3)
+			+ check_dim(m_dim4, v.get_dim4(), 4)};
 
-		// Then overwrite the dimensions. This will either:
-		//  - Set the dimensions from 0 to their correct value (good)
-		//  - Overwrite the dimension with the same value (good)
-		//  - Overwrite the dimension with a different value (bad, error
-		//    message from check_dim should be yelling at you before
-		//    this).
-		if (dim_good1 && dim_good2 && dim_good3 && dim_good4)
+		if (!mismatches.empty())
 		{
-			m_dim1 = v.get_dim1();
-			m_dim2 = v.get_dim2();
-			m_dim3 = v.get_dim3();
-			m_dim4 = v.get_dim4();
+			Errors::fatal_error("In Background, " + std::string(data) 
+				+ " has different dimensions from what has already been "
+				"set. This indicates the data is not being read in "
+				"correctly or is from different Gkeyll runs." + mismatches);
 		}
-		else
-		{
-			std::cerr << "Fix dimension error before continuing\n";
-			// Best way to terminate program?
-		}
+
+		// Then overwrite the dimensions. This either sets them from 0 to
+		// their correct value, or overwrites them with the same value.
+		m_dim1 = v.get_dim1();
+		m_dim2 = v.get_dim2();
+		m_dim3 = v.get_dim3();
+		m_dim4 = v.get_dim4();
 	}
 
 	/**
@@ -881,11 +868,12 @@ namespace Background
 	* Broadcasts the background from rank 0 to every other MPI rank.
 	*
 	* Every rank must call this. After it returns, every rank holds a copy
-	* of the dimensions, the times and computational grid, the geometry
-	* data and the plasma and field data loaded on rank 0. Not broadcast
-	* are the time and grid min/max values, bR, the covariant magnetic
-	* field components (b_x, b_y, b_z) and the electric field gradient
-	* (gradeX, gradeY, gradeZ).
+	* of the dimensions, the simulation bounds (t, x, y and z min/max), the
+	* times and computational grid, the geometry data and the plasma and
+	* field data loaded on rank 0. Not broadcast are bR, the covariant
+	* magnetic field components (b_x, b_y, b_z) and the electric field
+	* gradient (gradeX, gradeY, gradeZ), which are only saved to the output
+	* file on rank 0.
 	*
 	* @param comm MPI communicator to broadcast over.
 	*/
@@ -896,6 +884,19 @@ namespace Background
 		MPI_Bcast(&m_dim2, 1, MPI_INT, 0, comm);
 		MPI_Bcast(&m_dim3, 1, MPI_INT, 0, comm);
 		MPI_Bcast(&m_dim4, 1, MPI_INT, 0, comm);
+
+		// Broadcast the simulation bounds. Rank 0 sets these in
+		// move_into_times and move_into_grid_x/y/z while loading the grid, so
+		// the other ranks only get them from here.
+		const MPI_Datatype bkg_type {mpi_type<BkgFPType>::type};
+		MPI_Bcast(&m_t_min, 1, bkg_type, 0, comm);
+		MPI_Bcast(&m_t_max, 1, bkg_type, 0, comm);
+		MPI_Bcast(&m_x_min, 1, bkg_type, 0, comm);
+		MPI_Bcast(&m_x_max, 1, bkg_type, 0, comm);
+		MPI_Bcast(&m_y_min, 1, bkg_type, 0, comm);
+		MPI_Bcast(&m_y_max, 1, bkg_type, 0, comm);
+		MPI_Bcast(&m_z_min, 1, bkg_type, 0, comm);
+		MPI_Bcast(&m_z_max, 1, bkg_type, 0, comm);
 
 		// Broadcast 1D vectors
 		Utilities::mpi_broadcast_vector(m_times, 0, comm);
@@ -969,30 +970,32 @@ namespace Background
 	/**
 	* Placeholder for copying the background to a GPU in CPU-only builds.
 	*
-	* The real definition is in src/cuda/background.cu. This version only
-	* prints an error saying GPU support was not compiled in.
+	* The real definition is in src/cuda/background.cu. This version stops
+	* the run with Errors::fatal_error, since GPU support was not compiled
+	* in.
 	*
 	* @param device_id ID of the GPU to copy to (unused).
 	*/
 	BackgroundDevice Background::to_device(int device_id)
 	{
-		std::cerr << "Error! Background::to_device was called but GPU support"
-			<< " was not compiled in.\n";
+		Errors::fatal_error("Background::to_device was called but GPU "
+			"support was not compiled in.");
 	}
 
 	/**
 	* Placeholder for freeing a device-side background in CPU-only builds.
 	*
-	* The real definition is in src/cuda/background.cu. This version only
-	* prints an error saying GPU support was not compiled in.
+	* The real definition is in src/cuda/background.cu. This version stops
+	* the run with Errors::fatal_error, since GPU support was not compiled
+	* in.
 	*
 	* @param bkg_d Device-side background to free (unused).
 	* @param device_id ID of the GPU the background is on (unused).
 	*/
 	void free_bkg(BackgroundDevice& bkg_d, int device_id)
 	{
-		std::cerr << "Error! Background::free_bkg was called but GPU support"
-			<< " was not compiled in.\n";
+		Errors::fatal_error("Background::free_bkg was called but GPU "
+			"support was not compiled in.");
 	}
 
 #endif

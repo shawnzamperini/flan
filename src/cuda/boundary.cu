@@ -1,10 +1,21 @@
+/**
+* @file  boundary.cu
+*
+* @brief CUDA routines for handling time and spatial boundary conditions.
+*
+* GPU version of boundary.cpp. Each time step, every particle is checked
+* against the time boundary and the minimum and maximum x, y and z
+* boundaries. Each boundary can be absorbing (the particle is killed),
+* periodic (the particle is wrapped to the other side) or, for the spatial
+* boundaries, core (the particle is put back at the boundary at a random
+* location along it). The simulation bounds are read from the __constant__
+* variables in device_constants.cuh.
+*/
 #include <cstdio>
 
 #include "background_device.h"
 #include "pcg32.h"
 #include "slots_device.h"
-
-#include <curand_kernel.h>
 
 #include "boundary.cuh"
 #include "device_constants.cuh"
@@ -12,13 +23,23 @@
 namespace Boundary
 {
 
-	// Absorbing boundary condition. Check is value is outside the bound.
-	// max_bound = true indicates that bound is a maximum, and that we are
-	// checking if value >= bound. Likewise, max_bound = false checks if
-	// value =< bound. buffer extends the boundary so that it triggers sooner.
-	// This is because sometimes the plasma can behave oddly right at the
-	// boundaries, so this can circumvent it.
-	__device__ 
+	/**
+	* Checks if a value is outside an absorbing boundary.
+	*
+	* max_bound = true means bound is a maximum and the check is
+	* a + buffer >= bound. max_bound = false means bound is a minimum and
+	* the check is a - buffer <= bound. The buffer makes the boundary
+	* trigger sooner, since the plasma can behave oddly right at the
+	* boundaries. Written without branches so it is SIMD friendly.
+	*
+	* @param a Value to check (e.g., the particle's x coordinate).
+	* @param bound Boundary value.
+	* @param max_bound If true, bound is a maximum. Otherwise it is a
+	*        minimum.
+	* @param buffer Distance the boundary is moved inward. Defaults to 0.
+	* @return 1 if the particle is outside the boundary (dead), else 0.
+	*/
+	__device__
 	int absorbing_bc_gpu(double a, double bound, bool max_bound,
 		double buffer)
 	{
@@ -34,10 +55,21 @@ namespace Boundary
 	}
 
 
-	// Periodic boundary condition. This type of BC will never kill a particle,
-	// just loop it around to the other side. This function returns the new
-	// looped value, or just the same value if a BC was not encountered.
-	__device__ 
+	/**
+	* Applies a periodic boundary condition.
+	*
+	* A periodic boundary never kills a particle. A value above amax has
+	* the domain length (amax - amin) subtracted, and a value below amin has
+	* it added. Only a single wrap is done, so a particle is assumed to
+	* move less than one domain length per time step. Written without
+	* branches so it is SIMD friendly.
+	*
+	* @param a Value to check (e.g., the particle's y coordinate).
+	* @param amin Minimum of the domain.
+	* @param amax Maximum of the domain.
+	* @return The wrapped value, or a unchanged if it is inside the domain.
+	*/
+	__device__
 	double periodic_bc_gpu(double a, double amin, double amax)
 	{
 		const double L = amax - amin;
@@ -50,12 +82,33 @@ namespace Boundary
 	}
 
 
-	// Core boundary condition. The coordinate being checked against is a. b
-	// and c are the other two coordinates. If a core condition is met, b is
-	// moved to a random value between b_min/b_max, likewise for c. This is
-	// essentially like entering the core and then popping out at a random
-	// location somewhere else along the core boundary. A residence time
-	// could easily be added to this if it was useful.
+	/**
+	* Applies a core boundary condition.
+	*
+	* The coordinate being checked is a, and b and c are the other two
+	* coordinates. If a is past the boundary (moved inward by a_buffer), a
+	* is put back on the buffered boundary, and b and c are moved to
+	* uniformly random values between their buffered minimums and
+	* maximums. This is like the particle entering the core and popping
+	* back out somewhere else along the core boundary. A residence time
+	* could be added if it was useful.
+	*
+	* @param[in,out] a Coordinate checked against the boundary.
+	* @param[in,out] b First of the other two coordinates.
+	* @param[in,out] c Second of the other two coordinates.
+	* @param a_min Minimum of a.
+	* @param a_max Maximum of a.
+	* @param a_buffer Distance the a boundary is moved inward.
+	* @param b_min Minimum of b.
+	* @param b_max Maximum of b.
+	* @param b_buffer Buffer on each side of the b range.
+	* @param c_min Minimum of c.
+	* @param c_max Maximum of c.
+	* @param c_buffer Buffer on each side of the c range.
+	* @param max_bound If true, check the a_max side. Otherwise check the
+	*        a_min side.
+	* @param rng Random number generator for this particle.
+	*/
 	__device__
 	void core_bc_gpu(double& a, double& b, double& c, double a_min,
 		double a_max, double a_buffer, double b_min, double b_max,
@@ -71,7 +124,7 @@ namespace Boundary
 		{
 			a = max_bound ? a_max - a_buffer : a_min + a_buffer;
 
-			// Particle starts at random a/b locations (accounting for buffers)
+			// Particle starts at random b/c locations (accounting for buffers)
 			const double b_lo = b_min + b_buffer;
 			const double b_hi = b_max - b_buffer;
 			b = b_lo + rng.next_double() * (b_hi - b_lo);
@@ -83,6 +136,35 @@ namespace Boundary
 	}
 
 
+	/**
+	* Kernel that checks each particle against the time and spatial
+	* boundaries and applies the boundary conditions.
+	*
+	* One thread handles one slot, and dead particles are skipped. The
+	* boundaries are checked in the order t, then min/max x, y and z. Each
+	* boundary type is an integer: 0 = absorbing, 1 = periodic and
+	* 2 = core (x, y and z only). An absorbing boundary sets the slot's
+	* state and returns as soon as the particle is dead. For a core
+	* boundary in x, y and z are randomized, in y, z and x are randomized,
+	* and in z, x and y are randomized.
+	*
+	* @param slots_d Particle slots on the device. The state, t and
+	*        positions are updated in place.
+	* @param bkg_d Background plasma on the device. Currently unused.
+	* @param tbound_type_int Type of the maximum time boundary (0 or 1).
+	* @param min_xbound_type_int Type of the minimum x boundary.
+	* @param max_xbound_type_int Type of the maximum x boundary.
+	* @param min_ybound_type_int Type of the minimum y boundary.
+	* @param max_ybound_type_int Type of the maximum y boundary.
+	* @param min_zbound_type_int Type of the minimum z boundary.
+	* @param max_zbound_type_int Type of the maximum z boundary.
+	* @param imp_xbound_buffer Buffer on the x boundaries.
+	* @param imp_ybound_buffer Buffer on the y boundaries.
+	* @param imp_zbound_buffer Buffer on the z boundaries.
+	* @param lcfs_x x coordinate of the last closed flux surface. Currently
+	*        unused.
+	* @param rngs_d Random number generators on the device, one per slot.
+	*/
 	__global__
 	void check_bounds_kernel(Slots::SlotsDevice slots_d, 
 		const Background::BackgroundDevice bkg_d, 
@@ -397,6 +479,29 @@ namespace Boundary
 	}  //check_bounds_kernel
 
 
+	/**
+	* Launches check_bounds_kernel to apply the time and spatial boundary
+	* conditions to every particle on the GPU.
+	*
+	* Uses blocks of 256 threads, one thread per slot. The launch is
+	* asynchronous, except in DEBUG builds, where it waits for the kernel to
+	* finish and prints any error.
+	*
+	* @param slots_d Particle slots on the device.
+	* @param bkg_d Background plasma on the device.
+	* @param tbound_type_int Type of the maximum time boundary.
+	* @param min_xbound_type_int Type of the minimum x boundary.
+	* @param max_xbound_type_int Type of the maximum x boundary.
+	* @param min_ybound_type_int Type of the minimum y boundary.
+	* @param max_ybound_type_int Type of the maximum y boundary.
+	* @param min_zbound_type_int Type of the minimum z boundary.
+	* @param max_zbound_type_int Type of the maximum z boundary.
+	* @param imp_xbound_buffer Buffer on the x boundaries.
+	* @param imp_ybound_buffer Buffer on the y boundaries.
+	* @param imp_zbound_buffer Buffer on the z boundaries.
+	* @param lcfs_x x coordinate of the last closed flux surface.
+	* @param rngs_d Random number generators on the device, one per slot.
+	*/
 	void check_bounds_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d, 
 		const int tbound_type_int,
@@ -420,6 +525,13 @@ namespace Boundary
 			min_ybound_type_int, max_ybound_type_int, 
 			min_zbound_type_int, max_zbound_type_int, imp_xbound_buffer, 
 			imp_ybound_buffer, imp_zbound_buffer, lcfs_x, rngs_d);
+
+#ifdef DEBUG
+		// Check for errors
+		cudaError_t err {cudaDeviceSynchronize()};
+		if (err != cudaSuccess)
+			printf("check_bounds_kernel error: %s\n", cudaGetErrorString(err));
+#endif
 	}
 
 }

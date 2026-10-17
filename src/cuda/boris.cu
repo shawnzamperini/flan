@@ -90,8 +90,8 @@ namespace Boris
 		Interpolate::InterpolationStencil stencil_3d
 			{Interpolate::build_stencil_3d(bkg_d, xidx, yidx, zidx, x, y, z)};
 		Interpolate::InterpolationStencil stencil_4d
-			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, x, y, 
-			z)};
+			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, t, x, 
+			y, z)};
 
 		// Interpolate reciprocal basis vectors
 		// 0-2: dxdX, dxdY, dxdZ

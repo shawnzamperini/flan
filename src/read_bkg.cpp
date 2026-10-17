@@ -4,9 +4,10 @@
 * @brief Entry point for loading the plasma background, which dispatches to
 *        the reader for the requested background source.
 */
-#include <iostream>
+#include <string>
 
 #include "background.h"
+#include "errors.h"
 #include "options.h"
 #include "read_gkyl.h"
 #include "read_test.h"
@@ -20,8 +21,9 @@ namespace Background
 	* "test" loads a hardcoded test background with Test::read_test, and
 	* "gkeyll" loads a Gkeyll simulation with Gkyl::read_gkyl. SOLEDGE3X
 	* backgrounds (control integer 2) are not implemented yet. If the source
-	* is not implemented or not recognized, an error is printed and an empty
-	* Background is returned.
+	* is not implemented or not recognized, the run is stopped with
+	* Errors::fatal_error. Options::set_bkg_source already rejects any other
+	* value, so this is only a safeguard.
 	*
 	* @param opts Simulation options.
 	* @return Background object holding the plasma background.
@@ -46,15 +48,15 @@ namespace Background
 		// Load in a SOLEDGE3X background
 		else if (opts.bkg_source_int() == 2)
 		{
-			std::cerr << "Error! SOLEDGE3X backgrounds are not "
-				<< "implemented yet!\n";
+			Errors::fatal_error("SOLEDGE3X backgrounds are not implemented "
+				"yet.");
 		}
 
 		// Unrecognized option
 		else
 		{
-			std::cerr << "Error! bkg_source = " << opts.bkg_source() << " not"
-				<< " recognized.\n";
+			Errors::fatal_error("bkg_source = " + opts.bkg_source() 
+				+ " not recognized.");
 		}
 
 		return bkg;

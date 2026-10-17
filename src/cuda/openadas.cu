@@ -262,8 +262,8 @@ namespace OpenADAS
 
 		// Get interpolation stencil at this location for 4D arrays
 		Interpolate::InterpolationStencil stencil_4d 
-			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, x, y,
-			z)};
+			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, t, x, 
+			y, z)};
 
 		// Interpolate ne, Te at the particle location
 		const double ne {Interpolate::interpolate_field_4d(bkg_d.ne,
@@ -303,24 +303,48 @@ namespace OpenADAS
 	}
 
 
-	// Allocate the ionization/recombination warning counters on a GPU and
-	// zero them. Done once per run, not every time step.
+	/**
+	* Allocates the warning counters on a GPU and sets them to zero.
+	*
+	* Called once per GPU at the start of a run, not every time step. The
+	* ionization and recombination counters then accumulate over every call
+	* to ioniz_recomb_gpu, and the max time counter over every call to
+	* ImpurityTransport::step_gpu.
+	*
+	* @param device_id ID of the GPU to allocate the counters on.
+	* @return Struct holding the device pointers to the three counters.
+	*/
 	IonizRecombWarningsDevice alloc_warnings(int device_id)
 	{
 		IonizRecombWarningsDevice warnings_d {};
 		cudaSetDevice(device_id);
 		warnings_d.device_id = device_id;
+		cudaMalloc(&warnings_d.max_time, sizeof(int));
 		cudaMalloc(&warnings_d.ioniz, sizeof(int));
 		cudaMalloc(&warnings_d.recomb, sizeof(int));
+		cudaMemset(warnings_d.max_time, 0, sizeof(int));
 		cudaMemset(warnings_d.ioniz, 0, sizeof(int));
 		cudaMemset(warnings_d.recomb, 0, sizeof(int));
 		return warnings_d;
 	}
 
 
-	// Copy the warning counts from the GPU and add them to the host counters
+	/**
+	* Copies the warning counts from the GPU and adds them to the host-side
+	* counters.
+	*
+	* Blocks until all previously launched kernels have finished.
+	*
+	* @param warnings_d Device-side warning counters.
+	* @param ioniz_warnings Host-side ionization warning counter.
+	*        Incremented by the device count.
+	* @param recomb_warnings Host-side recombination warning counter.
+	*        Incremented by the device count.
+	* @param max_time_ctr Host-side counter of particles that exceeded
+	*        imp_max_time. Incremented by the device count.
+	*/
 	void add_warnings_to_host(const IonizRecombWarningsDevice& warnings_d,
-		int& ioniz_warnings, int& recomb_warnings)
+		int& ioniz_warnings, int& recomb_warnings, int& max_time_ctr)
 	{
 		cudaSetDevice(warnings_d.device_id);
 
@@ -333,13 +357,25 @@ namespace OpenADAS
 		cudaMemcpy(&num_warnings, warnings_d.recomb, sizeof(int), 
 			cudaMemcpyDeviceToHost);
 		recomb_warnings += num_warnings;
+
+		num_warnings = 0;
+		cudaMemcpy(&num_warnings, warnings_d.max_time, sizeof(int), 
+			cudaMemcpyDeviceToHost);
+		max_time_ctr += num_warnings;
 	}
 
 
-	// Free the warning counters
+	/**
+	* Frees the device-side warning counters.
+	*
+	* @param warnings_d Device-side warning counters. The pointers are set
+	*        to nullptr.
+	*/
 	void free_warnings(IonizRecombWarningsDevice& warnings_d)
 	{
 		cudaSetDevice(warnings_d.device_id);
+		cudaFree(warnings_d.max_time);
+		warnings_d.max_time = nullptr;
 		cudaFree(warnings_d.ioniz);
 		warnings_d.ioniz = nullptr;
 		cudaFree(warnings_d.recomb);
@@ -347,9 +383,29 @@ namespace OpenADAS
 	}
 
 
-	// Wrapper to call ionization/recombination kernel. The warning counters
-	// are allocated once (alloc_warnings) and accumulate over the whole run,
-	// so this is just a kernel launch with no allocations or copies.
+	/**
+	* Launches ioniz_recomb_kernel to update the charge state of every
+	* particle on the GPU due to ionization and recombination.
+	*
+	* Uses blocks of 256 threads, one thread per slot. The warning counters
+	* are allocated once with alloc_warnings and accumulate over the whole
+	* run, so this is just a kernel launch with no allocations or copies.
+	* The launch is asynchronous, except in DEBUG builds, where it waits
+	* for the kernel to finish and prints any error. The number of
+	* particles whose ionization or recombination probability exceeded 1
+	* is added to the counters in warnings_d.
+	*
+	* @param slots_d Particle slots on the device. The charge states are
+	*        updated in place.
+	* @param bkg_d Background plasma on the device.
+	* @param oa_ioniz_d Device-side OpenADAS struct with the ionization
+	*        (SCD) rate coefficients.
+	* @param oa_recomb_d Device-side OpenADAS struct with the
+	*        recombination (ACD) rate coefficients.
+	* @param dt Time step (s).
+	* @param warnings_d Device-side warning counters from alloc_warnings.
+	* @param rngs_d Random number generators on the device, one per slot.
+	*/
 	void ioniz_recomb_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d,
 		const OpenADASDevice& oa_ioniz_d, 

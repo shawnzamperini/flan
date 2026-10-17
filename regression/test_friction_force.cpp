@@ -1,18 +1,10 @@
 #include <cmath>
 #include <iostream>
-#include <tuple>
 
 #include "flan.h"
 #include "flan_types.h"
 #include "mpi.h"
 
-
-// mapc2p (slated for depreciation)
-std::tuple<double, double, double> mapc2p(double xc, double yc, double zc)
-{
-	std::cout << "Don't use me!\n";
-	return {0, 0 ,0};
-}
 
 Inputs create_inputs()
 {
@@ -24,7 +16,7 @@ Inputs create_inputs()
 	inpts["test_opt"] = "friction_force";
 
 	// Impurity and transport options
-	inpts["imp_num"] = 1000;
+	inpts["imp_num"] = 100;
 
 	/*
 	   |  Z |  Mass  |
@@ -69,12 +61,6 @@ Inputs create_inputs()
 
 	// Miscellanous
 	inpts["print_interval"] = 10;
-
-	// Pointers to functions go here
-	Mapc2p_ptr mapc2p_ptr {&mapc2p};
-
-	// Function pointer input options go here
-	inpts["mapc2p"] = mapc2p_ptr;
 
 	return inpts;
 }

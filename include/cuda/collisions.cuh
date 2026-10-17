@@ -1,3 +1,10 @@
+#pragma once
+
+/**
+* @file  collisions.cuh
+*
+* @brief Header file for collisions.cu
+*/
 #include "background_device.h"
 #include "options_device.h"
 #include "pcg32.h"

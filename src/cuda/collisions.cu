@@ -264,7 +264,11 @@ namespace Collisions
 			// Use interpolation function to find A value from precomputed 
 			// arrays of A(s) values found in nanbu_s_a.cuhh. These values were 
 			// calculated using python/calc_nanbu.py.
-			return Utilities::linear_interpolate_cuda(Nanbu::s, Nanbu::A, s);
+			// Like the CPU code, we use a uniform spacing interpolate 
+			// because it's way faster. 
+			//return Utilities::linear_interpolate_cuda(Nanbu::s, Nanbu::A, s);
+			return Utilities::linear_interpolate_uniform_cuda(Nanbu::s, 
+				Nanbu::A, s);
 		}
 	}  // nanbu_calc_A
 
@@ -453,8 +457,8 @@ namespace Collisions
 		// Interpolate for ne, Te
 		// Get interpolation stencil at this location for 4D arrays
 		Interpolate::InterpolationStencil stencil_4d
-			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, x, y, 
-			z)};
+			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, t, x, 
+			y, z)};
 
 		// Interpolate to get background flow at particle location
 		double ne {Interpolate::interpolate_field_4d(bkg_d.ne, 
@@ -545,7 +549,7 @@ namespace Collisions
 		slots_d.vY[i] = v_post.y;
 		slots_d.vZ[i] = v_post.z;
 
-	}  // nanbu_coll
+	}  // nanbu_coll_kernel
 
 
 	/**
@@ -588,6 +592,6 @@ namespace Collisions
 			printf("nanbu_coll_kernel error: %s\n", cudaGetErrorString(err));
 #endif
 
-	} // nanbu_coll_gpu
+	}  // collision_gpu
 
 }  // namespace Collisions

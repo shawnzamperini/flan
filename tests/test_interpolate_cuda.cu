@@ -46,7 +46,7 @@ void test_interp_4d_kernel(Background::BackgroundDevice bkg_d,
 		test_z)};
 
     auto s = Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, 
-		test_x, test_y, test_z);
+		test_t, test_x, test_y, test_z);
 
     result[0] = Interpolate::interpolate_field_4d(field, s, test_t, test_x, 
 		test_y, test_z);

@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "background.h"
+#include "errors.h"
 #include "openadas.h"
 #include "openadas_device.h"
 #include "pcg32.h"
@@ -44,6 +45,9 @@ namespace OpenADAS
 	* Creates an OpenADAS object and loads the rate coefficients from the
 	* matching OpenADAS file.
 	*
+	* The run is stopped with Errors::fatal_error if the file can't be
+	* opened, e.g., because openadas_root or openadas_year is wrong.
+	*
 	* @param openadas_root Full path to the directory containing the
 	*        OpenADAS data.
 	* @param openadas_year Year of the OpenADAS data to load, e.g., 50.
@@ -62,6 +66,12 @@ namespace OpenADAS
 
 		// Open file
 		std::ifstream openadas_stream {openadas_path};
+		if (!openadas_stream)
+		{
+			Errors::fatal_error("Could not open the OpenADAS file " 
+				+ openadas_path + ". Check openadas_root and "
+				"openadas_year.");
+		}
 
 		// Read in the rate coefficients along with all the header info.
 		// Everything is stored internally in the class.
@@ -73,9 +83,9 @@ namespace OpenADAS
 	* Assembles the full path to an OpenADAS data file, e.g.,
 	* [openadas_root]/scd50/scd50_w.dat.
 	*
-	* An error is printed if rate_type is not "scd" or "acd", or if there is
-	* no OpenADAS data for imp_atom_num. Supported elements are H through Ne,
-	* Al, Si, Cl, Ar, Fe, Kr, Mo, Xe and W.
+	* The run is stopped with Errors::fatal_error if rate_type is not "scd"
+	* or "acd", or if there is no OpenADAS data for imp_atom_num. Supported
+	* elements are H through Ne, Al, Si, Cl, Ar, Fe, Kr, Mo, Xe and W.
 	*
 	* @param openadas_root Full path to the directory containing the
 	*        OpenADAS data.
@@ -91,9 +101,8 @@ namespace OpenADAS
 		// Check for valid entry for rate type
 		if (rate_type != "scd" && rate_type != "acd")
 		{
-			std::cerr << "Error! rate_type = " << rate_type << ". Only "
-				<< "\"scd\" and \"acd\" are allowed.\n";
-			// throw exception...
+			Errors::fatal_error("rate_type = " + std::string(rate_type) 
+				+ ". Only \"scd\" and \"acd\" are allowed.");
 		}
 
 		// Select element name from atomic number.
@@ -119,9 +128,10 @@ namespace OpenADAS
 		else if (imp_atom_num == 74) imp_name = "w";
 		else
 		{
-			std::cerr << "Error! imp_atom_num = " << imp_atom_num << " is not"
-				<< " a valid option.\n";
-			// throw exception...
+			Errors::fatal_error("imp_atom_num = " 
+				+ std::to_string(imp_atom_num) + " has no OpenADAS data in "
+				"Flan. Supported atomic numbers are 1-10, 13, 14, 17, 18, 26, "
+				"36, 42, 54 and 74.");
 		}
 
 		// Assemble the full path. Example:
@@ -148,9 +158,11 @@ namespace OpenADAS
 	* The densities and temperatures are stored in the file as log10(ne
 	* [cm^-3]) and log10(Te [eV]), and the rate coefficients as log10(rate
 	* [cm^3/s]). They are converted to ne (m^-3), Te (eV) and rate (m^3/s).
-	* The rates are stored with dimensions (charge, Te, ne). An error is
-	* printed if there are fewer than two densities or temperatures, since
-	* the bilinear interpolation needs at least two of each.
+	* The rates are stored with dimensions (charge, Te, ne). The run is
+	* stopped with Errors::fatal_error if the file doesn't cover every
+	* charge state (1 to Z), since the rates would be indexed incorrectly,
+	* or if there are fewer than two densities or temperatures, since the
+	* bilinear interpolation needs at least two of each.
 	*
 	* @param openadas_stream Open file stream of the OpenADAS file.
 	*/
@@ -181,23 +193,26 @@ namespace OpenADAS
 		// and recombination by q-1. A partial file would shift every rate.
 		if (m_charge_low != 1 || m_charge_high != m_atomic_number)
 		{
-			std::cerr << "Error! The OpenADAS file covers charges "
-				<< m_charge_low << " to " << m_charge_high << ", but Flan "
-				<< "expects 1 to " << m_atomic_number << ". The rate "
-				<< "coefficients will be indexed incorrectly!\n";
+			Errors::fatal_error("The OpenADAS file covers charges " 
+				+ std::to_string(m_charge_low) + " to " 
+				+ std::to_string(m_charge_high) + ", but Flan expects 1 to "
+				+ std::to_string(m_atomic_number) + ". The rate "
+				"coefficients would be indexed incorrectly.");
 		}
 
 		// We need at least two ne and te values in order to do a bilinear
 		// interpolation of the rate coefficients later in the program.
 		if (m_ndens < 2)
 		{
-			std::cerr << "Error! Only " << m_ndens << " density values are in "
-				<< "the OpenADAS file. The program will not work!\n";
+			Errors::fatal_error("The OpenADAS file has " 
+				+ std::to_string(m_ndens) + " density value(s), but at least "
+				"2 are needed to interpolate the rate coefficients.");
 		}
 		if (m_ntemp < 2)
 		{
-			std::cerr << "Error! Only " << m_ntemp << " temperature values "
-				<< "are in the OpenADAS file. The program will not work!\n";
+			Errors::fatal_error("The OpenADAS file has " 
+				+ std::to_string(m_ntemp) + " temperature value(s), but at "
+				"least 2 are needed to interpolate the rate coefficients.");
 		}
 
 		// Resize m_ne and m_te since we know how big they are now.

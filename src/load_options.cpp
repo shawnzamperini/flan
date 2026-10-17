@@ -11,7 +11,10 @@
 */
 
 #include <iostream>
+#include <sstream>
+#include <string>
 
+#include "errors.h"
 #include "flan_types.h"  // For Inputs type
 #include "load_options.h"
 #include "options.h"
@@ -52,9 +55,10 @@ namespace Options
 	* default value.
 	*
 	* Each option name is matched to its setter in Options and the value is
-	* set with assign_option. An error is printed for an option name that
-	* is not recognized, or a value of the wrong type, and that option is
-	* left unchanged.
+	* set with assign_option. The run is stopped with Errors::fatal_error
+	* for an option name that is not recognized (e.g., a typo) or a value
+	* of the wrong type, since running with the default instead would
+	* silently ignore the option.
 	*
 	* @param opts Options object to load the options into. Generally should
 	*        be passed in right after constructing it.
@@ -608,8 +612,8 @@ namespace Options
 
 			else
 			{
-				std::cerr << "Error! " << key << " is not a recognized "
-					<< "option\n";
+				Errors::fatal_error(std::string(key) 
+					+ " is not a recognized option.");
 			}
 		}
 	}
@@ -617,14 +621,16 @@ namespace Options
 	/**
 	* Checks if the value in a variant is of the expected type.
 	*
-	* If not, an error is printed saying which type was expected.
+	* If not, the run is stopped with Errors::fatal_error, saying which type
+	* was expected.
 	*
 	* @tparam T Expected type of the value: int, double, std::string or
 	*         Mapc2p_ptr.
 	* @param var Variant holding the value of an input option. See Inputs in
 	*        flan_types.h.
 	* @param var_name Name of the input option, used in the error message.
-	* @return True if the value in var is of type T, false if not.
+	* @return True if the value in var is of type T. Doesn't return if
+	*         not.
 	*/
 	template <typename T>
 	bool var_correct_type(auto var, const std::string_view var_name)
@@ -640,19 +646,16 @@ namespace Options
 		}
 		else
 		{
-			// Print error message, letting user know what type the variable
+			// Stop the run, letting user know what type the variable
 			// should be.
-			std::cerr << "Error! " << var_name << " is the wrong type. "
-				<< "Expected ";
-			if (std::is_same<T, int>::value) std::cerr << "int";
-			else if (std::is_same<T, double>::value) std::cerr << "double";
-			else if (std::is_same<T, std::string>::value) std::cerr
-				<< "string";
-			else if (std::is_same<T, Mapc2p_ptr>::value) std::cerr
-				<< "Mapc2p_ptr";
-			std::cerr << ".\n";
-
-			return false;
+			std::ostringstream msg {};
+			msg << var_name << " is the wrong type. Expected ";
+			if (std::is_same<T, int>::value) msg << "int";
+			else if (std::is_same<T, double>::value) msg << "double";
+			else if (std::is_same<T, std::string>::value) msg << "string";
+			else if (std::is_same<T, Mapc2p_ptr>::value) msg << "Mapc2p_ptr";
+			msg << ".";
+			Errors::fatal_error(msg.str());
 		}
 	}
 
@@ -660,8 +663,7 @@ namespace Options
 	* Sets an option to the value stored in a variant, overwriting the
 	* default.
 	*
-	* If the value in var is not of type T, the value is not stored and an
-	* error is printed.
+	* If the value in var is not of type T, var_correct_type stops the run.
 	*
 	* @tparam T Expected type of the value: int, double, std::string or
 	*         Mapc2p_ptr.
@@ -674,14 +676,11 @@ namespace Options
 	void assign_option(std::function<void(T)> set_func, auto var,
 		const std::string_view var_name)
 	{
-		// Call set function only if the data in var is of the correct type T.
+		// Call set function only if the data in var is of the correct type
+		// T. If it isn't, var_correct_type stops the run.
 		if (var_correct_type<T>(var, var_name))
 		{
 			set_func(std::get<T>(var));
-		}
-		else
-		{
-			std::cerr << var_name << " not set.\n";
 		}
 	}
 
@@ -689,10 +688,15 @@ namespace Options
 	* Checks that the options are compatible with each other, changing them
 	* if needed.
 	*
-	* Currently this only checks that Nanbu collisions are used with
-	* BiMaxwellian moments from Gkeyll. If not, a warning is printed and
-	* collisions are turned off. Placeholders are left for checks of
-	* particle splitting and the variable time step.
+	* Currently this checks that:
+	*  - Nanbu collisions are used with BiMaxwellian moments from Gkeyll.
+	*    If not, collisions are turned off.
+	*  - A periodic x, y or z boundary is periodic on both the minimum and
+	*    maximum side. If only one side is, both are set to periodic.
+	*  - GPU acceleration is off in a CPU-only build.
+	*
+	* A warning is printed whenever an option is changed. Placeholders are
+	* left for checks of particle splitting and the variable time step.
 	*
 	* @param opts Options object to check and modify in place.
 	*/
@@ -706,6 +710,37 @@ namespace Options
 				<< " files from Gkeyll. Collisions are being turned OFF.\n";
 			opts.set_imp_collisions("off");
 		}
+
+		// A periodic boundary wraps the particle to the other side of the
+		// domain, so it only makes sense if both sides of a direction are
+		// periodic. periodic_bc wraps at both ends and the minimum side is
+		// checked first, so, e.g., a periodic min x with an absorbing max x
+		// would wrap particles past max x before they could be absorbed. If
+		// only one side is periodic, make both sides periodic.
+		auto check_periodic_pair = [&opts](const std::string& dir,
+			const std::string& min_type, const std::string& max_type,
+			void (Options::*set_min)(std::string),
+			void (Options::*set_max)(std::string))
+		{
+			if ((min_type == "periodic") != (max_type == "periodic"))
+			{
+				std::cout << "Warning! min_" << dir << "bound_type = "
+					<< min_type << " and max_" << dir << "bound_type = "
+					<< max_type << ", but a periodic boundary must be "
+					<< "periodic on both sides. Setting both to periodic.\n";
+				(opts.*set_min)("periodic");
+				(opts.*set_max)("periodic");
+			}
+		};
+		check_periodic_pair("x", opts.min_xbound_type(),
+			opts.max_xbound_type(), &Options::set_min_xbound_type,
+			&Options::set_max_xbound_type);
+		check_periodic_pair("y", opts.min_ybound_type(),
+			opts.max_ybound_type(), &Options::set_min_ybound_type,
+			&Options::set_max_ybound_type);
+		check_periodic_pair("z", opts.min_zbound_type(),
+			opts.max_zbound_type(), &Options::set_min_zbound_type,
+			&Options::set_max_zbound_type);
 
 #ifndef USE_CUDA
 		// Turn off GPU option if it was turned on for a CPU-only build.

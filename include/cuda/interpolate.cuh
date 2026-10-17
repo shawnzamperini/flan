@@ -1,44 +1,89 @@
 #pragma once
-#include <cstdio>
 
+/**
+* @file  interpolate.cuh
+*
+* @brief CUDA routines for interpolating background fields at a particle's
+*        location.
+*
+* The background fields are defined at the grid cell centers (and, for 4D
+* fields, at each time frame). To interpolate at a particle, a stencil is
+* first built with build_stencil_3d or build_stencil_4d. It holds the
+* indices of the 8 cell centers that bound the particle and the geometry
+* of the box they form. One stencil can then be reused for every field
+* interpolated at that particle with interpolate_field_3d or
+* interpolate_field_4d, which saves recalculating the indices for each
+* field. Everything is inline so it can be used in any kernel.
+*/
 #include "background_device.h"
 
 #include "device_constants.cuh"
-#include "interpolate.cuh"
 #include "utilities.cuh"
 
 
 namespace Interpolate
 {
-	
-	// A stencil to hold the indices of cells surrounding a point that we
-	// wish to interpolate at. We reuse this for 3D or 4D, just means in 3D
-	// not all the fields are defined.
+
+	/**
+	* Indices and geometry of the box of cell centers surrounding a point,
+	* used to interpolate fields at that point.
+	*
+	* The same struct is used for 3D and 4D fields. A 3D stencil from
+	* build_stencil_3d leaves the time members (idx1, tidx_neighbor, t0
+	* and frame_dt) unset.
+	*
+	* The 8 corners are ordered by (x, y, z) offset as 000, 001, 010, 011,
+	* 100, 101, 110, 111, where 0 is the containing cell's index and 1 is
+	* the neighbor's index in that direction.
+	*/
 	struct InterpolationStencil
 	{
-		int idx0[8];     // corners at tidx
-		int idx1[8];     // corners at tidx_neighbor
+		int idx0[8];         ///< Flattened indices of the corners at tidx.
+		int idx1[8];         ///< Flattened indices of the corners at
+		                     ///< tidx_neighbor (4D only).
 
-		int tidx_neighbor;
-		int xidx_neighbor;
-		int yidx_neighbor;
-		int zidx_neighbor;
+		int tidx_neighbor;   ///< Neighboring time frame index (4D only).
+		int xidx_neighbor;   ///< Neighboring x cell index.
+		int yidx_neighbor;   ///< Neighboring y cell index.
+		int zidx_neighbor;   ///< Neighboring z cell index.
 
-		double t0;
-		double frame_dt;
+		double t0;           ///< Time of frame tidx (s) (4D only).
+		double frame_dt;     ///< Time from frame tidx to tidx_neighbor (s).
+		                     ///< Negative if the neighbor is the previous
+		                     ///< frame (4D only).
 
-		double x0;
-		double y0;
-		double z0;
+		double x0;           ///< x of the containing cell's center.
+		double y0;           ///< y of the containing cell's center.
+		double z0;           ///< z of the containing cell's center.
 
-		double dx;
-		double dy;
-		double dz;
+		double dx;           ///< x from the containing cell's center to the
+		                     ///< neighbor's. Negative if the neighbor is
+		                     ///< on the low side.
+		double dy;           ///< Same as dx, for y.
+		double dz;           ///< Same as dx, for z.
 	};
 
 
-	// Create and return a stencil that is used in interpolate_field to 
-	// interpolate a 3D field
+	/**
+	* Builds the stencil used to interpolate a 3D (x, y, z) field, such as
+	* the basis vectors, at a point.
+	*
+	* For each direction, get_neighbor_index_cuda picks the neighboring
+	* cell on the same side of the containing cell's center as the point
+	* (or the only neighbor at a grid edge). The 8 corner indices are then
+	* flattened with calc_3d_index_cuda, and the box origin and size are
+	* taken from the cell center coordinates in device_constants.cuh.
+	*
+	* @param bkg_d Background plasma on the device, used for the grid
+	*        dimensions.
+	* @param xidx x index of the grid cell containing the point.
+	* @param yidx y index of the grid cell containing the point.
+	* @param zidx z index of the grid cell containing the point.
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @return Stencil for interpolate_field_3d. The time members are unset.
+	*/
 	__device__ __forceinline__
 	InterpolationStencil build_stencil_3d(
 		const Background::BackgroundDevice& bkg_d, int xidx, 
@@ -108,16 +153,40 @@ namespace Interpolate
 	}
 
 
-	// Create and return a stencil that is used in interpolate_field to 
-	// interpolate a 4D field
+	/**
+	* Builds the stencil used to interpolate a 4D (t, x, y, z) field, such
+	* as E, B, ne or Te, at a point.
+	*
+	* The neighbors are picked the same way as in build_stencil_3d,
+	* including in time: the neighboring frame is the one on the same side
+	* of frame tidx as t (or the only neighbor at the first or last frame),
+	* so t is bounded by the two frames. The 8 corner indices are flattened
+	* with calc_4d_index_cuda at both tidx (idx0) and tidx_neighbor (idx1).
+	*
+	* @param bkg_d Background plasma on the device, used for the grid
+	*        dimensions.
+	* @param tidx Index of the nearest background time frame.
+	* @param xidx x index of the grid cell containing the point.
+	* @param yidx y index of the grid cell containing the point.
+	* @param zidx z index of the grid cell containing the point.
+	* @param t Time of the point (s).
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @return Stencil for interpolate_field_4d.
+	*/
 	__device__ __forceinline__
 	InterpolationStencil build_stencil_4d(
 		const Background::BackgroundDevice& bkg_d, int tidx, int xidx, 
-		int yidx, int zidx, const double x, const double y, const double z)
+		int yidx, int zidx, const double t, const double x, const double y, 
+		const double z)
 	{
 		InterpolationStencil s;
 
 		// Neighbor indices
+		const int tidx_neighbor =
+			Utilities::get_neighbor_index_cuda(t, d_t, tidx, bkg_d.tdim);
+
 		const int xidx_neighbor =
 			Utilities::get_neighbor_index_cuda(x, d_x, xidx, bkg_d.xdim);
 
@@ -126,10 +195,6 @@ namespace Interpolate
 
 		const int zidx_neighbor =
 			Utilities::get_neighbor_index_cuda(z, d_z, zidx, bkg_d.zdim);
-
-		// Time neighbor
-		const int at_end = (tidx == static_cast<int>(bkg_d.tdim) - 1);
-		const int tidx_neighbor = tidx + 1 - 2 * at_end;
 
 		s.tidx_neighbor = tidx_neighbor;
 		s.xidx_neighbor = xidx_neighbor;
@@ -230,8 +295,20 @@ namespace Interpolate
 	}
 
 
-	// Interpolate a 3D field at x,y,z. The stencil comes from build_stencil
-	// above. 
+	/**
+	* Trilinearly interpolates a 3D field at (x, y, z).
+	*
+	* The field values at the 8 stencil corners are passed to
+	* trilinear_interpolate, which clamps the weights to [0, 1], so there
+	* is no extrapolation past the box of cell centers.
+	*
+	* @param field Flattened 3D field on the device.
+	* @param s Stencil from build_stencil_3d, built at this point.
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @return Interpolated field value.
+	*/
 	__device__ __forceinline__
 	double interpolate_field_3d(const double* __restrict__ field,
 		const InterpolationStencil& s, double x, double y, double z)
@@ -259,8 +336,25 @@ namespace Interpolate
 	} // interpolate_field_3d
 
 
-	// Interpolate a 4D field at t,x,y,z. The stencil comes from build_stencil
-	// above. 
+	/**
+	* Interpolates a 4D field at (t, x, y, z), trilinear in space and
+	* linear in time.
+	*
+	* The field is trilinearly interpolated at frames tidx and
+	* tidx_neighbor as in interpolate_field_3d, and the two values are then
+	* linearly interpolated to t. Unlike the spatial weights, the time
+	* weight (t - t0) / frame_dt is not clamped. It is in [0, 1] except
+	* before the first frame or after the last one, where the result is
+	* extrapolated.
+	*
+	* @param field Flattened 4D field on the device.
+	* @param s Stencil from build_stencil_4d, built at this point.
+	* @param t Time of the point (s).
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @return Interpolated field value.
+	*/
 	__device__ __forceinline__
 	double interpolate_field_4d(const double* __restrict__ field,
 		const InterpolationStencil& s, double t, double x, double y, double z)
