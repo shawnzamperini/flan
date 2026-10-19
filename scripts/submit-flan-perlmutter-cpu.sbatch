@@ -4,18 +4,18 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --constraint=cpu
-#SBATCH --cpus-per-task=128
+#SBATCH --cpus-per-task=256
 #SBATCH --partition=debug
 #SBATCH --time=00:30:00
 
 # OpenMP settings
-export OMP_NUM_THREADS=128      # Match --cpus-per-task above
+export OMP_NUM_THREADS=256      # Match --cpus-per-task above
 export OMP_PLACES=cores			# Bind threads to cores
 export OMP_PROC_BIND=spread     # Spread threads across cores
 
 # This controls the number of threads available in python. Make it match
 # cpus-per-task
-export NUMEXPR_MAX_THREADS=128
+export NUMEXPR_MAX_THREADS=256
 
 # Initialize conda for compute node
 module load conda

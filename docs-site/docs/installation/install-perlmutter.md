@@ -1,45 +1,80 @@
 # Perlmutter Installation
 
-Installing Flan on Perlmutter involves downloading and compiling
-the dependencies and then compiling the code via CMake. It uses the NERSC 
-provided Cray C/C++ compiler wrappers (`cc`/`CC`).
+These are the steps for installing Flan on NERSC's Perlmutter. See the
+[Installation](installation.md) overview for more on each step.
 
-## Install Dependencies
+Perlmutter's GPU nodes have NVIDIA A100 GPUs, which the GPU build supports,
+so the GPU build is the one to use. It runs on Perlmutter's CPU nodes too,
+with `use_gpu = "off"`. On Perlmutter, Flan is built with the Cray compiler
+wrappers (`cc` and `CC`), which come with Cray MPICH.
 
-Navigate to the top-level `flan/` directory and run:
+## 1. Clone Flan
 
 ```bash
+git clone https://github.com/shawnzamperini/flan.git
+cd flan
+```
+
+## 2. Build the dependencies
+
+Load the conda module, then run the Perlmutter dependency script from the
+top-level `flan/` directory:
+
+```bash
+module load conda
 machines/mkdeps.perlmutter.sh
 ```
 
-This will download and install all the dependencies in `$HOME/flansoft` by 
-default. If you wish to have them installed elsewhere, change the following
-line in `mkdeps.perlmutter.sh` to the desired directory:
+This builds zlib, HDF5 and NetCDF with the Cray wrappers in `$HOME/flansoft`,
+creates the `flan` conda environment with postgkyl, and writes the file that
+tells CMake where everything is. To put the dependencies somewhere else,
+change this line in `machines/mkdeps.perlmutter.sh` before running it:
 
 ```bash
-export FLANSOFT=/path/to/dir/flansoft
+export FLANSOFT=$HOME/flansoft
 ```
 
-This script also handles creating the conda environment that Flan must run in.
-You must activate the environment before running Flan by first loading the
-conda module with `module load conda` and then activating the environment with
-`conda activate flan`. 
-
-## Install Flan
-
-Navigate to `flan/build`. This is where Flan will be compiled as a library. 
-Run CMake to create the Makefile, then make and install the library. On
-Perlmutter you should enable CUDA.
+Then activate the environment. Do this before building, and every time
+before running Flan, including in job scripts:
 
 ```bash
-cd build
+module load conda
+conda activate flan
+```
+
+## 3. Build, install and test Flan
+
+From the top-level `flan/` directory, with the `flan` environment active:
+
+```bash
+mkdir build_gpu && cd build_gpu
 cmake .. -DENABLE_CUDA=ON
-make && make install
+make -j8
+make install
 ```
 
-Flan will be installed at `flan/lib/libflan.so`. 
+Check that the CMake output says `NVIDIA GPU support enabled`. `make` also
+creates `flan/scripts/flan_setup.sh`, and `make install` puts `libflan.so` in
+`flan/lib/`.
 
-### Troubleshooting
+Run the tests on a GPU node, e.g., in an interactive job, since they need a
+GPU and run on several MPI ranks:
 
-Please reach out to a developer if you encounter issues so the instructions 
-can be updated.
+```bash
+ctest
+```
+
+It should end with `100% tests passed`.
+
+For a CPU-only build, e.g., if you'll only use the CPU nodes, use
+`mkdir build_cpu && cd build_cpu` and `cmake ..` instead, then the same
+`make`, `make install` and `ctest`.
+
+You're ready to set up a case, see [Running Flan](../running/running-flan.md)
+and [Running on Perlmutter](../running/running-perlmutter.md).
+
+## Troubleshooting
+
+See [Troubleshooting](installation.md#troubleshooting) for common problems.
+For anything else, contact Shawn Zamperini
+([zamperinis@fusion.gat.com](mailto:zamperinis@fusion.gat.com)).

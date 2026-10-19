@@ -1,45 +1,98 @@
 # Linux Installation
 
-Installing Flan on a general Linux machine involves downloading and compiling
-the dependencies and then compiling the code via CMake. 
+These are the steps for installing Flan on a Linux machine, such as a laptop
+or workstation. See the [Installation](installation.md) overview for more on
+each step and on choosing between a CPU and GPU build.
 
-## Install Dependencies
+## 1. Install the requirements
 
-Navigate to the top-level `flan/` directory and run:
+You need a C++23 compiler, CMake 3.26 or newer, MPI, git and conda. On
+Ubuntu, for example:
+
+```bash
+sudo apt install build-essential cmake git openmpi-bin libopenmpi-dev
+```
+
+If your distribution's CMake is older than 3.26, a newer one can be installed
+with `pip install cmake` or from [cmake.org](https://cmake.org/download/).
+For conda, [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is
+enough.
+
+For a GPU build, you also need an NVIDIA GPU with its driver, and the
+[CUDA Toolkit](https://developer.nvidia.com/cuda-downloads). Check that both
+work with:
+
+```bash
+nvidia-smi
+nvcc --version
+```
+
+## 2. Clone Flan
+
+```bash
+git clone https://github.com/shawnzamperini/flan.git
+cd flan
+```
+
+## 3. Build the dependencies
+
+From the top-level `flan/` directory, run:
 
 ```bash
 machines/mkdeps.linux.sh
 ```
 
-This will download and install all the dependencies in `$HOME/flansoft` by 
-default. If you wish to have them installed elsewhere, change the following
-line in `mkdeps.linux.sh` to the desired directory:
+This downloads and builds zlib, HDF5 and NetCDF in `$HOME/flansoft`, creates
+the `flan` conda environment with postgkyl, and writes the file that tells
+CMake where everything is. It takes a while. To put the dependencies
+somewhere else, change this line in `machines/mkdeps.linux.sh` before running
+it:
 
 ```bash
-export FLANSOFT=/path/to/dir/flansoft
+export FLANSOFT=$HOME/flansoft
 ```
 
-This script also handles creating the conda environment that Flan must run in.
-You must activate the environment before running Flan with 
-`conda activate flan`.
-
-## Install Flan
-
-Navigate to `flan/build`. This is where Flan will be compiled as a library. 
-Run CMake to create the Makefile, then make and install the library.
+Then activate the environment. Do this before building, and every time
+before running Flan:
 
 ```bash
-cd build
+conda activate flan
+```
+
+## 4. Build, install and test Flan
+
+From the top-level `flan/` directory, with the `flan` environment active:
+
+For a CPU build:
+
+```bash
+mkdir build_cpu && cd build_cpu
 cmake ..
-make && make install
+make -j8
+make install
+ctest
 ```
 
-Flan will be installed at `flan/lib/libflan.so`. This also creates a bash
-script `scripts/flan_setup.sh`, which is used when setting up a new case.
+For a GPU build:
 
-### Troubleshooting
+```bash
+mkdir build_gpu && cd build_gpu
+cmake .. -DENABLE_CUDA=ON
+make -j8
+make install
+ctest
+```
 
-There are probably numerous issues that can pop up, as each machine is 
-different. Please reach out to a developer if you encounter issues so the 
-instructions can be updated.
+`make` also creates `flan/scripts/flan_setup.sh`, and `make install` puts
+`libflan.so` in `flan/lib/`. `ctest` should end with
+`100% tests passed`. If your GPU isn't an A100 or another Ampere GPU (compute
+capability 8.0 or 8.6), see
+[Supported GPUs](installation.md#cpu-or-gpu-build) before building.
 
+You're ready to set up a case, see [Running Flan](../running/running-flan.md).
+
+## Troubleshooting
+
+See [Troubleshooting](installation.md#troubleshooting) for common problems.
+For anything else, contact Shawn Zamperini
+([zamperinis@fusion.gat.com](mailto:zamperinis@fusion.gat.com)).

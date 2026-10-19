@@ -1,7 +1,7 @@
 # Flan
 ## Fully kinetic Monte Carlo to follow trace amount of impurities in a turbulent plasma. 
 
-Flan is named after my dog, Flannery. It does not stand for anything. It is written in C++ and its algorithms are written for efficient memory access and to take full advantage of OpenMP, MPI and CUDA. The code is written and maintained by Shawn Zamperini at General Atomics. See LICENSE and contact Shawn if you wish to use the code (free for public research, private companies need to get the lawyers involved). 
+Flan is named after my dog, Flannery. It does not stand for anything. It is written in C++ and its algorithms are written for efficient memory access and to take full advantage of OpenMP, MPI and CUDA. The code is written and maintained by Shawn Zamperini at General Atomics. Flan is free for noncommercial use, such as academic research, under the [PolyForm Noncommercial License 1.0.0](LICENSE). Commercial use requires a separate license; contact Shawn (zamperinis@fusion.gat.com) to request one. 
 
 <img src="https://github.com/shawnzamperini/flan/blob/main/docs/flan_image.jpg" width="250">
 

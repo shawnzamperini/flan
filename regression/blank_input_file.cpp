@@ -14,8 +14,8 @@ Inputs create_inputs()
 	inpts["case_name"] = "flan_case_name";
 	
 	// Impurity options
-	inpts["imp_num"] = 100000000;
-	inpts["imp_time_step"] = 1e-8;
+	inpts["imp_num"] = 1000;
+	inpts["imp_time_step"] = 1e-9;
 	inpts["imp_collisions"] = "nanbu";  // off, nanbu
 
 	//   |  Z |  Mass  |
@@ -29,8 +29,8 @@ Inputs create_inputs()
 	//inpts["imp_atom_num"] = 6; inpts["imp_mass_amu"] = 12.01;
 	//Ne | 10 |  20.18 |
 	//inpts["imp_atom_num"] = 10; inpts["imp_mass_amu"] = 20.18;
-	//Si | 14 |  20.85 |
-	//inpts["imp_atom_num"] = 14; inpts["imp_mass_amu"] = 20.85;
+	//Si | 14 |  28.09 |
+	//inpts["imp_atom_num"] = 14; inpts["imp_mass_amu"] = 28.09;
 	//Fe | 26 |  55.85 |
 	//inpts["imp_atom_num"] = 26; inpts["imp_mass_amu"] = 55.85;
 	//Mo | 42 |  95.95 |
@@ -42,7 +42,7 @@ Inputs create_inputs()
 
 	// Atomic physics
 	inpts["imp_iz_recomb"] = "on";
-	inpts["openadas_root"] = "/global/homes/z/zamp/flansoft/openadas";
+	inpts["openadas_root"] = "/path/to/openadas";  // Change to your directory
 	inpts["openadas_year"] = 89;  // 50 for tungsten, 89 for everything else
 
 
