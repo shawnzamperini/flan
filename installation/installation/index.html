@@ -397,10 +397,21 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#cpu-or-gpu-build" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        CPU or GPU build
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
       
     </span>
   </a>
@@ -411,7 +422,7 @@
   <a href="#clone-the-repository" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Clone the Repository
+        Clone the repository
       
     </span>
   </a>
@@ -419,10 +430,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#machine-specific-instructions" class="md-nav__link">
+  <a href="#build-the-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Machine specific instructions
+        Build the dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-flan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build Flan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build Flan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rebuilding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rebuilding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#machine-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Machine instructions
       
     </span>
   </a>
@@ -1219,10 +1291,21 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#cpu-or-gpu-build" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        CPU or GPU build
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
       
     </span>
   </a>
@@ -1233,7 +1316,7 @@
   <a href="#clone-the-repository" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Clone the Repository
+        Clone the repository
       
     </span>
   </a>
@@ -1241,10 +1324,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#machine-specific-instructions" class="md-nav__link">
+  <a href="#build-the-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Machine specific instructions
+        Build the dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-flan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build Flan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build Flan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rebuilding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rebuilding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#machine-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Machine instructions
       
     </span>
   </a>
@@ -1269,39 +1413,172 @@
 
 
 <h1 id="installation">Installation</h1>
-<p>Flan is built as a modern C++23 project using CMake and supports both serial
-and hybrid MPI/OpenMP execution. This page walks you through installing and
-building Flan on laptops, workstations, and HPC systems such as Perlmutter.</p>
-<hr />
-<h2 id="prerequisites">Prerequisites</h2>
-<p>Flan has the following dependencies:</p>
+<p>Flan is a C++ library, <code>libflan.so</code>, built with CMake. Installing it takes
+three steps:</p>
+<ol>
+<li>Clone the repository.</li>
+<li>Build the dependencies and create the <code>flan</code> conda environment, with the
+   script for your machine.</li>
+<li>Configure, build, install and test Flan with CMake.</li>
+</ol>
+<p>The steps are the same everywhere, apart from the dependency script and a few
+machine-specific settings. The <a href="../install-linux/">Linux</a> and
+<a href="../install-perlmutter/">Perlmutter</a> pages have the exact commands for each.
+This page explains the choices and what each step does.</p>
+<h2 id="cpu-or-gpu-build">CPU or GPU build</h2>
+<p>Flan can be built two ways:</p>
 <ul>
-<li>C++23-capable compiler  </li>
-<li>CMake ≥ 3.26</li>
-<li>OpenMP support  </li>
-<li>MPI  </li>
-<li>MPICH, OpenMPI, Cray-MPICH, etc.</li>
-<li>HDF5</li>
-<li>NetCDF</li>
-<li>zlib</li>
-<li>conda (or mamba)</li>
+<li><strong>CPU build.</strong> Particles are followed in parallel with MPI and OpenMP.
+  This works on any Linux machine.</li>
+<li><strong>GPU build.</strong> Everything in the CPU build, plus CUDA versions of the main
+  loop that follow the particles on GPUs. This needs an <strong>NVIDIA GPU</strong> and the
+  CUDA Toolkit, so it doesn't work with AMD or Intel GPUs.</li>
 </ul>
-<p>HDF5, NetCDF and zlib are installed by machine-specific scripts to install
-dependencies, found in <code>machines/</code>. Other dependencies must be provided by the
-computing environment.</p>
-<hr />
-<h2 id="clone-the-repository">Clone the Repository</h2>
-<p>Cloning the repository is straightforward. This will clone it into <code>flan/</code>:</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/shawnzamperini/flan.git
-</code></pre></div>
-<hr />
-<h2 id="machine-specific-instructions">Machine specific instructions</h2>
-<p>Select your machine from the following list. Use 
-<a href="../install-linux/">Linux</a> for a general purpose installation,
-e.g., a personal laptop.</p>
+<p>A GPU build can still run on the CPU: whether a simulation uses the GPUs is
+chosen at run time with the <code>use_gpu</code> input option (see
+<a href="../../input-options/">Input Options</a>). So if your machine has an NVIDIA GPU,
+the GPU build is the one to use.</p>
+<div class="admonition note">
+<p class="admonition-title">Supported GPUs</p>
+<p>The GPU build is compiled for compute capability 8.0 and 8.6, which
+covers the NVIDIA A100 (Perlmutter) and other Ampere GPUs, such as the
+RTX 30 series and RTX A series. For a different GPU, change
+<code>CMAKE_CUDA_ARCHITECTURES</code> in the top-level <code>CMakeLists.txt</code> to your GPU's
+compute capability, e.g., <code>90</code> for an H100. You can find it with
+<code>nvidia-smi --query-gpu=name,compute_cap --format=csv</code>.</p>
+</div>
+<h2 id="requirements">Requirements</h2>
+<p>Your machine needs to provide:</p>
 <ul>
-<li><a href="../install-linux/">Linux</a></li>
-<li><a href="../install-perlmutter/">Perlmutter</a></li>
+<li>A C++ compiler that supports C++23 (GCC 11.4 has been tested)</li>
+<li>CMake 3.26 or newer</li>
+<li>MPI (e.g., OpenMPI, MPICH or Cray MPICH)</li>
+<li>OpenMP (included with GCC)</li>
+<li>git</li>
+<li>conda (e.g., Miniconda) or mamba</li>
+<li>An internet connection when building, to download the dependencies and
+  GoogleTest</li>
+<li><strong>GPU build only:</strong> an NVIDIA GPU and the CUDA Toolkit (CUDA 12.8 has been
+  tested)</li>
+</ul>
+<p>zlib, HDF5 and NetCDF (C and C++) are downloaded and built by the dependency
+script, along with postgkyl, which Flan uses to read Gkeyll data.</p>
+<h2 id="clone-the-repository">Clone the repository</h2>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/shawnzamperini/flan.git
+<span class="nb">cd</span><span class="w"> </span>flan
+</code></pre></div>
+<h2 id="build-the-dependencies">Build the dependencies</h2>
+<p>Run the dependency script for your machine from the top-level <code>flan/</code>
+directory, e.g., for a general Linux machine:</p>
+<div class="highlight"><pre><span></span><code>machines/mkdeps.linux.sh
+</code></pre></div>
+<p>This builds zlib, HDF5 and NetCDF in <code>$HOME/flansoft</code> (change <code>FLANSOFT</code> in
+the script to put them elsewhere). It also creates the <code>flan</code> conda
+environment, which has postgkyl and the Python packages Flan needs, and sets
+the environment variables Flan uses to find its Python scripts. Finally, it
+writes <code>install-deps/build-opts.cmake</code>, which tells CMake where the
+dependencies are. CMake won't configure without it, so the dependencies
+always come first.</p>
+<p>Activate the environment before building and before running Flan:</p>
+<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>flan
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Build and run in the same environment</p>
+<p>The <code>flan</code> environment includes its own MPI. Activate it before running
+CMake, so Flan is built with the same MPI it'll run with. Building with
+one MPI and running with another usually crashes at the first MPI call.</p>
+</div>
+<h2 id="build-flan">Build Flan</h2>
+<p>The CPU and GPU builds each go in their own build directory, so you can have
+both. From the top-level <code>flan/</code> directory:</p>
+<p><strong>1. Make a build directory and configure.</strong> CMake checks the compilers and
+dependencies and writes the Makefiles:</p>
+<p>For a CPU build:</p>
+<div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>build_cpu<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build_cpu
+cmake<span class="w"> </span>..
+</code></pre></div>
+<p>For a GPU build:</p>
+<div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>build_gpu<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build_gpu
+cmake<span class="w"> </span>..<span class="w"> </span>-DENABLE_CUDA<span class="o">=</span>ON
+</code></pre></div>
+<p>The output should end with <code>-- Build files have been written to: ...</code>. For a
+GPU build, check that it says <code>NVIDIA GPU support enabled</code>.</p>
+<p><strong>2. Build.</strong> This compiles the library and the tests, and creates
+<code>flan/scripts/flan_setup.sh</code>, which sets up new cases (see
+<a href="../../running/running-flan/">Running Flan</a>). <code>-j8</code> builds with 8 processes.
+Use however many cores you have.</p>
+<div class="highlight"><pre><span></span><code>make<span class="w"> </span>-j8
+</code></pre></div>
+<p><strong>3. Install.</strong></p>
+<div class="highlight"><pre><span></span><code>make<span class="w"> </span>install
+</code></pre></div>
+<p>This copies <code>libflan.so</code> to <code>flan/lib/</code>, and the CMake files that cases use
+to find Flan to <code>flan/lib/cmake/flan/</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">One installed build at a time</p>
+<p>Both builds install to the same <code>flan/lib/</code>, so the last <code>make install</code>
+is the one cases use. If you switch between a CPU and GPU build, run
+<code>make install</code> in the one you want, then rebuild your case.</p>
+</div>
+<p><strong>4. Run the tests.</strong></p>
+<div class="highlight"><pre><span></span><code>ctest
+</code></pre></div>
+<p>All the tests should pass:</p>
+<div class="highlight"><pre><span></span><code>100% tests passed, 0 tests failed out of 7
+</code></pre></div>
+<p>A CPU build has 7 tests. A GPU build has those plus the GPU tests, 17 in
+all, and they need a GPU to run on. One of the tests checks the MPI
+communication, so it runs Flan's test program on 3 MPI ranks. If a test
+fails, <code>ctest --output-on-failure</code> shows what went wrong.</p>
+<h3 id="build-options">Build options</h3>
+<p>These are set with <code>-D</code> when configuring, e.g., <code>cmake .. -DENABLE_CUDA=ON</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ENABLE_CUDA</code></td>
+<td><code>OFF</code></td>
+<td>Build the GPU version. Needs the CUDA Toolkit.</td>
+</tr>
+<tr>
+<td><code>CMAKE_BUILD_TYPE</code></td>
+<td><code>Release</code></td>
+<td><code>Release</code> for normal use. <code>Debug</code> turns off optimization and turns on extra checks, e.g., the GPU waits after every kernel and prints any error. <code>RelWithDebInfo</code> is optimized but keeps debugging information.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rebuilding">Rebuilding</h3>
+<p>After pulling new changes, rebuild and reinstall from the build directory:</p>
+<div class="highlight"><pre><span></span><code>make<span class="w"> </span>-j8<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>install
+</code></pre></div>
+<p>If files were added to or removed from Flan, run <code>cmake ..</code> first so CMake
+picks them up.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>Every machine is a little different, so problems can come up that these
+instructions don't cover. A few common ones:</p>
+<ul>
+<li><strong>CMake can't find <code>build-opts.cmake</code>:</strong> the dependency script hasn't been
+  run yet, or it failed partway. Run it again and check its output.</li>
+<li><strong>CMake can't find the CUDA compiler:</strong> the CUDA Toolkit isn't installed or
+  <code>nvcc</code> isn't on your <code>PATH</code>.</li>
+<li><strong>A crash right at the start of a run, mentioning MPI:</strong> Flan was probably
+  built and run with different MPIs. See the note on building and running in
+  the same environment above.</li>
+</ul>
+<p>For anything else, contact Shawn Zamperini
+(<a href="mailto:zamperinis@fusion.gat.com">zamperinis@fusion.gat.com</a>), so the
+instructions can be updated too.</p>
+<h2 id="machine-instructions">Machine instructions</h2>
+<ul>
+<li><a href="../install-linux/">Linux</a>: any Linux machine, such as a laptop or
+  workstation.</li>
+<li><a href="../install-perlmutter/">Perlmutter</a>: NERSC's Perlmutter.</li>
 </ul>
 
 

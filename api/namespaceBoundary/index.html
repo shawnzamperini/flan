@@ -1301,7 +1301,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-check_bounds_gpu"><strong>check_bounds_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, const int tbound_type_int, const int min_xbound_type_int, const int max_xbound_type_int, const int min_ybound_type_int, const int max_ybound_type_int, const int min_zbound_type_int, const int max_zbound_type_int, const double imp_xbound_buffer, const double imp_ybound_buffer, const double imp_zbound_buffer, const double lcfs_x, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d) <br><em>Check time and spatial boundaries and handle accordingly (GPU)</em></td>
+<td style="text-align: left;"><a href="#function-check_bounds_gpu"><strong>check_bounds_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, const int tbound_type_int, const int min_xbound_type_int, const int max_xbound_type_int, const int min_ybound_type_int, const int max_ybound_type_int, const int min_zbound_type_int, const int max_zbound_type_int, const double imp_xbound_buffer, const double imp_ybound_buffer, const double imp_zbound_buffer, const double lcfs_x, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1334,6 +1334,17 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">buffer</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Checks if a value is outside an absorbing boundary.</p>
+<p>max_bound = true means bound is a maximum and the check is a + buffer &gt;= bound. max_bound = false means bound is a minimum and the check is a - buffer &lt;= bound. The buffer makes the boundary trigger sooner, since the plasma can behave oddly right at the boundaries. Written without branches so it is SIMD friendly.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> Value to check (e.g., the particle's x coordinate). </li>
+<li><code>bound</code> <a href="./"><strong>Boundary</strong></a> value. </li>
+<li><code>max_bound</code> If true, bound is a maximum. Otherwise it is a minimum. </li>
+<li><code>buffer</code> Distance the boundary is moved inward. Defaults to 0. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>1 if the particle is outside the boundary (dead), else 0. </p>
 <hr>
 
 <h3 id="function-absorbing_bc_gpu">function absorbing_bc_gpu</h3>
@@ -1344,6 +1355,17 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">buffer</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Checks if a value is outside an absorbing boundary.</p>
+<p>max_bound = true means bound is a maximum and the check is a + buffer &gt;= bound. max_bound = false means bound is a minimum and the check is a - buffer &lt;= bound. The buffer makes the boundary trigger sooner, since the plasma can behave oddly right at the boundaries. Written without branches so it is SIMD friendly.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> Value to check (e.g., the particle's x coordinate). </li>
+<li><code>bound</code> <a href="./"><strong>Boundary</strong></a> value. </li>
+<li><code>max_bound</code> If true, bound is a maximum. Otherwise it is a minimum. </li>
+<li><code>buffer</code> Distance the boundary is moved inward. Defaults to 0. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>1 if the particle is outside the boundary (dead), else 0. </p>
 <hr>
 
 <h3 id="function-check_bounds_cpu">function check_bounds_cpu</h3>
@@ -1354,10 +1376,18 @@
 <span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rngs</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Checks every alive particle against the time and spatial boundaries and applies the boundary conditions (CPU implementation).</p>
+<p>The boundaries are checked in the order t, then min/max x, y and z. Each boundary type is an integer from the *bound_type options: 0 = absorbing, 1 = periodic and 2 = core (x, y and z only). An absorbing boundary sets the slot's state and skips the remaining checks as soon as the particle is dead. For a core boundary in x, y and z are randomized, in y, z and x are randomized, and in z, x and y are randomized. The spatial buffers are the imp_*bound_buffer options, and the time boundary has no buffer. The loop over particles is parallelized with OpenMP.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots</code> Particle slots. The state, t and positions are updated in place. </li>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma, used for the simulation bounds. </li>
+<li><code>opts</code> Simulation options, used for the boundary types and buffers. </li>
+<li><code>rngs</code> Random number generators, one per OpenMP thread, used by the core boundary. </li>
+</ul>
 <hr>
 
 <h3 id="function-check_bounds_gpu">function check_bounds_gpu</h3>
-<p><em>Check time and spatial boundaries and handle accordingly (GPU)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Boundary</span><span class="o">::</span><span class="n">check_bounds_gpu</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">,</span>
@@ -1374,7 +1404,26 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">lcfs_x</span><span class="p">,</span>
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">rngs_d</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Launches check_bounds_kernel to apply the time and spatial boundary conditions to every particle on the GPU.</p>
+<p>Uses blocks of 256 threads, one thread per slot. The launch is asynchronous, except in DEBUG builds, where it waits for the kernel to finish and prints any error.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+<li><code>tbound_type_int</code> Type of the maximum time boundary. </li>
+<li><code>min_xbound_type_int</code> Type of the minimum x boundary. </li>
+<li><code>max_xbound_type_int</code> Type of the maximum x boundary. </li>
+<li><code>min_ybound_type_int</code> Type of the minimum y boundary. </li>
+<li><code>max_ybound_type_int</code> Type of the maximum y boundary. </li>
+<li><code>min_zbound_type_int</code> Type of the minimum z boundary. </li>
+<li><code>max_zbound_type_int</code> Type of the maximum z boundary. </li>
+<li><code>imp_xbound_buffer</code> Buffer on the x boundaries. </li>
+<li><code>imp_ybound_buffer</code> Buffer on the y boundaries. </li>
+<li><code>imp_zbound_buffer</code> Buffer on the z boundaries. </li>
+<li><code>lcfs_x</code> x coordinate of the last closed flux surface. </li>
+<li><code>rngs_d</code> Random number generators on the device, one per slot. </li>
+</ul>
 <hr>
 
 <h3 id="function-check_bounds_kernel">function check_bounds_kernel</h3>
@@ -1395,6 +1444,25 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">rngs_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that checks each particle against the time and spatial boundaries and applies the boundary conditions.</p>
+<p>One thread handles one slot, and dead particles are skipped. The boundaries are checked in the order t, then min/max x, y and z. Each boundary type is an integer: 0 = absorbing, 1 = periodic and 2 = core (x, y and z only). An absorbing boundary sets the slot's state and returns as soon as the particle is dead. For a core boundary in x, y and z are randomized, in y, z and x are randomized, and in z, x and y are randomized.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. The state, t and positions are updated in place. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. Currently unused. </li>
+<li><code>tbound_type_int</code> Type of the maximum time boundary (0 or 1). </li>
+<li><code>min_xbound_type_int</code> Type of the minimum x boundary. </li>
+<li><code>max_xbound_type_int</code> Type of the maximum x boundary. </li>
+<li><code>min_ybound_type_int</code> Type of the minimum y boundary. </li>
+<li><code>max_ybound_type_int</code> Type of the maximum y boundary. </li>
+<li><code>min_zbound_type_int</code> Type of the minimum z boundary. </li>
+<li><code>max_zbound_type_int</code> Type of the maximum z boundary. </li>
+<li><code>imp_xbound_buffer</code> Buffer on the x boundaries. </li>
+<li><code>imp_ybound_buffer</code> Buffer on the y boundaries. </li>
+<li><code>imp_zbound_buffer</code> Buffer on the z boundaries. </li>
+<li><code>lcfs_x</code> x coordinate of the last closed flux surface. Currently unused. </li>
+<li><code>rngs_d</code> Random number generators on the device, one per slot. </li>
+</ul>
 <hr>
 
 <h3 id="function-core_bc">function core_bc</h3>
@@ -1415,6 +1483,25 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Applies a core boundary condition.</p>
+<p>The coordinate being checked is a, and b and c are the other two coordinates. If a is past the boundary (moved inward by a_buffer), a is put back on the buffered boundary, and b and c are moved to uniformly random values between their buffered minimums and maximums. This is like the particle entering the core and popping back out somewhere else along the core boundary. A residence time could be added if it was useful.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> Coordinate checked against the boundary. </li>
+<li><code>b</code> First of the other two coordinates. </li>
+<li><code>c</code> Second of the other two coordinates. </li>
+<li><code>a_min</code> Minimum of a. </li>
+<li><code>a_max</code> Maximum of a. </li>
+<li><code>a_buffer</code> Distance the a boundary is moved inward. </li>
+<li><code>b_min</code> Minimum of b. </li>
+<li><code>b_max</code> Maximum of b. </li>
+<li><code>b_buffer</code> Buffer on each side of the b range. </li>
+<li><code>c_min</code> Minimum of c. </li>
+<li><code>c_max</code> Maximum of c. </li>
+<li><code>c_buffer</code> Buffer on each side of the c range. </li>
+<li><code>max_bound</code> If true, check the a_max side. Otherwise check the a_min side. </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
 <hr>
 
 <h3 id="function-core_bc_gpu">function core_bc_gpu</h3>
@@ -1435,6 +1522,25 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Applies a core boundary condition.</p>
+<p>The coordinate being checked is a, and b and c are the other two coordinates. If a is past the boundary (moved inward by a_buffer), a is put back on the buffered boundary, and b and c are moved to uniformly random values between their buffered minimums and maximums. This is like the particle entering the core and popping back out somewhere else along the core boundary. A residence time could be added if it was useful.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> Coordinate checked against the boundary. </li>
+<li><code>b</code> First of the other two coordinates. </li>
+<li><code>c</code> Second of the other two coordinates. </li>
+<li><code>a_min</code> Minimum of a. </li>
+<li><code>a_max</code> Maximum of a. </li>
+<li><code>a_buffer</code> Distance the a boundary is moved inward. </li>
+<li><code>b_min</code> Minimum of b. </li>
+<li><code>b_max</code> Maximum of b. </li>
+<li><code>b_buffer</code> Buffer on each side of the b range. </li>
+<li><code>c_min</code> Minimum of c. </li>
+<li><code>c_max</code> Maximum of c. </li>
+<li><code>c_buffer</code> Buffer on each side of the c range. </li>
+<li><code>max_bound</code> If true, check the a_max side. Otherwise check the a_min side. </li>
+<li><code>rng</code> Random number generator for this particle. </li>
+</ul>
 <hr>
 
 <h3 id="function-periodic_bc">function periodic_bc</h3>
@@ -1444,6 +1550,16 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">amax</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Applies a periodic boundary condition.</p>
+<p>A periodic boundary never kills a particle. A value above amax has the domain length (amax - amin) subtracted, and a value below amin has it added. Only a single wrap is done, so a particle is assumed to move less than one domain length per time step. Written without branches so it is SIMD friendly.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> Value to check (e.g., the particle's y coordinate). </li>
+<li><code>amin</code> Minimum of the domain. </li>
+<li><code>amax</code> Maximum of the domain. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The wrapped value, or a unchanged if it is inside the domain. </p>
 <hr>
 
 <h3 id="function-periodic_bc_gpu">function periodic_bc_gpu</h3>
@@ -1453,6 +1569,16 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">amax</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Applies a periodic boundary condition.</p>
+<p>A periodic boundary never kills a particle. A value above amax has the domain length (amax - amin) subtracted, and a value below amin has it added. Only a single wrap is done, so a particle is assumed to move less than one domain length per time step. Written without branches so it is SIMD friendly.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> Value to check (e.g., the particle's y coordinate). </li>
+<li><code>amin</code> Minimum of the domain. </li>
+<li><code>amax</code> Maximum of the domain. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The wrapped value, or a unchanged if it is inside the domain. </p>
 <hr>
 
 <hr />

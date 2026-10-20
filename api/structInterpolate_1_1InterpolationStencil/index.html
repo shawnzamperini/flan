@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1333,6 +1344,7 @@
 
 <h1 id="struct-interpolateinterpolationstencil">Struct Interpolate::InterpolationStencil</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceInterpolate/"><strong>Interpolate</strong></a> <strong>&gt;</strong> <a href="./"><strong>InterpolationStencil</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
 <h2 id="public-attributes">Public Attributes</h2>
 <table>
 <thead>
@@ -1348,11 +1360,11 @@
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-dy"><strong>dy</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-dy"><strong>dy</strong></a>  <br><em>Same as dx, for y.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-dz"><strong>dz</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-dz"><strong>dz</strong></a>  <br><em>Same as dx, for z.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
@@ -1360,7 +1372,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-idx0"><strong>idx0</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-idx0"><strong>idx0</strong></a>  <br><em>Flattened indices of the corners at tidx.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
@@ -1368,107 +1380,125 @@
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-t0"><strong>t0</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-t0"><strong>t0</strong></a>  <br><em>Time of frame tidx (s) (4D only).</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-tidx_neighbor"><strong>tidx_neighbor</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-tidx_neighbor"><strong>tidx_neighbor</strong></a>  <br><em>Neighboring time frame index (4D only).</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-x0"><strong>x0</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-x0"><strong>x0</strong></a>  <br><em>x of the containing cell's center.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-xidx_neighbor"><strong>xidx_neighbor</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-xidx_neighbor"><strong>xidx_neighbor</strong></a>  <br><em>Neighboring x cell index.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-y0"><strong>y0</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-y0"><strong>y0</strong></a>  <br><em>y of the containing cell's center.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-yidx_neighbor"><strong>yidx_neighbor</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-yidx_neighbor"><strong>yidx_neighbor</strong></a>  <br><em>Neighboring y cell index.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-z0"><strong>z0</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-z0"><strong>z0</strong></a>  <br><em>z of the containing cell's center.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-zidx_neighbor"><strong>zidx_neighbor</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-zidx_neighbor"><strong>zidx_neighbor</strong></a>  <br><em>Neighboring z cell index.</em></td>
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p><a href="../namespaceIndices/"><strong>Indices</strong></a> and geometry of the box of cell centers surrounding a point, used to interpolate fields at that point.</p>
+<p>The same struct is used for 3D and 4D fields. A 3D stencil from build_stencil_3d leaves the time members (idx1, tidx_neighbor, t0 and frame_dt) unset.</p>
+<p>The 8 corners are ordered by (x, y, z) offset as 000, 001, 010, 011, 100, 101, 110, 111, where 0 is the containing cell's index and 1 is the neighbor's index in that direction. </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-dx">variable dx</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">dx</span><span class="p">;</span>
 </code></pre></div>
+<p>x from the containing cell's center to the neighbor's. Negative if the neighbor is on the low side. </p>
 <hr>
 
 <h3 id="variable-dy">variable dy</h3>
+<p><em>Same as dx, for y.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">dy</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-dz">variable dz</h3>
+<p><em>Same as dx, for z.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">dz</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-frame_dt">variable frame_dt</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">frame_dt</span><span class="p">;</span>
 </code></pre></div>
+<p>Time from frame tidx to tidx_neighbor (s). Negative if the neighbor is the previous frame (4D only). </p>
 <hr>
 
 <h3 id="variable-idx0">variable idx0</h3>
+<p><em>Flattened indices of the corners at tidx.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">idx0</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-idx1">variable idx1</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">idx1</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>
 </code></pre></div>
+<p>Flattened indices of the corners at tidx_neighbor (4D only). </p>
 <hr>
 
 <h3 id="variable-t0">variable t0</h3>
+<p><em>Time of frame tidx (s) (4D only).</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">t0</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-tidx_neighbor">variable tidx_neighbor</h3>
+<p><em>Neighboring time frame index (4D only).</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">tidx_neighbor</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-x0">variable x0</h3>
+<p><em>x of the containing cell's center.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">x0</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-xidx_neighbor">variable xidx_neighbor</h3>
+<p><em>Neighboring x cell index.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">xidx_neighbor</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-y0">variable y0</h3>
+<p><em>y of the containing cell's center.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">y0</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-yidx_neighbor">variable yidx_neighbor</h3>
+<p><em>Neighboring y cell index.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">yidx_neighbor</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-z0">variable z0</h3>
+<p><em>z of the containing cell's center.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">z0</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-zidx_neighbor">variable zidx_neighbor</h3>
+<p><em>Neighboring z cell index.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Interpolate</span><span class="o">::</span><span class="n">InterpolationStencil</span><span class="o">::</span><span class="n">zidx_neighbor</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <hr />

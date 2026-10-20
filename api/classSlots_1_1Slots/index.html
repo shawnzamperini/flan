@@ -2295,7 +2295,7 @@
 </code></pre></div>
 <p>Allocates GPU memory for the particles and copies them to the device.</p>
 <p>I think this should probably be moved to <a href="../slots_8cu/"><strong>slots.cu</strong></a>...</p>
-<p>The per-particle arrays are allocated and copied, except pt and iters, which are not stored on the device. The work arrays used by the GPU kernels (all_dead, counter, alive, num_dead and dead_indices) are also allocated, and all_dead is initialized to false. If GPU support was not compiled in, an error is printed and an empty <a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> is returned.</p>
+<p>The per-particle arrays are allocated and copied, except iters, which are not stored on the device. The work arrays used by the GPU kernels (all_dead, num_dead and dead_indices) are also allocated, and all_dead is initialized to false. If GPU support was not compiled in, an error is printed and an empty <a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> is returned.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>device_id</code> ID of the GPU to allocate the memory on. </li>
@@ -2310,7 +2310,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Copies the particles from the device back into a new host <a href="./"><strong>Slots</strong></a> object.</p>
-<p>The mass and the per-particle arrays on the device are copied back. pt, iters and the atomic number are not stored on the device, so they are left at zero in the returned object. The device memory is not freed, use free_slots for that. If GPU support was not compiled in, only N and the mass are set.</p>
+<p>The mass and the per-particle arrays on the device are copied back. iters and the atomic number are not stored on the device, so they are left at zero in the returned object. The device memory is not freed, use free_slots for that. If GPU support was not compiled in, only N and the mass are set.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>slots_d</code> <a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> struct returned by to_device. </li>

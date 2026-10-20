@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1178,32 +1189,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#variable-alive" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        variable alive
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#variable-all_dead" class="md-nav__link">
     <span class="md-ellipsis">
       
         variable all_dead
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#variable-counter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        variable counter
       
     </span>
   </a>
@@ -1487,6 +1476,7 @@
 
 <h1 id="struct-slotsslotsdevice">Struct Slots::SlotsDevice</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceSlots/"><strong>Slots</strong></a> <strong>&gt;</strong> <a href="./"><strong>SlotsDevice</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;slots_device.h&gt;</code></li>
 </ul>
@@ -1501,31 +1491,23 @@
 <tbody>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-n"><strong>N</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-n"><strong>N</strong></a>  <br><em>Number of slots.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-z"><strong>Z</strong></a>  <br></td>
-</tr>
-<tr>
-<td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-alive"><strong>alive</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-z"><strong>Z</strong></a>  <br><a href="../namespaceImpurity/"><em><strong>Impurity</strong></em></a> <em>atomic number.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">bool *</td>
-<td style="text-align: left;"><a href="#variable-all_dead"><strong>all_dead</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-all_dead"><strong>all_dead</strong></a>  <br><em>Single value, true if every slot is dead.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-counter"><strong>counter</strong></a>  <br></td>
-</tr>
-<tr>
-<td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-dead_indices"><strong>dead_indices</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-dead_indices"><strong>dead_indices</strong></a>  <br><a href="../namespaceIndices/"><em><strong>Indices</strong></em></a> <em>of the dead slots, size N.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>  <br><em>ID of the GPU the arrays are on.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
@@ -1533,7 +1515,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-mass"><strong>mass</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-mass"><strong>mass</strong></a>  <br><a href="../namespaceImpurity/"><em><strong>Impurity</strong></em></a> <em>mass (kg)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
@@ -1541,217 +1523,236 @@
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-pt"><strong>pt</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-pt"><strong>pt</strong></a>  <br><em>Time since the particle was launched (s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-q"><strong>q</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-q"><strong>q</strong></a>  <br><em>Charge state.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-state"><strong>state</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-state"><strong>state</strong></a>  <br><em>0 if the particle is alive, 1 if dead</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-t"><strong>t</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-t"><strong>t</strong></a>  <br><a href="../namespaceBackground/"><em><strong>Background</strong></em></a> <em>time of the particle (s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-tidx"><strong>tidx</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-tidx"><strong>tidx</strong></a>  <br><em>Nearest background time index.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vx"><strong>vX</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vx"><strong>vX</strong></a>  <br><em>Cartesian X velocity (m/s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vy"><strong>vY</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vy"><strong>vY</strong></a>  <br><em>Cartesian Y velocity (m/s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vz"><strong>vZ</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vz"><strong>vZ</strong></a>  <br><em>Cartesian Z velocity (m/s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vx"><strong>vx</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vx"><strong>vx</strong></a>  <br><em>Computational x velocity (x units/s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vy"><strong>vy</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vy"><strong>vy</strong></a>  <br><em>Computational y velocity (y units/s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vz"><strong>vz</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vz"><strong>vz</strong></a>  <br><em>Computational z velocity (z units/s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-weight"><strong>weight</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-weight"><strong>weight</strong></a>  <br><em>Particle weight, 1 / imp_num at launch.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-x"><strong>x</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-x"><strong>x</strong></a>  <br><em>Computational x coordinate.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-xidx"><strong>xidx</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-xidx"><strong>xidx</strong></a>  <br><em>x index of the containing grid cell</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-y"><strong>y</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-y"><strong>y</strong></a>  <br><em>Computational y coordinate.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-yidx"><strong>yidx</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-yidx"><strong>yidx</strong></a>  <br><em>y index of the containing grid cell</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-z"><strong>z</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-z"><strong>z</strong></a>  <br><em>Computational z coordinate.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-zidx"><strong>zidx</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-zidx"><strong>zidx</strong></a>  <br><em>z index of the containing grid cell</em></td>
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Device-side copy of a <a href="../classSlots_1_1Slots/"><strong>Slots</strong></a> object, made by <a href="../classSlots_1_1Slots/#function-to_device"><strong>Slots::to_device</strong></a> and freed with free_slots.</p>
+<p>A plain struct of device pointers, so it can be passed to kernels by value. Each per-particle array has N entries, one per slot, and slot i is handled by thread i in the kernels. Positions and their velocities (x, vx) are in computational coordinates, and vX, vY, vZ are the Cartesian velocity. </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-n">variable N</h3>
+<p><em>Number of slots.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">N</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-z">variable Z</h3>
+<p><a href="../namespaceImpurity/"><em><strong>Impurity</strong></em></a> <em>atomic number.</em>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">Z</span><span class="p">;</span>
-</code></pre></div>
-<hr>
-
-<h3 id="variable-alive">variable alive</h3>
-<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">alive</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-all_dead">variable all_dead</h3>
+<p><em>Single value, true if every slot is dead.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">bool</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">all_dead</span><span class="p">;</span>
-</code></pre></div>
-<hr>
-
-<h3 id="variable-counter">variable counter</h3>
-<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">counter</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-dead_indices">variable dead_indices</h3>
+<p><a href="../namespaceIndices/"><em><strong>Indices</strong></em></a> <em>of the dead slots, size N.</em>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">dead_indices</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-device_id">variable device_id</h3>
+<p><em>ID of the GPU the arrays are on.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">device_id</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-iters">variable iters</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">iters</span><span class="p">;</span>
 </code></pre></div>
+<p>Number of steps taken. Allocated, but never initialized or updated on the device </p>
 <hr>
 
 <h3 id="variable-mass">variable mass</h3>
+<p><a href="../namespaceImpurity/"><em><strong>Impurity</strong></em></a> <em>mass (kg)</em>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">mass</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-num_dead">variable num_dead</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">num_dead</span><span class="p">;</span>
 </code></pre></div>
+<p>Single value, number of entries in dead_indices </p>
 <hr>
 
 <h3 id="variable-pt">variable pt</h3>
+<p><em>Time since the particle was launched (s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">pt</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-q">variable q</h3>
+<p><em>Charge state.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">q</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-state">variable state</h3>
+<p><em>0 if the particle is alive, 1 if dead</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">state</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-t">variable t</h3>
+<p><a href="../namespaceBackground/"><em><strong>Background</strong></em></a> <em>time of the particle (s)</em>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">t</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-tidx">variable tidx</h3>
+<p><em>Nearest background time index.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">tidx</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vx">variable vX</h3>
+<p><em>Cartesian X velocity (m/s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">vX</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vy">variable vY</h3>
+<p><em>Cartesian Y velocity (m/s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">vY</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vz">variable vZ</h3>
+<p><em>Cartesian Z velocity (m/s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">vZ</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vx_1">variable vx</h3>
+<p><em>Computational x velocity (x units/s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">vx</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vy_1">variable vy</h3>
+<p><em>Computational y velocity (y units/s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">vy</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vz_1">variable vz</h3>
+<p><em>Computational z velocity (z units/s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">vz</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-weight">variable weight</h3>
+<p><em>Particle weight, 1 / imp_num at launch.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">weight</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-x">variable x</h3>
+<p><em>Computational x coordinate.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">x</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-xidx">variable xidx</h3>
+<p><em>x index of the containing grid cell</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">xidx</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-y">variable y</h3>
+<p><em>Computational y coordinate.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">y</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-yidx">variable yidx</h3>
+<p><em>y index of the containing grid cell</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">yidx</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-z_1">variable z</h3>
+<p><em>Computational z coordinate.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">z</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-zidx">variable zidx</h3>
+<p><em>z index of the containing grid cell</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="o">::</span><span class="n">zidx</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <hr />

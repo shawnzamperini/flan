@@ -1154,6 +1154,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1173,11 +1184,10 @@
 
 <h1 id="file-interpolatecuh">File interpolate.cuh</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_84b56ae5fb2dac9a5c8c4aa192827ebc/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>interpolate.cuh</strong></a></p>
+<p><em>CUDA routines for interpolating background fields at a particle's location.</em> <a href="#detailed-description">More...</a></p>
 <ul>
-<li><code>#include &lt;cstdio&gt;</code></li>
 <li><code>#include "background_device.h"</code></li>
 <li><code>#include "device_constants.cuh"</code></li>
-<li><code>#include "interpolate.cuh"</code></li>
 <li><code>#include "utilities.cuh"</code></li>
 </ul>
 <h2 id="namespaces">Namespaces</h2>
@@ -1210,6 +1220,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>The background fields are defined at the grid cell centers (and, for 4D fields, at each time frame). To interpolate at a particle, a stencil is first built with build_stencil_3d or build_stencil_4d. It holds the indices of the 8 cell centers that bound the particle and the geometry of the box they form. One stencil can then be reused for every field interpolated at that particle with interpolate_field_3d or interpolate_field_4d, which saves recalculating the indices for each field. Everything is inline so it can be used in any kernel. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/include/cuda/interpolate.cuh</code></p>
 

@@ -1411,7 +1411,7 @@
 <h1 id="class-vectorsvector3d">Class Vectors::Vector3D</h1>
 <p><strong>template &lt;typename T&gt;</strong></p>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceVectors/"><strong>Vectors</strong></a> <strong>&gt;</strong> <a href="./"><strong>Vector3D</strong></a></p>
-<p><em>Implementation of a 3D vector.</em> <a href="#detailed-description">More...</a></p>
+<p><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;vectors.h&gt;</code></li>
 </ul>
@@ -1426,118 +1426,132 @@
 <tbody>
 <tr>
 <td style="text-align: right;"></td>
-<td style="text-align: left;"><a href="#function-vector3d-14"><strong>Vector3D</strong></a> () <br><em>Default empty constructor.</em></td>
+<td style="text-align: left;"><a href="#function-vector3d-14"><strong>Vector3D</strong></a> () <br></td>
 </tr>
 <tr>
 <td style="text-align: right;"></td>
-<td style="text-align: left;"><a href="#function-vector3d-24"><strong>Vector3D</strong></a> (int dim1, int dim2, int dim3) <br><em>Constructor to create an empty vector of indicated size.</em></td>
+<td style="text-align: left;"><a href="#function-vector3d-24"><strong>Vector3D</strong></a> (int dim1, int dim2, int dim3) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;"></td>
-<td style="text-align: left;"><a href="#function-vector3d-34"><strong>Vector3D</strong></a> (std::vector&lt; T &gt; data_in, int dim1, int dim2, int dim3) <br><em>Constructor to create vector and fill with data passed in.</em></td>
+<td style="text-align: left;"><a href="#function-vector3d-34"><strong>Vector3D</strong></a> (std::vector&lt; T &gt; data_in, int dim1, int dim2, int dim3) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;"></td>
-<td style="text-align: left;"><a href="#function-vector3d-44"><strong>Vector3D</strong></a> (std::vector&lt; T &gt; data_in, int dim1, int dim2, int dim3, int dim4) <br><em>Artificial constructor that should not be directly called.</em></td>
+<td style="text-align: left;"><a href="#function-vector3d-44"><strong>Vector3D</strong></a> (std::vector&lt; T &gt; data_in, int dim1, int dim2, int dim3, int dim4) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-broadcast"><strong>broadcast</strong></a> (MPI_Comm comm) <br><em>Broadcast</em> <a href="./"><em><strong>Vector3D</strong></em></a> <em>to other processes.</em></td>
+<td style="text-align: left;"><a href="#function-broadcast"><strong>broadcast</strong></a> (MPI_Comm comm) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-calc_index"><strong>calc_index</strong></a> (const int i, const int j, const int k) const<br><em>Convert from 3D index to the 1D one used in the underlying m_data.</em></td>
+<td style="text-align: left;"><a href="#function-calc_index"><strong>calc_index</strong></a> (const int i, const int j, const int k) const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">const std::vector&lt; T &gt; &amp;</td>
-<td style="text-align: left;"><a href="#function-get_data-12"><strong>get_data</strong></a> () const<br><em>Get the 1D vector containing all the data (const)</em></td>
+<td style="text-align: left;"><a href="#function-get_data-12"><strong>get_data</strong></a> () const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">std::vector&lt; T &gt; &amp;</td>
-<td style="text-align: left;"><a href="#function-get_data-22"><strong>get_data</strong></a> () <br><em>Get the 1D vector containing all the data (non-const)</em></td>
+<td style="text-align: left;"><a href="#function-get_data-22"><strong>get_data</strong></a> () <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_dim1"><strong>get_dim1</strong></a> () const<br><em>Get first dimension size.</em></td>
+<td style="text-align: left;"><a href="#function-get_dim1"><strong>get_dim1</strong></a> () const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_dim2"><strong>get_dim2</strong></a> () const<br><em>Get second dimension size.</em></td>
+<td style="text-align: left;"><a href="#function-get_dim2"><strong>get_dim2</strong></a> () const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_dim3"><strong>get_dim3</strong></a> () const<br><em>Get third dimension size.</em></td>
+<td style="text-align: left;"><a href="#function-get_dim3"><strong>get_dim3</strong></a> () const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_i"><strong>get_i</strong></a> (const int idx) const<br><em>Get the index along the first dimension from an index calculated by calc_index.</em></td>
+<td style="text-align: left;"><a href="#function-get_i"><strong>get_i</strong></a> (const int idx) const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">std::tuple&lt; int, int, int &gt;</td>
-<td style="text-align: left;"><a href="#function-get_ijk"><strong>get_ijk</strong></a> (const int idx) <br><em>Get the i,j,k indices from a given index in the underlying 1D data (i.e., inverse of calc_index).</em></td>
+<td style="text-align: left;"><a href="#function-get_ijk"><strong>get_ijk</strong></a> (const int idx) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_j"><strong>get_j</strong></a> (const int idx) const<br><em>Get the index along the second dimension from an index calculated by calc_index.</em></td>
+<td style="text-align: left;"><a href="#function-get_j"><strong>get_j</strong></a> (const int idx) const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_k"><strong>get_k</strong></a> (const int idx) const<br><em>Get the index along the third dimension from an index calculated by calc_index.</em></td>
+<td style="text-align: left;"><a href="#function-get_k"><strong>get_k</strong></a> (const int idx) const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_size"><strong>get_size</strong></a> () const<br><em>Get size of underlying data.</em></td>
+<td style="text-align: left;"><a href="#function-get_size"><strong>get_size</strong></a> () const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-move_into_data"><strong>move_into_data</strong></a> (<a href="./"><strong>Vectors::Vector3D</strong></a>&lt; T &gt; &amp; vec) <br><em>Move the passed in vector to data.</em></td>
+<td style="text-align: left;"><a href="#function-move_into_data"><strong>move_into_data</strong></a> (<a href="./"><strong>Vectors::Vector3D</strong></a>&lt; T &gt; &amp; vec) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">T &amp;</td>
-<td style="text-align: left;"><a href="#function-operator"><strong>operator()</strong></a> (int i, int j, int k) <br><em>Overload parentheses to act as indexing.</em></td>
+<td style="text-align: left;"><a href="#function-operator"><strong>operator()</strong></a> (int i, int j, int k) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">const T &amp;</td>
-<td style="text-align: left;"><a href="#function-operator_1"><strong>operator()</strong></a> (const int i, const int j, const int k) const<br><em>Overload parentheses to act as indexing (for const objects).</em></td>
+<td style="text-align: left;"><a href="#function-operator_1"><strong>operator()</strong></a> (const int i, const int j, const int k) const<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-resize"><strong>resize</strong></a> (const int dim1, const int dim2, const int dim3) <br><em>Resize</em> <a href="./"><em><strong>Vector3D</strong></em></a> <em>to the passed in dimensions.</em></td>
+<td style="text-align: left;"><a href="#function-resize"><strong>resize</strong></a> (const int dim1, const int dim2, const int dim3) <br></td>
 </tr>
 </tbody>
 </table>
 <h2 id="detailed-description">Detailed Description</h2>
-<p>This class provides an intuitive interface to 3D data. A value at a particular index is accessed by indexing via the parentheses operator, e.g., vec(i,j,k). The underlying data is stored as a contiguous 1D vector. </p>
+<p>3D array of values, stored as a flattened 1D vector.</p>
+<p>A value is accessed with the parentheses operator, e.g., vec(i, j, k). The data is stored in row-major order (k varies fastest), so it can be copied straight to and from GPU arrays. See <a href="../vectors_8cpp/"><strong>vectors.cpp</strong></a> for the member function docs. </p>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
 <h3 id="function-vector3d-14">function Vector3D [1/4]</h3>
-<p><em>Default empty constructor.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">Vector3D</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Creates an empty <a href="./"><strong>Vector3D</strong></a> with all dimensions 0. </p>
 <hr>
 
 <h3 id="function-vector3d-24">function Vector3D [2/4]</h3>
-<p><em>Constructor to create an empty vector of indicated size.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">Vector3D</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim1</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim3</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Creates a <a href="./"><strong>Vector3D</strong></a> of the given shape, with every element value initialized (zero for numbers).</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>dim1</code> Size of the first dimension. </li>
+<li><code>dim2</code> Size of the second dimension. </li>
+<li><code>dim3</code> Size of the third dimension. </li>
+</ul>
 <hr>
 
 <h3 id="function-vector3d-34">function Vector3D [3/4]</h3>
-<p><em>Constructor to create vector and fill with data passed in.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">Vector3D</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">data_in</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim1</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim3</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Creates a <a href="./"><strong>Vector3D</strong></a> of the given shape, filled with data_in.</p>
+<p>The run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> if data_in doesn't have dim1 * dim2 * dim3 values, since indexing would then go out of bounds.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>data_in</code> Values in flattened (row-major) order. </li>
+<li><code>dim1</code> Size of the first dimension. </li>
+<li><code>dim2</code> Size of the second dimension. </li>
+<li><code>dim3</code> Size of the third dimension. </li>
+</ul>
 <hr>
 
 <h3 id="function-vector3d-44">function Vector3D [4/4]</h3>
-<p><em>Artificial constructor that should not be directly called.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">Vector3D</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">data_in</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim1</span><span class="p">,</span>
@@ -1545,152 +1559,157 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim3</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim4</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
-<p>Artificial constructor to allow us to compile read_gkyl::load_values. That function selectively returns a brace-enclosed initializer list for either a <a href="./"><strong>Vector3D</strong></a> or <a href="../classVectors_1_1Vector4D/"><strong>Vector4D</strong></a> based on the template parameter. The compiler nonetheless needs to see a constructor for <a href="./"><strong>Vector3D</strong></a> that accepts 5 inputs, since that is what <a href="../classVectors_1_1Vector4D/"><strong>Vector4D</strong></a> uses. This constructor should never get used. </p>
+</code></pre></div>
+<p>Artificial constructor that should never be called.</p>
+<p>It lets read_gkyl's load_values compile. That function returns a brace-enclosed initializer list for either a <a href="./"><strong>Vector3D</strong></a> or a <a href="../classVectors_1_1Vector4D/"><strong>Vector4D</strong></a> depending on its template parameter, so the compiler needs to see a <a href="./"><strong>Vector3D</strong></a> constructor that takes the 5 arguments a <a href="../classVectors_1_1Vector4D/"><strong>Vector4D</strong></a> uses. If it's ever called, the run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a>. </p>
 <hr>
 
 <h3 id="function-broadcast">function broadcast</h3>
-<p><em>Broadcast</em> <a href="./"><em><strong>Vector3D</strong></em></a> <em>to other processes.</em>
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">broadcast</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Broadcasts the vector from rank 0 to every other rank.</p>
+<p>Must be called by every rank in comm. The other ranks' dimensions and data are overwritten with rank 0's.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>comm</code> MPI communicator to broadcast over. </li>
+</ul>
 <hr>
 
 <h3 id="function-calc_index">function calc_index</h3>
-<p><em>Convert from 3D index to the 1D one used in the underlying m_data.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">calc_index</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">k</span>
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Converts a 3D index to the index into the flattened data.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code> Index along the first dimension. </li>
+<li><code>j</code> Index along the second dimension. </li>
+<li><code>k</code> Index along the third dimension. </li>
+</ul>
 <p><strong>Returns:</strong></p>
-<p>Returns the index used to index the underlying 1D data vector. </p>
+<p>Index into <a href="./#function-get_data-22"><strong>get_data()</strong></a>. </p>
 <hr>
 
 <h3 id="function-get_data-12">function get_data [1/2]</h3>
-<p><em>Get the 1D vector containing all the data (const)</em> 
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_data</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
-<p><strong>Returns:</strong></p>
-<p>Returns a 1D vector of underlying data type </p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-get_data-22">function get_data [2/2]</h3>
-<p><em>Get the 1D vector containing all the data (non-const)</em> 
 <div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_data</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
-</code></pre></div></p>
-<p><strong>Returns:</strong></p>
-<p>Returns a 1D vector of underlying data type </p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-get_dim1">function get_dim1</h3>
-<p><em>Get first dimension size.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_dim1</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
-<p><strong>Returns:</strong></p>
-<p>Returns dimension as an int </p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-get_dim2">function get_dim2</h3>
-<p><em>Get second dimension size.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_dim2</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
-<p><strong>Returns:</strong></p>
-<p>Returns dimension as an int </p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-get_dim3">function get_dim3</h3>
-<p><em>Get third dimension size.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_dim3</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
-<p><strong>Returns:</strong></p>
-<p>Returns dimension as an int </p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-get_i">function get_i</h3>
-<p><em>Get the index along the first dimension from an index calculated by calc_index.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_i</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span>
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-get_ijk">function get_ijk</h3>
-<p><em>Get the i,j,k indices from a given index in the underlying 1D data (i.e., inverse of calc_index).</em> 
 <div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_ijk</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Converts an index into the flattened data back to a 3D index. The inverse of calc_index.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>idx</code> Index into <a href="./#function-get_data-22"><strong>get_data()</strong></a>. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Tuple of the i, j and k indices. </p>
 <hr>
 
 <h3 id="function-get_j">function get_j</h3>
-<p><em>Get the index along the second dimension from an index calculated by calc_index.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_j</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span>
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-get_k">function get_k</h3>
-<p><em>Get the index along the third dimension from an index calculated by calc_index.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_k</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span>
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-get_size">function get_size</h3>
-<p><em>Get size of underlying data.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">get_size</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Returns the number of elements set when the vector was constructed.</p>
+<p>Not updated by resize or move_into_data, so it can be out of date after either. <a href="./#function-get_data-22"><strong>get_data()</strong></a>.size() is always correct.</p>
 <p><strong>Returns:</strong></p>
-<p>Returns size as an int </p>
+<p>Number of elements at construction. </p>
 <hr>
 
 <h3 id="function-move_into_data">function move_into_data</h3>
-<p><em>Move the passed in vector to data.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">move_into_data</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">vec</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
-<p>This uses move semantics. Hmmm... this is really some sort of abstraction of operator=... </p>
+</code></pre></div>
+<p>Moves the data and dimensions of vec into this vector, without copying the data.</p>
+<p>vec's data is left empty, but its dimensions aren't changed, so it shouldn't be used afterwards.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>vec</code> Vector to move from. </li>
+</ul>
 <hr>
 
 <h3 id="function-operator">function operator()</h3>
-<p><em>Overload parentheses to act as indexing.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">T</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="k">operator</span><span class="p">()</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">k</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
-<p><strong>Returns:</strong></p>
-<p>Returns reference to value represented by this index of indicated data type </p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-operator_1">function operator()</h3>
-<p><em>Overload parentheses to act as indexing (for const objects).</em> 
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="k">operator</span><span class="p">()</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">k</span>
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
-</code></pre></div></p>
-<p><strong>Returns:</strong></p>
-<p>Returns reference to value represented by this index of indicated data type </p>
+</code></pre></div>
 <hr>
 
 <h3 id="function-resize">function resize</h3>
-<p><em>Resize</em> <a href="./"><em><strong>Vector3D</strong></em></a> <em>to the passed in dimensions.</em>
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">Vector3D</span><span class="o">::</span><span class="n">resize</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim1</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim2</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim3</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
-<p>This is needed to add a layer of safety. One could resize m_data themselves, but then they would also need to set dim1, dim2 and dim3. This function takes care of that to prevent that accident. </p>
+</code></pre></div>
+<p>Resizes the vector to a new shape, updating the dimensions along with the data.</p>
+<p>Safer than resizing <a href="./#function-get_data-22"><strong>get_data()</strong></a> directly, since that wouldn't update the dimensions. The data is not rearranged, so existing values are only still in the right place if just dim1 changed.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>dim1</code> New size of the first dimension. </li>
+<li><code>dim2</code> New size of the second dimension. </li>
+<li><code>dim3</code> New size of the third dimension. </li>
+</ul>
 <hr>
 
 <hr />

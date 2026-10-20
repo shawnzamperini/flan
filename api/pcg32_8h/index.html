@@ -1155,6 +1155,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#macro-definition-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1201,6 +1212,7 @@
 
 <h1 id="file-pcg32h">File pcg32.h</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_d44c64559bbebec7f509842c48db8b23/"><strong>include</strong></a> <strong>&gt;</strong> <a href="./"><strong>pcg32.h</strong></a></p>
+<p><em>PCG32 random number generator that can be used in CPU and GPU code.</em> <a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;cmath&gt;</code></li>
 <li><code>#include &lt;cstdint&gt;</code></li>
@@ -1236,6 +1248,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>PCG32 (the XSH RR variant of M. E. O'Neill's PCG family) has 64 bits of state and returns 32-bit numbers. It's small, fast and doesn't use the standard library, so the same generator works on both the host and the device. On the CPU there is one generator per OpenMP thread, and on the GPU one per slot (see <a href="../init__rngs_8cu/"><strong>init_rngs.cu</strong></a>). Generators with the same seed but different seq values (streams) give independent sequences. </p>
 <h2 id="macro-definition-documentation">Macro Definition Documentation</h2>
 <h3 id="define-hd">define HD</h3>
 <div class="highlight"><pre><span></span><code><span class="cp">#define HD </span>

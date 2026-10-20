@@ -1406,6 +1406,14 @@
 </code></pre></div>
 <p>Any option you don't set uses the default value listed below. The options
 are grouped by what they control.</p>
+<div class="admonition note">
+<p class="admonition-title">Mistakes in options stop the run</p>
+<p>Flan stops with an error before the simulation starts if an option name
+isn't recognized (e.g., a typo), a value has the wrong type, or a string
+option has a value that isn't one of its valid values. The type must
+match the table exactly. For example, <code>inpts["imp_num"] = 1e4</code> is a
+double, so use <code>inpts["imp_num"] = 10000</code> for an int option.</p>
+</div>
 <h2 id="simulation">Simulation</h2>
 <table>
 <thead>
@@ -1432,8 +1440,8 @@ are grouped by what they control.</p>
 <tr>
 <td><code>seed</code></td>
 <td>int</td>
-<td><code>4</code></td>
-<td>Base seed for the random number generators. A negative value seeds them from the clock so each run is different. The MPI rank is added to the seed so each rank gets a different sequence.</td>
+<td><code>-1</code></td>
+<td>Base seed for the random number generators. A negative value (the default) seeds them from the clock so each run is different. Set it to 0 or above to make a run repeatable. The MPI rank is added to the seed so each rank gets a different sequence.</td>
 </tr>
 <tr>
 <td><code>slot_cap</code></td>
@@ -1482,7 +1490,7 @@ are grouped by what they control.</p>
 <td><code>min_ti</code></td>
 <td>float</td>
 <td><code>0.1</code></td>
-<td>Lower limit on the ion temperature (eV), applied when calculating collisions with the background ions.</td>
+<td>Lower limit on the ion temperature (eV), applied when calculating collisions with the background ions and when sampling starting velocities with <code>imp_temp_start_opt = "main_ion"</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -1693,6 +1701,14 @@ are grouped by what they control.</p>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Periodic boundaries must be periodic on both sides</p>
+<p>A periodic boundary wraps a particle around to the other side of the
+domain, so it only makes sense if both the minimum and maximum
+boundaries in that direction are periodic. If only one side of x, y or z
+is set to <code>"periodic"</code>, Flan prints a warning and sets both sides to
+<code>"periodic"</code>.</p>
+</div>
 <h2 id="impurity-properties">Impurity properties</h2>
 <table>
 <thead>

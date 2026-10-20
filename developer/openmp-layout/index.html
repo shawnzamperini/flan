@@ -843,6 +843,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenMP Layout
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -859,6 +877,91 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#threads-per-rank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threads per rank
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-main-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The main loop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#random-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random numbers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shared-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#things-to-know" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Things to know
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1142,6 +1245,80 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#threads-per-rank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threads per rank
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-main-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The main loop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#random-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random numbers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shared-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#things-to-know" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Things to know
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1158,7 +1335,152 @@
 
 
 <h1 id="openmp-layout">OpenMP Layout</h1>
-<p><em>This page is under construction.</em></p>
+<p>On the CPU, Flan follows the particles on each MPI rank in parallel with
+OpenMP threads. Each step of the main loop is a loop over the particle
+slots, and OpenMP splits that loop between the threads. This page describes
+how that's laid out, and how the few places where threads share something
+are handled. For running on several ranks, see
+<a href="../mpi-parallelism/">MPI Parallelism</a>. With GPUs on, the main loop runs on
+the GPUs instead and OpenMP only helps with setup.</p>
+<h2 id="threads-per-rank">Threads per rank</h2>
+<p>The number of threads is set with <code>OMP_NUM_THREADS</code>, the same for every
+rank:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">8</span><span class="w"> </span>./my_case<span class="w">                </span><span class="c1"># 1 rank, 8 threads</span>
+<span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">8</span><span class="w"> </span>mpiexec<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>./my_case<span class="w">   </span><span class="c1"># 4 ranks, 8 threads each</span>
+</code></pre></div>
+<p>Flan prints the number it's using at startup (<code>OMP Threads/Rank</code>). On a
+cluster, bind the threads to cores so they don't move around, e.g., with
+<code>OMP_PLACES=cores</code> and <code>OMP_PROC_BIND=spread</code> (see
+<a href="../../running/running-perlmutter/">Perlmutter</a>).</p>
+<h2 id="the-main-loop">The main loop</h2>
+<p>Every CPU version of a main loop step (<code>*_cpu</code>, see
+<a href="../code-structure/#the-main-loop">Code Structure</a>) has the same shape: a
+loop over the slots, split between the threads, that skips dead slots and
+updates each alive particle on its own:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#pragma omp parallel for</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">N</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="c1">// Skip dead particles</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">slots</span><span class="p">.</span><span class="n">state</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Update particle i</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The particles don't interact with each other, so each thread only ever reads
+and writes its own slots, and no locking is needed. The default <code>static</code>
+schedule splits the slots into one contiguous block per thread, which keeps
+each thread's memory accesses together. The slots are stored as a structure
+of arrays (one array per quantity), so a thread walks through each array in
+order.</p>
+<p>The parallel region starts and ends inside each step, so the threads wait
+for each other at the end of every step before the next one starts. The
+steps run in a fixed order and each depends on the one before (e.g., the
+Boris push needs the cells found in the previous step), so this is needed.</p>
+<h2 id="random-numbers">Random numbers</h2>
+<p>Collisions, ionization/recombination, the core boundary condition and
+launching new particles all need random numbers. Each thread has its own
+PCG32 generator, so threads never share one:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#pragma omp parallel</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="c1">// Grab our RNG for this thread, each thread has its own (and they're</span>
+<span class="w">    </span><span class="c1">// seeded uniquely).</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">omp_get_thread_num</span><span class="p">();</span>
+<span class="w">    </span><span class="n">pcg32</span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rngs</span><span class="p">[</span><span class="n">tid</span><span class="p">];</span>
+
+<span class="w">    </span><span class="cp">#pragma omp for</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">N</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="p">...</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>follow_impurities</code> creates one generator per thread before the main loop
+(<code>omp_get_max_threads()</code> of them). They all use the same seed (<code>seed</code> plus
+the MPI rank) but a different stream (the thread number), which gives every
+thread its own independent sequence. Using <code>#pragma omp parallel</code> and then
+<code>#pragma omp for</code>, instead of <code>#pragma omp parallel for</code>, is what lets each
+thread look up its generator once, before the loop starts.</p>
+<h2 id="shared-results">Shared results</h2>
+<p>A few things are added up across all the particles. These are the only
+places threads write to the same memory.</p>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Statistics (counts, weights, velocities, charge, <code>s</code>)</td>
+<td><code>Impurity::record_stats_cpu</code></td>
+<td><code>#pragma omp atomic update</code> on each add</td>
+</tr>
+<tr>
+<td>Ionization/recombination probability &gt; 1 warnings</td>
+<td><code>OpenADAS::ioniz_recomb</code></td>
+<td><code>reduction(+:...)</code></td>
+</tr>
+<tr>
+<td>Particles past <code>imp_max_time</code></td>
+<td><code>step_cpu</code></td>
+<td><code>#pragma omp atomic</code></td>
+</tr>
+<tr>
+<td>Dead slots</td>
+<td><code>Slots::fill_slots_cpu</code></td>
+<td><code>reduction(+:dead_count)</code></td>
+</tr>
+<tr>
+<td>Slots claimed for new particles</td>
+<td><code>Slots::fill_slots_cpu</code></td>
+<td><code>#pragma omp atomic capture</code></td>
+</tr>
+<tr>
+<td>Error messages (e.g., <code>s = nan</code>)</td>
+<td><code>Collisions::nanbu_coll</code></td>
+<td><code>#pragma omp critical</code> around the printing</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Statistics.</strong> Many particles can be in the same cell, so each add to the
+statistics arrays is atomic. Atomics are cheap when threads rarely add to the
+same cell at the same time, which is the usual case since there are many more
+cells than threads. The commented-out <em>buffered</em> version in
+<code>impurity_stats.cpp</code> gives each thread its own copy of the arrays and adds
+them up at the end instead. It was slower in testing, but could win when
+there are far more particles than cells.</p>
+<p><strong>Filling slots.</strong> <code>fill_slots_cpu</code> first counts the dead slots, and decides
+how many to revive (all of them, or the number of particles left to launch,
+whichever is smaller). Then each thread claims dead slots by incrementing a
+shared counter with <code>atomic capture</code>, and stops reviving once the counter
+reaches that number. That way exactly the right number of particles is
+launched, without a lock.</p>
+<h2 id="setup">Setup</h2>
+<p>OpenMP is also used outside the main loop, mostly in reading the background:
+converting and checking the Gkeyll data in <code>read_gkyl.cpp</code>, filling the test
+backgrounds in <code>read_test.cpp</code>, and calculating the derived quantities in
+<code>impurity_stats.cpp</code>. These are simple <code>parallel for</code> loops over grid cells.</p>
+<h2 id="things-to-know">Things to know</h2>
+<ul>
+<li><strong>No MPI inside parallel regions.</strong> Flan calls <code>MPI_Init</code>, not
+  <code>MPI_Init_thread</code>, so MPI may only be called from outside OpenMP parallel
+  regions. This is also why the <code>nan</code> checks in the collisions only print a
+  warning instead of calling <code>Errors::fatal_error</code>, which calls <code>MPI_Abort</code>.</li>
+<li><strong>Reproducibility.</strong> With a fixed <code>seed</code>, a run isn't exactly repeatable
+  with threads. Which thread (and so which random number sequence) handles
+  which particle depends on the number of threads, which slots get new
+  particles depends on the order threads reach the shared counter, and the
+  atomic adds to the statistics happen in a different order each run, which
+  changes the last few digits. The results are statistically the same. For a
+  repeatable run, use one thread and one rank.</li>
+<li><strong>Adding a step.</strong> A new CPU step should follow the same pattern: a
+  <code>parallel for</code> over the slots that skips dead ones, the thread's own
+  generator if it needs random numbers, and an atomic, reduction or critical
+  section for anything shared between particles.</li>
+</ul>
 
 
 

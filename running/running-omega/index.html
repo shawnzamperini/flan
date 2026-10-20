@@ -540,6 +540,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Omega
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -556,6 +574,58 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installing-on-omega" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing on Omega
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#job-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Job script
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submitting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submitting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1142,6 +1212,47 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installing-on-omega" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing on Omega
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#job-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Job script
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submitting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submitting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1158,7 +1269,66 @@
 
 
 <h1 id="running-on-omega">Running on Omega</h1>
-<p><em>This page is under construction.</em></p>
+<p>Omega is General Atomics' cluster. Flan runs on Omega's CPU nodes, set up and
+compiled the same as on any Linux machine, with a few differences.</p>
+<h2 id="installing-on-omega">Installing on Omega</h2>
+<p>Follow the <a href="../../installation/install-linux/">Linux</a> instructions, but build
+the dependencies with the Omega script:</p>
+<div class="highlight"><pre><span></span><code>machines/mkdeps.omega.sh
+</code></pre></div>
+<p>It puts the dependencies in <code>/fusion/projects/codes/flan/$USER/flansoft</code>
+instead of your home directory, and it creates the <code>flan</code> environment with
+<strong>mamba</strong> instead of conda, since Omega prefers mamba. Activate it with:</p>
+<div class="highlight"><pre><span></span><code>mamba<span class="w"> </span>activate<span class="w"> </span>flan
+</code></pre></div>
+<p>Omega has several compiler modules, and others loaded can get in the way.
+Load GCC 13 before building, the same as in the job script below:</p>
+<div class="highlight"><pre><span></span><code>module<span class="w"> </span>purge
+module<span class="w"> </span>load<span class="w"> </span>gcc/13.x
+</code></pre></div>
+<h2 id="job-script">Job script</h2>
+<p>Compile the case on a login node (see <a href="../running-flan/">Running Flan</a>), then
+submit the run as a Slurm job. This script runs one MPI rank with 16 OpenMP
+threads:</p>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash -l</span>
+<span class="c1">#SBATCH --job-name=my_case</span>
+<span class="c1">#SBATCH --export=ALL</span>
+<span class="c1">#SBATCH --nodes=1</span>
+<span class="c1">#SBATCH --ntasks=1</span>
+<span class="c1">#SBATCH --cpus-per-task=16</span>
+<span class="c1">#SBATCH --mem-per-cpu=15G</span>
+<span class="c1">#SBATCH --partition=short</span>
+<span class="c1">#SBATCH --time=00:30:00</span>
+
+<span class="c1"># Other modules get in the way, purge them</span>
+module<span class="w"> </span>purge
+module<span class="w"> </span>load<span class="w"> </span>gcc/13.x
+
+<span class="c1"># The flan environment is needed on the compute node too</span>
+<span class="nb">eval</span><span class="w"> </span><span class="s2">"</span><span class="k">$(</span>mamba<span class="w"> </span>shell<span class="w"> </span>hook<span class="w"> </span>--shell<span class="w"> </span>bash<span class="k">)</span><span class="s2">"</span>
+mamba<span class="w"> </span>activate<span class="w"> </span>flan
+
+<span class="nb">export</span><span class="w"> </span><span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="nv">$SLURM_CPUS_PER_TASK</span>
+
+./my_case
+
+<span class="c1"># Copy the results and the saved background files to the results area</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">RESULTSDIR</span><span class="o">=</span><span class="s2">"/fusion/projects/results/flan/</span><span class="nv">$USER</span><span class="s2">/my_case"</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$RESULTSDIR</span>
+cp<span class="w"> </span>bkg*<span class="w"> </span><span class="nv">$RESULTSDIR</span>
+cp<span class="w"> </span>*.nc<span class="w"> </span><span class="nv">$RESULTSDIR</span>
+</code></pre></div>
+<p>Change <code>my_case</code> to your case name. The last few lines copy the results
+(<code>&lt;case_name&gt;.nc</code>) and the saved Gkeyll background files to Omega's results
+area, which is where results are meant to be kept.</p>
+<h2 id="submitting">Submitting</h2>
+<p>If the script is saved as <code>submit.sh</code>:</p>
+<div class="highlight"><pre><span></span><code>sbatch<span class="w"> </span>submit.sh<span class="w">        </span><span class="c1"># Submit the job</span>
+squeue<span class="w"> </span>-u<span class="w"> </span><span class="nv">$USER</span><span class="w">         </span><span class="c1"># Check on it</span>
+</code></pre></div>
+<p>Flan's output goes to <code>slurm-&lt;jobid&gt;.out</code> in the directory the job was
+submitted from.</p>
+<p>See <a href="../running-flan/#troubleshooting">Running Flan</a> for troubleshooting.</p>
 
 
 

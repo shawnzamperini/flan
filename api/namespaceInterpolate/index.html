@@ -1264,7 +1264,7 @@
 </tr>
 <tr>
 <td style="text-align: right;"><a href="../structInterpolate_1_1InterpolationStencil/"><strong>InterpolationStencil</strong></a></td>
-<td style="text-align: left;"><a href="#function-build_stencil_4d"><strong>build_stencil_4d</strong></a> (const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, int tidx, int xidx, int yidx, int zidx, const double x, const double y, const double z) <br></td>
+<td style="text-align: left;"><a href="#function-build_stencil_4d"><strong>build_stencil_4d</strong></a> (const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, int tidx, int xidx, int yidx, int zidx, const double t, const double x, const double y, const double z) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
@@ -1288,6 +1288,20 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Builds the stencil used to interpolate a 3D (x, y, z) field, such as the basis vectors, at a point.</p>
+<p>For each direction, get_neighbor_index_cuda picks the neighboring cell on the same side of the containing cell's center as the point (or the only neighbor at a grid edge). The 8 corner indices are then flattened with calc_3d_index_cuda, and the box origin and size are taken from the cell center coordinates in <a href="../device__constants_8cuh/"><strong>device_constants.cuh</strong></a>.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device, used for the grid dimensions. </li>
+<li><code>xidx</code> x index of the grid cell containing the point. </li>
+<li><code>yidx</code> y index of the grid cell containing the point. </li>
+<li><code>zidx</code> z index of the grid cell containing the point. </li>
+<li><code>x</code> Computational x coordinate of the point. </li>
+<li><code>y</code> Computational y coordinate of the point. </li>
+<li><code>z</code> Computational z coordinate of the point. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Stencil for interpolate_field_3d. The time members are unset. </p>
 <hr>
 
 <h3 id="function-build_stencil_4d">function build_stencil_4d</h3>
@@ -1297,11 +1311,28 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">xidx</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">yidx</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">t</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">y</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Builds the stencil used to interpolate a 4D (t, x, y, z) field, such as E, B, ne or Te, at a point.</p>
+<p>The neighbors are picked the same way as in build_stencil_3d, including in time: the neighboring frame is the one on the same side of frame tidx as t (or the only neighbor at the first or last frame), so t is bounded by the two frames. The 8 corner indices are flattened with calc_4d_index_cuda at both tidx (idx0) and tidx_neighbor (idx1).</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device, used for the grid dimensions. </li>
+<li><code>tidx</code> Index of the nearest background time frame. </li>
+<li><code>xidx</code> x index of the grid cell containing the point. </li>
+<li><code>yidx</code> y index of the grid cell containing the point. </li>
+<li><code>zidx</code> z index of the grid cell containing the point. </li>
+<li><code>t</code> Time of the point (s). </li>
+<li><code>x</code> Computational x coordinate of the point. </li>
+<li><code>y</code> Computational y coordinate of the point. </li>
+<li><code>z</code> Computational z coordinate of the point. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Stencil for interpolate_field_4d. </p>
 <hr>
 
 <h3 id="function-interpolate_field_3d">function interpolate_field_3d</h3>
@@ -1313,6 +1344,18 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Trilinearly interpolates a 3D field at (x, y, z).</p>
+<p>The field values at the 8 stencil corners are passed to trilinear_interpolate, which clamps the weights to [0, 1], so there is no extrapolation past the box of cell centers.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>field</code> Flattened 3D field on the device. </li>
+<li><code>s</code> Stencil from build_stencil_3d, built at this point. </li>
+<li><code>x</code> Computational x coordinate of the point. </li>
+<li><code>y</code> Computational y coordinate of the point. </li>
+<li><code>z</code> Computational z coordinate of the point. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated field value. </p>
 <hr>
 
 <h3 id="function-interpolate_field_4d">function interpolate_field_4d</h3>
@@ -1325,10 +1368,23 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">z</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Interpolates a 4D field at (t, x, y, z), trilinear in space and linear in time.</p>
+<p>The field is trilinearly interpolated at frames tidx and tidx_neighbor as in interpolate_field_3d, and the two values are then linearly interpolated to t. Unlike the spatial weights, the time weight (t - t0) / frame_dt is not clamped. It is in [0, 1] except before the first frame or after the last one, where the result is extrapolated.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>field</code> Flattened 4D field on the device. </li>
+<li><code>s</code> Stencil from build_stencil_4d, built at this point. </li>
+<li><code>t</code> Time of the point (s). </li>
+<li><code>x</code> Computational x coordinate of the point. </li>
+<li><code>y</code> Computational y coordinate of the point. </li>
+<li><code>z</code> Computational z coordinate of the point. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated field value. </p>
 <hr>
 
 <hr />
-<p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/cuda/interpolate.cu</code></p>
+<p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/include/cuda/interpolate.cuh</code></p>
 
 
 

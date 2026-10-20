@@ -1176,8 +1176,12 @@
 <p><em>Implementations of multidimensional vectors.</em> <a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;algorithm&gt;</code></li>
+<li><code>#include &lt;iomanip&gt;</code></li>
+<li><code>#include &lt;sstream&gt;</code></li>
+<li><code>#include &lt;string&gt;</code></li>
 <li><code>#include &lt;tuple&gt;</code></li>
 <li><code>#include &lt;vector&gt;</code></li>
+<li><code>#include "errors.h"</code></li>
 <li><code>#include "mpi.h"</code></li>
 <li><code>#include "utilities.h"</code></li>
 <li><code>#include "vectors.h"</code></li>
@@ -1198,8 +1202,8 @@
 </tbody>
 </table>
 <h2 id="detailed-description">Detailed Description</h2>
-<p>This file contains some simple implementations of multidimensional vectors. Instead of storing them as actual multidimensional vectors, they are stored as flatten vectors and then () is overloaded to act as indexing.</p>
-<p>The bottom of this file includes instatiations of Vector3D and Vector4D for the different types needed (e.g., int, double, ...). This is a pecularity needed when splitting the declarations and definitions between a header and source file, needed so the linker can find the classes for each template type. </p>
+<p>This file contains some simple implementations of multidimensional vectors. Instead of storing them as actual multidimensional vectors, they are stored as flattened vectors and then () is overloaded to act as indexing. The last index varies fastest (row-major order), the same as the flattened arrays used on the GPU (see calc_3d_index_cuda and calc_4d_index_cuda).</p>
+<p>The bottom of this file includes instantiations of Vector3D and Vector4D for the different types needed (e.g., int, double, ...). This is a peculiarity needed when splitting the declarations and definitions between a header and source file, needed so the linker can find the classes for each template type. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/vectors.cpp</code></p>
 

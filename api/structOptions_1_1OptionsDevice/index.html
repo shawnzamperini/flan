@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1171,6 +1182,17 @@
     <span class="md-ellipsis">
       
         variable imp_mass_amu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variable-imp_max_time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        variable imp_max_time
       
     </span>
   </a>
@@ -1498,6 +1520,7 @@
 
 <h1 id="struct-optionsoptionsdevice">Struct Options::OptionsDevice</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceOptions/"><strong>Options</strong></a> <strong>&gt;</strong> <a href="./"><strong>OptionsDevice</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;options_device.h&gt;</code></li>
 </ul>
@@ -1512,18 +1535,22 @@
 <tbody>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-bkg_source_int"><strong>bkg_source_int</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-bkg_source_int"><strong>bkg_source_int</strong></a>  <br><em>bkg_source: 0 test, 1 gkeyll</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-imp_mass_amu"><strong>imp_mass_amu</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-imp_mass_amu"><strong>imp_mass_amu</strong></a>  <br><a href="../namespaceImpurity/"><em><strong>Impurity</strong></em></a> <em>mass (amu)</em></td>
+</tr>
+<tr>
+<td style="text-align: right;">double</td>
+<td style="text-align: left;"><a href="#variable-imp_max_time"><strong>imp_max_time</strong></a>  <br><em>Maximum time a particle is followed (s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-imp_num"><strong>imp_num</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-imp_num"><strong>imp_num</strong></a>  <br><em>Number of impurities to follow.</em></td>
 </tr>
 <tr>
-<td style="text-align: right;">double</td>
+<td style="text-align: right;">int</td>
 <td style="text-align: left;"><a href="#variable-imp_temp_start_opt_int"><strong>imp_temp_start_opt_int</strong></a>  <br></td>
 </tr>
 <tr>
@@ -1532,7 +1559,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-init_charge"><strong>init_charge</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-init_charge"><strong>init_charge</strong></a>  <br><em>Charge state particles are launched with.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
@@ -1548,15 +1575,15 @@
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-min_ne"><strong>min_ne</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-min_ne"><strong>min_ne</strong></a>  <br><em>Minimum electron density (m^-3)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-min_te"><strong>min_te</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-min_te"><strong>min_te</strong></a>  <br><em>Minimum electron temperature (eV)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-min_ti"><strong>min_ti</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-min_ti"><strong>min_ti</strong></a>  <br><em>Minimum ion temperature (eV)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
@@ -1564,214 +1591,252 @@
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-trange_max"><strong>trange_max</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-trange_max"><strong>trange_max</strong></a>  <br><em>imp_trange_max (s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-trange_min"><strong>trange_min</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-trange_min"><strong>trange_min</strong></a>  <br><em>imp_trange_min (s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-tstart_opt_int"><strong>tstart_opt_int</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-tstart_opt_int"><strong>tstart_opt_int</strong></a>  <br><em>imp_tstart_opt</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-tstart_val"><strong>tstart_val</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-tstart_val"><strong>tstart_val</strong></a>  <br><em>imp_tstart_val (s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-xrange_max"><strong>xrange_max</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-xrange_max"><strong>xrange_max</strong></a>  <br><em>imp_xrange_max</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-xrange_min"><strong>xrange_min</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-xrange_min"><strong>xrange_min</strong></a>  <br><em>imp_xrange_min</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-xstart_opt_int"><strong>xstart_opt_int</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-xstart_opt_int"><strong>xstart_opt_int</strong></a>  <br><em>imp_xstart_opt</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-xstart_val"><strong>xstart_val</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-xstart_val"><strong>xstart_val</strong></a>  <br><em>imp_xstart_val</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-yrange_max"><strong>yrange_max</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-yrange_max"><strong>yrange_max</strong></a>  <br><em>imp_yrange_max</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-yrange_min"><strong>yrange_min</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-yrange_min"><strong>yrange_min</strong></a>  <br><em>imp_yrange_min</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-ystart_opt_int"><strong>ystart_opt_int</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-ystart_opt_int"><strong>ystart_opt_int</strong></a>  <br><em>imp_ystart_opt</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-ystart_val"><strong>ystart_val</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-ystart_val"><strong>ystart_val</strong></a>  <br><em>imp_ystart_val</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-zrange_max"><strong>zrange_max</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-zrange_max"><strong>zrange_max</strong></a>  <br><em>imp_zrange_max</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-zrange_min"><strong>zrange_min</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-zrange_min"><strong>zrange_min</strong></a>  <br><em>imp_zrange_min</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-zstart_opt_int"><strong>zstart_opt_int</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-zstart_opt_int"><strong>zstart_opt_int</strong></a>  <br><em>imp_zstart_opt</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
-<td style="text-align: left;"><a href="#variable-zstart_val"><strong>zstart_val</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-zstart_val"><strong>zstart_val</strong></a>  <br><em>imp_zstart_val</em></td>
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Device-side copy of the options that kernels need, made by <a href="../classOptions_1_1Options/#function-to_device"><strong>Options::to_device</strong></a> and freed with free_opts.</p>
+<p>Only a subset of the options is here. Kernels take a pointer to a single copy in GPU memory (opts_d). A field added here must also be set in <a href="../classOptions_1_1Options/#function-to_device"><strong>Options::to_device</strong></a>. The *_opt_int fields are the integer versions of string options, set by the matching <a href="../classOptions_1_1Options/"><strong>Options</strong></a> setters. </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-bkg_source_int">variable bkg_source_int</h3>
+<p><em>bkg_source: 0 test, 1 gkeyll</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">bkg_source_int</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-imp_mass_amu">variable imp_mass_amu</h3>
+<p><a href="../namespaceImpurity/"><em><strong>Impurity</strong></em></a> <em>mass (amu)</em>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">imp_mass_amu</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
+<hr>
+
+<h3 id="variable-imp_max_time">variable imp_max_time</h3>
+<p><em>Maximum time a particle is followed (s)</em> 
+<div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">imp_max_time</span><span class="p">;</span>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-imp_num">variable imp_num</h3>
+<p><em>Number of impurities to follow.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">imp_num</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-imp_temp_start_opt_int">variable imp_temp_start_opt_int</h3>
-<div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">imp_temp_start_opt_int</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">imp_temp_start_opt_int</span><span class="p">;</span>
 </code></pre></div>
+<p>imp_temp_start_opt: 0 single_value, 1 main_ion </p>
 <hr>
 
 <h3 id="variable-imp_temp_start_val">variable imp_temp_start_val</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">imp_temp_start_val</span><span class="p">;</span>
 </code></pre></div>
+<p>Starting temperature for single_value (eV) </p>
 <hr>
 
 <h3 id="variable-init_charge">variable init_charge</h3>
+<p><em>Charge state particles are launched with.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">init_charge</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-lcfs_x">variable lcfs_x</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">lcfs_x</span><span class="p">;</span>
 </code></pre></div>
+<p>x coordinate of the last closed flux surface </p>
 <hr>
 
 <h3 id="variable-lcfs_y">variable lcfs_y</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">lcfs_y</span><span class="p">;</span>
 </code></pre></div>
+<p>y coordinate of the last closed flux surface </p>
 <hr>
 
 <h3 id="variable-lcfs_z">variable lcfs_z</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">lcfs_z</span><span class="p">;</span>
 </code></pre></div>
+<p>z coordinate of the last closed flux surface </p>
 <hr>
 
 <h3 id="variable-min_ne">variable min_ne</h3>
+<p><em>Minimum electron density (m^-3)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">min_ne</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-min_te">variable min_te</h3>
+<p><em>Minimum electron temperature (eV)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">min_te</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-min_ti">variable min_ti</h3>
+<p><em>Minimum ion temperature (eV)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">min_ti</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-test_opt_int">variable test_opt_int</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">test_opt_int</span><span class="p">;</span>
 </code></pre></div>
+<p>test_opt: 0 gyrate, 1 exb, 2 gradb, 3 polarization, 4 curvature, 5 friction_force </p>
 <hr>
 
 <h3 id="variable-trange_max">variable trange_max</h3>
+<p><em>imp_trange_max (s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">trange_max</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-trange_min">variable trange_min</h3>
+<p><em>imp_trange_min (s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">trange_min</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-tstart_opt_int">variable tstart_opt_int</h3>
+<p><em>imp_tstart_opt</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">tstart_opt_int</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-tstart_val">variable tstart_val</h3>
+<p><em>imp_tstart_val (s)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">tstart_val</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-xrange_max">variable xrange_max</h3>
+<p><em>imp_xrange_max</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">xrange_max</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-xrange_min">variable xrange_min</h3>
+<p><em>imp_xrange_min</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">xrange_min</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-xstart_opt_int">variable xstart_opt_int</h3>
+<p><em>imp_xstart_opt</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">xstart_opt_int</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-xstart_val">variable xstart_val</h3>
+<p><em>imp_xstart_val</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">xstart_val</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-yrange_max">variable yrange_max</h3>
+<p><em>imp_yrange_max</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">yrange_max</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-yrange_min">variable yrange_min</h3>
+<p><em>imp_yrange_min</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">yrange_min</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-ystart_opt_int">variable ystart_opt_int</h3>
+<p><em>imp_ystart_opt</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">ystart_opt_int</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-ystart_val">variable ystart_val</h3>
+<p><em>imp_ystart_val</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">ystart_val</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-zrange_max">variable zrange_max</h3>
+<p><em>imp_zrange_max</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">zrange_max</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-zrange_min">variable zrange_min</h3>
+<p><em>imp_zrange_min</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">zrange_min</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-zstart_opt_int">variable zstart_opt_int</h3>
+<p><em>imp_zstart_opt</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">zstart_opt_int</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-zstart_val">variable zstart_val</h3>
+<p><em>imp_zstart_val</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="o">::</span><span class="n">zstart_val</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <hr />

@@ -1277,43 +1277,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#function-get_nearest_cell_index_hd" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        function get_nearest_cell_index_hd
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#function-get_nearest_index_gpu" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        function get_nearest_index_gpu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#function-gpu_worker" class="md-nav__link">
     <span class="md-ellipsis">
       
         function gpu_worker
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#function-init_slot_rngs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        function init_slot_rngs
       
     </span>
   </a>
@@ -1497,20 +1464,8 @@
 <td style="text-align: left;"><a href="#function-follow_impurities"><strong>follow_impurities</strong></a> (<a href="../classBackground_1_1Background/"><strong>Background::Background</strong></a> &amp; bkg, <a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a> &amp; opts, <a href="../classTimer_1_1Timer/"><strong>Timer::Timer</strong></a> &amp; timer) <br></td>
 </tr>
 <tr>
-<td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_nearest_cell_index_hd"><strong>get_nearest_cell_index_hd</strong></a> (const T * grid_edges, int N, T value) <br></td>
-</tr>
-<tr>
-<td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_nearest_index_gpu"><strong>get_nearest_index_gpu</strong></a> (const T * vec, int N, T value) <br></td>
-</tr>
-<tr>
 <td style="text-align: right;">void</td>
 <td style="text-align: left;"><a href="#function-gpu_worker"><strong>gpu_worker</strong></a> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a> &amp; slots, <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const <a href="../classBackground_1_1Background/"><strong>Background::Background</strong></a> &amp; bkg, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, <a href="../classImpurity_1_1Statistics/"><strong>Impurity::Statistics</strong></a> &amp; imp_stats, <a href="../structImpurityStats_1_1StatisticsDevice/"><strong>ImpurityStats::StatisticsDevice</strong></a> &amp; imp_stats_d, const <a href="../classOpenADAS_1_1OpenADAS/"><strong>OpenADAS::OpenADAS</strong></a> &amp; oa_ioniz, const <a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADAS::OpenADASDevice</strong></a> &amp; oa_ioniz_d, const <a href="../classOpenADAS_1_1OpenADAS/"><strong>OpenADAS::OpenADAS</strong></a> &amp; oa_recomb, const <a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADAS::OpenADASDevice</strong></a> &amp; oa_recomb_d, <a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a> &amp; opts, <a href="../classTimer_1_1Timer/"><strong>Timer::Timer</strong></a> &amp; timer, int &amp; ioniz_warnings, int &amp; recomb_warnings, const <a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>OpenADAS::IonizRecombWarningsDevice</strong></a> &amp; warnings_d, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d, <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d, int &amp; max_time_ctr) <br></td>
-</tr>
-<tr>
-<td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-init_slot_rngs"><strong>init_slot_rngs</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const unsigned long long seed) <br><em>Wrapper to call init_rng_kernel, which initializes the RNG for each slot on the device.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1538,15 +1493,15 @@
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-step_gpu"><strong>step_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const double dt) <br><em>Wrapper to call step_kernel, which performs a particle step over time dt.</em></td>
+<td style="text-align: left;"><a href="#function-step_gpu"><strong>step_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const double dt, const <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d, int * max_time_ctr_d) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-step_kernel"><strong>step_kernel</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> slots_d, const double dt) <br></td>
+<td style="text-align: left;"><a href="#function-step_kernel"><strong>step_kernel</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> slots_d, const double dt, const <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d, int * max_time_ctr_d) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-step_wrapper"><strong>step_wrapper</strong></a> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a> &amp; slots, <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const <a href="../classBackground_1_1Background/"><strong>Background::Background</strong></a> &amp; bkg, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, const <a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a> &amp; opts, int &amp; max_time_ctr) <br></td>
+<td style="text-align: left;"><a href="#function-step_wrapper"><strong>step_wrapper</strong></a> (<a href="../classSlots_1_1Slots/"><strong>Slots::Slots</strong></a> &amp; slots, <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const <a href="../classBackground_1_1Background/"><strong>Background::Background</strong></a> &amp; bkg, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, const <a href="../classOptions_1_1Options/"><strong>Options::Options</strong></a> &amp; opts, const <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d, const <a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>OpenADAS::IonizRecombWarningsDevice</strong></a> &amp; warnings_d, int &amp; max_time_ctr) <br></td>
 </tr>
 </tbody>
 </table>
@@ -1728,6 +1683,13 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Launches find_containing_cell_kernel to update the time and cell indices of every alive particle on the GPU.</p>
+<p>GPU version of find_containing_cell_cpu. Uses blocks of 256 threads, one thread per slot. The launch is asynchronous, except in DEBUG builds, where it waits for the kernel to finish and prints any error.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. tidx, xidx, yidx and zidx are updated. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+</ul>
 <hr>
 
 <h3 id="function-find_containing_cell_kernel">function find_containing_cell_kernel</h3>
@@ -1736,6 +1698,13 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="n">bkg_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that finds the background time index and grid cell of each alive particle, one thread per slot.</p>
+<p>The time index is the nearest background time frame, and the x, y and z indices are the cells containing the particle (see <a href="../indices_8cuh/"><strong>indices.cuh</strong></a>). Dead slots are skipped.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. tidx, xidx, yidx and zidx are updated. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device, used for the grid dimensions. </li>
+</ul>
 <hr>
 
 <h3 id="function-find_containing_cell_wrapper">function find_containing_cell_wrapper</h3>
@@ -1778,26 +1747,6 @@
 </ul>
 <p><strong>Returns:</strong></p>
 <p><a href="../namespaceImpurity/"><strong>Impurity</strong></a> statistics accumulated from every particle followed on this rank. </p>
-<hr>
-
-<h3 id="function-get_nearest_cell_index_hd">function get_nearest_cell_index_hd</h3>
-<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
-<span class="kt">int</span><span class="w"> </span><span class="n">ImpurityTransport</span><span class="o">::</span><span class="n">get_nearest_cell_index_hd</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">grid_edges</span><span class="p">,</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">,</span>
-<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">value</span>
-<span class="p">)</span><span class="w"> </span>
-</code></pre></div>
-<hr>
-
-<h3 id="function-get_nearest_index_gpu">function get_nearest_index_gpu</h3>
-<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
-<span class="kt">int</span><span class="w"> </span><span class="n">ImpurityTransport</span><span class="o">::</span><span class="n">get_nearest_index_gpu</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">vec</span><span class="p">,</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">,</span>
-<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">value</span>
-<span class="p">)</span><span class="w"> </span>
-</code></pre></div>
 <hr>
 
 <h3 id="function-gpu_worker">function gpu_worker</h3>
@@ -1845,15 +1794,6 @@
 <li><code>opts_d</code> Device-side simulation options for this GPU. </li>
 <li><code>max_time_ctr</code> Counter of particles that exceeded the maximum allowed time. </li>
 </ul>
-<hr>
-
-<h3 id="function-init_slot_rngs">function init_slot_rngs</h3>
-<p><em>Wrapper to call init_rng_kernel, which initializes the RNG for each slot on the device.</em> 
-<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">ImpurityTransport</span><span class="o">::</span><span class="n">init_slot_rngs</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">seed</span>
-<span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
 <hr>
 
 <h3 id="function-ioniz_recomb_cpu">function ioniz_recomb_cpu</h3>
@@ -2048,20 +1988,41 @@
 <hr>
 
 <h3 id="function-step_gpu">function step_gpu</h3>
-<p><em>Wrapper to call step_kernel, which performs a particle step over time dt.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">ImpurityTransport</span><span class="o">::</span><span class="n">step_gpu</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">max_time_ctr_d</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Launches step_kernel to advance every alive particle on the GPU by one time step.</p>
+<p>GPU version of step_cpu. Uses blocks of 256 threads, one thread per slot. The launch is asynchronous, except in DEBUG builds, where it waits for the kernel to finish and prints any error.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. </li>
+<li><code>dt</code> Time step (s). </li>
+<li><code>opts_d</code> Simulation options on the device, used for imp_max_time. </li>
+<li><code>max_time_ctr_d</code> Device counter of particles killed for exceeding imp_max_time, e.g. the max_time member of <a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>OpenADAS::IonizRecombWarningsDevice</strong></a>. </li>
+</ul>
 <hr>
 
 <h3 id="function-step_kernel">function step_kernel</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">ImpurityTransport</span><span class="o">::</span><span class="n">step_kernel</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">max_time_ctr_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that advances each alive particle by one time step, one thread per slot.</p>
+<p>The time since launch pt and the background time t are increased by dt, and x, y and z are moved by the computational velocity (vx, vy, vz) times dt. If pt is then past the imp_max_time option, the particle is killed and counted in max_time_ctr_d. Dead slots are skipped. Unlike step_cpu, the iteration count isn't updated.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. pt, t, x, y and z are updated, and state is set to dead for particles past imp_max_time. </li>
+<li><code>dt</code> Time step (s). </li>
+<li><code>opts_d</code> Simulation options on the device, used for imp_max_time. </li>
+<li><code>max_time_ctr_d</code> Device counter of particles killed for exceeding imp_max_time. Incremented atomically. </li>
+</ul>
 <hr>
 
 <h3 id="function-step_wrapper">function step_wrapper</h3>
@@ -2071,11 +2032,13 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">IonizRecombWarningsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">warnings_d</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">max_time_ctr</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Advances every alive particle by one impurity time step, choosing the CPU or GPU implementation.</p>
-<p>The time step is the imp_time_step option. If GPU acceleration is on (use_gpu), step_gpu is called. Otherwise step_cpu is called. The GPU branch only exists in CUDA builds. Only the CPU path checks the imp_max_time option, so max_time_ctr is not updated on the GPU.</p>
+<p>The time step is the imp_time_step option. If GPU acceleration is on (use_gpu), step_gpu is called. Otherwise step_cpu is called. The GPU branch only exists in CUDA builds. Both paths kill particles that have been followed for longer than the imp_max_time option and count them. The CPU path adds to max_time_ctr directly. The GPU path counts them in warnings_d.max_time on the device, which is added to max_time_ctr with <a href="../namespaceOpenADAS/#function-add_warnings_to_host"><strong>OpenADAS::add_warnings_to_host</strong></a> after the run.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>slots</code> Host-side particle slots (used on the CPU path). </li>
@@ -2083,6 +2046,8 @@
 <li><code>bkg</code> Host-side background plasma (used on the CPU path). </li>
 <li><code>bkg_d</code> Device-side background plasma (currently unused). </li>
 <li><code>opts</code> Simulation options, which provide the time step. </li>
+<li><code>opts_d</code> Device-side simulation options (used on the GPU path). </li>
+<li><code>warnings_d</code> Device-side warning counters for this GPU (used on the GPU path). </li>
 <li><code>max_time_ctr</code> Counter of particles that exceeded the maximum allowed time (CPU path only). </li>
 </ul>
 <hr>

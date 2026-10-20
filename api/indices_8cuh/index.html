@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,6 +1173,7 @@
 
 <h1 id="file-indicescuh">File indices.cuh</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_84b56ae5fb2dac9a5c8c4aa192827ebc/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>indices.cuh</strong></a></p>
+<p><em>CUDA routines for finding the index of the time frame or grid cell that a value falls in.</em> <a href="#detailed-description">More...</a></p>
 <h2 id="namespaces">Namespaces</h2>
 <table>
 <thead>
@@ -1177,6 +1189,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>These are the device versions of the routines in <a href="../indices_8h/"><strong>indices.h</strong></a>, with the same results. std::lower_bound can't be used in device code, so the binary search is written out by hand. They are templates, so they are defined here in the header. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/include/cuda/indices.cuh</code></p>
 

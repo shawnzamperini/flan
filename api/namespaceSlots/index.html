@@ -1375,7 +1375,7 @@
 <tbody>
 <tr>
 <td style="text-align: right;">bool</td>
-<td style="text-align: left;"><a href="#function-all_dead_gpu"><strong>all_dead_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> &amp; slots_d) <br><em>Check if slots contain all dead particles.</em></td>
+<td style="text-align: left;"><a href="#function-all_dead_gpu"><strong>all_dead_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> &amp; slots_d) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1391,11 +1391,11 @@
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-fill_slots_gpu"><strong>fill_slots_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> &amp; slots_d, int &amp; rem_parts, int &amp; alive_slots, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d, <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d) <br><em>Replace dead particles with alive ones, as long as remaining particles are greater than zero (GPU).</em></td>
+<td style="text-align: left;"><a href="#function-fill_slots_gpu"><strong>fill_slots_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> &amp; slots_d, int &amp; rem_parts, int &amp; alive_slots, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d, <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-fill_slots_kernel"><strong>fill_slots_kernel</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> slots_d, <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> bkg_d, int rem_parts, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d, const <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d) <br><em>GPU kernel to fill slots, replacing dead particles with alive ones.</em></td>
+<td style="text-align: left;"><a href="#function-fill_slots_kernel"><strong>fill_slots_kernel</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>SlotsDevice</strong></a> slots_d, <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> bkg_d, int rem_parts, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d, const <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1423,23 +1423,24 @@
 </tr>
 <tr>
 <td style="text-align: right;"><a href="../structSlots_1_1ParticleInitDevice/"><strong>ParticleInitDevice</strong></a></td>
-<td style="text-align: left;"><a href="#function-make_new_particle_cuda"><strong>make_new_particle_cuda</strong></a> (<a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d, const <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d) <br></td>
+<td style="text-align: left;"><a href="#function-make_new_particle_cuda"><strong>make_new_particle_cuda</strong></a> (<a href="../structpcg32/"><strong>pcg32</strong></a> &amp; rng, const <a href="../structOptions_1_1OptionsDevice/"><strong>Options::OptionsDevice</strong></a> * opts_d, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d) <br></td>
 </tr>
 </tbody>
 </table>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
 <h3 id="function-all_dead_gpu">function all_dead_gpu</h3>
-<p><em>Check if slots contain all dead particles.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">bool</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">all_dead_gpu</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Checks if every slot holds a dead particle.</p>
+<p>Sets all_dead to true on the device, launches all_dead_kernel (blocks of 256 threads, one thread per slot) and copies the result back, which waits for the kernel to finish. In DEBUG builds, any kernel error is printed.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>slots_d</code> Device-side slots struct to check</li>
+<li><code>slots_d</code> Particle slots on the device. </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>true if all dead, false if not </p>
+<p>true if every slot is dead, false if not. </p>
 <hr>
 
 <h3 id="function-all_dead_kernel">function all_dead_kernel</h3>
@@ -1447,6 +1448,12 @@
 <span class="w">    </span><span class="n">SlotsDevice</span><span class="w"> </span><span class="n">slots_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that sets all_dead to false if any slot holds an alive particle.</p>
+<p>all_dead must be set to true before the launch. One thread checks one slot.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. </li>
+</ul>
 <hr>
 
 <h3 id="function-compact_dead_slots">function compact_dead_slots</h3>
@@ -1457,6 +1464,15 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that gathers the indices of every dead slot into a compact list.</p>
+<p>This is a warp-level stream compaction. Each warp votes on which of its lanes hold a dead slot (__ballot_sync), lane 0 reserves room for that many indices in dead_indices with a single atomicAdd on num_dead, and each dead lane then writes its slot index at its offset within the warp's reserved block. Using one atomic per warp instead of one per thread keeps contention low. The order of the indices between warps is not deterministic.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>state</code> State of each slot, where 0 is alive and anything else is dead. </li>
+<li><code>dead_indices</code> Output list of dead slot indices. Must be able to hold N indices. </li>
+<li><code>num_dead</code> Device counter of dead slots. Must be zeroed before the launch. Holds the number of dead slots afterward. </li>
+<li><code>N</code> Number of slots. </li>
+</ul>
 <hr>
 
 <h3 id="function-fill_slots_cpu">function fill_slots_cpu</h3>
@@ -1483,7 +1499,6 @@
 <hr>
 
 <h3 id="function-fill_slots_gpu">function fill_slots_gpu</h3>
-<p><em>Replace dead particles with alive ones, as long as remaining particles are greater than zero (GPU).</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">fill_slots_gpu</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rem_parts</span><span class="p">,</span>
@@ -1492,16 +1507,21 @@
 <span class="w">    </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg_d</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Replaces dead particles with new ones, as long as there are particles left to launch.</p>
+<p>Runs compact_dead_slots to gather the dead slot indices, copies the number of dead slots back to the host (which waits for the kernel to finish), and then launches fill_slots_kernel with one thread per dead slot. Both use blocks of 256 threads. The fill kernel launch is asynchronous, except in DEBUG builds, where it waits for the kernel to finish and prints any error. The number of filled slots is min(rem_parts, num_dead), so the counts are updated on the host without waiting for it.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>slots</code> <a href="./"><strong>Slots</strong></a> object to swap out dead particles in </li>
-<li><code>rem_parts</code> Number of remaining alive particles to track </li>
+<li><code>slots_d</code> Particle slots on the device. </li>
+<li><code>rem_parts</code> Number of particles left to launch. Decreased by the number of slots filled. </li>
+<li><code>alive_slots</code> Number of alive slots after filling. </li>
+<li><code>rngs_d</code> Random number generators on the device. </li>
+<li><code>opts_d</code> Simulation options on the device. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
 </ul>
 <hr>
 
 <h3 id="function-fill_slots_kernel">function fill_slots_kernel</h3>
-<p><em>GPU kernel to fill slots, replacing dead particles with alive ones.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">fill_slots_kernel</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">SlotsDevice</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
 <span class="w">    </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">,</span>
@@ -1509,8 +1529,18 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">rngs_d</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
-<p>We choose to copy slots_d to the kernel each time this is called since the copy time is &lt;&lt; kernel launch time, and copying results in clearer code. </p>
+</code></pre></div>
+<p>Kernel that fills dead slots with new particles.</p>
+<p>One thread handles one entry of the dead slot list from compact_dead_slots, so only the first min(num_dead, rem_parts) dead slots are filled. Each creates a new particle with make_new_particle_cuda and writes it into the slot, marking it alive. The cell indices are set to 0 here and assigned afterward by find_containing_cell_gpu.</p>
+<p>slots_d is passed by value each time since the copy time is much less than the kernel launch time, and it makes for clearer code.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. The dead slots are overwritten in place. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+<li><code>rem_parts</code> Number of particles left to launch. </li>
+<li><code>rngs_d</code> Random number generators on the device. </li>
+<li><code>opts_d</code> Simulation options on the device. </li>
+</ul>
 <hr>
 
 <h3 id="function-free_slots">function free_slots</h3>
@@ -1543,6 +1573,25 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Picks the starting Cartesian velocity of a new particle.</p>
+<p>For the test backgrounds (bkg_source = "test") the velocity is fixed by the test case: 10,000 m/s in Y for the gyrate, ExB, grad-B and polarization tests, 30,000 m/s along the field line (in the X-Y plane, at angle z) for the curvature test, and at rest for the friction test.</p>
+<p>Otherwise each component is sampled from a Maxwellian with zero mean and sigma = sqrt(kT/m), giving an isotropic velocity distribution. The temperature is imp_temp_start_val if imp_temp_start_opt is "single_value", or the main ion temperature interpolated (trilinear in space, linear in time) at the particle location if it is "main_ion". The interpolated ion temperature is held at or above min_ti, since it can go negative near the grid edges.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device, used for the ion temperature. </li>
+<li><code>t</code> Starting time of the particle (s). </li>
+<li><code>x</code> Starting computational x coordinate. </li>
+<li><code>y</code> Starting computational y coordinate. </li>
+<li><code>z</code> Starting computational z coordinate. In the curvature test, z is the toroidal angle. </li>
+<li><code>tidx</code> Index of the nearest background time frame. </li>
+<li><code>xidx</code> x index of the grid cell containing the particle. </li>
+<li><code>yidx</code> y index of the grid cell containing the particle. </li>
+<li><code>zidx</code> z index of the grid cell containing the particle. </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+<li><code>opts_d</code> Simulation options on the device. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Starting velocity {vX, vY, vZ} in Cartesian space (m/s). </p>
 <hr>
 
 <h3 id="function-get_birth_vxyz_1">function get_birth_vXYZ</h3>
@@ -1562,19 +1611,19 @@
 </code></pre></div>
 <p>Picks the starting Cartesian velocity of a new particle.</p>
 <p>For the test backgrounds (bkg_source = "test") the velocity is fixed by the test case: 10,000 m/s in Y for the gyrate, ExB, grad-B and polarization tests, 30,000 m/s along the field line (in the X-Y plane, at angle z) for the curvature test, and at rest for the friction test.</p>
-<p>Otherwise each component is sampled from a Maxwellian with zero mean and sigma = sqrt(kT/m), giving an isotropic velocity distribution. The temperature is imp_temp_start_val if imp_temp_start_opt is "single_value", or the main ion temperature in the particle's cell if it is "ti". The ion temperature is the cell value, not interpolated.</p>
+<p>Otherwise each component is sampled from a Maxwellian with zero mean and sigma = sqrt(kT/m), giving an isotropic velocity distribution. The temperature is imp_temp_start_val if imp_temp_start_opt is "single_value", or the main ion temperature interpolated at the particle location with Background::interp_ti if it is "main_ion". The interpolated ion temperature is held at or above min_ti, since it can go negative near the grid edges.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma, used for the ion temperature. </li>
 <li><code>opts</code> Simulation options. </li>
-<li><code>t</code> Starting time of the particle (s). Currently unused. </li>
-<li><code>x</code> Starting computational x coordinate. Currently unused. </li>
-<li><code>y</code> Starting computational y coordinate. Currently unused. </li>
-<li><code>z</code> Starting computational z coordinate. Only used by the curvature test, where z is the toroidal angle. </li>
-<li><code>tidx</code> Index of the nearest background time frame. </li>
-<li><code>xidx</code> x index of the grid cell containing the particle. </li>
-<li><code>yidx</code> y index of the grid cell containing the particle. </li>
-<li><code>zidx</code> z index of the grid cell containing the particle. </li>
+<li><code>t</code> Starting time of the particle (s). </li>
+<li><code>x</code> Starting computational x coordinate. </li>
+<li><code>y</code> Starting computational y coordinate. </li>
+<li><code>z</code> Starting computational z coordinate. In the curvature test, z is the toroidal angle. </li>
+<li><code>tidx</code> Index of the nearest background time frame. Currently unused. </li>
+<li><code>xidx</code> x index of the grid cell containing the particle. Currently unused. </li>
+<li><code>yidx</code> y index of the grid cell containing the particle. Currently unused. </li>
+<li><code>zidx</code> z index of the grid cell containing the particle. Currently unused. </li>
 <li><code>rng</code> Random number generator for this thread. </li>
 </ul>
 <p><strong>Returns:</strong></p>
@@ -1619,6 +1668,20 @@
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Picks the starting value of one coordinate (t, x, y or z) of a new particle.</p>
+<p>start_opt_int is the control integer of the imp_*start_opt option deciding where the particle starts: 0: At start_val. 1: Uniformly random between range_min and range_max. 2: Uniformly random over the full simulation volume, between bkg_min and bkg_max. Any other value returns 0.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>start_opt_int</code> Control integer of the imp_*start_opt option. </li>
+<li><code>start_val</code> Starting value used when start_opt_int is 0. </li>
+<li><code>range_min</code> Lower end of the range used when start_opt_int is 1. </li>
+<li><code>range_max</code> Upper end of the range used when start_opt_int is 1. </li>
+<li><code>bkg_min</code> Minimum of the simulation volume, used when start_opt_int is 2. </li>
+<li><code>bkg_max</code> Maximum of the simulation volume, used when start_opt_int is 2. </li>
+<li><code>rng</code> Random number generator for this thread. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Starting value of the coordinate. </p>
 <hr>
 
 <h3 id="function-make_new_particle">function make_new_particle</h3>
@@ -1642,11 +1705,21 @@
 
 <h3 id="function-make_new_particle_cuda">function make_new_particle_cuda</h3>
 <div class="highlight"><pre><span></span><code><span class="n">ParticleInitDevice</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">make_new_particle_cuda</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">rngs_d</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rng</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">OptionsDevice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">opts_d</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg_d</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Creates a new particle based on the input options.</p>
+<p>The starting t, x, y and z come from get_birth_val_cuda, the indices of the nearest time frame and the containing grid cell are found, and the starting Cartesian velocity comes from get_birth_vXYZ. The computational velocities are left at zero, since they are set on the first <a href="../namespaceBoris/"><strong>Boris</strong></a> update. The weight is 1 / imp_num and the charge is init_charge.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>rng_d</code> Random number generator of the slot the particle goes into. </li>
+<li><code>opts_d</code> Simulation options on the device. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The new particle. </p>
 <hr>
 
 <hr />

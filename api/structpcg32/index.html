@@ -1155,6 +1155,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1295,6 +1306,7 @@
 
 <h1 id="struct-pcg32">Struct pcg32</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="./"><strong>pcg32</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;pcg32.h&gt;</code></li>
 </ul>
@@ -1309,11 +1321,11 @@
 <tbody>
 <tr>
 <td style="text-align: right;">bool</td>
-<td style="text-align: left;"><a href="#variable-has_spare"><strong>has_spare</strong></a>   = <code>{false}</code><br></td>
+<td style="text-align: left;"><a href="#variable-has_spare"><strong>has_spare</strong></a>   = <code>{false}</code><br><em>True if spare holds an unused normal value.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">uint64_t</td>
-<td style="text-align: left;"><a href="#variable-inc"><strong>inc</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-inc"><strong>inc</strong></a>  <br><em>Stream increment, always odd. Set from seq.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
@@ -1321,7 +1333,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">uint64_t</td>
-<td style="text-align: left;"><a href="#variable-state"><strong>state</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-state"><strong>state</strong></a>  <br><em>Internal state, advanced on every call.</em></td>
 </tr>
 </tbody>
 </table>
@@ -1352,35 +1364,48 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>PCG32 random number generator, usable on the host and the device. </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-has_spare">variable has_spare</h3>
+<p><em>True if spare holds an unused normal value.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">bool</span><span class="w"> </span><span class="n">pcg32</span><span class="o">::</span><span class="n">has_spare</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-inc">variable inc</h3>
+<p><em>Stream increment, always odd. Set from seq.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">uint64_t</span><span class="w"> </span><span class="n">pcg32</span><span class="o">::</span><span class="n">inc</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-spare">variable spare</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">pcg32</span><span class="o">::</span><span class="n">spare</span><span class="p">;</span>
 </code></pre></div>
+<p>Second value from the last Box-Muller transform, returned by the next normal call </p>
 <hr>
 
 <h3 id="variable-state">variable state</h3>
+<p><em>Internal state, advanced on every call.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">uint64_t</span><span class="w"> </span><span class="n">pcg32</span><span class="o">::</span><span class="n">state</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
 <h3 id="function-next_double">function next_double</h3>
 <div class="highlight"><pre><span></span><code><span class="kr">inline</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">pcg32</span><span class="o">::</span><span class="n">next_double</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns the next random double in [0, 1).</p>
+<p>Uses two calls to next_uint to fill all 53 bits of a double's mantissa, so the result is a multiple of 2^-53 (about 1e-16). With fewer bits, comparisons like r &lt; p would be wrong for small p, since every p smaller than the spacing would act the same.</p>
+<p><strong>Returns:</strong></p>
+<p>Uniformly distributed value in [0, 1). </p>
 <hr>
 
 <h3 id="function-next_uint">function next_uint</h3>
 <div class="highlight"><pre><span></span><code><span class="kr">inline</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">pcg32</span><span class="o">::</span><span class="n">next_uint</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns the next random 32-bit unsigned integer.</p>
+<p><strong>Returns:</strong></p>
+<p>Uniformly distributed value in [0, 2^32 - 1]. </p>
 <hr>
 
 <h3 id="function-normal">function normal</h3>
@@ -1389,6 +1414,15 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">stddev</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns a normally distributed random number.</p>
+<p>Uses the Box-Muller transform, which makes two independent normal values from two uniform ones. The second is cached in spare and returned by the next call, so only every other call draws new uniform numbers. The cached value is in standard units, so the next call can use a different mean and stddev.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>mean</code> Mean of the distribution. </li>
+<li><code>stddev</code> Standard deviation of the distribution. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Random value from the normal distribution. </p>
 <hr>
 
 <h3 id="function-pcg32">function pcg32</h3>
@@ -1397,6 +1431,12 @@
 <span class="w">    </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">seq</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Creates a generator from a seed and a stream number.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>seed</code> Starting seed. </li>
+<li><code>seq</code> Stream number. Generators with different seq values give independent sequences, even with the same seed. </li>
+</ul>
 <hr>
 
 <hr />

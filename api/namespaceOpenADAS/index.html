@@ -1334,11 +1334,11 @@
 <tbody>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-add_warnings_to_host"><strong>add_warnings_to_host</strong></a> (const <a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>IonizRecombWarningsDevice</strong></a> &amp; warnings_d, int &amp; ioniz_warnings, int &amp; recomb_warnings) <br><em>Copies the warning counts from the GPU and adds them to the host-side counters.</em></td>
+<td style="text-align: left;"><a href="#function-add_warnings_to_host"><strong>add_warnings_to_host</strong></a> (const <a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>IonizRecombWarningsDevice</strong></a> &amp; warnings_d, int &amp; ioniz_warnings, int &amp; recomb_warnings, int &amp; max_time_ctr) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;"><a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>IonizRecombWarningsDevice</strong></a></td>
-<td style="text-align: left;"><a href="#function-alloc_warnings"><strong>alloc_warnings</strong></a> (int device_id) <br><em>Allocates the ionization/recombination warning counters on a GPU and sets them to zero.</em></td>
+<td style="text-align: left;"><a href="#function-alloc_warnings"><strong>alloc_warnings</strong></a> (int device_id) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1354,7 +1354,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-free_warnings"><strong>free_warnings</strong></a> (<a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>IonizRecombWarningsDevice</strong></a> &amp; warnings_d) <br><em>Frees the device-side warning counters.</em></td>
+<td style="text-align: left;"><a href="#function-free_warnings"><strong>free_warnings</strong></a> (<a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>IonizRecombWarningsDevice</strong></a> &amp; warnings_d) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">const double *</td>
@@ -1366,7 +1366,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-ioniz_recomb_gpu"><strong>ioniz_recomb_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, const <a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADASDevice</strong></a> &amp; oa_ioniz_d, const <a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADASDevice</strong></a> &amp; oa_recomb_d, const double dt, const <a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>IonizRecombWarningsDevice</strong></a> &amp; warnings_d, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d) <br><em>Wrapper to call ioniz_recomb_kernel, which updates particle charge based on ionization/recombination rates.</em></td>
+<td style="text-align: left;"><a href="#function-ioniz_recomb_gpu"><strong>ioniz_recomb_gpu</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, const <a href="../structBackground_1_1BackgroundDevice/"><strong>Background::BackgroundDevice</strong></a> &amp; bkg_d, const <a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADASDevice</strong></a> &amp; oa_ioniz_d, const <a href="../structOpenADAS_1_1OpenADASDevice/"><strong>OpenADASDevice</strong></a> &amp; oa_recomb_d, const double dt, const <a href="../structOpenADAS_1_1IonizRecombWarningsDevice/"><strong>IonizRecombWarningsDevice</strong></a> &amp; warnings_d, <a href="../structpcg32/"><strong>pcg32</strong></a> * rngs_d) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1376,35 +1376,37 @@
 </table>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
 <h3 id="function-add_warnings_to_host">function add_warnings_to_host</h3>
-<p><em>Copies the warning counts from the GPU and adds them to the host-side counters.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">add_warnings_to_host</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">IonizRecombWarningsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">warnings_d</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">ioniz_warnings</span><span class="p">,</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">recomb_warnings</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">recomb_warnings</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">max_time_ctr</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Copies the warning counts from the GPU and adds them to the host-side counters.</p>
 <p>Blocks until all previously launched kernels have finished.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>warnings_d</code> Device-side warning counters. </li>
 <li><code>ioniz_warnings</code> Host-side ionization warning counter. Incremented by the device count. </li>
 <li><code>recomb_warnings</code> Host-side recombination warning counter. Incremented by the device count. </li>
+<li><code>max_time_ctr</code> Host-side counter of particles that exceeded imp_max_time. Incremented by the device count. </li>
 </ul>
 <hr>
 
 <h3 id="function-alloc_warnings">function alloc_warnings</h3>
-<p><em>Allocates the ionization/recombination warning counters on a GPU and sets them to zero.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">IonizRecombWarningsDevice</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">alloc_warnings</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
-<p>Called once per GPU at the start of a run. The counters then accumulate over every call to ioniz_recomb_gpu.</p>
+</code></pre></div>
+<p>Allocates the warning counters on a GPU and sets them to zero.</p>
+<p>Called once per GPU at the start of a run, not every time step. The ionization and recombination counters then accumulate over every call to ioniz_recomb_gpu, and the max time counter over every call to <a href="../namespaceImpurityTransport/#function-step_gpu"><strong>ImpurityTransport::step_gpu</strong></a>.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>device_id</code> ID of the GPU to allocate the counters on. </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>Struct holding the device pointers to the two counters. </p>
+<p>Struct holding the device pointers to the three counters. </p>
 <hr>
 
 <h3 id="function-calc_ioniz_recomb_probs">function calc_ioniz_recomb_probs</h3>
@@ -1420,6 +1422,20 @@
 <span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">recomb_prob</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Calculates the probabilities of a particle ionizing and recombining during one time step.</p>
+<p>The rate coefficients are bilinearly interpolated in Te and ne, and the probability is rate * ne * dt. The ionization rate for charge q is at charge index q (q -&gt; q+1), and the recombination rate is at charge index q-1 (q -&gt; q-1). A fully stripped particle (q = Z) can't ionize and a neutral (q = 0) can't recombine, so those probabilities are zero. The probabilities are not capped at 1.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>oa_ioniz_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> struct with the ionization (SCD) rate coefficients. </li>
+<li><code>oa_recomb_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> struct with the recombination (ACD) rate coefficients. </li>
+<li><code>ne</code> Electron density at the particle location (m^-3). </li>
+<li><code>te</code> Electron temperature at the particle location (eV). </li>
+<li><code>dt</code> Time step (s). </li>
+<li><code>q</code> Charge state of the particle. </li>
+<li><code>Z</code> Atomic number of the impurity. </li>
+<li><code>ioniz_prob</code> Probability of ionizing this time step. </li>
+<li><code>recomb_prob</code> Probability of recombining this time step. </li>
+</ul>
 <hr>
 
 <h3 id="function-calc_ioniz_recomb_probs_1">function calc_ioniz_recomb_probs</h3>
@@ -1461,14 +1477,20 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Frees the device memory allocated by OpenADAS::to_device.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>oa_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> struct. The pointers are set to nullptr. </li>
+<li><code>device_id</code> ID of the GPU the data was copied to. </li>
+</ul>
 <hr>
 
 <h3 id="function-free_warnings">function free_warnings</h3>
-<p><em>Frees the device-side warning counters.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">free_warnings</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">IonizRecombWarningsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">warnings_d</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Frees the device-side warning counters.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>warnings_d</code> Device-side warning counters. The pointers are set to nullptr. </li>
@@ -1481,6 +1503,15 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">charge_state</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns a pointer to the start of the 2D (Te, ne) slice of the rate coefficient table for a given charge index.</p>
+<p>The charge index is clamped to [0, charge_high - charge_low], so an out-of-range index (e.g., -1 for recombination of a neutral) still returns a valid pointer. The caller is responsible for not using the rate in that case.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>oa_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> struct. </li>
+<li><code>charge_state</code> Index of the charge state slice to return. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Pointer to the ntemp * ndens slice for this charge state. </p>
 <hr>
 
 <h3 id="function-ioniz_recomb">function ioniz_recomb</h3>
@@ -1511,7 +1542,6 @@
 <hr>
 
 <h3 id="function-ioniz_recomb_gpu">function ioniz_recomb_gpu</h3>
-<p><em>Wrapper to call ioniz_recomb_kernel, which updates particle charge based on ionization/recombination rates.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">ioniz_recomb_gpu</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">BackgroundDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg_d</span><span class="p">,</span>
@@ -1521,17 +1551,18 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">IonizRecombWarningsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">warnings_d</span><span class="p">,</span>
 <span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">rngs_d</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
-<p>This is only a kernel launch, so it returns before the kernel has finished. The number of particles whose ionization or recombination probability exceeded 1 is added to the counters in warnings_d.</p>
+</code></pre></div>
+<p>Launches ioniz_recomb_kernel to update the charge state of every particle on the GPU due to ionization and recombination.</p>
+<p>Uses blocks of 256 threads, one thread per slot. The warning counters are allocated once with alloc_warnings and accumulate over the whole run, so this is just a kernel launch with no allocations or copies. The launch is asynchronous, except in DEBUG builds, where it waits for the kernel to finish and prints any error. The number of particles whose ionization or recombination probability exceeded 1 is added to the counters in warnings_d.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>slots_d</code> Device-side particle slots. Charges updated in place. </li>
-<li><code>bkg_d</code> Device-side background plasma. </li>
-<li><code>oa_ioniz_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> ionization (scd) rates. </li>
-<li><code>oa_recomb_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> recombination (acd) rates. </li>
+<li><code>slots_d</code> Particle slots on the device. The charge states are updated in place. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+<li><code>oa_ioniz_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> struct with the ionization (SCD) rate coefficients. </li>
+<li><code>oa_recomb_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> struct with the recombination (ACD) rate coefficients. </li>
 <li><code>dt</code> Time step (s). </li>
 <li><code>warnings_d</code> Device-side warning counters from alloc_warnings. </li>
-<li><code>rngs_d</code> Device-side random number generators, one per slot. </li>
+<li><code>rngs_d</code> Random number generators on the device, one per slot. </li>
 </ul>
 <hr>
 
@@ -1547,6 +1578,19 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">d_recomb_warnings</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that updates the charge state of each particle due to ionization and recombination.</p>
+<p>One thread handles one slot, and dead particles are skipped. ne and Te are interpolated at the particle location (trilinear in space between the neighboring cell centers, then linear in time), and the ionization and recombination probabilities are calculated with calc_ioniz_recomb_probs. Each is compared to its own uniform random number, so the charge changes by +1, -1 or 0 (if the particle both ionizes and recombines, the two cancel). A warning counter is incremented each time a probability exceeds 1, since that means dt is too large.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device. The charge states are updated in place. </li>
+<li><code>bkg_d</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma on the device. </li>
+<li><code>oa_ioniz_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> struct with the ionization rate coefficients. </li>
+<li><code>oa_recomb_d</code> Device-side <a href="./"><strong>OpenADAS</strong></a> struct with the recombination rate coefficients. </li>
+<li><code>dt</code> Time step (s). </li>
+<li><code>rngs_d</code> Random number generators on the device, one per slot. </li>
+<li><code>d_ioniz_warnings</code> Device counter of ionization probabilities greater than 1. </li>
+<li><code>d_recomb_warnings</code> Device counter of recombination probabilities greater than 1. </li>
+</ul>
 <hr>
 
 <hr />

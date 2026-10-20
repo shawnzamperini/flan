@@ -1155,6 +1155,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1273,6 +1284,7 @@
 
 <h1 id="struct-particleprogress">Struct ParticleProgress</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="./"><strong>ParticleProgress</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;particle_progress.h&gt;</code></li>
 </ul>
@@ -1287,11 +1299,11 @@
 <tbody>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-next_index"><strong>next_index</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-next_index"><strong>next_index</strong></a>  <br><em>Which checkpoint we are waiting for.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-num_prints"><strong>num_prints</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-num_prints"><strong>num_prints</strong></a>  <br><em>Number of messages to print over the run.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double</td>
@@ -1299,7 +1311,7 @@
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-tot_parts"><strong>tot_parts</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-tot_parts"><strong>tot_parts</strong></a>  <br><em>Total number of particles.</em></td>
 </tr>
 </tbody>
 </table>
@@ -1322,25 +1334,32 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Prints a progress message each time another 1 / num_prints of the particles has been finished.</p>
+<p>Set up with the total number of particles and print_interval, then call update with the number left as the main loop runs. With num_prints = 10, a message is printed when 90%, 80%, ..., 0% of the particles are left. </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-next_index">variable next_index</h3>
+<p><em>Which checkpoint we are waiting for.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">ParticleProgress</span><span class="o">::</span><span class="n">next_index</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-num_prints">variable num_prints</h3>
+<p><em>Number of messages to print over the run.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">ParticleProgress</span><span class="o">::</span><span class="n">num_prints</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-step">variable step</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">ParticleProgress</span><span class="o">::</span><span class="n">step</span><span class="p">;</span>
 </code></pre></div>
+<p>Percentage step per print (e.g., 10% if num_prints = 10) </p>
 <hr>
 
 <h3 id="variable-tot_parts">variable tot_parts</h3>
+<p><em>Total number of particles.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">ParticleProgress</span><span class="o">::</span><span class="n">tot_parts</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
 <h3 id="function-particleprogress">function ParticleProgress</h3>
@@ -1349,6 +1368,11 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">prints</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>total</code> Total number of particles. </li>
+<li><code>prints</code> Number of progress messages to print over the run. </li>
+</ul>
 <hr>
 
 <h3 id="function-update">function update</h3>
@@ -1356,6 +1380,12 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">rem_parts</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Prints a message for every checkpoint passed since the last call.</p>
+<p>Several messages are printed at once if rem_parts dropped past more than one checkpoint. Does nothing if tot_parts or num_prints isn't positive.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>rem_parts</code> Number of particles not finished yet, including the ones being followed. </li>
+</ul>
 <hr>
 
 <hr />

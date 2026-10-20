@@ -1328,6 +1328,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Creates an <a href="./"><strong>OpenADAS</strong></a> object and loads the rate coefficients from the matching <a href="./"><strong>OpenADAS</strong></a> file.</p>
+<p>The run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> if the file can't be opened, e.g., because openadas_root or openadas_year is wrong.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>openadas_root</code> Full path to the directory containing the <a href="./"><strong>OpenADAS</strong></a> data. </li>
@@ -1363,7 +1364,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Assembles the full path to an <a href="./"><strong>OpenADAS</strong></a> data file, e.g., [openadas_root]/scd50/scd50_w.dat.</p>
-<p>An error is printed if rate_type is not "scd" or "acd", or if there is no <a href="./"><strong>OpenADAS</strong></a> data for imp_atom_num. Supported elements are H through Ne, Al, Si, Cl, Ar, Fe, Kr, Mo, Xe and W.</p>
+<p>The run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> if rate_type is not "scd" or "acd", or if there is no <a href="./"><strong>OpenADAS</strong></a> data for imp_atom_num. Supported elements are H through Ne, Al, Si, Cl, Ar, Fe, Kr, Mo, Xe and W.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>openadas_root</code> Full path to the directory containing the <a href="./"><strong>OpenADAS</strong></a> data. </li>
@@ -1400,7 +1401,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Reads in the header, densities, temperatures and rate coefficients from an <a href="./"><strong>OpenADAS</strong></a> file, storing them in the class.</p>
-<p>The densities and temperatures are stored in the file as log10(ne [cm^-3]) and log10(Te [eV]), and the rate coefficients as log10(rate [cm^3/s]). They are converted to ne (m^-3), Te (eV) and rate (m^3/s). The rates are stored with dimensions (charge, Te, ne). An error is printed if there are fewer than two densities or temperatures, since the bilinear interpolation needs at least two of each.</p>
+<p>The densities and temperatures are stored in the file as log10(ne [cm^-3]) and log10(Te [eV]), and the rate coefficients as log10(rate [cm^3/s]). They are converted to ne (m^-3), Te (eV) and rate (m^3/s). The rates are stored with dimensions (charge, Te, ne). The run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> if the file doesn't cover every charge state (1 to Z), since the rates would be indexed incorrectly, or if there are fewer than two densities or temperatures, since the bilinear interpolation needs at least two of each.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>openadas_stream</code> Open file stream of the <a href="./"><strong>OpenADAS</strong></a> file. </li>
@@ -1412,6 +1413,14 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Copies the <a href="./"><strong>OpenADAS</strong></a> rate coefficient data to a GPU.</p>
+<p>The scalar metadata (atomic number, table dimensions and charge range) is copied into the returned struct, and the Te grid, ne grid and flattened rate coefficient table are allocated on the device and copied over. The rates are stored by charge, then Te, then ne, so each charge state is a contiguous ntemp * ndens slice. The returned struct must be freed with free_oa. If USE_CUDA is not defined, nothing is copied and a zero-initialized struct is returned.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>device_id</code> ID of the GPU to copy the data to. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Struct holding the metadata and device pointers to the data. </p>
 <hr>
 
 <hr />

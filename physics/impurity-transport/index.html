@@ -1463,9 +1463,9 @@ main loop starts. This sets up the staggering.</p>
 <ol>
 <li>Each Cartesian component, and the magnitude, is trilinearly interpolated in
    space between the centers of the cell containing the particle and its
-   neighbors on the particle's side. This is done for the particle's
-   background time frame and the next one (the previous one if the particle is in the last
-   frame).</li>
+   neighbors on the particle's side. This is done for the particle's nearest
+   background time frame and the neighboring frame on the particle's side in
+   time, so the particle's time is always between the two frames.</li>
 <li>The two values are linearly interpolated in time to the particle's time.</li>
 <li>The interpolated vector is rescaled to the interpolated magnitude.</li>
 </ol>
@@ -1520,7 +1520,7 @@ particle:</p>
 over particles with OpenMP. The GPU version is <code>update_velocity_kernel</code> in
 <code>src/cuda/boris.cu</code>, with one thread per particle. The two use the same push.
 The GPU version builds the interpolation stencils with the helpers in
-<code>src/cuda/interpolate.cu</code>. The core of the push is:</p>
+<code>include/cuda/interpolate.cuh</code>. The core of the push is:</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// Charge state times the (positive) elementary charge, divided by mass</span>
 <span class="kt">double</span><span class="w"> </span><span class="n">q_m</span><span class="w"> </span><span class="p">{</span><span class="n">slots</span><span class="p">.</span><span class="n">q</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">-</span><span class="n">Constants</span><span class="o">::</span><span class="n">charge_e</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">slots</span><span class="p">.</span><span class="n">mass</span><span class="p">()};</span>
 

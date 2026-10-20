@@ -1211,6 +1211,23 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Creates the hardcoded test background chosen by the test_opt option.</p>
+<p>Every case uses the same grid: 128 time frames from 0 to 50 us, and 32 x 32 x 9 cells in x, y and z. The plasma is uniform, with ne = 1e20 m^-3 and Te = Ti = 1 eV. The cases are:</p>
+<ul>
+<li>gyrate (0): slab, B_Z = 1 T, no electric field. The particle just gyrates.</li>
+<li>exb (1): slab, B_Z = 1 T and E_Y = 500 V/m, for an ExB drift.</li>
+<li>gradb (2): slab, B_Z = 1 + 5 y T (a 5 T/m gradient in y), no electric field, for a grad-B drift.</li>
+<li>polarization (3): slab, B_Z = 1 T and E_Y = 5000 - 1e7 t V/m (falling by 10 V/us), for a polarization drift.</li>
+<li>curvature (4): cylindrical (x = R, y = Z, z = phi), a purely toroidal B = 10 T, no electric field, for a curvature drift.</li>
+<li>friction_force (5): slab, B_X = 1 T and a background flow of u_X = 1000 m/s, no electric field, to show the friction force from the collision model.</li>
+</ul>
+<p>The slab is 5 x 5 x 3 cm, x from 0 to 0.05 m, y from -0.025 to 0.025 m and z from -0.015 to 0.015 m, with x = X, y = Y and z = Z. The cylindrical volume has R from 2.00 to 2.05 m, Z from -0.025 to 0.025 m and phi from 0 to about pi/2. Only the background flow is nonzero in the friction force case. The reciprocal basis vectors and Jacobian are set for each geometry. The tangent basis vectors are not set.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>opts</code> Simulation options, used for test_opt. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p><a href="../namespaceBackground/"><strong>Background</strong></a> holding the test plasma. </p>
 <hr>
 
 <hr />

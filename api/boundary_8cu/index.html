@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,12 +1173,12 @@
 
 <h1 id="file-boundarycu">File boundary.cu</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_adb0e0080591d240f7507da3cc422fe2/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>boundary.cu</strong></a></p>
+<p><em>CUDA routines for handling time and spatial boundary conditions.</em> <a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;cstdio&gt;</code></li>
 <li><code>#include "background_device.h"</code></li>
 <li><code>#include "pcg32.h"</code></li>
 <li><code>#include "slots_device.h"</code></li>
-<li><code>#include &lt;curand_kernel.h&gt;</code></li>
 <li><code>#include "boundary.cuh"</code></li>
 <li><code>#include "device_constants.cuh"</code></li>
 </ul>
@@ -1186,6 +1197,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>GPU version of <a href="../boundary_8cpp/"><strong>boundary.cpp</strong></a>. Each time step, every particle is checked against the time boundary and the minimum and maximum x, y and z boundaries. Each boundary can be absorbing (the particle is killed), periodic (the particle is wrapped to the other side) or, for the spatial boundaries, core (the particle is put back at the boundary at a random location along it). The simulation bounds are read from the <strong>constant</strong> variables in <a href="../device__constants_8cuh/"><strong>device_constants.cuh</strong></a>. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/cuda/boundary.cu</code></p>
 

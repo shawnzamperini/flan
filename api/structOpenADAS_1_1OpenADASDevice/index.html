@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1278,6 +1289,7 @@
 
 <h1 id="struct-openadasopenadasdevice">Struct OpenADAS::OpenADASDevice</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceOpenADAS/"><strong>OpenADAS</strong></a> <strong>&gt;</strong> <a href="./"><strong>OpenADASDevice</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;openadas_device.h&gt;</code></li>
 </ul>
@@ -1292,31 +1304,31 @@
 <tbody>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-atomic_number"><strong>atomic_number</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-atomic_number"><strong>atomic_number</strong></a>  <br><em>Atomic number of the element.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-charge_high"><strong>charge_high</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-charge_high"><strong>charge_high</strong></a>  <br><em>Highest charge in the file (IZ1MAX)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-charge_low"><strong>charge_low</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-charge_low"><strong>charge_low</strong></a>  <br><em>Lowest charge in the file (IZ1MIN)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>  <br><em>ID of the GPU the arrays are on.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-ndens"><strong>ndens</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-ndens"><strong>ndens</strong></a>  <br><em>Number of densities in the table.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-ne"><strong>ne</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-ne"><strong>ne</strong></a>  <br><em>Electron densities (m^-3), size ndens.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-ntemp"><strong>ntemp</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-ntemp"><strong>ntemp</strong></a>  <br><em>Number of temperatures in the table.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
@@ -1324,54 +1336,66 @@
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-te"><strong>te</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-te"><strong>te</strong></a>  <br><em>Electron temperatures (eV), size ntemp.</em></td>
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Device-side copy of one <a href="../classOpenADAS_1_1OpenADAS/"><strong>OpenADAS</strong></a> rate file (ionization or recombination), made by <a href="../classOpenADAS_1_1OpenADAS/#function-to_device"><strong>OpenADAS::to_device</strong></a> and freed with free_oa.</p>
+<p>The values are already converted from the file's log10 units. rates holds one ntemp x ndens table per charge state, one after the other, each indexed by te_index * ndens + ne_index (see get_charge_slice in <a href="../openadas_8cu/"><strong>openadas.cu</strong></a>). </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-atomic_number">variable atomic_number</h3>
+<p><em>Atomic number of the element.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">atomic_number</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-charge_high">variable charge_high</h3>
+<p><em>Highest charge in the file (IZ1MAX)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">charge_high</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-charge_low">variable charge_low</h3>
+<p><em>Lowest charge in the file (IZ1MIN)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">charge_low</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-device_id">variable device_id</h3>
+<p><em>ID of the GPU the arrays are on.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">device_id</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-ndens">variable ndens</h3>
+<p><em>Number of densities in the table.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">ndens</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-ne">variable ne</h3>
+<p><em>Electron densities (m^-3), size ndens.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">ne</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-ntemp">variable ntemp</h3>
+<p><em>Number of temperatures in the table.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">ntemp</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-rates">variable rates</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">rates</span><span class="p">;</span>
 </code></pre></div>
+<p>Rate coefficients (m^3/s), size ndens * ntemp * (charge_high - charge_low + 1) </p>
 <hr>
 
 <h3 id="variable-te">variable te</h3>
+<p><em>Electron temperatures (eV), size ntemp.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">OpenADASDevice</span><span class="o">::</span><span class="n">te</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <hr />

@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,7 +1173,7 @@
 
 <h1 id="file-boundarycpp">File boundary.cpp</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_68267d1309a1af8e8297ef4c3efbcdba/"><strong>src</strong></a> <strong>&gt;</strong> <a href="./"><strong>boundary.cpp</strong></a></p>
-<p><em>Routines for handling time and spatial boundary conditions.</em> </p>
+<p><em>Routines for handling time and spatial boundary conditions.</em> <a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;omp.h&gt;</code></li>
 <li><code>#include &lt;vector&gt;</code></li>
@@ -1187,6 +1198,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Each time step, every particle is checked against the time boundary and the minimum and maximum x, y and z boundaries. Each boundary can be absorbing (the particle is killed), periodic (the particle is wrapped to the other side) or, for the spatial boundaries, core (the particle is put back at the boundary at a random location along it). The simulation bounds are the first and last background times and the outer cell edges. The GPU version is in <a href="../boundary_8cu/"><strong>cuda/boundary.cu</strong></a>. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/boundary.cpp</code></p>
 

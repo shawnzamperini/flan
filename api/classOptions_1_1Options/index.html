@@ -3906,6 +3906,10 @@
 <h3 id="function-calc_grad_elec">function calc_grad_elec</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="o">::</span><span class="n">calc_grad_elec</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the calc_grad_elec option.</p>
+<p>Whether to calculate the electric field gradient.</p>
+<p><strong>Returns:</strong></p>
+<p>Value of the calc_grad_elec option. </p>
 <hr>
 
 <h3 id="function-calc_grad_elec_int">function calc_grad_elec_int</h3>
@@ -3933,7 +3937,7 @@
 <span class="p">)</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
 <p>Returns a control integer after checking that it was set.</p>
-<p>Control integers start at -1, meaning not set. If control_int is still negative, an error is printed. This usually means the option's setter is missing from initialize_control_ints. The value is returned either way.</p>
+<p>Control integers start at -1, meaning not set. If control_int is still negative, the run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a>. This usually means the option's setter is missing from initialize_control_ints.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>var_name</code> Name of the option the control integer belongs to (for the error message). </li>
@@ -5659,6 +5663,10 @@
 <h3 id="function-tbound_type">function tbound_type</h3>
 <div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="o">::</span><span class="n">tbound_type</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">const</span>
 </code></pre></div>
+<p>Returns the tbound_type option.</p>
+<p><a href="../namespaceBoundary/"><strong>Boundary</strong></a> condition at the start and end of the background time range.</p>
+<p><strong>Returns:</strong></p>
+<p>Value of the tbound_type option. </p>
 <hr>
 
 <h3 id="function-tbound_type_int">function tbound_type_int</h3>
@@ -5693,6 +5701,14 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span><span class="o">=</span><span class="mi">0</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Copies the options used in kernels to a GPU.</p>
+<p>The options are gathered into an <a href="../structOptions_1_1OptionsDevice/"><strong>OptionsDevice</strong></a> on the host, which is then copied as a whole to a single <a href="../structOptions_1_1OptionsDevice/"><strong>OptionsDevice</strong></a> allocated on the GPU. <a href="./"><strong>Options</strong></a> added to <a href="../structOptions_1_1OptionsDevice/"><strong>OptionsDevice</strong></a> must also be set here, or the kernels will see zero.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>device_id</code> ID of the GPU to copy to. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Device pointer to the <a href="../structOptions_1_1OptionsDevice/"><strong>OptionsDevice</strong></a>. It can be passed straight to kernels, but not dereferenced on the host. Free it with free_opts. </p>
 <hr>
 
 <h3 id="function-use_gpu">function use_gpu</h3>

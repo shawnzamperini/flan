@@ -1189,6 +1189,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#variable-max_time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        variable max_time
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#variable-recomb" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1238,11 +1249,15 @@
 <tbody>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>   = <code>{}</code><br></td>
+<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>   = <code>{}</code><br><em>ID of the GPU the counters are on.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
 <td style="text-align: left;"><a href="#variable-ioniz"><strong>ioniz</strong></a>   = <code>{}</code><br></td>
+</tr>
+<tr>
+<td style="text-align: right;">int *</td>
+<td style="text-align: left;"><a href="#variable-max_time"><strong>max_time</strong></a>   = <code>{}</code><br></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
@@ -1251,22 +1266,31 @@
 </tbody>
 </table>
 <h2 id="detailed-description">Detailed Description</h2>
-<p>Device-side counters of how many times the ionization or recombination probability exceeded 1.</p>
-<p>Allocated once per GPU with alloc_warnings, incremented by ioniz_recomb_kernel every time step, read back with add_warnings_to_host at the end of the run and freed with free_warnings. </p>
+<p>Device-side counters of how many times the ionization or recombination probability exceeded 1, and of how many particles were killed for exceeding imp_max_time.</p>
+<p>Allocated once per GPU with alloc_warnings, incremented by ioniz_recomb_kernel (ioniz, recomb) and <a href="../namespaceImpurityTransport/#function-step_kernel"><strong>ImpurityTransport::step_kernel</strong></a> (max_time) every time step, read back with add_warnings_to_host at the end of the run and freed with free_warnings. </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-device_id">variable device_id</h3>
+<p><em>ID of the GPU the counters are on.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">IonizRecombWarningsDevice</span><span class="o">::</span><span class="n">device_id</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-ioniz">variable ioniz</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">IonizRecombWarningsDevice</span><span class="o">::</span><span class="n">ioniz</span><span class="p">;</span>
 </code></pre></div>
+<p>Single int, number of times the ionization probability exceeded 1 </p>
+<hr>
+
+<h3 id="variable-max_time">variable max_time</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">IonizRecombWarningsDevice</span><span class="o">::</span><span class="n">max_time</span><span class="p">;</span>
+</code></pre></div>
+<p>Single int, number of particles killed for exceeding imp_max_time </p>
 <hr>
 
 <h3 id="variable-recomb">variable recomb</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">OpenADAS</span><span class="o">::</span><span class="n">IonizRecombWarningsDevice</span><span class="o">::</span><span class="n">recomb</span><span class="p">;</span>
 </code></pre></div>
+<p>Single int, number of times the recombination probability exceeded 1 </p>
 <hr>
 
 <hr />

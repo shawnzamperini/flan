@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,9 +1173,9 @@
 
 <h1 id="file-utilitiescuh">File utilities.cuh</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_84b56ae5fb2dac9a5c8c4aa192827ebc/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>utilities.cuh</strong></a></p>
+<p><em>Small math and indexing helpers used in CUDA kernels.</em> <a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;cmath&gt;</code></li>
-<li><code>#include &lt;cstdio&gt;</code></li>
 <li><code>#include &lt;cuda_runtime.h&gt;</code></li>
 </ul>
 <h2 id="namespaces">Namespaces</h2>
@@ -1182,6 +1193,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>These are the device versions of helpers in <a href="../utilities_8h/"><strong>utilities.h</strong></a> and <a href="../vectors_8h/"><strong>vectors.h</strong></a>: vector products, neighbor and flattened array indices, and linear, bilinear and trilinear interpolation. Everything is inline (or a template) so it can be used in any kernel without separate compilation. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/include/cuda/utilities.cuh</code></p>
 

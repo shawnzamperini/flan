@@ -1258,6 +1258,13 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Frees the global memory arrays of a device-side background.</p>
+<p>Each pointer is set to nullptr after it's freed. The constant memory variables (d_t, d_x, etc.) are not freed, since constant memory is allocated statically.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg_d</code> Device-side background from Background::to_device. </li>
+<li><code>device_id</code> ID of the GPU the background is on. </li>
+</ul>
 <hr>
 
 <h3 id="function-read_bkg">function read_bkg</h3>
@@ -1266,7 +1273,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Reads in the plasma background from the source chosen by the bkg_source option.</p>
-<p>"test" loads a hardcoded test background with <a href="../namespaceTest/#function-read_test"><strong>Test::read_test</strong></a>, and "gkeyll" loads a Gkeyll simulation with <a href="../namespaceGkyl/#function-read_gkyl"><strong>Gkyl::read_gkyl</strong></a>. SOLEDGE3X backgrounds (control integer 2) are not implemented yet. If the source is not implemented or not recognized, an error is printed and an empty <a href="./"><strong>Background</strong></a> is returned.</p>
+<p>"test" loads a hardcoded test background with <a href="../namespaceTest/#function-read_test"><strong>Test::read_test</strong></a>, and "gkeyll" loads a Gkeyll simulation with <a href="../namespaceGkyl/#function-read_gkyl"><strong>Gkyl::read_gkyl</strong></a>. SOLEDGE3X backgrounds (control integer 2) are not implemented yet. If the source is not implemented or not recognized, the run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a>. Options::set_bkg_source already rejects any other value, so this is only a safeguard.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>opts</code> Simulation options. </li>

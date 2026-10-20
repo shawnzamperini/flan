@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1355,6 +1366,7 @@
 
 <h1 id="struct-slotsparticleinitdevice">Struct Slots::ParticleInitDevice</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceSlots/"><strong>Slots</strong></a> <strong>&gt;</strong> <a href="./"><strong>ParticleInitDevice</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
 <h2 id="public-attributes">Public Attributes</h2>
 <table>
 <thead>
@@ -1430,6 +1442,9 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>A newly created particle, returned by make_new_particle_cuda and then written into a slot.</p>
+<p>t is in s, x, y and z are computational coordinates, vx, vy and vz are computational velocities, vX, vY and vZ are Cartesian velocities (m/s), weight is the particle weight, the idx members are the time and cell indices and q is the charge state. </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-q">variable q</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">ParticleInitDevice</span><span class="o">::</span><span class="n">q</span><span class="p">;</span>

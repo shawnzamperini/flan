@@ -1281,6 +1281,20 @@
 <span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">value</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns the index of the grid cell containing value.</p>
+<p>Same as get_nearest_cell_index_cpu in <a href="../indices_8h/"><strong>indices.h</strong></a>. A value exactly on the edge between two cells is placed in the lower cell. Values outside the grid return the index of the first or last cell.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point data type of the grid edges and value. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>grid_edges</code> Sorted grid edges, e.g., d_grid_x. </li>
+<li><code>N</code> Number of grid edges, one more than the number of cells (e.g., bkg_d.xdim + 1). </li>
+<li><code>value</code> Value to find the containing cell for. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Index of the cell containing value, between 0 and N - 2. </p>
 <hr>
 
 <h3 id="function-get_nearest_index_cpu">function get_nearest_index_cpu</h3>
@@ -1313,6 +1327,20 @@
 <span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">value</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Returns the index of the value in a sorted array that is nearest to value.</p>
+<p>Used to find the nearest background time frame. Same as get_nearest_index_cpu in <a href="../indices_8h/"><strong>indices.h</strong></a>. If value is exactly halfway between two values, the lower index is returned. Values outside the range of vec return the index of the first or last element.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point data type of the array and value. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>vec</code> Sorted array of values, e.g., the background times (d_t). </li>
+<li><code>N</code> Length of vec. </li>
+<li><code>value</code> Value to find the nearest index for. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Index of the nearest value in vec. </p>
 <hr>
 
 <hr />

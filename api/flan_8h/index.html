@@ -1205,20 +1205,29 @@
 <tbody>
 <tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-flan"><strong>flan</strong></a> (const <a href="../flan__types_8h/#typedef-inputs"><strong>Inputs</strong></a> &amp; inpts) <br><em>Entry point to Flan library.</em></td>
+<td style="text-align: left;"><a href="#function-flan"><strong>flan</strong></a> (const <a href="../flan__types_8h/#typedef-inputs"><strong>Inputs</strong></a> &amp; inpts) <br></td>
 </tr>
 </tbody>
 </table>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
 <h3 id="function-flan">function flan</h3>
-<p><em>Entry point to Flan library.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">flan</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Inputs</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">inpts</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Runs a Flan simulation with the given input options.</p>
+<p>The steps are:</p>
+<ul>
+<li>Load the options from inpts, filling in defaults for any not given (<a href="../namespaceOptions/#function-load_options"><strong>Options::load_options</strong></a>).</li>
+<li>Read the background plasma on rank 0 (<a href="../namespaceBackground/#function-read_bkg"><strong>Background::read_bkg</strong></a>) and broadcast it to every rank.</li>
+<li>Follow the impurities on every rank (<a href="../namespaceImpurityTransport/#function-follow_impurities"><strong>ImpurityTransport::follow_impurities</strong></a>).</li>
+<li>Combine the statistics from every rank onto rank 0 (<a href="../namespaceImpurity/#function-reduce_stats"><strong>Impurity::reduce_stats</strong></a>), and calculate the density, velocities, charge and <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> s from them.</li>
+<li>Save the results on rank 0 (<a href="../namespaceSaveResults/#function-save_results"><strong>SaveResults::save_results</strong></a>) and print the timing summary.</li>
+</ul>
+<p>MPI must already be initialized when flan is called, and the caller finalizes it afterwards. Every rank must call flan.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>inpts</code> User defined input options that, along with the default options, control a Flan simulation. </li>
+<li><code>inpts</code> Input options from the input file. <a href="../namespaceOptions/"><strong>Options</strong></a> not in inpts keep their default values. </li>
 </ul>
 <hr>
 

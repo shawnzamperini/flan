@@ -2018,7 +2018,7 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
-<p>Checks that the number of frames in the loaded background matches that requested for the simulation, printing an error if not.</p>
+<p>Checks that the number of frames in the loaded background matches that requested for the simulation, stopping the run with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> if not.</p>
 <p>This only needs to be run once. It is useful if the user is reusing an already calculated background, but changed the frames in the input file. In that case the background files should be deleted so that they can be regenerated, since the default is to read any existing files. Note you can circumvent this error checking if the range of frames stays the same, but that's a fringe case and not worth the effort to protect against at the moment.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
@@ -2031,18 +2031,18 @@
 <div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">Gkyl</span><span class="o">::</span><span class="n">get_calc_elec_field_py</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
 </code></pre></div>
 <p>Returns the full path to calc_elec_field.py, which calculates the electric field from the potential gradient.</p>
-<p>The path is stored in the CALC_ELEC_FIELD_PY environment variable. If it is not set, an error is printed. Currently unused, since calc_gradients calculates the electric field directly.</p>
+<p>The path is stored in the CALC_ELEC_FIELD_PY environment variable. If it is not set, the run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a>. Currently unused, since calc_gradients calculates the electric field directly.</p>
 <p><strong>Returns:</strong></p>
-<p>Full path to calc_elec_field.py, or an empty string if CALC_ELEC_FIELD_PY is not set. </p>
+<p>Full path to calc_elec_field.py. </p>
 <hr>
 
 <h3 id="function-get_read_gkyl_py">function get_read_gkyl_py</h3>
 <div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">Gkyl</span><span class="o">::</span><span class="n">get_read_gkyl_py</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
 </code></pre></div>
 <p>Returns the full path to read_gkyl.py, which is used to interface with postgkyl and create files that are easily read in by Flan.</p>
-<p>The path is stored in the READ_GKYL_PY environment variable, which is set before Flan is run. If it is not set, an error is printed.</p>
+<p>The path is stored in the READ_GKYL_PY environment variable, which is set before Flan is run. If it is not set, the run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a>, since the background can't be read without it.</p>
 <p><strong>Returns:</strong></p>
-<p>Full path to read_gkyl.py, or an empty string if READ_GKYL_PY is not set. </p>
+<p>Full path to read_gkyl.py. </p>
 <hr>
 
 <h3 id="function-gradient_ybound_fix">function gradient_ybound_fix</h3>
@@ -2064,7 +2064,7 @@
 <div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="w"> </span><span class="n">BkgFPType</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">Gkyl</span><span class="o">::</span><span class="n">load_grid</span><span class="w"> </span><span class="p">()</span><span class="w"> </span>
 </code></pre></div>
 <p>Reads in the x, y, z grid edges from bkg_from_pgkyl_grid.csv.</p>
-<p>Lines starting with # are comments. The first line holds the number of grid edges in x, y and z. Then all the x values are listed, then the y values, then the z values, one per line. An error is printed if there are not 3 dimensions or there are too many values.</p>
+<p>Lines starting with # are comments. The first line holds the number of grid edges in x, y and z. Then all the x values are listed, then the y values, then the z values, one per line. The run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> if there are not 3 dimensions or there are too many values.</p>
 <p><strong>Returns:</strong></p>
 <p>Tuple of the grid edges in x, y and z. </p>
 <hr>

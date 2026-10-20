@@ -1379,6 +1379,20 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">netCDF</span><span class="o">::</span><span class="n">NcDim</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">dim</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Creates a netCDF variable with the netCDF type matching T.</p>
+<p>double, float and int are supported. Strings must be saved with save_string instead. Any other type is a programming error and stops the run with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a>.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> C++ type of the values that will be stored. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_group</code> Group (or file) to add the variable to. </li>
+<li><code>var_name</code> Name of the variable. </li>
+<li><code>dim</code> Dimension of the variable. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The new, empty variable. </p>
 <hr>
 
 <h3 id="function-save_background">function save_background</h3>
@@ -1388,6 +1402,14 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves the background plasma into the "background" group.</p>
+<p>This is the density, temperatures, plasma potential, electric field, ion flow, magnetic field and its gradient, all with dimensions (time, x, y, z). The electric field gradient is only saved if it was calculated (calc_grad_elec).</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_file</code> File to save into. The time, x, y and z dimensions must already exist. </li>
+<li><code>opts</code> Simulation options, used for calc_grad_elec. </li>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma to save. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_geometry">function save_geometry</h3>
@@ -1396,6 +1418,13 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">bkg</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves the grids and geometry into the "geometry" group.</p>
+<p>This is the background times, the computational cell centers and edges, the physical (X, Y, Z) cell centers and edges, the Jacobian, the metric coefficients, the tangent and reciprocal basis vectors, and the dual basis components of the magnetic field.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_file</code> File to save into. The time, x, y, z and grid dimensions must already exist. </li>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma holding the geometry. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_input_options">function save_input_options</h3>
@@ -1404,6 +1433,13 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves every input option into the "input" group.</p>
+<p>Each option is saved under its option name, with a description and, for numbers, units. The groups follow the Input <a href="../namespaceOptions/"><strong>Options</strong></a> page of the docs. An option added to load_input should be added here too.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_file</code> File to save into. The "scalar" and "num_string" dimensions must already exist. </li>
+<li><code>opts</code> Simulation options. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_netcdf">function save_netcdf</h3>
@@ -1423,6 +1459,15 @@
 <span class="w">    </span><span class="n">Impurity</span><span class="o">::</span><span class="n">Statistics</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">imp_stats</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves the impurity results into the "output" group.</p>
+<p>This is the impurity counts and density, the average Cartesian and computational velocities, the average charge and the average <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collisionality s, all with dimensions (time, x, y, z). The particle track is saved too if save_track is on.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_file</code> File to save into. The time, x, y, z and track dimensions must already exist. </li>
+<li><code>opts</code> Simulation options, used for save_track. </li>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma. Currently unused. </li>
+<li><code>imp_stats</code> <a href="../namespaceImpurity/"><strong>Impurity</strong></a> statistics to save. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_results">function save_results</h3>
@@ -1432,6 +1477,14 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Options</span><span class="o">::</span><span class="n">Options</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">opts</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves the results of a simulation.</p>
+<p>Entry point for saving. Right now this just calls save_netcdf, but it leaves room for other output formats.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>bkg</code> <a href="../namespaceBackground/"><strong>Background</strong></a> plasma, saved along with the grids and geometry. </li>
+<li><code>imp_stats</code> <a href="../namespaceImpurity/"><strong>Impurity</strong></a> statistics to save. </li>
+<li><code>opts</code> Simulation options, saved in the input group. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_scalar">function save_scalar</h3>
@@ -1445,6 +1498,20 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">units</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves a single number as a variable in nc_group.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Type of the value: double, float or int. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_group</code> Group (or file) to save into. </li>
+<li><code>value</code> Value to save. </li>
+<li><code>var_name</code> Name of the variable. </li>
+<li><code>dim</code> Length 1 dimension for scalars ("scalar"). </li>
+<li><code>description</code> Description attribute. </li>
+<li><code>units</code> Units attribute, e.g., "(s)". Empty for unitless values. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_string">function save_string</h3>
@@ -1456,6 +1523,15 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">description</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves a string as a variable in nc_group.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_group</code> Group (or file) to save into. </li>
+<li><code>value</code> String to save. </li>
+<li><code>var_name</code> Name of the variable. </li>
+<li><code>dim</code> Length 1 dimension for strings ("num_string"). </li>
+<li><code>description</code> Description attribute. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_vector_1d">function save_vector_1d</h3>
@@ -1469,6 +1545,21 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">units</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves a 1D vector as a variable in nc_group.</p>
+<p>An empty vector is skipped with a warning, since netCDF can't store a zero-length variable. dim must have the same length as vec.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Type of the values: double, float or int. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_group</code> Group (or file) to save into. </li>
+<li><code>vec</code> Values to save. </li>
+<li><code>var_name</code> Name of the variable. </li>
+<li><code>dim</code> Dimension of the variable, the same length as vec. </li>
+<li><code>description</code> Description attribute. </li>
+<li><code>units</code> Units attribute. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_vector_3d">function save_vector_3d</h3>
@@ -1484,6 +1575,23 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">units</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves a Vector3D as a variable in nc_group.</p>
+<p>The flattened data is written as is, since netCDF uses the same row-major order. An empty vector is skipped with a warning. The dimensions must match the shape of vec.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Type of the values: double, float or int. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_group</code> Group (or file) to save into. </li>
+<li><code>vec</code> Values to save. </li>
+<li><code>var_name</code> Name of the variable. </li>
+<li><code>dim1</code> First dimension of the variable. </li>
+<li><code>dim2</code> Second dimension of the variable. </li>
+<li><code>dim3</code> Third dimension of the variable. </li>
+<li><code>description</code> Description attribute. </li>
+<li><code>units</code> Units attribute. </li>
+</ul>
 <hr>
 
 <h3 id="function-save_vector_4d">function save_vector_4d</h3>
@@ -1500,6 +1608,24 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">units</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Saves a Vector4D as a variable in nc_group.</p>
+<p>The flattened data is written as is, since netCDF uses the same row-major order. An empty vector is skipped with a warning. The dimensions must match the shape of vec.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Type of the values: double, float or int. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>nc_group</code> Group (or file) to save into. </li>
+<li><code>vec</code> Values to save. </li>
+<li><code>var_name</code> Name of the variable. </li>
+<li><code>dim1</code> First dimension of the variable (usually time). </li>
+<li><code>dim2</code> Second dimension of the variable. </li>
+<li><code>dim3</code> Third dimension of the variable. </li>
+<li><code>dim4</code> Fourth dimension of the variable. </li>
+<li><code>description</code> Description attribute. </li>
+<li><code>units</code> Units attribute. </li>
+</ul>
 <hr>
 
 <hr />

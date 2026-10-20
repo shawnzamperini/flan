@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-functions-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1154,6 +1165,17 @@
   
     <nav class="md-nav" aria-label="Public Functions Documentation">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#function-free_rngs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function free_rngs
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#function-init_rngs_cuda" class="md-nav__link">
@@ -1201,6 +1223,7 @@
 
 <h1 id="file-init_rngscu">File init_rngs.cu</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_adb0e0080591d240f7507da3cc422fe2/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>init_rngs.cu</strong></a></p>
+<p><em>CUDA routines for creating the random number generators used on a GPU.</em> <a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;cuda_runtime.h&gt;</code></li>
 <li><code>#include "pcg32.h"</code></li>
@@ -1216,6 +1239,10 @@
 </thead>
 <tbody>
 <tr>
+<td style="text-align: right;">void</td>
+<td style="text-align: left;"><a href="#function-free_rngs"><strong>free_rngs</strong></a> (<a href="../structpcg32/"><strong>pcg32</strong></a> *&amp; rngs_d, int device_id) <br></td>
+</tr>
+<tr>
 <td style="text-align: right;"><a href="../structpcg32/"><strong>pcg32</strong></a> *</td>
 <td style="text-align: left;"><a href="#function-init_rngs_cuda"><strong>init_rngs_cuda</strong></a> (<a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, uint64_t base_seed) <br></td>
 </tr>
@@ -1225,13 +1252,38 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Each slot gets its own PCG32 random number generator, stored in a device array indexed by slot. Kernels that need random numbers (collisions, ionization/recombination, boundary conditions and filling slots) use the generator of the slot they are working on. </p>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
+<h3 id="function-free_rngs">function free_rngs</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">free_rngs</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">pcg32</span><span class="w"> </span><span class="o">*&amp;</span><span class="w"> </span><span class="n">rngs_d</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Frees the random number generators allocated by init_rngs_cuda.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>rngs_d</code> Device array of generators. Set to nullptr. </li>
+<li><code>device_id</code> ID of the GPU the generators are on. </li>
+</ul>
+<hr>
+
 <h3 id="function-init_rngs_cuda">function init_rngs_cuda</h3>
 <div class="highlight"><pre><span></span><code><span class="n">pcg32</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">init_rngs_cuda</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">base_seed</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Allocates and initializes the random number generators for the slots on a GPU.</p>
+<p>Launches init_rngs_kernel with blocks of 256 threads, so the array is rounded up to a whole number of blocks and has at least slots_d.N generators. Generator i belongs to slot i. Waits for the kernel to finish before returning. The array is allocated on the current device, so that must be the GPU slots_d is on.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>slots_d</code> Particle slots on the device, used for the number of slots. </li>
+<li><code>base_seed</code> Base seed for the generators. See init_rngs_kernel. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Device pointer to the array of generators. The caller owns it and must free it with free_rngs. </p>
 <hr>
 
 <h3 id="function-init_rngs_kernel">function init_rngs_kernel</h3>
@@ -1240,6 +1292,13 @@
 <span class="w">    </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">base_seed</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that creates one PCG32 random number generator per thread.</p>
+<p>Thread tid gets seed base_seed + tid and stream tid, so every generator in the array produces a different sequence.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>rngs</code> Device array to fill. Must hold one generator per thread in the launch. </li>
+<li><code>base_seed</code> Base seed shared by every generator in the array. </li>
+</ul>
 <hr>
 
 <hr />

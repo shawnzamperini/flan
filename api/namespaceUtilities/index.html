@@ -1310,6 +1310,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#function-linear_interpolate_uniform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function linear_interpolate_uniform
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-linear_interpolate_uniform_cuda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function linear_interpolate_uniform_cuda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#function-linspace" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1458,11 +1480,19 @@
 </tr>
 <tr>
 <td style="text-align: right;">T</td>
-<td style="text-align: left;"><a href="#function-linear_interpolate"><strong>linear_interpolate</strong></a> (const std::array&lt; T, N &gt; &amp; xarr, const std::array&lt; T, N &gt; &amp; yarr, T x) <br><em>Return value at x in set of (xarr, yarr) values using linear interpolation.</em></td>
+<td style="text-align: left;"><a href="#function-linear_interpolate"><strong>linear_interpolate</strong></a> (const std::array&lt; T, N &gt; &amp; xarr, const std::array&lt; T, N &gt; &amp; yarr, T x) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">T</td>
 <td style="text-align: left;"><a href="#function-linear_interpolate_cuda"><strong>linear_interpolate_cuda</strong></a> (const T(&amp;) xarr, const T(&amp;) yarr, T x) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">T</td>
+<td style="text-align: left;"><a href="#function-linear_interpolate_uniform"><strong>linear_interpolate_uniform</strong></a> (const std::array&lt; T, N &gt; &amp; xarr, const std::array&lt; T, N &gt; &amp; yarr, T x) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">T</td>
+<td style="text-align: left;"><a href="#function-linear_interpolate_uniform_cuda"><strong>linear_interpolate_uniform_cuda</strong></a> (const T(&amp;) xarr, const T(&amp;) yarr, T x) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">std::vector&lt; double &gt;</td>
@@ -1504,7 +1534,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Performs bilinear interpolation on a flattened two-dimensional lookup table stored in device memory.</p>
-<p>The function locates the grid cell that contains the point (x, y), computes the interpolation weights in each dimension, and returns the bilinearly interpolated value. Interpolation weights are clamped to the range [0, 1] to prevent extrapolation beyond the boundaries of the tabulated data.</p>
+<p>The function locates the grid cell that contains the point (x, y) with a linear search, computes the interpolation weights in each dimension, and returns the bilinearly interpolated value. Interpolation weights are clamped to the range [0, 1] to prevent extrapolation beyond the boundaries of the tabulated data. nx and ny must both be at least 2.</p>
 <p>The table is assumed to be stored in row-major order with dimensions nx × ny, where the flattened index corresponding to (ix, iy) is ix * ny + iy.</p>
 <p><strong>Template parameters:</strong></p>
 <ul>
@@ -1539,20 +1569,6 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Performs bilinear interpolation within a rectangular region in two-dimensional (x, y) space.</p>
-<p>The function interpolates a value at the coordinates (x, y) using values defined at the corners of a rectangle bounded by (x0, y0) and (x1, y1).</p>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li><code>x0</code> Lower x-coordinate of the rectangle. </li>
-<li><code>y0</code> Lower y-coordinate of the rectangle. </li>
-<li><code>z0</code> Value at the lower corner. </li>
-<li><code>x1</code> Upper x-coordinate of the rectangle. </li>
-<li><code>y1</code> Upper y-coordinate of the rectangle. </li>
-<li><code>z1</code> Value at the upper corner. </li>
-<li><code>x</code> X-coordinate at which to evaluate the interpolated value. </li>
-<li><code>y</code> Y-coordinate at which to evaluate the interpolated value. </li>
-</ul>
-<p><strong>Returns:</strong></p>
-<p>Bilinearly interpolated value at (x, y). Performs bilinear interpolation within a rectangular region in two-dimensional (x, y) space.</p>
 <p>The rectangle is defined by the coordinates (x0, y0) and (x1, y1), with values specified at each of the four corners. Interpolation is performed first along the x direction and then along the y direction to obtain the value at (x, y).</p>
 <p>Corner indexing follows the usual convention:</p>
 <p>z00 : (x0, y0) z10 : (x1, y0) z01 : (x0, y1) z11 : (x1, y1)</p>
@@ -1600,6 +1616,17 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Converts a 3D (x, y, z) index to the index into a flattened 3D array, matching Vector3D::calc_index.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>ydim</code> Number of cells in y. </li>
+<li><code>zdim</code> Number of cells in z. </li>
+<li><code>xidx</code> x index. </li>
+<li><code>yidx</code> y index. </li>
+<li><code>zidx</code> z index. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Flattened index. </p>
 <hr>
 
 <h3 id="function-calc_4d_index_cuda">function calc_4d_index_cuda</h3>
@@ -1613,6 +1640,19 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">zidx</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Converts a 4D (t, x, y, z) index to the index into a flattened 4D array, matching Vector4D::calc_index.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>xdim</code> Number of cells in x. </li>
+<li><code>ydim</code> Number of cells in y. </li>
+<li><code>zdim</code> Number of cells in z. </li>
+<li><code>tidx</code> Time index. </li>
+<li><code>xidx</code> x index. </li>
+<li><code>yidx</code> y index. </li>
+<li><code>zidx</code> z index. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Flattened index. </p>
 <hr>
 
 <h3 id="function-cross_product">function cross_product</h3>
@@ -1639,6 +1679,14 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">out</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Computes the cross product a x b.</p>
+<p>out must not be the same array as a or b, since out[0] is written before a and b are done being read.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> First vector. </li>
+<li><code>b</code> Second vector. </li>
+<li><code>out</code> Cross product a x b. </li>
+</ul>
 <hr>
 
 <h3 id="function-dot_product">function dot_product</h3>
@@ -1664,6 +1712,14 @@
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">b</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Computes the dot product of two 3-vectors.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> First vector. </li>
+<li><code>b</code> Second vector. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>a . b </p>
 <hr>
 
 <h3 id="function-get_neighbor_index">function get_neighbor_index</h3>
@@ -1699,6 +1755,18 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Finds the index of the neighboring cell center on val's side of the center of cell idx.</p>
+<p>This picks the second point to interpolate between. If val is above cell_centers[idx], the neighbor is idx + 1, otherwise (including val exactly at the center) it's idx - 1. At the first or last cell, the only neighbor is returned regardless of side, and the clamped interpolation weights then hold the value constant past the outer cell centers. Same logic as the CPU version, <a href="./"><strong>Utilities</strong></a>:: get_neighbor_index, written without branches.</p>
+<p>N must be at least 2. With N = 1 there is no neighbor and the returned index is out of range.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>val</code> Coordinate of the point. </li>
+<li><code>cell_centers</code> Cell center coordinates, length N. </li>
+<li><code>idx</code> Index of the cell containing val. </li>
+<li><code>N</code> Number of cells. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Index of the neighboring cell. </p>
 <hr>
 
 <h3 id="function-interp_vec4d">function interp_vec4d</h3>
@@ -1738,23 +1806,33 @@
 <hr>
 
 <h3 id="function-linear_interpolate">function linear_interpolate</h3>
-<p><em>Return value at x in set of (xarr, yarr) values using linear interpolation.</em> 
 <div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="w"> </span><span class="n">N</span><span class="o">&gt;</span>
 <span class="n">T</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">linear_interpolate</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">xarr</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">yarr</span><span class="p">,</span>
 <span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">x</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Linearly interpolates a fixed-size table at x.</p>
+<p>Searches the table from the start for the interval containing x, so xarr can be increasing or decreasing. For a large, evenly spaced table, linear_interpolate_uniform is much faster.</p>
+<p>This is defined in the header file here because otherwise we would need to have definitions in the source file for every N that we use (which is of course silly and not a real option).</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point type of the table. </li>
+<li><code>N</code> Length of the table, deduced from the arrays. </li>
+</ul>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>xarr</code> Array of x values </li>
-<li><code>yarr</code> Array of y values </li>
-<li><code>x</code> Value to get y value at</li>
+<li><code>xarr</code> Table x values. </li>
+<li><code>yarr</code> Table y values. </li>
+<li><code>x</code> Point to interpolate at. </li>
 </ul>
-<p>This is defined in the header file here because otherwise we would need to have definitions in the source file for every N that we use (which is of course silly and not a real option).</p>
 <p><strong>Returns:</strong></p>
-<p>Returns linearly interpolated value at f(x) </p>
+<p>Interpolated y value. </p>
+<p><strong>Exception:</strong></p>
+<ul>
+<li><code>std::out_of_range</code> If x is outside the range of xarr. </li>
+</ul>
 <hr>
 
 <h3 id="function-linear_interpolate_cuda">function linear_interpolate_cuda</h3>
@@ -1765,6 +1843,71 @@
 <span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">x</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Linearly interpolates a fixed-size table at x.</p>
+<p>Searches the table from the start for the interval containing x, so xarr can be increasing or decreasing. x must be within the range of xarr. If it isn't, yarr[N - 1] is returned, which is only correct if x is past the last entry.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point type of the table. </li>
+<li><code>N</code> Length of the table, deduced from the arrays. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>xarr</code> Table x values. </li>
+<li><code>yarr</code> Table y values. </li>
+<li><code>x</code> Point to interpolate at. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated y value. </p>
+<hr>
+
+<h3 id="function-linear_interpolate_uniform">function linear_interpolate_uniform</h3>
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="w"> </span><span class="n">N</span><span class="o">&gt;</span>
+<span class="n">T</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">linear_interpolate_uniform</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">xarr</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">yarr</span><span class="p">,</span>
+<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">x</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Linearly interpolates a fixed-size table with evenly spaced x values at x.</p>
+<p>Faster than linear_interpolate for large tables, since the interval containing x is calculated directly instead of searched for. xarr must be increasing and evenly spaced, like the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> table from python/calc_nanbu_A.py. Points outside the table are extrapolated from the first or last interval. Same as linear_interpolate_uniform_cuda in <a href="../utilities_8cuh/"><strong>cuda/utilities.cuh</strong></a>.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point type of the table. </li>
+<li><code>N</code> Length of the table, deduced from the arrays. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>xarr</code> Table x values, increasing and evenly spaced. </li>
+<li><code>yarr</code> Table y values. </li>
+<li><code>x</code> Point to interpolate at. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated y value. </p>
+<hr>
+
+<h3 id="function-linear_interpolate_uniform_cuda">function linear_interpolate_uniform_cuda</h3>
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">Utilities</span><span class="o">::</span><span class="n">linear_interpolate_uniform_cuda</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="p">(</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="n">xarr</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="p">(</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="n">yarr</span><span class="p">,</span>
+<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">x</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Linearly interpolates a fixed-size table with evenly spaced x values at x.</p>
+<p>Faster than linear_interpolate_cuda for large tables, since the interval containing x is calculated directly instead of searched for. xarr must be increasing and evenly spaced, like the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> table from python/calc_nanbu_A.py. Points outside the table are extrapolated from the first or last interval.</p>
+<p><strong>Template parameters:</strong></p>
+<ul>
+<li><code>T</code> Floating-point type of the table. </li>
+<li><code>N</code> Length of the table, deduced from the arrays. </li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>xarr</code> Table x values, increasing and evenly spaced. </li>
+<li><code>yarr</code> Table y values. </li>
+<li><code>x</code> Point to interpolate at. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated y value. </p>
 <hr>
 
 <h3 id="function-linspace">function linspace</h3>
@@ -1911,11 +2054,35 @@
 <li><code>z</code> Z-coordinate at which to evaluate the field. </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>Interpolated field value. </p>
+<p>Interpolated field value.</p>
+<p>Trilinearly interpolates between the 8 corners of a box at (x, y, z).</p>
+<p>The box has one corner at (x0, y0, z0) and the opposite one at (x0 + dx, y0 + dy, z0 + dz). dx, dy and dz can be negative, so x0 doesn't have to be the low corner. Corner values are named by offset, e.g., v100 is at (x0 + dx, y0, z0). The weights are clamped to [0, 1], so points outside the box get the value on the nearest face instead of being extrapolated.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>x0</code> x coordinate of the origin corner. </li>
+<li><code>y0</code> y coordinate of the origin corner. </li>
+<li><code>z0</code> z coordinate of the origin corner. </li>
+<li><code>dx</code> Box size in x. Must not be 0. </li>
+<li><code>dy</code> Box size in y. Must not be 0. </li>
+<li><code>dz</code> Box size in z. Must not be 0. </li>
+<li><code>v000</code> Value at (x0, y0, z0). </li>
+<li><code>v100</code> Value at (x0 + dx, y0, z0). </li>
+<li><code>v010</code> Value at (x0, y0 + dy, z0). </li>
+<li><code>v110</code> Value at (x0 + dx, y0 + dy, z0). </li>
+<li><code>v001</code> Value at (x0, y0, z0 + dz). </li>
+<li><code>v101</code> Value at (x0 + dx, y0, z0 + dz). </li>
+<li><code>v011</code> Value at (x0, y0 + dy, z0 + dz). </li>
+<li><code>v111</code> Value at (x0 + dx, y0 + dy, z0 + dz). </li>
+<li><code>x</code> x coordinate of the point. </li>
+<li><code>y</code> y coordinate of the point. </li>
+<li><code>z</code> z coordinate of the point. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>Interpolated value at (x, y, z). </p>
 <hr>
 
 <hr />
-<p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/cuda/utilities.cu</code></p>
+<p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/utilities.cpp</code></p>
 
 
 

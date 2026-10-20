@@ -1167,17 +1167,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#function-get_nearest_index_gpu" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        function get_nearest_index_gpu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#function-record_stats_gpu" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1248,12 +1237,8 @@
 </thead>
 <tbody>
 <tr>
-<td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#function-get_nearest_index_gpu"><strong>get_nearest_index_gpu</strong></a> (const T * vec, int N, T value) <br></td>
-</tr>
-<tr>
 <td style="text-align: right;">void</td>
-<td style="text-align: left;"><a href="#function-record_stats_gpu"><strong>record_stats_gpu</strong></a> (<a href="../structImpurityStats_1_1StatisticsDevice/"><strong>StatisticsDevice</strong></a> &amp; stats_d, const <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, double dt) <br><em>Wrapper to call record_stats GPU kernel.</em></td>
+<td style="text-align: left;"><a href="#function-record_stats_gpu"><strong>record_stats_gpu</strong></a> (<a href="../structImpurityStats_1_1StatisticsDevice/"><strong>StatisticsDevice</strong></a> &amp; stats_d, const <a href="../structSlots_1_1SlotsDevice/"><strong>Slots::SlotsDevice</strong></a> &amp; slots_d, double dt) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">void</td>
@@ -1262,24 +1247,21 @@
 </tbody>
 </table>
 <h2 id="public-functions-documentation">Public Functions Documentation</h2>
-<h3 id="function-get_nearest_index_gpu">function get_nearest_index_gpu</h3>
-<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
-<span class="kt">int</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">get_nearest_index_gpu</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">vec</span><span class="p">,</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">,</span>
-<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">value</span>
-<span class="p">)</span><span class="w"> </span>
-</code></pre></div>
-<hr>
-
 <h3 id="function-record_stats_gpu">function record_stats_gpu</h3>
-<p><em>Wrapper to call record_stats GPU kernel.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">record_stats_gpu</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">StatisticsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">stats_d</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Slots</span><span class="o">::</span><span class="n">SlotsDevice</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">slots_d</span><span class="p">,</span>
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span>
 <span class="p">)</span><span class="w"> </span>
-</code></pre></div></p>
+</code></pre></div>
+<p>Launches record_stats_kernel to add every alive particle on the GPU to the impurity statistics.</p>
+<p>GPU version of record_stats_cpu. Uses blocks of 256 threads, one thread per slot. The launch is asynchronous, except in DEBUG builds, where it waits for the kernel to finish and prints any error.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>stats_d</code> <a href="../namespaceImpurity/"><strong>Impurity</strong></a> statistics on the device. Added to. </li>
+<li><code>slots_d</code> Particle slots on the device, on the same GPU as stats_d. </li>
+<li><code>dt</code> Time step (s). </li>
+</ul>
 <hr>
 
 <h3 id="function-record_stats_kernel">function record_stats_kernel</h3>
@@ -1289,6 +1271,14 @@
 <span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Kernel that adds each alive particle to the statistics of its cell and time frame, one thread per slot.</p>
+<p>The count is incremented and weight * dt (the occupancy, in number of particles) is added to the weights. The Cartesian and computational velocities and the charge are added multiplied by weight * dt, so they can later be turned into weighted averages. Dead slots are skipped. The cell and time frame are the particle's tidx, xidx, yidx and zidx, so find_containing_cell_gpu must have been called first.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>stats_d</code> <a href="../namespaceImpurity/"><strong>Impurity</strong></a> statistics on the device. Added to. </li>
+<li><code>slots_d</code> Particle slots on the device. </li>
+<li><code>dt</code> Time step (s). </li>
+</ul>
 <hr>
 
 <hr />

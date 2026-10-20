@@ -1320,7 +1320,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Sets an option to the value stored in a variant, overwriting the default.</p>
-<p>If the value in var is not of type T, the value is not stored and an error is printed.</p>
+<p>If the value in var is not of type T, var_correct_type stops the run.</p>
 <p><strong>Template parameters:</strong></p>
 <ul>
 <li><code>T</code> Expected type of the value: int, double, std::string or Mapc2p_ptr. </li>
@@ -1339,7 +1339,11 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Checks that the options are compatible with each other, changing them if needed.</p>
-<p>Currently this only checks that <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collisions are used with BiMaxwellian moments from Gkeyll. If not, a warning is printed and collisions are turned off. Placeholders are left for checks of particle splitting and the variable time step.</p>
+<p>Currently this checks that:
+* <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collisions are used with BiMaxwellian moments from Gkeyll. If not, collisions are turned off.
+* A periodic x, y or z boundary is periodic on both the minimum and maximum side. If only one side is, both are set to periodic.
+* GPU acceleration is off in a CPU-only build.</p>
+<p>A warning is printed whenever an option is changed. Placeholders are left for checks of particle splitting and the variable time step.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>opts</code> <a href="./"><strong>Options</strong></a> object to check and modify in place. </li>
@@ -1352,6 +1356,12 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Frees the <a href="../structOptions_1_1OptionsDevice/"><strong>OptionsDevice</strong></a> allocated by Options::to_device.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>opts_d</code> Device pointer returned by Options::to_device. It is not set to nullptr, since it's passed by value. </li>
+<li><code>device_id</code> ID of the GPU the options are on. </li>
+</ul>
 <hr>
 
 <h3 id="function-load_input">function load_input</h3>
@@ -1361,7 +1371,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Loads each input option into an <a href="./"><strong>Options</strong></a> object, overwriting the default value.</p>
-<p>Each option name is matched to its setter in <a href="./"><strong>Options</strong></a> and the value is set with assign_option. An error is printed for an option name that is not recognized, or a value of the wrong type, and that option is left unchanged.</p>
+<p>Each option name is matched to its setter in <a href="./"><strong>Options</strong></a> and the value is set with assign_option. The run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> for an option name that is not recognized (e.g., a typo) or a value of the wrong type, since running with the default instead would silently ignore the option.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>opts</code> <a href="./"><strong>Options</strong></a> object to load the options into. Generally should be passed in right after constructing it. </li>
@@ -1392,7 +1402,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Checks if the value in a variant is of the expected type.</p>
-<p>If not, an error is printed saying which type was expected.</p>
+<p>If not, the run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a>, saying which type was expected.</p>
 <p><strong>Template parameters:</strong></p>
 <ul>
 <li><code>T</code> Expected type of the value: int, double, std::string or Mapc2p_ptr. </li>
@@ -1403,7 +1413,7 @@
 <li><code>var_name</code> Name of the input option, used in the error message. </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>True if the value in var is of type T, false if not. </p>
+<p>True if the value in var is of type T. Doesn't return if not. </p>
 <hr>
 
 <hr />

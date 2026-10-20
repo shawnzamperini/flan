@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,6 +1173,7 @@
 
 <h1 id="file-boriscu">File boris.cu</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_adb0e0080591d240f7507da3cc422fe2/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>boris.cu</strong></a></p>
+<p><em>CUDA routines for calculating the Lorentz force on a particle and updating its velocity with the</em> <a href="../namespaceBoris/"><em><strong>Boris</strong></em></a> <em>algorithm.</em><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;cuda_runtime.h&gt;</code></li>
 <li><code>#include &lt;cstdio&gt;</code></li>
@@ -1169,7 +1181,6 @@
 <li><code>#include "background_device.h"</code></li>
 <li><code>#include "constants.h"</code></li>
 <li><code>#include "slots_device.h"</code></li>
-<li><code>#include "device_constants.cuh"</code></li>
 <li><code>#include "interpolate.cuh"</code></li>
 <li><code>#include "utilities.cuh"</code></li>
 </ul>
@@ -1188,6 +1199,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>GPU version of <a href="../boris_8cpp/"><strong>boris.cpp</strong></a>. The velocity is updated in Cartesian space (vX, vY, vZ) using the electric and magnetic fields interpolated to the particle location. The velocity in computational coordinates (vx, vy, vz) is then found from the reciprocal basis vectors, which is what is used to move the particle. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/cuda/boris.cu</code></p>
 

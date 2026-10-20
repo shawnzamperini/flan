@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,6 +1173,7 @@
 
 <h1 id="file-nanbu_s_ah">File nanbu_s_a.h</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_d44c64559bbebec7f509842c48db8b23/"><strong>include</strong></a> <strong>&gt;</strong> <a href="./"><strong>nanbu_s_a.h</strong></a></p>
+<p><em>Tabulated values of A(s) for the</em> <a href="../namespaceNanbu/"><em><strong>Nanbu</strong></em></a> <em>collision model.</em><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;array&gt;</code></li>
 </ul>
@@ -1180,6 +1192,9 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Generated automatically by python/calc_nanbu_A.py, don't edit by hand. A is found from coth(A) - 1/A = exp(-s) for evenly spaced s from 0.009 to 5.001 in steps of 0.001. Outside 0.01 &lt;= s &lt;= 5, <a href="../namespaceNanbu/"><strong>Nanbu</strong></a>'s approximations A = 1/s and A = 3 exp(-s) are used instead.</p>
+<p>CPU version. The GPU version is <a href="../nanbu__s__a_8cuh/"><strong>cuda/nanbu_s_a.cuh</strong></a>. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/include/nanbu_s_a.h</code></p>
 

@@ -3133,8 +3133,8 @@
 <td style="text-align: left;"><a href="#function-broadcast"><strong>broadcast</strong></a> (MPI_Comm comm) <br></td>
 </tr>
 <tr>
-<td style="text-align: right;">bool</td>
-<td style="text-align: left;"><a href="#function-check_dim"><strong>check_dim</strong></a> (const int m_dim, const int in_dim, const std::string_view data, const int dim_num) <br></td>
+<td style="text-align: right;">std::string</td>
+<td style="text-align: left;"><a href="#function-check_dim"><strong>check_dim</strong></a> (const int m_dim, const int in_dim, const int dim_num) <br></td>
 </tr>
 <tr>
 <td style="text-align: right;">const <a href="../classVectors_1_1Vector3D/"><strong>Vectors::Vector3D</strong></a>&lt; <a href="../flan__types_8h/#typedef-bkgfptype"><strong>BkgFPType</strong></a> &gt; &amp;</td>
@@ -3841,7 +3841,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Broadcasts the background from rank 0 to every other MPI rank.</p>
-<p>Every rank must call this. After it returns, every rank holds a copy of the dimensions, the times and computational grid, the geometry data and the plasma and field data loaded on rank 0. Not broadcast are the time and grid min/max values, bR, the covariant magnetic field components (b_x, b_y, b_z) and the electric field gradient (gradeX, gradeY, gradeZ).</p>
+<p>Every rank must call this. After it returns, every rank holds a copy of the dimensions, the simulation bounds (t, x, y and z min/max), the times and computational grid, the geometry data and the plasma and field data loaded on rank 0. Not broadcast are bR, the covariant magnetic field components (b_x, b_y, b_z) and the electric field gradient (gradeX, gradeY, gradeZ), which are only saved to the output file on rank 0.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>comm</code> MPI communicator to broadcast over. </li>
@@ -3849,24 +3849,22 @@
 <hr>
 
 <h3 id="function-check_dim">function check_dim</h3>
-<div class="highlight"><pre><span></span><code><span class="kt">bool</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="o">::</span><span class="n">check_dim</span><span class="w"> </span><span class="p">(</span>
+<div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">Background</span><span class="o">::</span><span class="n">Background</span><span class="o">::</span><span class="n">check_dim</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">m_dim</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">in_dim</span><span class="p">,</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">data</span><span class="p">,</span>
 <span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim_num</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Checks that a new dimension matches the dimension already stored.</p>
-<p>A stored dimension of 0 means it has not been set yet, so any new dimension is accepted. Otherwise the two must be equal. A mismatch means the data is not being read in correctly or is from different Gkeyll runs, and an error message with both values is printed.</p>
+<p>A stored dimension of 0 means it has not been set yet, so any new dimension is accepted. Otherwise the two must be equal.</p>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>m_dim</code> Dimension currently stored in the <a href="./"><strong>Background</strong></a>. </li>
 <li><code>in_dim</code> Dimension of the data being loaded. </li>
-<li><code>data</code> Name of the data being loaded (for the error message). </li>
-<li><code>dim_num</code> Which dimension (1-4) is being checked (for the error message). </li>
+<li><code>dim_num</code> Which dimension (1-4) is being checked (for the message). </li>
 </ul>
 <p><strong>Returns:</strong></p>
-<p>True if the dimensions are consistent, false otherwise. </p>
+<p>Empty if the dimensions are consistent. Otherwise a line describing the mismatch, for set_dims to put in its error message. </p>
 <hr>
 
 <h3 id="function-get_j">function get_J</h3>
@@ -4911,7 +4909,7 @@
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
 <p>Checks the dimensions of a Vector4D against the stored dimensions and stores them if they are consistent.</p>
-<p>Each of the four dimensions of v is checked with check_dim. If all four are consistent, they become the stored dimensions. If any are not, an error message is printed and the stored dimensions are left unchanged. The program is not stopped.</p>
+<p>Each of the four dimensions of v is checked with check_dim. If all four are consistent, they become the stored dimensions. If any are not, the run is stopped with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a>, listing every dimension that doesn't match. A mismatch means the data is not being read in correctly or is from different Gkeyll runs.</p>
 <p><strong>Template parameters:</strong></p>
 <ul>
 <li><code>T</code> Data type stored in the Vector4D. </li>
@@ -4928,6 +4926,15 @@
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">device_id</span><span class="o">=</span><span class="mi">0</span>
 <span class="p">)</span><span class="w"> </span>
 </code></pre></div>
+<p>Copies the background to a GPU.</p>
+<p>The times, cell centers, cell edges and simulation bounds are copied to constant memory (see <a href="../device__constants_8cu/"><strong>device_constants.cu</strong></a>), and the 3D and 4D arrays are allocated and copied to global memory. Constant memory is per GPU, so each GPU gets its own copy. Constant memory is shared by everything on a GPU, though, so only one background can be on each GPU at a time. Copying a second one to the same GPU overwrites the constant memory of the first.</p>
+<p>Stops the run with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> if a dimension is too big for the constant memory arrays (see MAX_1D in <a href="../device__constants_8cuh/"><strong>device_constants.cuh</strong></a>).</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>device_id</code> ID of the GPU to copy to. </li>
+</ul>
+<p><strong>Returns:</strong></p>
+<p>The device-side background. Its pointers are to global memory on the GPU and must be freed with free_bkg. </p>
 <hr>
 
 <hr />

@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1344,6 +1355,7 @@
 
 <h1 id="file-device_constantscu">File device_constants.cu</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_adb0e0080591d240f7507da3cc422fe2/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>device_constants.cu</strong></a></p>
+<p><em>Definitions of the background grid variables kept in GPU constant memory.</em> <a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include "device_constants.cuh"</code></li>
 </ul>
@@ -1358,140 +1370,159 @@
 <tbody>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_grid_x"><strong>d_grid_x</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_grid_x"><strong>d_grid_x</strong></a>  <br><em>x cell edges, length xdim + 1</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_grid_y"><strong>d_grid_y</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_grid_y"><strong>d_grid_y</strong></a>  <br><em>y cell edges, length ydim + 1</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_grid_z"><strong>d_grid_z</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_grid_z"><strong>d_grid_z</strong></a>  <br><em>z cell edges, length zdim + 1</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_t"><strong>d_t</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_t"><strong>d_t</strong></a>  <br><a href="../namespaceBackground/"><em><strong>Background</strong></em></a> <em>times (s), length tdim.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_t_max"><strong>d_t_max</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_t_max"><strong>d_t_max</strong></a>  <br><em>Last background time (s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_t_min"><strong>d_t_min</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_t_min"><strong>d_t_min</strong></a>  <br><em>First background time (s)</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_x"><strong>d_x</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_x"><strong>d_x</strong></a>  <br><em>x cell centers, length xdim</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_x_max"><strong>d_x_max</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_x_max"><strong>d_x_max</strong></a>  <br><em>Upper x bound of the simulation.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_x_min"><strong>d_x_min</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_x_min"><strong>d_x_min</strong></a>  <br><em>Lower x bound of the simulation.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_y"><strong>d_y</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_y"><strong>d_y</strong></a>  <br><em>y cell centers, length ydim</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_y_max"><strong>d_y_max</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_y_max"><strong>d_y_max</strong></a>  <br><em>Upper y bound of the simulation.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_y_min"><strong>d_y_min</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_y_min"><strong>d_y_min</strong></a>  <br><em>Lower y bound of the simulation.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_z"><strong>d_z</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_z"><strong>d_z</strong></a>  <br><em>z cell centers, length zdim</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_z_max"><strong>d_z_max</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_z_max"><strong>d_z_max</strong></a>  <br><em>Upper z bound of the simulation.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">__constant__ double</td>
-<td style="text-align: left;"><a href="#variable-d_z_min"><strong>d_z_min</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-d_z_min"><strong>d_z_min</strong></a>  <br><em>Lower z bound of the simulation.</em></td>
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>The background's time and coordinate arrays are small and read by nearly every kernel, so they are kept in constant memory, which is cached and faster to read than global memory when the threads in a warp read the same address. Background::to_device fills them with cudaMemcpyToSymbol. Constant memory is per GPU, and to_device selects the GPU before copying, so each GPU gets its own copy.</p>
+<p>The arrays have a fixed size of MAX_1D (see <a href="../device__constants_8cuh/"><strong>device_constants.cuh</strong></a>). Only the first tdim, xdim, ydim or zdim elements (dim + 1 for the grid edges) are set; the rest are unused.</p>
+<p>These are compiled with relocatable device code, so there is one copy of each variable per executable. Code that needs them must be linked with the same copy that Background::to_device fills in (see tests/CMakeLists.txt). </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-d_grid_x">variable d_grid_x</h3>
+<p><em>x cell edges, length xdim + 1</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_grid_x</span><span class="p">[</span><span class="n">MAX_1D</span><span class="p">];</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_grid_y">variable d_grid_y</h3>
+<p><em>y cell edges, length ydim + 1</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_grid_y</span><span class="p">[</span><span class="n">MAX_1D</span><span class="p">];</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_grid_z">variable d_grid_z</h3>
+<p><em>z cell edges, length zdim + 1</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_grid_z</span><span class="p">[</span><span class="n">MAX_1D</span><span class="p">];</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_t">variable d_t</h3>
+<p><a href="../namespaceBackground/"><em><strong>Background</strong></em></a> <em>times (s), length tdim.</em>
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_t</span><span class="p">[</span><span class="n">MAX_1D</span><span class="p">];</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_t_max">variable d_t_max</h3>
+<p><em>Last background time (s)</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_t_max</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_t_min">variable d_t_min</h3>
+<p><em>First background time (s)</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_t_min</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_x">variable d_x</h3>
+<p><em>x cell centers, length xdim</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_x</span><span class="p">[</span><span class="n">MAX_1D</span><span class="p">];</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_x_max">variable d_x_max</h3>
+<p><em>Upper x bound of the simulation.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_x_max</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_x_min">variable d_x_min</h3>
+<p><em>Lower x bound of the simulation.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_x_min</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_y">variable d_y</h3>
+<p><em>y cell centers, length ydim</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_y</span><span class="p">[</span><span class="n">MAX_1D</span><span class="p">];</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_y_max">variable d_y_max</h3>
+<p><em>Upper y bound of the simulation.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_y_max</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_y_min">variable d_y_min</h3>
+<p><em>Lower y bound of the simulation.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_y_min</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_z">variable d_z</h3>
+<p><em>z cell centers, length zdim</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_z</span><span class="p">[</span><span class="n">MAX_1D</span><span class="p">];</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_z_max">variable d_z_max</h3>
+<p><em>Upper z bound of the simulation.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_z_max</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-d_z_min">variable d_z_min</h3>
+<p><em>Lower z bound of the simulation.</em> 
 <div class="highlight"><pre><span></span><code><span class="n">__constant__</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">d_z_min</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <hr />

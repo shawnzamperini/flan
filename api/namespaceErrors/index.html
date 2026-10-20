@@ -19,7 +19,7 @@
     
     
       
-        <title>File interpolate.cu - Flan</title>
+        <title>Namespace Errors - Flan</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#file-interpolatecu" class="md-skip">
+        <a href="#namespace-errors" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              File interpolate.cu
+              Namespace Errors
             
           </span>
         </div>
@@ -1133,13 +1133,52 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#namespaces" class="md-nav__link">
+  <a href="#public-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Namespaces
+        Public Functions
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-functions-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Functions Documentation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public Functions Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#function-check_cuda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function check_cuda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-fatal_error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function fatal_error
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1160,9 +1199,9 @@
 
 
 
-<h1 id="file-interpolatecu">File interpolate.cu</h1>
-<p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_adb0e0080591d240f7507da3cc422fe2/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>interpolate.cu</strong></a></p>
-<h2 id="namespaces">Namespaces</h2>
+<h1 id="namespace-errors">Namespace Errors</h1>
+<p><a href="../namespaces/"><strong>Namespace List</strong></a> <strong>&gt;</strong> <a href="./"><strong>Errors</strong></a></p>
+<h2 id="public-functions">Public Functions</h2>
 <table>
 <thead>
 <tr>
@@ -1172,13 +1211,46 @@
 </thead>
 <tbody>
 <tr>
-<td style="text-align: right;">namespace</td>
-<td style="text-align: left;"><a href="../namespaceInterpolate/"><strong>Interpolate</strong></a> <br></td>
+<td style="text-align: right;">void</td>
+<td style="text-align: left;"><a href="#function-check_cuda"><strong>check_cuda</strong></a> (cudaError_t err, const char * context) <br></td>
+</tr>
+<tr>
+<td style="text-align: right;">void</td>
+<td style="text-align: left;"><a href="#function-fatal_error"><strong>fatal_error</strong></a> (const std::string &amp; msg) <br></td>
 </tr>
 </tbody>
 </table>
+<h2 id="public-functions-documentation">Public Functions Documentation</h2>
+<h3 id="function-check_cuda">function check_cuda</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Errors</span><span class="o">::</span><span class="n">check_cuda</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">cudaError_t</span><span class="w"> </span><span class="n">err</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">context</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Stops the run if a CUDA call failed.</p>
+<p>Wrap CUDA runtime calls, or the cudaDeviceSynchronize after a kernel launch, with this. For example: </p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>err</code> Return value of the CUDA call. </li>
+<li><code>context</code> What was being done, for the error message (e.g., the kernel or function name). </li>
+</ul>
+<hr>
+
+<h3 id="function-fatal_error">function fatal_error</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">Errors</span><span class="o">::</span><span class="n">fatal_error</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">msg</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Prints an error message and stops the whole run.</p>
+<p>Use this for errors that would give wrong results if Flan kept going. The message is printed to stderr with the MPI rank, then MPI_Abort ends every rank. std::exit would only end this rank, and the others would hang at the next collective. If MPI isn't initialized (e.g., in the unit tests), std::exit is used instead, since MPI_Abort can't be called before MPI_Init.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>msg</code> Description of the error. "Error! " is added to the front and a newline to the end. </li>
+</ul>
+<hr>
+
 <hr />
-<p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/cuda/interpolate.cu</code></p>
+<p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/errors.cpp</code></p>
 
 
 

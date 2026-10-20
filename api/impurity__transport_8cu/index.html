@@ -1143,6 +1143,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,12 +1173,13 @@
 
 <h1 id="file-impurity_transportcu">File impurity_transport.cu</h1>
 <p><a href="../files/"><strong>FileList</strong></a> <strong>&gt;</strong> <a href="../dir_adb0e0080591d240f7507da3cc422fe2/"><strong>cuda</strong></a> <strong>&gt;</strong> <a href="./"><strong>impurity_transport.cu</strong></a></p>
+<p><em>CUDA routines for the main loop steps of</em> <a href="../impurity__transport_8cpp/"><em><strong>impurity_transport.cpp</strong></em></a> <em>that don't have a file of their own.</em><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;cuda_runtime.h&gt;</code></li>
 <li><code>#include &lt;cstdio&gt;</code></li>
-<li><code>#include &lt;curand_kernel.h&gt;</code></li>
 <li><code>#include "background_device.h"</code></li>
 <li><code>#include "openadas_device.h"</code></li>
+<li><code>#include "options_device.h"</code></li>
 <li><code>#include "pcg32.h"</code></li>
 <li><code>#include "slots_device.h"</code></li>
 <li><code>#include "device_constants.cuh"</code></li>
@@ -1189,6 +1201,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>GPU versions of find_containing_cell_cpu and step_cpu. The wrappers in <a href="../impurity__transport_8cpp/"><strong>impurity_transport.cpp</strong></a> call these when use_gpu is on. </p>
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/cuda/impurity_transport.cu</code></p>
 

@@ -1144,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#detailed-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#public-attributes-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1344,6 +1355,7 @@
 
 <h1 id="struct-impuritystatsstatisticsdevice">Struct ImpurityStats::StatisticsDevice</h1>
 <p><a href="../annotated/"><strong>ClassList</strong></a> <strong>&gt;</strong> <a href="../namespaceImpurityStats/"><strong>ImpurityStats</strong></a> <strong>&gt;</strong> <a href="./"><strong>StatisticsDevice</strong></a></p>
+<p><a href="#detailed-description">More...</a></p>
 <ul>
 <li><code>#include &lt;impurity_stats_device.h&gt;</code></li>
 </ul>
@@ -1358,31 +1370,31 @@
 <tbody>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-nt"><strong>Nt</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-nt"><strong>Nt</strong></a>  <br><em>Number of background times.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-nx"><strong>Nx</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-nx"><strong>Nx</strong></a>  <br><em>Number of cells in x.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-ny"><strong>Ny</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-ny"><strong>Ny</strong></a>  <br><em>Number of cells in y.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-nz"><strong>Nz</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-nz"><strong>Nz</strong></a>  <br><em>Number of cells in z.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int *</td>
-<td style="text-align: left;"><a href="#variable-counts"><strong>counts</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-counts"><strong>counts</strong></a>  <br><em>Number of particle time steps recorded.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">int</td>
-<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-device_id"><strong>device_id</strong></a>  <br><em>ID of the GPU the arrays are on.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-q"><strong>q</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-q"><strong>q</strong></a>  <br><em>Sum of charge state * weight * dt.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
@@ -1390,15 +1402,15 @@
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vx"><strong>vX</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vx"><strong>vX</strong></a>  <br><em>Sum of Cartesian X velocity * weight * dt.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vy"><strong>vY</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vy"><strong>vY</strong></a>  <br><em>Sum of Cartesian Y velocity * weight * dt.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-vz"><strong>vZ</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-vz"><strong>vZ</strong></a>  <br><em>Sum of Cartesian Z velocity * weight * dt.</em></td>
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
@@ -1414,84 +1426,105 @@
 </tr>
 <tr>
 <td style="text-align: right;">double *</td>
-<td style="text-align: left;"><a href="#variable-weights"><strong>weights</strong></a>  <br></td>
+<td style="text-align: left;"><a href="#variable-weights"><strong>weights</strong></a>  <br><em>Sum of weight * dt (occupancy)</em></td>
 </tr>
 </tbody>
 </table>
+<h2 id="detailed-description">Detailed Description</h2>
+<p>Device-side copy of the impurity statistics arrays, made by Statistics::to_device and freed with free_stats.</p>
+<p>Each array is 4D, (t, x, y, z) on the background grid, flattened the same way as the background (see calc_4d_index_cuda). Each alive particle adds to the cell and time frame it's in every time step (see record_stats_kernel). Apart from counts, every value is added multiplied by the particle's weight * dt, so dividing by weights gives the weighted average. </p>
 <h2 id="public-attributes-documentation">Public Attributes Documentation</h2>
 <h3 id="variable-nt">variable Nt</h3>
+<p><em>Number of background times.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">Nt</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-nx">variable Nx</h3>
+<p><em>Number of cells in x.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">Nx</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-ny">variable Ny</h3>
+<p><em>Number of cells in y.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">Ny</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-nz">variable Nz</h3>
+<p><em>Number of cells in z.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">Nz</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-counts">variable counts</h3>
+<p><em>Number of particle time steps recorded.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">counts</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-device_id">variable device_id</h3>
+<p><em>ID of the GPU the arrays are on.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">device_id</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-q">variable q</h3>
+<p><em>Sum of charge state * weight * dt.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">q</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-s">variable s</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">s</span><span class="p">;</span>
 </code></pre></div>
+<p>Sum of the <a href="../namespaceNanbu/"><strong>Nanbu</strong></a> collision parameter s * weight * dt (added in <a href="../collisions_8cu/"><strong>collisions.cu</strong></a>) </p>
 <hr>
 
 <h3 id="variable-vx">variable vX</h3>
+<p><em>Sum of Cartesian X velocity * weight * dt.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">vX</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vy">variable vY</h3>
+<p><em>Sum of Cartesian Y velocity * weight * dt.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">vY</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vz">variable vZ</h3>
+<p><em>Sum of Cartesian Z velocity * weight * dt.</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">vZ</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <h3 id="variable-vx_1">variable vx</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">vx</span><span class="p">;</span>
 </code></pre></div>
+<p>Sum of computational x velocity * weight
+* dt </p>
 <hr>
 
 <h3 id="variable-vy_1">variable vy</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">vy</span><span class="p">;</span>
 </code></pre></div>
+<p>Sum of computational y velocity * weight
+* dt </p>
 <hr>
 
 <h3 id="variable-vz_1">variable vz</h3>
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">vz</span><span class="p">;</span>
 </code></pre></div>
+<p>Sum of computational z velocity * weight
+* dt </p>
 <hr>
 
 <h3 id="variable-weights">variable weights</h3>
+<p><em>Sum of weight * dt (occupancy)</em> 
 <div class="highlight"><pre><span></span><code><span class="kt">double</span><span class="o">*</span><span class="w"> </span><span class="n">ImpurityStats</span><span class="o">::</span><span class="n">StatisticsDevice</span><span class="o">::</span><span class="n">weights</span><span class="p">;</span>
-</code></pre></div>
+</code></pre></div></p>
 <hr>
 
 <hr />

@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#perlmutter-batch-script" class="md-skip">
+        <a href="#running-on-perlmutter" class="md-skip">
           Skip to content
         </a>
       
@@ -512,6 +512,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Perlmutter
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -528,6 +546,58 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cpu-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CPU nodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gpu-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU nodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submitting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submitting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1142,6 +1212,47 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cpu-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CPU nodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gpu-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU nodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submitting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submitting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1157,41 +1268,89 @@
 
 
 
-<h1 id="perlmutter-batch-script">Perlmutter Batch Script</h1>
-<p>The following is an example batch script used to submit a Flan job on 
-Perlmutter. </p>
-<p><div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash -l</span>
-<span class="c1">#SBATCH --job-name=my-job-name</span>
-<span class="c1">#SBATCH --account=m3739     # Update with project number</span>
-<span class="c1">#SBATCH --nodes=2           # 2 nodes</span>
-<span class="c1">#SBATCH --ntasks=2          # 2 MPI tasks</span>
+<h1 id="running-on-perlmutter">Running on Perlmutter</h1>
+<p>On Perlmutter, compile the case on a login node (see
+<a href="../running-flan/">Running Flan</a>), then submit the run as a Slurm job. Below
+are example job scripts for the CPU nodes and the GPU nodes. Change
+<code>--account</code> to your NERSC project, and the executable name to your case.
+Copies of both are in the repository, as
+<code>scripts/submit-flan-perlmutter-cpu.sbatch</code> and
+<code>scripts/submit-flan-perlmutter-gpu.sbatch</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Starting points</p>
+<p>These scripts are a place to start, not tuned settings. The CPU script is
+the one Flan has been run with. The GPU script hasn't been tested yet.
+How many CPUs to ask for and how to bind the threads depends on the job,
+see NERSC's guide to
+<a href="https://docs.nersc.gov/jobs/affinity/">process and thread affinity</a>.</p>
+</div>
+<h2 id="cpu-nodes">CPU nodes</h2>
+<p>This script runs one MPI rank per node with 256 OpenMP threads each, on 2
+nodes. <code>--cpus-per-task</code> counts hardware threads, and a CPU node has 128 cores
+with 2 hardware threads each, so 256 gives the rank the whole node:</p>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash -l</span>
+<span class="c1">#SBATCH --job-name=my_case</span>
+<span class="c1">#SBATCH --account=mXXXX         # Your NERSC project</span>
 <span class="c1">#SBATCH --constraint=cpu</span>
-<span class="c1">#SBATCH --cpus-per-task=128 # Use all CPUs on node</span>
-<span class="c1">#SBATCH --qos=regular       # debug (only one node allowed) or regular</span>
-<span class="c1">#SBATCH --time=01:00:00     # Run for an hour</span>
+<span class="c1">#SBATCH --nodes=2</span>
+<span class="c1">#SBATCH --ntasks-per-node=1     # One MPI rank per node</span>
+<span class="c1">#SBATCH --cpus-per-task=256     # The whole node (128 cores x 2 threads)</span>
+<span class="c1">#SBATCH --qos=regular           # debug (one node, short runs) or regular</span>
+<span class="c1">#SBATCH --time=01:00:00</span>
 
 <span class="c1"># OpenMP settings</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="nv">$SLURM_CPUS_PER_TASK</span><span class="w">      </span><span class="c1"># Match --cpus-per-task above</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="nv">$SLURM_CPUS_PER_TASK</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">OMP_PLACES</span><span class="o">=</span>cores<span class="w">         </span><span class="c1"># Bind threads to cores</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">OMP_PROC_BIND</span><span class="o">=</span>spread<span class="w">     </span><span class="c1"># Spread threads across cores</span>
 
-<span class="c1"># This controls the number of threads available in python. Make it match</span>
-<span class="c1"># cpus-per-task</span>
+<span class="c1"># Threads available to Python (postgkyl, when reading a Gkeyll background)</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">NUMEXPR_MAX_THREADS</span><span class="o">=</span><span class="nv">$SLURM_CPUS_PER_TASK</span>
 
-<span class="c1"># Initialize conda for compute node</span>
+<span class="c1"># The flan environment is needed on the compute node too</span>
 module<span class="w"> </span>load<span class="w"> </span>conda
 conda<span class="w"> </span>activate<span class="w"> </span>flan
 
-<span class="c1"># Run Flan run</span>
-srun<span class="w"> </span>--cpu-bind<span class="o">=</span>cores<span class="w"> </span>./my_flan_case
+srun<span class="w"> </span>--cpu-bind<span class="o">=</span>cores<span class="w"> </span>./my_case
 </code></pre></div>
-Compile the input file as normal, using the Makefile provided when setting up 
-a case directory. If the batch script is saved as <code>submit-flan-perlmutter.sh</code>, 
-then submit the job with:</p>
-<div class="highlight"><pre><span></span><code>sbatch<span class="w"> </span>submit-flan-perlmutter.sh
+<h2 id="gpu-nodes">GPU nodes</h2>
+<p>Each GPU node has 4 NVIDIA A100 GPUs. Flan uses every GPU a rank can see, so
+run one rank per node and give it all 4. Set <code>inpts["use_gpu"] = "cuda"</code> in
+the input file, and compile against a GPU build of Flan
+(see <a href="../../installation/install-perlmutter/">Perlmutter Installation</a>).</p>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash -l</span>
+<span class="c1">#SBATCH --job-name=my_case</span>
+<span class="c1">#SBATCH --account=mXXXX         # Your NERSC project</span>
+<span class="c1">#SBATCH --constraint=gpu</span>
+<span class="c1">#SBATCH --nodes=1</span>
+<span class="c1">#SBATCH --ntasks-per-node=1     # One MPI rank per node, using all 4 GPUs</span>
+<span class="c1">#SBATCH --gpus-per-node=4</span>
+<span class="c1">#SBATCH --cpus-per-task=128     # The whole node (64 cores x 2 threads)</span>
+<span class="c1">#SBATCH --qos=regular</span>
+<span class="c1">#SBATCH --time=01:00:00</span>
+
+<span class="nb">export</span><span class="w"> </span><span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="nv">$SLURM_CPUS_PER_TASK</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">OMP_PLACES</span><span class="o">=</span>cores
+<span class="nb">export</span><span class="w"> </span><span class="nv">OMP_PROC_BIND</span><span class="o">=</span>spread
+<span class="nb">export</span><span class="w"> </span><span class="nv">NUMEXPR_MAX_THREADS</span><span class="o">=</span><span class="nv">$SLURM_CPUS_PER_TASK</span>
+
+module<span class="w"> </span>load<span class="w"> </span>conda
+conda<span class="w"> </span>activate<span class="w"> </span>flan
+
+srun<span class="w"> </span>--cpu-bind<span class="o">=</span>cores<span class="w"> </span>./my_case
 </code></pre></div>
-<p>Output is put into a generically named slurm file. </p>
+<p>A GPU node has 64 cores, so 128 hardware threads is the whole node. The
+OpenMP threads are still used on the GPU nodes, for reading the background
+and other setup.</p>
+<h2 id="submitting">Submitting</h2>
+<p>If the script is saved as <code>submit.sh</code>:</p>
+<div class="highlight"><pre><span></span><code>sbatch<span class="w"> </span>submit.sh<span class="w">        </span><span class="c1"># Submit the job</span>
+squeue<span class="w"> </span>-u<span class="w"> </span><span class="nv">$USER</span><span class="w">         </span><span class="c1"># Check on it</span>
+</code></pre></div>
+<p>Flan's output goes to <code>slurm-&lt;jobid&gt;.out</code> in the directory the job was
+submitted from, and the results to <code>&lt;case_name&gt;.nc</code> in the case directory.
+Use the <code>debug</code> QOS for quick tests: it's limited to short, small jobs, but
+usually starts much sooner.</p>
+<p>See <a href="../running-flan/#troubleshooting">Running Flan</a> for troubleshooting.</p>
 
 
 

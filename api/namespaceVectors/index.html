@@ -1143,6 +1143,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#public-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-functions-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Functions Documentation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public Functions Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#function-shape_mismatch_error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        function shape_mismatch_error
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1173,14 +1212,48 @@
 <tbody>
 <tr>
 <td style="text-align: right;">class</td>
-<td style="text-align: left;"><a href="../classVectors_1_1Vector3D/"><strong>Vector3D</strong></a> &lt;typename T&gt;<br><em>Implementation of a 3D vector.</em></td>
+<td style="text-align: left;"><a href="../classVectors_1_1Vector3D/"><strong>Vector3D</strong></a> &lt;typename T&gt;<br></td>
 </tr>
 <tr>
 <td style="text-align: right;">class</td>
-<td style="text-align: left;"><a href="../classVectors_1_1Vector4D/"><strong>Vector4D</strong></a> &lt;typename T&gt;<br><em>Implementation of a 4D vector.</em></td>
+<td style="text-align: left;"><a href="../classVectors_1_1Vector4D/"><strong>Vector4D</strong></a> &lt;typename T&gt;<br></td>
 </tr>
 </tbody>
 </table>
+<h2 id="public-functions">Public Functions</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Type</th>
+<th style="text-align: left;">Name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">void</td>
+<td style="text-align: left;"><a href="#function-shape_mismatch_error"><strong>shape_mismatch_error</strong></a> (const <a href="../classVectors_1_1Vector4D/"><strong>Vector4D</strong></a>&lt; T &gt; &amp; a, const <a href="../classVectors_1_1Vector4D/"><strong>Vector4D</strong></a>&lt; T &gt; &amp; b, const std::string &amp; op) <br></td>
+</tr>
+</tbody>
+</table>
+<h2 id="public-functions-documentation">Public Functions Documentation</h2>
+<h3 id="function-shape_mismatch_error">function shape_mismatch_error</h3>
+<div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
+<span class="kt">void</span><span class="w"> </span><span class="n">Vectors</span><span class="o">::</span><span class="n">shape_mismatch_error</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Vector4D</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">Vector4D</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">b</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">op</span>
+<span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+<p>Stops the run with <a href="../namespaceErrors/#function-fatal_error"><strong>Errors::fatal_error</strong></a> because a and b are not the same shape, showing both shapes side by side.</p>
+<p>Used by operator+ and operator*.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>a</code> First vector. </li>
+<li><code>b</code> Second vector. </li>
+<li><code>op</code> Operator that was called (e.g., "+"), for the message. </li>
+</ul>
+<hr>
+
 <hr />
 <p>The documentation for this class was generated from the following file <code>/home/zamp/github/flan/src/vectors.cpp</code></p>
 
