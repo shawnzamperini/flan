@@ -1,0 +1,5 @@
+# Python packages needed to build the docs: pip install -r requirements.txt
+# MkDocs is held below 2.0, which removes the plugin system this site relies on.
+mkdocs>=1.6,<2
+mkdocs-material>=9.7,<10
+mkdoxy>=1.2.8,<2

@@ -1,0 +1,86 @@
+site_name: Flan
+
+theme:
+  name: material
+  favicon: assets/images/favicon.png
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+extra_css:
+  #- styles/burger-king.css
+  - styles/halloween.css
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Installation:
+      - Overview: installation/installation.md
+      - Linux: installation/install-linux.md
+      - Perlmutter: installation/install-perlmutter.md
+  - Running Flan:
+      - Overview: running/running-flan.md
+      - Perlmutter: running/running-perlmutter.md
+      - Omega: running/running-omega.md
+  - Input Options: input-options.md
+  - Physics:
+      - Impurity Transport: physics/impurity-transport.md
+      - Collisions: physics/collisions.md
+      - Ionization/Recombination: physics/ionization-recombination.md
+  - Developer:
+      - Code Structure: developer/code-structure.md
+      - MPI Parallelism: developer/mpi-parallelism.md
+      - OpenMP Layout: developer/openmp-layout.md
+      - Contributing: developer/contributing.md
+      - Gangster Spongebob: developer/gangster-spongebob.md
+      - API Reference:
+          - Namespaces: api/namespaces.md
+          - Classes: api/annotated.md
+          - Functions: api/namespace_member_functions.md
+          - Files: api/files.md
+  - Publications/Presentations: publications.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js
+
+
+# API reference generated from the Doxygen comments in the source code. Needs
+# Doxygen installed. Paths are relative to docs-site/, so run mkdocs from here.
+plugins:
+  - search
+  - mkdoxy:
+      projects:
+        api:
+          src-dirs: ../src ../include
+          full-doc: True
+          doxy-cfg:
+            FILE_PATTERNS: "*.cpp *.h *.cu *.cuh"
+            RECURSIVE: True
+            EXCLUDE: "../src/tmp ../include/tmp ../include/boris_old.cpp"
+            EXTENSION_MAPPING: "cu=C++ cuh=C++"
+            EXTRACT_ALL: True
+            ENABLE_PREPROCESSING: True
+            MACRO_EXPANSION: True
+            PREDEFINED: "USE_CUDA __global__= __device__= __host__= __forceinline__="
+            # Don't publish the source code itself, only the documentation
+            XML_PROGRAMLISTING: False
+            SOURCE_BROWSER: False
+            VERBATIM_HEADERS: False
+            INLINE_SOURCES: False
+      save-api: .mkdoxy

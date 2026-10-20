@@ -1,30 +1,10 @@
 #include <iostream>
 #include <cmath>
-#include <tuple>
 
 #include "flan.h"
 #include "flan_types.h"
+#include "mpi.h"
 
-
-// mapc2p from d3d-167196-v6-gpu
-std::tuple<double, double, double> mapc2p(double xc, double yc, double zc)
-{
-	// Some constants from the top
-	double R0 {1.722};
-	double a0 {0.59};
-
-	// Cylindrical coordinates
-	double R {xc};
-	double phi {zc / (R0 + a0)};
-
-	// Cartesian coordinates
-	double X {R * std::cos(phi)};
-	double Y {R * std::sin(phi)};
-	double Z {yc};
-
-	// Return as three-tuple of doubles.
-	return std::make_tuple(X, Y, Z);
-}
 
 Inputs create_inputs()
 {
@@ -32,7 +12,7 @@ Inputs create_inputs()
 	
 	// Int, double and string input options go here
 	inpts["case_name"] = "sh_outward_v1";
-	inpts["imp_num"] = 50000;
+	inpts["imp_num"] = 100;
 	inpts["gkyl_dir"] = "/home/zamp/gkyldir/d3d-167196-v6-gpu";
 	inpts["gkyl_casename"] = "d3d-167196-v6-gpu";
 	inpts["gkyl_frame_start"] = 600;
@@ -59,19 +39,19 @@ Inputs create_inputs()
 	inpts["imp_var_reduct_freq"] = 0.05;
 	inpts["imp_var_reduct_min_weight"] = 0.9999;
 
-	// Pointers to functions go here
-	Mapc2p_ptr mapc2p_ptr {&mapc2p};
-
-	// Function pointer input options go here
-	inpts["mapc2p"] = mapc2p_ptr;
-
 	return inpts;
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
-	// Run Flan
+	// Initialize MPI
+	MPI_Init(&argc, &argv);
+
+	// Bundle up inputs and run Flan
 	Inputs inpts {create_inputs()};
 	flan(inpts);
+
+	// Finalize MPI
+	MPI_Finalize();
 }

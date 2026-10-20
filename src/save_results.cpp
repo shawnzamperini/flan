@@ -5,6 +5,14 @@
 * Right now only outputting everything into a single netCDF file is supported.
 * Important to know that NcFile inherits from NcGroup, so we can pass an
 * NcFile object into a function that calls for an NcGroup.
+*
+* The file is named <case_name>.nc and has four groups: input (the options
+* used), geometry (grids, metric coefficients and basis vectors),
+* background (the plasma) and output (the impurity results). The 4D arrays
+* have dimensions (time, x, y, z), and the grid edge arrays use the
+* "grid x", "grid y" and "grid z" dimensions, one longer than x, y and z.
+* Every variable has a description attribute, and numeric ones a units
+* attribute. Units of "(?)" depend on the computational coordinates used.
 */
 #include <filesystem>
 #include <iostream>
@@ -16,6 +24,7 @@
 
 #include "background.h"
 #include "config.h"
+#include "errors.h"
 #include "flan_types.h"
 #include "netcdf"
 #include "options.h"
@@ -23,6 +32,16 @@
 
 namespace SaveResults
 {
+	/**
+	* Saves the results of a simulation.
+	*
+	* Entry point for saving. Right now this just calls save_netcdf, but it
+	* leaves room for other output formats.
+	*
+	* @param bkg Background plasma, saved along with the grids and geometry.
+	* @param imp_stats Impurity statistics to save.
+	* @param opts Simulation options, saved in the input group.
+	*/
 	void save_results(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts)
 	{
@@ -32,7 +51,19 @@ namespace SaveResults
 	
 	}
 
-	// Create a NetCDF variable of the chosen type
+	/**
+	* Creates a netCDF variable with the netCDF type matching T.
+	*
+	* double, float and int are supported. Strings must be saved with
+	* save_string instead. Any other type is a programming error and stops
+	* the run with Errors::fatal_error.
+	*
+	* @tparam T C++ type of the values that will be stored.
+	* @param nc_group Group (or file) to add the variable to.
+	* @param var_name Name of the variable.
+	* @param dim Dimension of the variable.
+	* @return The new, empty variable.
+	*/
 	template <typename T>
 	netCDF::NcVar create_var(const netCDF::NcGroup& nc_group,
 		const std::string& var_name, const netCDF::NcDim& dim)
@@ -54,19 +85,29 @@ namespace SaveResults
 			}
 			else if constexpr (std::is_same_v<T, std::vector<std::string>>)
 			{
-				std::cerr << "Error! If you want to save a string you must "
-					<< "call save_string.\n";
+				Errors::fatal_error("If you want to save a string you must "
+					"call save_string. var_name = " + var_name);
 			}
 			else
 			{
-				std::cerr << "Error! Variable type for NetCDF file not "
-					<< "recognized. var_name = " << var_name << '\n';
+				Errors::fatal_error("Variable type for NetCDF file not "
+					"recognized. var_name = " + var_name);
 			}
 
 			return var;
 	}
 
-	// Save a scalar to nc_group.
+	/**
+	* Saves a single number as a variable in nc_group.
+	*
+	* @tparam T Type of the value: double, float or int.
+	* @param nc_group Group (or file) to save into.
+	* @param value Value to save.
+	* @param var_name Name of the variable.
+	* @param dim Length 1 dimension for scalars ("scalar").
+	* @param description Description attribute.
+	* @param units Units attribute, e.g., "(s)". Empty for unitless values.
+	*/
 	template <typename T>
 	void save_scalar(const netCDF::NcGroup& nc_group, const T value, 
 		const std::string& var_name, const netCDF::NcDim& dim, 
@@ -86,12 +127,20 @@ namespace SaveResults
 			var.putAtt("units", units);
 	}
 
-	// Save a string to nc_group.
+	/**
+	* Saves a string as a variable in nc_group.
+	*
+	* @param nc_group Group (or file) to save into.
+	* @param value String to save.
+	* @param var_name Name of the variable.
+	* @param dim Length 1 dimension for strings ("num_string").
+	* @param description Description attribute.
+	*/
 	void save_string(const netCDF::NcGroup& nc_group, const std::string value, 
 		const std::string& var_name, const netCDF::NcDim& dim, 
 		const std::string& description)
 	{
-			// Create netCDF variable holding the templated type
+			// Create netCDF string variable
 			netCDF::NcVar var {nc_group.addVar(var_name, netCDF::ncString, dim)};
 			
 			// NetCDF expects the string to be passed as an array of C-style
@@ -106,7 +155,20 @@ namespace SaveResults
 			var.putAtt("description", description);
 	}
 
-	// Save a 1D vector into nc_group. dim must be matched by the programmer.
+	/**
+	* Saves a 1D vector as a variable in nc_group.
+	*
+	* An empty vector is skipped with a warning, since netCDF can't store a
+	* zero-length variable. dim must have the same length as vec.
+	*
+	* @tparam T Type of the values: double, float or int.
+	* @param nc_group Group (or file) to save into.
+	* @param vec Values to save.
+	* @param var_name Name of the variable.
+	* @param dim Dimension of the variable, the same length as vec.
+	* @param description Description attribute.
+	* @param units Units attribute.
+	*/
 	template <typename T>
 	void save_vector_1d(const netCDF::NcGroup& nc_group, std::vector<T> vec, 
 		const std::string& var_name, const netCDF::NcDim& dim, 
@@ -115,7 +177,7 @@ namespace SaveResults
 		// Vector cannot be zero-length.
 		if (vec.size() == 0)
 		{
-			std::cerr << "NetCDF Error! " << var_name << " is zero-length."
+			std::cerr << "Warning! " << var_name << " is zero-length."
 				<< " Skipping.\n";
 		}
 		else
@@ -147,7 +209,23 @@ namespace SaveResults
 		}
 	}
 
-	// Save a 3D vector into nc_group. dims must be matched by the programmer.
+	/**
+	* Saves a Vector3D as a variable in nc_group.
+	*
+	* The flattened data is written as is, since netCDF uses the same
+	* row-major order. An empty vector is skipped with a warning. The
+	* dimensions must match the shape of vec.
+	*
+	* @tparam T Type of the values: double, float or int.
+	* @param nc_group Group (or file) to save into.
+	* @param vec Values to save.
+	* @param var_name Name of the variable.
+	* @param dim1 First dimension of the variable.
+	* @param dim2 Second dimension of the variable.
+	* @param dim3 Third dimension of the variable.
+	* @param description Description attribute.
+	* @param units Units attribute.
+	*/
 	template <typename T>
 	void save_vector_3d(const netCDF::NcGroup& nc_group, 
 		const Vectors::Vector3D<T>& vec, 
@@ -157,7 +235,7 @@ namespace SaveResults
 	{
 		if (vec.get_data().size() == 0)
 		{
-			std::cerr << "NetCDF Error! " << var_name << " is zero-length."
+			std::cerr << "Warning! " << var_name << " is zero-length."
 				<< " Skipping.\n";
 		}
 		else
@@ -194,7 +272,25 @@ namespace SaveResults
 			var.putAtt("units", units);
 		}
 	}
-	// Save a 4D vector into nc_group. dims must be matched by the programmer.
+
+	/**
+	* Saves a Vector4D as a variable in nc_group.
+	*
+	* The flattened data is written as is, since netCDF uses the same
+	* row-major order. An empty vector is skipped with a warning. The
+	* dimensions must match the shape of vec.
+	*
+	* @tparam T Type of the values: double, float or int.
+	* @param nc_group Group (or file) to save into.
+	* @param vec Values to save.
+	* @param var_name Name of the variable.
+	* @param dim1 First dimension of the variable (usually time).
+	* @param dim2 Second dimension of the variable.
+	* @param dim3 Third dimension of the variable.
+	* @param dim4 Fourth dimension of the variable.
+	* @param description Description attribute.
+	* @param units Units attribute.
+	*/
 	template <typename T>
 	void save_vector_4d(const netCDF::NcGroup& nc_group, 
 		const Vectors::Vector4D<T>& vec, 
@@ -205,7 +301,7 @@ namespace SaveResults
 	{
 		if (vec.get_data().size() == 0)
 		{
-			std::cerr << "NetCDF Error! " << var_name << " is zero-length."
+			std::cerr << "Warning! " << var_name << " is zero-length."
 				<< " Skipping.\n";
 		}
 		else
@@ -243,7 +339,17 @@ namespace SaveResults
 		}
 	}
 
-	// Save input options to netCDF file
+	/**
+	* Saves every input option into the "input" group.
+	*
+	* Each option is saved under its option name, with a description and,
+	* for numbers, units. The groups follow the Input Options page of the
+	* docs. An option added to load_input should be added here too.
+	*
+	* @param nc_file File to save into. The "scalar" and "num_string"
+	*        dimensions must already exist.
+	* @param opts Simulation options.
+	*/
 	void save_input_options(const netCDF::NcFile& nc_file, 
 		const Options::Options& opts)
 	{
@@ -252,13 +358,30 @@ namespace SaveResults
 		netCDF::NcDim dim_scalar {nc_file.getDim("scalar")};
 		netCDF::NcDim dim_str {nc_file.getDim("num_string")};
 
-		// Meta options for the simulation
+		// Simulation
 		save_string(input_group, opts.case_name(), "case_name", dim_str, 
 			"case name");
+		save_string(input_group, opts.use_gpu(), "use_gpu", dim_str, 
+			"GPU acceleration option");
+		save_scalar(input_group, opts.seed(), "seed", dim_scalar, 
+			"base seed for the random number generators (negative = from "
+			"the clock)", "");
+		save_scalar(input_group, opts.slot_cap(), "slot_cap", dim_scalar, 
+			"maximum number of particle slots", "");
+		save_scalar(input_group, opts.print_interval(), "print_interval", 
+			dim_scalar, "number of progress updates printed", "");
 
-		// Background plasma source and test options	
+		// Background plasma
 		save_string(input_group, opts.bkg_source(), "bkg_source", dim_str, 
 			"source of background plasma");
+		save_scalar(input_group, opts.min_ne(), "min_ne", dim_scalar, 
+			"lower limit on the electron density", "(m-3)");
+		save_scalar(input_group, opts.min_te(), "min_te", dim_scalar, 
+			"lower limit on the electron temperature", "(eV)");
+		save_scalar(input_group, opts.min_ti(), "min_ti", dim_scalar, 
+			"lower limit on the ion temperature", "(eV)");
+
+		// Testing
 		save_string(input_group, opts.test_opt(), "test_opt", dim_str, 
 			"test background plasma option");
 		save_string(input_group, opts.save_track(), "save_track", dim_str, 
@@ -276,17 +399,57 @@ namespace SaveResults
 		save_string(input_group, opts.gkyl_elec_name(), "gkyl_elec_name", 
 			dim_str, "name of electron species in Gkeyll");
 		save_string(input_group, opts.gkyl_ion_name(), "gkyl_ion_name", 
-			dim_str, "name of deuterium species in Gkeyll");
+			dim_str, "name of main ion species in Gkeyll");
+		save_scalar(input_group, opts.gkyl_elec_mass_amu(), 
+			"gkyl_elec_mass_amu", dim_scalar, 
+			"electron mass used in Gkeyll", "(amu)");
+		save_scalar(input_group, opts.gkyl_ion_mass_amu(), 
+			"gkyl_ion_mass_amu", dim_scalar, 
+			"main ion mass used in Gkeyll", "(amu)");
+		save_string(input_group, opts.gkyl_file_type(), "gkyl_file_type", 
+			dim_str, "file format of the Gkeyll output");
+		save_string(input_group, opts.gkyl_moment_type(), "gkyl_moment_type", 
+			dim_str, "type of moment files in the Gkeyll output");
+		save_string(input_group, opts.calc_grad_elec(), "calc_grad_elec", 
+			dim_str, "calculate the electric field gradient option");
 
-		// Geometry options
-		save_scalar(input_group, opts.lcfs_x(), "lcfs_x", 
-			dim_scalar, "x value where the LCFS is located", "(?)");
-		save_scalar(input_group, opts.imp_xbound_buffer(), "imp_xbound_buffer", 
-			dim_scalar, "buffer for x boundary conditions", "(?)");
+		// Geometry and boundaries
+		save_string(input_group, opts.tbound_type(), "tbound_type", 
+			dim_str, "time boundary condition");
 		save_string(input_group, opts.min_xbound_type(), "min_xbound_type", 
 			dim_str, "minimum x boundary condition");
+		save_string(input_group, opts.max_xbound_type(), "max_xbound_type", 
+			dim_str, "maximum x boundary condition");
+		save_string(input_group, opts.min_ybound_type(), "min_ybound_type", 
+			dim_str, "minimum y boundary condition");
+		save_string(input_group, opts.max_ybound_type(), "max_ybound_type", 
+			dim_str, "maximum y boundary condition");
+		save_string(input_group, opts.min_zbound_type(), "min_zbound_type", 
+			dim_str, "minimum z boundary condition");
+		save_string(input_group, opts.max_zbound_type(), "max_zbound_type", 
+			dim_str, "maximum z boundary condition");
+		save_scalar(input_group, opts.imp_xbound_buffer(), "imp_xbound_buffer", 
+			dim_scalar, "buffer for x boundary conditions", "(?)");
+		save_scalar(input_group, opts.imp_ybound_buffer(), "imp_ybound_buffer", 
+			dim_scalar, "buffer for y boundary conditions", "(?)");
+		save_scalar(input_group, opts.imp_zbound_buffer(), "imp_zbound_buffer", 
+			dim_scalar, "buffer for z boundary conditions", "(?)");
+		save_scalar(input_group, opts.lcfs_x(), "lcfs_x", 
+			dim_scalar, "x value where the LCFS is located", "(?)");
+		save_scalar(input_group, opts.lcfs_y(), "lcfs_y", 
+			dim_scalar, "y value where the LCFS is located", "(?)");
+		save_scalar(input_group, opts.lcfs_z(), "lcfs_z", 
+			dim_scalar, "z value where the LCFS is located", "(?)");
+		save_scalar(input_group, opts.sep_x_bc_xp_z1(), "sep_x_bc_xp_z1", 
+			dim_scalar, 
+			"first z value for the separatrix x boundary near the X-point",
+			"(?)");
+		save_scalar(input_group, opts.sep_x_bc_xp_z2(), "sep_x_bc_xp_z2", 
+			dim_scalar, 
+			"second z value for the separatrix x boundary near the X-point",
+			"(?)");
 
-		// Impurity chracteristics
+		// Impurity characteristics
 		save_scalar(input_group, opts.imp_atom_num(), "imp_atom_num", 
 			dim_scalar, "impurity atomic number", "");
 		save_scalar(input_group, opts.imp_mass_amu(), "imp_mass_amu", 
@@ -341,6 +504,13 @@ namespace SaveResults
 		save_scalar(input_group, opts.imp_zrange_max(), "imp_zrange_max", 
 			dim_scalar, 
 			"impurity starting z maximum (imp_zstart_opt = range)", "(?)");
+		save_string(input_group, opts.imp_temp_start_opt(), 
+			"imp_temp_start_opt", dim_str, 
+			"impurity starting temperature option");
+		save_scalar(input_group, opts.imp_temp_start_val(), 
+			"imp_temp_start_val", dim_scalar, 
+			"impurity starting temperature (imp_temp_start_opt = "
+			"single_value)", "(eV)");
 		save_string(input_group, opts.imp_collisions(), "imp_collisions", 
 			dim_str, "impurity collisions with background plasma option");
 		save_string(input_group, opts.imp_time_step_opt(), "imp_time_step_opt", 
@@ -349,6 +519,8 @@ namespace SaveResults
 			dim_scalar, "impurity time step", "(s)");
 		save_scalar(input_group, opts.imp_time_step_min(), "imp_time_step_min", 
 			dim_scalar, "minimum allowed impurity time step", "(s)");
+		save_scalar(input_group, opts.imp_max_time(), "imp_max_time", 
+			dim_scalar, "maximum time a particle is followed", "(s)");
 		save_scalar(input_group, opts.imp_source_scale_fact(), 
 			"imp_source_scale_fact", dim_scalar, 
 			"scaling factor to convert density to m-3", "(particles/s)");
@@ -369,19 +541,31 @@ namespace SaveResults
 			"var_red_med_mod", dim_scalar, 
 			"multiplier for median importance (var_red_import = median)", "");
 		save_string(input_group, opts.var_red_rusrol(), "var_red_rusrol", 
-			dim_str, "Russian roullette variance reduciton option");
+			dim_str, "Russian roulette variance reduction option");
 		save_scalar(input_group, opts.var_red_rusrol_prob(), 
 			"var_red_rusrol_prob", dim_scalar, 
-			"kill probability for Russian roullette variance reduction", "");
+			"kill probability for Russian roulette variance reduction", "");
 
 		// OpenADAS options
 		save_string(input_group, opts.openadas_root(), "openadas_root", 
-			dim_scalar, "directory containing OpenADAS data");
+			dim_str, "directory containing OpenADAS data");
 		save_scalar(input_group, opts.openadas_year(), "openadas_year", 
 			dim_scalar, "year for OpenADAS files", "");
 
 	}
 
+	/**
+	* Saves the grids and geometry into the "geometry" group.
+	*
+	* This is the background times, the computational cell centers and
+	* edges, the physical (X, Y, Z) cell centers and edges, the Jacobian,
+	* the metric coefficients, the tangent and reciprocal basis vectors, and
+	* the dual basis components of the magnetic field.
+	*
+	* @param nc_file File to save into. The time, x, y, z and grid
+	*        dimensions must already exist.
+	* @param bkg Background plasma holding the geometry.
+	*/
 	void save_geometry(const netCDF::NcFile& nc_file, 
 		const Background::Background& bkg)
 	{
@@ -410,7 +594,7 @@ namespace SaveResults
 			"(?)");
 
 		// Grid edges - x, y, z
-		// We don't actually know what the dimensions will be, since it depends
+		// We don't actually know what the units will be, since it depends
 		// on the computational coordinates used.
 		save_vector_1d(geo_group, bkg.get_grid_x(), "grid_x", grid_dim2, 
 			"x grid edges", "(?)");
@@ -429,7 +613,7 @@ namespace SaveResults
 			"Z cell centers", "(m)");
 
 		// Grid edges in physical space - X, Y, Z
-		// Note dims are dim2, dim3 and dim4
+		// Note dims are the grid dims, one longer than dim2, dim3 and dim4
 		save_vector_3d(geo_group, bkg.get_grid_X(), "grid_X", grid_dim2, 
 			grid_dim3, grid_dim4, "X grid edges", "(m)");
 		save_vector_3d(geo_group, bkg.get_grid_Y(), "grid_Y", grid_dim2, 
@@ -457,23 +641,23 @@ namespace SaveResults
 
 		// Tangent basis vector components
 		save_vector_3d(geo_group, bkg.get_dXdx(), "dXdx", dim2, 
-			dim3, dim4, "reciprocal basis vector (dX/dx)", "(?)");
+			dim3, dim4, "tangent basis vector (dX/dx)", "(?)");
 		save_vector_3d(geo_group, bkg.get_dYdx(), "dYdx", dim2, 
-			dim3, dim4, "reciprocal basis vector (dY/dx)", "(?)");
+			dim3, dim4, "tangent basis vector (dY/dx)", "(?)");
 		save_vector_3d(geo_group, bkg.get_dZdx(), "dZdx", dim2, 
-			dim3, dim4, "reciprocal basis vector (dZ/dx)", "(?)");
+			dim3, dim4, "tangent basis vector (dZ/dx)", "(?)");
 		save_vector_3d(geo_group, bkg.get_dXdy(), "dXdy", dim2, 
-			dim3, dim4, "reciprocal basis vector (dX/dy)", "(?)");
+			dim3, dim4, "tangent basis vector (dX/dy)", "(?)");
 		save_vector_3d(geo_group, bkg.get_dYdy(), "dYdy", dim2, 
-			dim3, dim4, "reciprocal basis vector (dY/dy)", "(?)");
+			dim3, dim4, "tangent basis vector (dY/dy)", "(?)");
 		save_vector_3d(geo_group, bkg.get_dZdy(), "dZdy", dim2, 
-			dim3, dim4, "reciprocal basis vector (dZ/dy)", "(?)");
+			dim3, dim4, "tangent basis vector (dZ/dy)", "(?)");
 		save_vector_3d(geo_group, bkg.get_dXdz(), "dXdz", dim2, 
-			dim3, dim4, "reciprocal basis vector (dX/dz)", "(?)");
+			dim3, dim4, "tangent basis vector (dX/dz)", "(?)");
 		save_vector_3d(geo_group, bkg.get_dYdz(), "dYdz", dim2, 
-			dim3, dim4, "reciprocal basis vector (dY/dz)", "(?)");
+			dim3, dim4, "tangent basis vector (dY/dz)", "(?)");
 		save_vector_3d(geo_group, bkg.get_dZdz(), "dZdz", dim2, 
-			dim3, dim4, "reciprocal basis vector (dZ/dz)", "(?)");
+			dim3, dim4, "tangent basis vector (dZ/dz)", "(?)");
 
 		// Reciprocal basis vector components
 		save_vector_3d(geo_group, bkg.get_dxdX(), "dxdX", dim2, 
@@ -504,6 +688,19 @@ namespace SaveResults
 			dim3, dim4, "dual basis magnetic vector (z)", "(?)");
 	}
 
+	/**
+	* Saves the background plasma into the "background" group.
+	*
+	* This is the density, temperatures, plasma potential, electric field,
+	* ion flow, magnetic field and its gradient, all with dimensions (time,
+	* x, y, z). The electric field gradient is only saved if it was
+	* calculated (calc_grad_elec).
+	*
+	* @param nc_file File to save into. The time, x, y and z dimensions
+	*        must already exist.
+	* @param opts Simulation options, used for calc_grad_elec.
+	* @param bkg Background plasma to save.
+	*/
 	void save_background(const netCDF::NcFile& nc_file, 
 		const Options::Options& opts, const Background::Background& bkg)
 	{
@@ -558,11 +755,11 @@ namespace SaveResults
 
 		// Magnetic field gradient
 		save_vector_4d(bkg_group, bkg.get_gradbX(), "dBdX", 
-			dim1, dim2, dim3, dim4, "magnetic field gradient (X)", "(T)");
+			dim1, dim2, dim3, dim4, "magnetic field gradient (X)", "(T/m)");
 		save_vector_4d(bkg_group, bkg.get_gradbY(), "dBdY", 
-			dim1, dim2, dim3, dim4, "magnetic field gradient (Y)", "(T)");
+			dim1, dim2, dim3, dim4, "magnetic field gradient (Y)", "(T/m)");
 		save_vector_4d(bkg_group, bkg.get_gradbZ(), "dBdZ", 
-			dim1, dim2, dim3, dim4, "magnetic field gradient (Z)", "(T)");
+			dim1, dim2, dim3, dim4, "magnetic field gradient (Z)", "(T/m)");
 
 		// Electric field gradient
 		if (opts.calc_grad_elec_int() == 1)
@@ -577,6 +774,20 @@ namespace SaveResults
 
 	}
 
+	/**
+	* Saves the impurity results into the "output" group.
+	*
+	* This is the impurity counts and density, the average Cartesian and
+	* computational velocities, the average charge and the average Nanbu
+	* collisionality s, all with dimensions (time, x, y, z). The particle
+	* track is saved too if save_track is on.
+	*
+	* @param nc_file File to save into. The time, x, y, z and track
+	*        dimensions must already exist.
+	* @param opts Simulation options, used for save_track.
+	* @param bkg Background plasma. Currently unused.
+	* @param imp_stats Impurity statistics to save.
+	*/
 	void save_output(const netCDF::NcFile& nc_file, 
 		const Options::Options& opts, const Background::Background& bkg,
 		Impurity::Statistics& imp_stats)
@@ -608,15 +819,15 @@ namespace SaveResults
 		save_vector_4d(out_group, imp_stats.get_vZ(), "v_Z", 
 			dim1, dim2, dim3, dim4, "average impurity Z velocity", "(m/s)");
 
-		// Impurity average x velocity in physical space
+		// Impurity average x velocity in computational space
 		save_vector_4d(out_group, imp_stats.get_vx(), "v_x", 
 			dim1, dim2, dim3, dim4, "average impurity x velocity", "(?/s)");
 			
-		// Impurity average y velocity in physical space
+		// Impurity average y velocity in computational space
 		save_vector_4d(out_group, imp_stats.get_vy(), "v_y", 
 			dim1, dim2, dim3, dim4, "average impurity y velocity", "(?/s)");
 
-		// Impurity average z velocity in physical space
+		// Impurity average z velocity in computational space
 		save_vector_4d(out_group, imp_stats.get_vz(), "v_z", 
 			dim1, dim2, dim3, dim4, "average impurity z velocity", "(?/s)");
 
@@ -650,6 +861,19 @@ namespace SaveResults
 		}
 	}
 
+	/**
+	* Saves everything into a netCDF file named <case_name>.nc.
+	*
+	* An existing file with that name is deleted first. The dimensions are
+	* created here, then the commit hash, input options, geometry,
+	* background and impurity results are saved (see the @file block for
+	* the layout).
+	*
+	* @param bkg Background plasma, used for the dimensions and saved in
+	*        the geometry and background groups.
+	* @param imp_stats Impurity statistics to save.
+	* @param opts Simulation options.
+	*/
 	void save_netcdf(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts)
 	{
@@ -659,11 +883,9 @@ namespace SaveResults
 		std::string desc {};
 
 		// Open new netCDF file named after this case. replace tells netCDF
-		// to overwrite the file if it exists.
-		// NcFile's scope is private to whatever block it is defined in,
-		// so we cannot pass it around functions (at least not like a normal
-		// variable). The implementation details are such that it 
-		// automatically closes once it goes out of scope.
+		// to overwrite the file if it exists. NcFile can't be copied, so it
+		// is passed to the save functions by reference, and it closes
+		// automatically once it goes out of scope.
 		std::string nc_filename {opts.case_name() + ".nc"};
 
 		// If file already exists, delete it otherwise we may encounter a
@@ -721,4 +943,4 @@ namespace SaveResults
 		std::cout << "Saved as " << nc_filename << '\n';
 	}
 
-}
+}  // namespace SaveResults

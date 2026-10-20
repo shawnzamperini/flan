@@ -1,36 +1,65 @@
 /**
-* @file boris.cpp
+* @file  boris.cpp
 *
-* @brief Implementation of the Boris algorithm for particle stepping in an
-* electromagentic field. See useful introduction and sample code that this
-* was inspired by here: https://www.particleincell.com/2011/vxb-rotation/
+* @brief Implementation of Boris algorithm for calculating the Lorentz force 
+*        on a particle and updating its velocity.
+*
+* The velocity is updated in Cartesian space (vX, vY, vZ) using the electric
+* and magnetic fields interpolated to the particle location. The velocity in
+* computational coordinates (vx, vy, vz) is then found from the reciprocal
+* basis vectors, which is what is used to move the particle.
 */
-#include <array>
+
 #include <cmath>
+#include <iostream>
 
 #include "background.h"
+#include "boris.h"
 #include "constants.h"
-#include "impurity.h"
 #include "options.h"
+#include "slots.h"
+#include "slots_device.h"
 #include "utilities.h"
 #include "vectors.h"
 
 namespace Boris
 {
-	// Interpolate the reciprocal basis functions at the impurity location
-	std::array<double, 9> interp_recp(const Impurity::Impurity& imp, 
+
+	/**
+	* Interpolates the reciprocal (contravariant) basis vectors at the particle
+	* location.
+	*
+	* These convert a Cartesian vector into its computational components,
+	* e.g., vx = dxdX * vX + dxdY * vY + dxdZ * vZ.
+	*
+	* Each of the nine components is trilinearly interpolated between the
+	* centers of the cell containing the particle and its neighboring cells
+	* on the side of the particle, since that is where the basis vectors are
+	* defined.
+	*
+	* @param bkg Background plasma holding the basis vectors.
+	* @param xidx x index of the grid cell containing the particle.
+	* @param yidx y index of the grid cell containing the particle.
+	* @param zidx z index of the grid cell containing the particle.
+	* @param x Computational x coordinate of the particle.
+	* @param y Computational y coordinate of the particle.
+	* @param z Computational z coordinate of the particle.
+	* @return Interpolated components in the order dxdX, dxdY, dxdZ, dydX,
+	*         dydY, dydZ, dzdX, dzdY, dzdZ.
+	*/
+	std::array<double, 9> interp_recp(
 		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx)
+		const int zidx, const double x, const double y, const double z)
 	{
 		// Get nearest neighbor indices for each direction. These tell us
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
-		const int xidx_neighbor {Utilities::get_neighbor_index(imp.get_x(), 
+		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
 			bkg.get_x(), xidx)};
-		const int yidx_neighbor {Utilities::get_neighbor_index(imp.get_y(), 
+		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
 			bkg.get_y(), yidx)};
-		const int zidx_neighbor {Utilities::get_neighbor_index(imp.get_z(), 
+		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
 			bkg.get_z(), zidx)};
 
 		// x, y, z coordinates of two bounding vertices to interpolate 
@@ -73,25 +102,48 @@ namespace Boris
 			// Perform interpolation, storing value in our local array
 			interp_vals[i] = Utilities::trilinear_interpolate(x0, y0, z0, 
 				x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, v111, 
-				imp.get_x(), imp.get_y(), imp.get_z());
+				x, y, z);
 		}
 		return interp_vals;
-	}
 
-	// Interpolate the tangent basis functions at the impurity location
-	std::array<double, 9> interp_tang(const Impurity::Impurity& imp, 
+	}  // interp_recp
+
+
+	/**
+	* Interpolates the tangent (covariant) basis vectors at the particle
+	* location.
+	*
+	* These convert a computational vector into its Cartesian components.
+	* Currently unused.
+	*
+	* Each of the nine components is trilinearly interpolated between the
+	* centers of the cell containing the particle and its neighboring cells
+	* on the side of the particle, since that is where the basis vectors are
+	* defined.
+	*
+	* @param bkg Background plasma holding the basis vectors.
+	* @param xidx x index of the grid cell containing the particle.
+	* @param yidx y index of the grid cell containing the particle.
+	* @param zidx z index of the grid cell containing the particle.
+	* @param x Computational x coordinate of the particle.
+	* @param y Computational y coordinate of the particle.
+	* @param z Computational z coordinate of the particle.
+	* @return Interpolated components in the order dXdx, dYdx, dZdx, dXdy,
+	*         dYdy, dZdy, dXdz, dYdz, dZdz.
+	*/
+	std::array<double, 9> interp_tang(
 		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx)
+		const int zidx, const double x, const double y, const double z)
 	{
 		// Get nearest neighbor indices for each direction. These tell us
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
-		const int xidx_neighbor {Utilities::get_neighbor_index(imp.get_x(), 
+		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
 			bkg.get_x(), xidx)};
-		const int yidx_neighbor {Utilities::get_neighbor_index(imp.get_y(), 
+		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
 			bkg.get_y(), yidx)};
-		const int zidx_neighbor {Utilities::get_neighbor_index(imp.get_z(), 
+		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
 			bkg.get_z(), zidx)};
 
 		// x, y, z coordinates of two bounding vertices to interpolate 
@@ -106,7 +158,7 @@ namespace Boris
 		const double z0 {bkg.get_z()[zidx]};
 		const double z1 {bkg.get_z()[zidx_neighbor]};
 
-		// Array of references to each reciprocal basis vector
+		// Array of references to each tangent basis vector
 		const std::array<std::reference_wrapper<
 			const Vectors::Vector3D<BkgFPType>>, 9> tang_basis {
 			bkg.get_dXdx(), bkg.get_dYdx(), bkg.get_dZdx(),
@@ -134,105 +186,111 @@ namespace Boris
 			// Perform interpolation, storing value in our local array
 			interp_vals[i] = Utilities::trilinear_interpolate(x0, y0, z0, 
 				x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, v111, 
-				imp.get_x(), imp.get_y(), imp.get_z());
+				x, y, z);
 		}
 		return interp_vals;
-	}
 
-	void update_velocity(Impurity::Impurity& imp, 
-		const Background::Background& bkg, const Options::Options& opts, 
-		const double dt, 
-		const int tidx, const int xidx, const int yidx, const int zidx)
+	}  // interp_tang
+
+
+	/**
+	* Advances the velocity of every particle by one time step using the
+	* Boris algorithm.
+	*
+	* The electric and magnetic fields (components and magnitudes) are
+	* trilinearly interpolated in space to the particle location, at the
+	* particle's time frame and a neighboring one, and then linearly
+	* interpolated in time. This keeps the fields continuous at cell
+	* boundaries and between time frames, which avoids numerical diffusion
+	* and unphysical kicks. Each interpolated vector is then rescaled to the
+	* interpolated magnitude so the gyro-orbit is the correct size.
+	*
+	* The standard Boris rotation then updates the Cartesian velocity
+	* (vX, vY, vZ). Velocities are stored at the half time steps before the
+	* position, i.e., x_i = x(t_i) and v_i = v(t_i - dt/2). Finally, the
+	* velocity in computational coordinates (vx, vy, vz) is calculated with
+	* the interpolated reciprocal basis vectors from interp_recp.
+	*
+	* @param slots Particle slots. The velocities are updated in place.
+	* @param bkg Background plasma holding the fields and basis vectors.
+	* @param opts Simulation options. Currently unused.
+	* @param dt Time step (s).
+	*/
+	void update_velocity_cpu(Slots::Slots& slots, 
+		const Background::Background& bkg, 
+		const Options::Options& opts,
+		const double dt)
 	{
-		// Pull out electric and magnetic field components, and particle
-		// velocity components and put into arrays for cleaner code
-		/*
-		std::array<double, 3> B_local {bkg.get_bX()(tidx, xidx, yidx, zidx), 
-			bkg.get_bY()(tidx, xidx, yidx, zidx),
-			bkg.get_bZ()(tidx, xidx, yidx, zidx)};
-		std::array<double, 3> E_local {bkg.get_eX()(tidx, xidx, yidx, zidx), 
-			bkg.get_eY()(tidx, xidx, yidx, zidx),
-			bkg.get_eZ()(tidx, xidx, yidx, zidx)};
-		*/
 
-		// Get nearest neighbor indices for each direction. These tell us
-		// which direction we should interpolate towards, i.e., which
-		// rectangle made by the neighboring cell centers our particle
-		// is bounded by.
-		const int xidx_neighbor {Utilities::get_neighbor_index(imp.get_x(), 
-			bkg.get_x(), xidx)};
-		const int yidx_neighbor {Utilities::get_neighbor_index(imp.get_y(), 
-			bkg.get_y(), yidx)};
-		const int zidx_neighbor {Utilities::get_neighbor_index(imp.get_z(), 
-			bkg.get_z(), zidx)};
+		#pragma omp parallel for
+		for (int i=0; i < slots.N(); ++i)
+		{
+			// Skip dead particles
+			if (slots.state()[i] > 0) continue;
 
-		// Similarly for t, except we can't use get_neighbor_index since it
-		// uses cell center coordinates, and t is defined at each frame (i.e.,
-		// not between each frame, that would be nonintuitive). So we use a
-		// little SIMD-friendly logic here to assign tidx_neighbor to tidx+1,
-		// and tidx-1 if we're in the last time frame.
-		// at_end = 1 if tidx == ntimes-1, else 0 
-		// If at_end = 0 → i + 1 
-		// If at_end = 1 → i - 1 
-		const int at_end {(tidx == static_cast<int>(bkg.get_times().size())-1)}; 
-		const int tidx_neighbor {tidx + 1 - 2 * at_end};
+			// Local variables
+			int tidx {slots.tidx()[i]};
+			int xidx {slots.xidx()[i]};
+			int yidx {slots.yidx()[i]};
+			int zidx {slots.zidx()[i]};
 
-		//std::cout << "t: " << tidx << "\t" << tidx_neighbor << "\n";
-		//std::cout << "x: " << xidx << "\t" << xidx_neighbor << "\n";
-		//std::cout << "y: " << yidx << "\t" << yidx_neighbor << "\n";
-		//std::cout << "z: " << zidx << "\t" << zidx_neighbor << "\n";
+			// Get nearest neighbor indices for each direction. These tell us
+			// which direction we should interpolate towards, i.e., which
+			// rectangle made by the neighboring cell centers our particle
+			// is bounded by.
+			const int tidx_neighbor {Utilities::get_neighbor_index(slots.t()[i], 
+				bkg.get_times(), tidx)};
+			const int xidx_neighbor {Utilities::get_neighbor_index(slots.x()[i], 
+				bkg.get_x(), xidx)};
+			const int yidx_neighbor {Utilities::get_neighbor_index(slots.y()[i], 
+				bkg.get_y(), yidx)};
+			const int zidx_neighbor {Utilities::get_neighbor_index(slots.z()[i], 
+				bkg.get_z(), zidx)};
 
-		// Time between neighboring t frames
-		const double frame_dt {bkg.get_times()[tidx_neighbor] 
-			- bkg.get_times()[tidx]};
+			//std::cout << "t: " << tidx << "\t" << tidx_neighbor << "\n";
+			//std::cout << "x: " << xidx << "\t" << xidx_neighbor << "\n";
+			//std::cout << "y: " << yidx << "\t" << yidx_neighbor << "\n";
+			//std::cout << "z: " << zidx << "\t" << zidx_neighbor << "\n";
 
-		// Trilinear interpolation to ensure we use a continous B/E in the 
-		// algorithm. Without interpolating, the particle will:
-		// a) Fail to follow the parallel direction of the field line due to
-		//    it being discrete in the code (this is called "numerical
-		//    diffusion" and introduces artificial cross-field transport).
-		// b) Experience large "kicks" at cell boundaries where B/E is 
-		//    discontinuous, which can introduce artificial drifts.
-		// 
-		// The issue in a) generally will still occur since we are still using
-		// an approximation to the field line, but this greatly reduces the
-		// numerical diffusion since B is now continous.
-		//
-		// In the following, we wrap the components into a couple nested arrays
-		// so that we can use a single nested loop to iterate through each 
-		// B and E component and not have to write the trilinear interpolation
-		// loop twice for each vector (or even 6 times, one for each vector
-		// component!). It adds a bit of complexity but avoids repeating code.
+			// Time between neighboring t frames
+			const double frame_dt {bkg.get_times()[tidx_neighbor] 
+				- bkg.get_times()[tidx]};
 
-		// Wrap in convienent array. Need a const reference in reference_wrapper
-		// because bkg.get_bX() returns a const ref. Need to match the getter. 
-		const std::array<std::reference_wrapper<
-			const Vectors::Vector4D<BkgFPType>>, 4> B 
-			{bkg.get_bX(), bkg.get_bY(), bkg.get_bZ(), bkg.get_bmag()};
-		const std::array<std::reference_wrapper<
-			const Vectors::Vector4D<BkgFPType>>, 4> E 
-			{bkg.get_eX(), bkg.get_eY(), bkg.get_eZ(), bkg.get_emag()};
+			// Trilinear interpolation to ensure we use a continous B/E in the 
+			// algorithm. Without interpolating, the particle will:
+			// a) Fail to follow the parallel direction of the field line due to
+			//    it being discrete in the code (this is called "numerical
+			//    diffusion" and introduces artificial cross-field transport).
+			// b) Experience large "kicks" at cell boundaries where B/E is 
+			//    discontinuous, which can introduce artificial drifts.
+			// 
+			// The issue in a) generally will still occur since we are still using
+			// an approximation to the field line, but this greatly reduces the
+			// numerical diffusion since B is now continous.
+			//
+			// In the following, we wrap the components into a couple nested arrays
+			// so that we can use a single nested loop to iterate through each 
+			// B and E component and not have to write the trilinear interpolation
+			// loop twice for each vector (or even 6 times, one for each vector
+			// component!). It adds a bit of complexity but avoids repeating code.
 
-		// And put again into single array so we can make an outer loop out
-		// of these.
-		const std::array outer {&B, &E};
+			// Wrap in convienent array. Need a const reference in reference_wrapper
+			// because bkg.get_bX() returns a const ref. Need to match the getter. 
+			const std::array<std::reference_wrapper<
+				const Vectors::Vector4D<BkgFPType>>, 4> B 
+				{bkg.get_bX(), bkg.get_bY(), bkg.get_bZ(), bkg.get_bmag()};
+			const std::array<std::reference_wrapper<
+				const Vectors::Vector4D<BkgFPType>>, 4> E 
+				{bkg.get_eX(), bkg.get_eY(), bkg.get_eZ(), bkg.get_emag()};
 
-		// Similarly, arrays to hold the output local values
-		std::array<double, 4> B_local {};
-		std::array<double, 4> E_local {};
-		std::array<double, 4>* locals [] = {&B_local, &E_local};
+			// And put again into single array so we can make an outer loop out
+			// of these.
+			const std::array outer {&B, &E};
 
-		// Loop through each B/E component, performing a trilinear interpolation
-		// to get the local value of each. First loop is to choose B or E.
-		for (int j = 0; j < 2; ++j) 
-		{ 
-			// Index out (B or E), dereference and assign to comps. This is 
-			// an object the same as B and E above.
-			const auto& comps = *outer[j]; 
-
-			// Get reference to output local values. This is a reference to
-			// an array of 3 doubles, B_local or E_local.
-			auto& out = *locals[j]; 
+			// Similarly, arrays to hold the output local values
+			std::array<double, 4> B_local {};
+			std::array<double, 4> E_local {};
+			std::array<double, 4>* locals [] = {&B_local, &E_local};
 
 			// x, y, z coordinates of two bounding vertices to interpolate 
 			// between. Note these are not grid vertices, but rather are formed
@@ -246,233 +304,224 @@ namespace Boris
 			const double z0 {bkg.get_z()[zidx]};
 			const double z1 {bkg.get_z()[zidx_neighbor]};
 
-			// Loop through each component to get interpolated value for each
-			for (int i = 0; i < 4; ++i) 
-			{
-				// Values at each vertex, 8 total because it's a rectangle.
-				double v000 {comps[i](tidx, xidx, yidx, zidx)};
-				double v100 {comps[i](tidx, xidx_neighbor, yidx, zidx)};
-				double v010 {comps[i](tidx, xidx, yidx_neighbor, zidx)};
-				double v110 {comps[i](tidx, xidx_neighbor, yidx_neighbor, 
-					zidx)};
-				double v001 {comps[i](tidx, xidx, yidx, zidx_neighbor)};
-				double v101 {comps[i](tidx, xidx_neighbor, yidx, 
-					zidx_neighbor)};
-				double v011 {comps[i](tidx, xidx, yidx_neighbor, 
-					zidx_neighbor)};
-				double v111 {comps[i](tidx, xidx_neighbor, yidx_neighbor,	
-					zidx_neighbor)};
+			// Loop through each B/E component, performing a trilinear interpolation
+			// to get the local value of each. First loop is to choose B or E.
+			for (int j = 0; j < 2; ++j) 
+			{ 
+				// Index out (B or E), dereference and assign to comps. This is 
+				// an object the same as B and E above.
+				const auto& comps = *outer[j]; 
 
-				// Perform interpolation, storing value in our local array
-				const double comp0 = Utilities::trilinear_interpolate(x0, y0, 
-					z0, x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, 
-					v111, imp.get_x(), imp.get_y(), imp.get_z());
+				// Get reference to output local values. This is a reference to
+				// an array of 3 doubles, B_local or E_local.
+				auto& out = *locals[j]; 
 
-				// Now repeat for the previous time index so we can do a simple
-				// linear interpolation in time. This is critical to get a
-				// decent estimate of the polarization drift, for instance.
-				// If we don't do this, the field will be discontinuous each
-				// time the particle enters a new time frame, causing 
-				// unphysical kicks.
-				v000 = comps[i](tidx_neighbor, xidx, yidx, zidx);
-				v100 = comps[i](tidx_neighbor, xidx_neighbor, yidx, zidx);
-				v010 = comps[i](tidx_neighbor, xidx, yidx_neighbor, zidx);
-				v110 = comps[i](tidx_neighbor, xidx_neighbor, 
-					yidx_neighbor, zidx);
-				v001 = comps[i](tidx_neighbor, xidx, yidx, zidx_neighbor);
-				v101 = comps[i](tidx_neighbor, xidx_neighbor, yidx, 
-					zidx_neighbor);
-				v011 = comps[i](tidx_neighbor, xidx, yidx_neighbor, 
-					zidx_neighbor);
-				v111 = comps[i](tidx_neighbor, xidx_neighbor, 
-					yidx_neighbor, zidx_neighbor);
+				// Loop through each component to get interpolated value for each
+				for (int k = 0; k < 4; ++k) 
+				{
+					// Values at each vertex, 8 total because it's a rectangle.
+					double v000 {comps[k](tidx, xidx, yidx, zidx)};
+					double v100 {comps[k](tidx, xidx_neighbor, yidx, zidx)};
+					double v010 {comps[k](tidx, xidx, yidx_neighbor, zidx)};
+					double v110 {comps[k](tidx, xidx_neighbor, yidx_neighbor, 
+						zidx)};
+					double v001 {comps[k](tidx, xidx, yidx, zidx_neighbor)};
+					double v101 {comps[k](tidx, xidx_neighbor, yidx, 
+						zidx_neighbor)};
+					double v011 {comps[k](tidx, xidx, yidx_neighbor, 
+						zidx_neighbor)};
+					double v111 {comps[k](tidx, xidx_neighbor, yidx_neighbor,	
+						zidx_neighbor)};
 
-				// Interpolate again at new time frame
-				const double comp1 = Utilities::trilinear_interpolate(x0, y0, 
-					z0, x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, 
-					v111, imp.get_x(), imp.get_y(), imp.get_z());
+					// Perform interpolation, storing value in our local array
+					const double comp0 = Utilities::trilinear_interpolate(x0, y0, 
+						z0, x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, 
+						v111, slots.x()[i], slots.y()[i], slots.z()[i]);
 
-				// Now linearly interpolate in time (this is just point slope)
-				const double slope {(comp1 - comp0) / frame_dt};
-				out[i] = slope * (imp.get_t() - bkg.get_times()[tidx]) + comp0;
-			}
+					// Now repeat for the previous time index so we can do a simple
+					// linear interpolation in time. This is critical to get a
+					// decent estimate of the polarization drift, for instance.
+					// If we don't do this, the field will be discontinuous each
+					// time the particle enters a new time frame, causing 
+					// unphysical kicks.
+					v000 = comps[k](tidx_neighbor, xidx, yidx, zidx);
+					v100 = comps[k](tidx_neighbor, xidx_neighbor, yidx, zidx);
+					v010 = comps[k](tidx_neighbor, xidx, yidx_neighbor, zidx);
+					v110 = comps[k](tidx_neighbor, xidx_neighbor, 
+						yidx_neighbor, zidx);
+					v001 = comps[k](tidx_neighbor, xidx, yidx, zidx_neighbor);
+					v101 = comps[k](tidx_neighbor, xidx_neighbor, yidx, 
+						zidx_neighbor);
+					v011 = comps[k](tidx_neighbor, xidx, yidx_neighbor, 
+						zidx_neighbor);
+					v111 = comps[k](tidx_neighbor, xidx_neighbor, 
+						yidx_neighbor, zidx_neighbor);
 
-			// We interpolated the magnitude as well. This is because there is
-			// no guarantee that the interpolated vector will have the same
-			// magnitude (in fact it almost certainly shrinks). We are faced
-			// with a choice:
-			//   a) Leave as-is. B/E are continuous at cell boundaries, but
-			//      the magntiude will be off. The size of the gyro-orbit will
-			//      be affected as a result.
-			//   b) Scale via the interpolated magnitude. B/E will be 
-			//      discontinuous at cell boundaries, but definitely not as
-			//      discontinous as without interpolation. Gyro-orbit will
-			//      be more physically correct.
-			// We choose option b), because getting the gyro-orbit correct is
-			// central to Flan. Slight discontinuities are not ideal, but the
-			// particle spends order of magnitude more time not crossing 
-			// a boundary, therefore option b) also minimizes numerical
-			// diffusion in that sense as well by ensuring the gyro-orbit is
-			// as correct as possible.
-			const double out_mag {std::sqrt(out[0] * out[0] + out[1] * out[1] 
-				+ out[2] * out[2])};
-			double mask {static_cast<double>(out_mag > 0)};
-			for (int i {}; i < 3; ++i)
-			{
-				// out[3] contains the interpolated magnitude. If out_mag
-				// is zero, mask will just multiply by zero to force the vector
-				// to zero. It's a divide-by-zero guard.
-				out[i] = out[i] * out[3] / std::max(out_mag, 1e-30) * mask;
-			}
+					// Interpolate again at new time frame
+					const double comp1 = Utilities::trilinear_interpolate(x0, y0, 
+						z0, x1, y1, z1, v000, v100, v010, v110, v001, v101, v011, 
+						v111, slots.x()[i], slots.y()[i], slots.z()[i]);
 
-		}
+					// Now linearly interpolate in time (this is just point slope)
+					const double slope {(comp1 - comp0) / frame_dt};
+					out[k] = slope * (slots.t()[i] - bkg.get_times()[tidx]) 
+						+ comp0;
+				}  // k loop
 
-		// Normal Boris algorithm continues
+				// We interpolated the magnitude as well. This is because there is
+				// no guarantee that the interpolated vector will have the same
+				// magnitude (in fact it almost certainly shrinks). We are faced
+				// with a choice:
+				//   a) Leave as-is. B/E are continuous at cell boundaries, but
+				//      the magntiude will be off. The size of the gyro-orbit will
+				//      be affected as a result.
+				//   b) Scale via the interpolated magnitude. B/E will be 
+				//      discontinuous at cell boundaries, but definitely not as
+				//      discontinous as without interpolation. Gyro-orbit will
+				//      be more physically correct.
+				// We choose option b), because getting the gyro-orbit correct is
+				// central to Flan. Slight discontinuities are not ideal, but the
+				// particle spends order of magnitude more time not crossing 
+				// a boundary, therefore option b) also minimizes numerical
+				// diffusion in that sense as well by ensuring the gyro-orbit is
+				// as correct as possible.
+				const double out_mag {std::sqrt(out[0] * out[0] + out[1] * out[1] 
+					+ out[2] * out[2])};
+				double mask {static_cast<double>(out_mag > 0)};
+				for (int k {}; k < 3; ++k)
+				{
+					// out[3] contains the interpolated magnitude. If out_mag
+					// is zero, mask will just multiply by zero to force the vector
+					// to zero. It's a divide-by-zero guard.
+					out[k] = out[k] * out[3] / std::max(out_mag, 1e-30) * mask;
+				}  // k loop
 
-		// Store in local variables for conveinence
-		double q_m {imp.get_charge() * -Constants::charge_e / imp.get_mass()};
-		std::array<double, 3> v {imp.get_vX(), imp.get_vY(), imp.get_vZ()};
+			}  // j loop
 
-		// t vector
-		std::array<double, 3> t {};
-		for (int i {}; i < 3; ++i) t[i] = q_m * B_local[i] * 0.5 * dt;
+			// Normal Boris algorithm continues
 
-		// Magnitude of t, squared
-		double tmag2 {t[0]*t[0] + t[1]*t[1] + t[2]*t[2]};
+			// Store in local variables for conveinence
+			double q_m {slots.q()[i] * -Constants::charge_e / slots.mass()};
+			std::array<double, 3> v {slots.vX()[i], slots.vY()[i], slots.vZ()[i]};
 
-		// s vector
-		std::array<double, 3> s {};
-		for (int i {}; i < 3; ++i) s[i] = 2 * t[i] / (1.0 + tmag2);
+			// t vector
+			std::array<double, 3> t {};
+			for (int j {}; j < 3; ++j) t[j] = q_m * B_local[j] * 0.5 * dt;
 
-		// v minus
-		std::array<double, 3> vminus {};
-		for (int i {}; i < 3; ++i) vminus[i] = v[i] + q_m * E_local[i] * 0.5*dt;
+			// Magnitude of t, squared
+			double tmag2 {t[0]*t[0] + t[1]*t[1] + t[2]*t[2]};
 
-		// v prime
-		std::array<double, 3> vprime {};
-		std::array<double, 3> vminus_cross_t {Utilities::cross_product(vminus,	
-			t)};
-		for (int i {}; i < 3; ++i) vprime[i] = vminus[i] + vminus_cross_t[i];
+			// s vector
+			std::array<double, 3> s {};
+			for (int j {}; j < 3; ++j) s[j] = 2 * t[j] / (1.0 + tmag2);
 
-		// v plus
-		std::array<double, 3> vplus {};
-		std::array<double ,3> vprime_cross_s {Utilities::cross_product(vprime, 
-			s)};
-		for (int i {}; i < 3; ++i) vplus[i] = vminus[i] + vprime_cross_s[i];
+			// v minus
+			std::array<double, 3> vminus {};
+			for (int j {}; j < 3; ++j) vminus[j] = v[j] + q_m * E_local[j] * 0.5*dt;
 
-		// v n+1/2
-		// Note we are storing particle velocity at the half time steps before
-		// the position. I.e., xi = x(ti), vi = v(ti - dt/2). 
-		imp.set_vX(vplus[0] + q_m * E_local[0] * 0.5 * dt);
-		imp.set_vY(vplus[1] + q_m * E_local[1] * 0.5 * dt);
-		imp.set_vZ(vplus[2] + q_m * E_local[2] * 0.5 * dt);
+			// v prime
+			std::array<double, 3> vprime {};
+			std::array<double, 3> vminus_cross_t {Utilities::cross_product(vminus,	
+				t)};
+			for (int j {}; j < 3; ++j) vprime[j] = vminus[j] + vminus_cross_t[j];
 
-		// Interpolate reciprocal and tangent basis vector at impurity location
-		std::array<double, 9> int_rec_bas {interp_recp(imp, bkg, xidx, 
-			yidx, zidx)};
-		//std::array<double, 9> int_tan_bas {interp_tang(imp, bkg, xidx, 
-		//	yidx, zidx)};
+			// v plus
+			std::array<double, 3> vplus {};
+			std::array<double ,3> vprime_cross_s {Utilities::cross_product(vprime, 
+				s)};
+			for (int j {}; j < 3; ++j) vplus[j] = vminus[j] + vprime_cross_s[j];
 
-		// Put basis vectors into arrays for easier manipulation below. Can
-		// either use the interpolated ones or the discrete ones without
-		// interpolation.
-		//std::array<double, 3> e1 {int_rec_bas[0], int_rec_bas[1], 
-		//	int_rec_bas[2]};
-		//std::array<double, 3> e2 {int_rec_bas[3], int_rec_bas[4], 
-		//	int_rec_bas[5]};
-		//std::array<double, 3> e3 {int_rec_bas[6], int_rec_bas[7], 
-		//	int_rec_bas[8]};
-		//std::array<double, 3> e_1 {int_tan_bas[0], int_tan_bas[1], 
-		//	int_tan_bas[2]};
-		//std::array<double, 3> e_2 {int_tan_bas[3], int_tan_bas[4], 
-		//	int_tan_bas[5]};
-		//std::array<double, 3> e_3 {int_tan_bas[6], int_tan_bas[7], 
-		//	int_tan_bas[8]};
-		
-		// Discrete, no interpolation
-		//std::array<double, 3> e1 {bkg.get_dxdX()(xidx, yidx, zidx),
-		//	bkg.get_dxdY()(xidx, yidx, zidx),
-		//	bkg.get_dxdZ()(xidx, yidx, zidx)};
-		//std::array<double, 3> e2 {bkg.get_dydX()(xidx, yidx, zidx),
-		//	bkg.get_dydY()(xidx, yidx, zidx),
-		//	bkg.get_dydZ()(xidx, yidx, zidx)};
-		//std::array<double, 3> e3 {bkg.get_dzdX()(xidx, yidx, zidx),
-		//	bkg.get_dzdY()(xidx, yidx, zidx),
-		//	bkg.get_dzdZ()(xidx, yidx, zidx)};
-		//std::array<double, 3> e_1 {bkg.get_dXdx()(xidx, yidx, zidx),
-		//	bkg.get_dYdx()(xidx, yidx, zidx),
-		//	bkg.get_dZdx()(xidx, yidx, zidx)};
-		//std::array<double, 3> e_2 {bkg.get_dXdy()(xidx, yidx, zidx),
-		//	bkg.get_dYdy()(xidx, yidx, zidx),
-		//	bkg.get_dZdy()(xidx, yidx, zidx)};
-		//std::array<double, 3> e_3 {bkg.get_dXdz()(xidx, yidx, zidx),
-		//	bkg.get_dYdz()(xidx, yidx, zidx),
-		//	bkg.get_dZdz()(xidx, yidx, zidx)};
+			// v n+1/2
+			// Note we are storing particle velocity at the half time steps before
+			// the position. I.e., xi = x(ti), vi = v(ti - dt/2). 
+			slots.set_vX(i, vplus[0] + q_m * E_local[0] * 0.5 * dt);
+			slots.set_vY(i, vplus[1] + q_m * E_local[1] * 0.5 * dt);
+			slots.set_vZ(i, vplus[2] + q_m * E_local[2] * 0.5 * dt);
 
-		// Check that coordinate system is mostly correct
-		/*
-		std::cout << "J = " << Utilities::dot_product(e_1, 
-			Utilities::cross_product(e_2, e_3)) << '\n';
-		std::cout << "e_1: " << e_1[0] << '\t' << e_1[1] << '\t' << e_1[2] << '\n';
-		std::cout << "e_2: " << e_2[0] << '\t' << e_2[1] << '\t' << e_2[2] << '\n';
-		std::cout << "e_3: " << e_3[0] << '\t' << e_3[1] << '\t' << e_3[2] << '\n';
-		std::cout << "e1: " << e1[0] << '\t' << e1[1] << '\t' << e1[2] << '\n';
-		std::cout << "e2: " << e2[0] << '\t' << e2[1] << '\t' << e2[2] << '\n';
-		std::cout << "e3: " << e3[0] << '\t' << e3[1] << '\t' << e3[2] << '\n';
-		std::cout << "e_1 * e_1 = " << Utilities::dot_product(e_1, e_1) << '\n';
-		std::cout << "e_1 * e_2 = " << Utilities::dot_product(e_1, e_2) << '\n';
-		std::cout << "e_1 * e_3 = " << Utilities::dot_product(e_1, e_3) << '\n';
-		std::cout << "e_2 * e_2 = " << Utilities::dot_product(e_2, e_2) << '\n';
-		std::cout << "e_2 * e_3 = " << Utilities::dot_product(e_2, e_3) << '\n';
-		std::cout << "e_3 * e_3 = " << Utilities::dot_product(e_3, e_3) << '\n';
-		std::cout << "e1 * e_1 = " << Utilities::dot_product(e1, e_1) << '\n';
-		std::cout << "e1 * e_2 = " << Utilities::dot_product(e1, e_2) << '\n';
-		std::cout << "e1 * e_3 = " << Utilities::dot_product(e1, e_3) << '\n';
-		std::cout << "e2 * e_1 = " << Utilities::dot_product(e2, e_1) << '\n';
-		std::cout << "e2 * e_2 = " << Utilities::dot_product(e2, e_2) << '\n';
-		std::cout << "e2 * e_3 = " << Utilities::dot_product(e2, e_3) << '\n';
-		std::cout << "e3 * e_1 = " << Utilities::dot_product(e3, e_1) << '\n';
-		std::cout << "e3 * e_2 = " << Utilities::dot_product(e3, e_2) << '\n';
-		std::cout << "e3 * e_3 = " << Utilities::dot_product(e3, e_3) << '\n';
-		*/
+			// Interpolate reciprocal and tangent basis vector at impurity location
+			std::array<double, 9> int_rec_bas {interp_recp(bkg, slots.xidx()[i], 
+				slots.yidx()[i], slots.zidx()[i], slots.x()[i], slots.y()[i], 
+				slots.z()[i])};
 
-		// Calculate velocity vector in computational coordinates using
-		// interpolated reciprocal basis vector. Not used right now since it's
-		// redundant/not needed in the particle update step, but leaving since
-		// it's an interesting idea.
-		imp.set_vx(int_rec_bas[0] * imp.get_vX() 
-			+ int_rec_bas[1] * imp.get_vY() + int_rec_bas[2] * imp.get_vZ());
-		imp.set_vy(int_rec_bas[3] * imp.get_vX() 
-			+ int_rec_bas[4] * imp.get_vY() + int_rec_bas[5] * imp.get_vZ());
-		imp.set_vz(int_rec_bas[6] * imp.get_vX() 
-			+ int_rec_bas[7] * imp.get_vY() + int_rec_bas[8] * imp.get_vZ());
+			//std::array<double, 9> int_tan_bas {interp_tang(imp, bkg, xidx, 
+			//	yidx, zidx)};
 
-		// Calculate velocity vector in computational coordinates using
-		// discrete reciprocal basis vector.
-		//imp.set_vx(bkg.get_dxdX()(xidx, yidx, zidx) * imp.get_vX()
-		//	+ bkg.get_dxdY()(xidx, yidx, zidx) * imp.get_vY()
-		//	+ bkg.get_dxdZ()(xidx, yidx, zidx) * imp.get_vZ());
-		//imp.set_vy(bkg.get_dydX()(xidx, yidx, zidx) * imp.get_vX()
-		//	+ bkg.get_dydY()(xidx, yidx, zidx) * imp.get_vY()
-		//	+ bkg.get_dydZ()(xidx, yidx, zidx) * imp.get_vZ());
-		//imp.set_vz(bkg.get_dzdX()(xidx, yidx, zidx) * imp.get_vX()
-		//	+ bkg.get_dzdY()(xidx, yidx, zidx) * imp.get_vY()
-		//	+ bkg.get_dzdZ()(xidx, yidx, zidx) * imp.get_vZ());
+			// Put basis vectors into arrays for easier manipulation below. Can
+			// either use the interpolated ones or the discrete ones without
+			// interpolation.
+			//std::array<double, 3> e1 {int_rec_bas[0], int_rec_bas[1], 
+			//	int_rec_bas[2]};
+			//std::array<double, 3> e2 {int_rec_bas[3], int_rec_bas[4], 
+			//	int_rec_bas[5]};
+			//std::array<double, 3> e3 {int_rec_bas[6], int_rec_bas[7], 
+			//	int_rec_bas[8]};
+			//std::array<double, 3> e_1 {int_tan_bas[0], int_tan_bas[1], 
+			//	int_tan_bas[2]};
+			//std::array<double, 3> e_2 {int_tan_bas[3], int_tan_bas[4], 
+			//	int_tan_bas[5]};
+			//std::array<double, 3> e_3 {int_tan_bas[6], int_tan_bas[7], 
+			//	int_tan_bas[8]};
+			
+			// Discrete, no interpolation
+			//std::array<double, 3> e1 {bkg.get_dxdX()(xidx, yidx, zidx),
+			//	bkg.get_dxdY()(xidx, yidx, zidx),
+			//	bkg.get_dxdZ()(xidx, yidx, zidx)};
+			//std::array<double, 3> e2 {bkg.get_dydX()(xidx, yidx, zidx),
+			//	bkg.get_dydY()(xidx, yidx, zidx),
+			//	bkg.get_dydZ()(xidx, yidx, zidx)};
+			//std::array<double, 3> e3 {bkg.get_dzdX()(xidx, yidx, zidx),
+			//	bkg.get_dzdY()(xidx, yidx, zidx),
+			//	bkg.get_dzdZ()(xidx, yidx, zidx)};
+			//std::array<double, 3> e_1 {bkg.get_dXdx()(xidx, yidx, zidx),
+			//	bkg.get_dYdx()(xidx, yidx, zidx),
+			//	bkg.get_dZdx()(xidx, yidx, zidx)};
+			//std::array<double, 3> e_2 {bkg.get_dXdy()(xidx, yidx, zidx),
+			//	bkg.get_dYdy()(xidx, yidx, zidx),
+			//	bkg.get_dZdy()(xidx, yidx, zidx)};
+			//std::array<double, 3> e_3 {bkg.get_dXdz()(xidx, yidx, zidx),
+			//	bkg.get_dYdz()(xidx, yidx, zidx),
+			//	bkg.get_dZdz()(xidx, yidx, zidx)};
 
-		// HARDCODED TEST SUITE
-		// Useful printout for tracking a single particle's motion
-		//std::cout << tidx << "\t" << xidx << "\t" << yidx << "\t" << zidx << "\t" 
-		//	<< std::scientific << imp.get_t() << "\t" << imp.get_x() 
-		//	<< "\t" << imp.get_y() << "\t" << imp.get_z() << "\t"
-		//	<< imp.get_X() << "\t" << imp.get_Y() << "\t" << imp.get_Z() << "\t"
-		//	<< imp.get_vX() << "\t" << imp.get_vY() << "\t" << imp.get_vZ() << "\t"
-		//	<< B_local[0] << "\t" << B_local[1] << "\t" << B_local[2] << '\t'
-		//	<< E_local[0] << "\t" << E_local[1] << "\t" << E_local[2] <<'\t'
-		//	<< int_rec_bas[0] << "\t" << int_rec_bas[1] << "\t" << int_rec_bas[2] <<'\t'
-		//	<< int_rec_bas[3] << "\t" << int_rec_bas[4] << "\t" << int_rec_bas[5] <<'\t'
-		//	<< int_rec_bas[6] << "\t" << int_rec_bas[7] << "\t" << int_rec_bas[8] <<'\t'
-		//	<< imp.get_vx() << "\t" << imp.get_vy() << "\t" << imp.get_vz() << "\n";
-	}
-}
+			// Check that coordinate system is mostly correct
+			/*
+			std::cout << "J = " << Utilities::dot_product(e_1, 
+				Utilities::cross_product(e_2, e_3)) << '\n';
+			std::cout << "e_1: " << e_1[0] << '\t' << e_1[1] << '\t' << e_1[2] << '\n';
+			std::cout << "e_2: " << e_2[0] << '\t' << e_2[1] << '\t' << e_2[2] << '\n';
+			std::cout << "e_3: " << e_3[0] << '\t' << e_3[1] << '\t' << e_3[2] << '\n';
+			std::cout << "e1: " << e1[0] << '\t' << e1[1] << '\t' << e1[2] << '\n';
+			std::cout << "e2: " << e2[0] << '\t' << e2[1] << '\t' << e2[2] << '\n';
+			std::cout << "e3: " << e3[0] << '\t' << e3[1] << '\t' << e3[2] << '\n';
+			std::cout << "e_1 * e_1 = " << Utilities::dot_product(e_1, e_1) << '\n';
+			std::cout << "e_1 * e_2 = " << Utilities::dot_product(e_1, e_2) << '\n';
+			std::cout << "e_1 * e_3 = " << Utilities::dot_product(e_1, e_3) << '\n';
+			std::cout << "e_2 * e_2 = " << Utilities::dot_product(e_2, e_2) << '\n';
+			std::cout << "e_2 * e_3 = " << Utilities::dot_product(e_2, e_3) << '\n';
+			std::cout << "e_3 * e_3 = " << Utilities::dot_product(e_3, e_3) << '\n';
+			std::cout << "e1 * e_1 = " << Utilities::dot_product(e1, e_1) << '\n';
+			std::cout << "e1 * e_2 = " << Utilities::dot_product(e1, e_2) << '\n';
+			std::cout << "e1 * e_3 = " << Utilities::dot_product(e1, e_3) << '\n';
+			std::cout << "e2 * e_1 = " << Utilities::dot_product(e2, e_1) << '\n';
+			std::cout << "e2 * e_2 = " << Utilities::dot_product(e2, e_2) << '\n';
+			std::cout << "e2 * e_3 = " << Utilities::dot_product(e2, e_3) << '\n';
+			std::cout << "e3 * e_1 = " << Utilities::dot_product(e3, e_1) << '\n';
+			std::cout << "e3 * e_2 = " << Utilities::dot_product(e3, e_2) << '\n';
+			std::cout << "e3 * e_3 = " << Utilities::dot_product(e3, e_3) << '\n';
+			*/
 
+			// Calculate velocity vector in computational coordinates using
+			// interpolated reciprocal basis vector.
+			slots.set_vx(i, int_rec_bas[0] * slots.vX()[i] 
+				+ int_rec_bas[1] * slots.vY()[i] 
+				+ int_rec_bas[2] * slots.vZ()[i]);
+			slots.set_vy(i, int_rec_bas[3] * slots.vX()[i] 
+				+ int_rec_bas[4] * slots.vY()[i] 
+				+ int_rec_bas[5] * slots.vZ()[i]);
+			slots.set_vz(i, int_rec_bas[6] * slots.vX()[i] 
+				+ int_rec_bas[7] * slots.vY()[i] 
+				+ int_rec_bas[8] * slots.vZ()[i]);
 
+		}  // i loop, omp parallel for
+	}  // update_velocity_cpu
+
+}  // namespace Boris

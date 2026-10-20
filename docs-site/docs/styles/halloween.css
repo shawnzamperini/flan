@@ -1,0 +1,28 @@
+/* ------------------------------
+   Halloween Color Scheme
+   ------------------------------ */
+
+/* Light mode (pumpkin + black) */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #FF7518;            /* Pumpkin orange */
+  --md-primary-fg-color--light: #FFA45A;
+  --md-primary-fg-color--dark: #CC5E13;
+
+  --md-accent-fg-color: #4B0082;             /* Witch purple */
+
+  --md-default-bg-color: #F8F8F8;            /* Ghost white */
+  --md-default-fg-color: #000000;            /* Black text */
+}
+
+/* Dark mode (black + pumpkin + purple) */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #FF7518;            /* Pumpkin orange */
+  --md-primary-fg-color--light: #FFA45A;
+  --md-primary-fg-color--dark: #CC5E13;
+
+  --md-accent-fg-color: #4B0082;             /* Witch purple */
+
+  --md-default-bg-color: #000000;            /* Deep black */
+  --md-default-fg-color: #F8F8F8;            /* Ghost white text */
+}
+

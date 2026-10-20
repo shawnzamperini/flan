@@ -2,6 +2,9 @@
 * @file  flan.cpp
 *
 * @brief Entry point and top level control of Flan library.
+*
+* An input file builds an Inputs map and calls flan with it, between
+* MPI_Init and MPI_Finalize (see regression/blank_input_file.cpp).
 */
 #include <cmath>
 #include <fstream>
@@ -25,6 +28,29 @@
 #include "timer.h"
 #include "vectors.h"
 
+/**
+* Runs a Flan simulation with the given input options.
+*
+* The steps are:
+*
+* 1. Load the options from inpts, filling in defaults for any not given
+*    (Options::load_options).
+* 2. Read the background plasma on rank 0 (Background::read_bkg) and
+*    broadcast it to every rank.
+* 3. Follow the impurities on every rank
+*    (ImpurityTransport::follow_impurities).
+* 4. Combine the statistics from every rank onto rank 0
+*    (Impurity::reduce_stats), and calculate the density, velocities,
+*    charge and Nanbu s from them.
+* 5. Save the results on rank 0 (SaveResults::save_results) and print the
+*    timing summary.
+*
+* MPI must already be initialized when flan is called, and the caller
+* finalizes it afterwards. Every rank must call flan.
+*
+* @param inpts Input options from the input file. Options not in inpts keep
+*        their default values.
+*/
 void flan(const Inputs& inpts)
 {
 	// MPI rank and number of processes
@@ -35,7 +61,7 @@ void flan(const Inputs& inpts)
 
 	// Create Timer object and begin total simulation timer
 	Timer::Timer timer {};
-	timer.start_total_timer();
+	timer.start(Timer::Section::Total);
 
 	// For printing output, flush buffer after every output operation
 	std::cout << std::unitbuf;
@@ -70,11 +96,12 @@ R"(
 	if (rank == 0) std::cout << "Loading input...\n";
 	Options::Options opts {Options::load_options(inpts)};
 
-	// Load plasma background. Returns a Background class option.
-	timer.start_read_timer();
+	// Load plasma background on rank 0. The other ranks get it from the
+	// broadcast below.
+	timer.start(Timer::Section::Read);
 	Background::Background bkg {};
 	if (rank == 0) bkg = Background::read_bkg(opts);
-	timer.end_read_timer();
+	timer.stop(Timer::Section::Read);
 
 	// Interpolate additional frames between each Gkeyll frame to artificially
 	// increase the time resolution of the simulation.
@@ -84,10 +111,10 @@ R"(
 	bkg.broadcast(MPI_COMM_WORLD);
 
 	// Begin main particle following loop.
-	timer.start_imp_timer();
-	Impurity::Statistics imp_stats {Impurity::follow_impurities(bkg, opts, 
+	timer.start(Timer::Section::Imp);
+	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
 		timer)};
-	timer.end_imp_timer();
+	timer.stop(Timer::Section::Imp);
 
 	// Reduce imp_stats from each rank, defined in impurity_stats.cpp. Only
 	// rank 0 returns a meaningful result here.
@@ -112,17 +139,18 @@ R"(
 	if (rank == 0)
 	{
 		// Save simulation results.
-		timer.start_save_timer();
+		timer.start(Timer::Section::Save);
 		SaveResults::save_results(bkg, global_stats, opts);
-		timer.end_save_timer();
+		timer.stop(Timer::Section::Save);
+	}
 
-		// End timer, print summary. Even though this is really just rank 0's
-		// time summary, it should be about the same for every other rank 
-		// (excluding the rank 0 specific tasks). It's still good for telling
-		// you how long the program took in each section. It's essentially
-		// the wall time.
-		timer.end_total_timer();
+	// End total timer, then print summary just for MPI rank 0. It should be
+	// about the same for all the other ranks. This is also going to give
+	// you the wall time effectively, which is what we're after.
+	timer.stop(Timer::Section::Total);
+	if (rank == 0)
+	{
 		timer.print_summary();
 	}
 
-}
+}  // flan

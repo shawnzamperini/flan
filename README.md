@@ -1,7 +1,7 @@
 # Flan
 ## Fully kinetic Monte Carlo to follow trace amount of impurities in a turbulent plasma. 
 
-Flan is named after my dog, Flannery. It does not stand for anything. 
+Flan is named after my dog, Flannery. It does not stand for anything. It is written in C++ and its algorithms are written for efficient memory access and to take full advantage of OpenMP, MPI and CUDA. The code is written and maintained by Shawn Zamperini at General Atomics. Flan is free for noncommercial use, such as academic research, under the [PolyForm Noncommercial License 1.0.0](LICENSE). Commercial use requires a separate license; contact Shawn (zamperinis@fusion.gat.com) to request one. 
 
 <img src="https://github.com/shawnzamperini/flan/blob/main/docs/flan_image.jpg" width="250">
 
@@ -12,27 +12,20 @@ Typical usage is to track a trace amount of impurities in a turbulent background
 - Particle ionization and recombination is tracked via coupling to ADAS
 - The collision model is based on the publication: [Nanbu, K. Theory of cumulative small-angle collisions in plasmas. Phys. Rev. E 55, 4642–4652 (1997)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.55.4642). This is a fully general collision scheme for Monte Carlo applications valid in all plasma regimes (with the only approximation being the plasma is in thermal equlibrium when calculating the Coulomb logarithm, likely a relatively negligible effect).
 
-A publication detailing Flan is anticipated in 2025. 
+Cite [this PPCF publication](https://iopscience.iop.org/article/10.1088/1361-6587/ae836b) when citing Flan. 
 
 ## Documentation
 
-[Link to the ReadTheDocs](https://flannery.readthedocs.io/en/latest/index.html)
+[Link to GitHub Pages site](https://shawnzamperini.github.io/flan/physics/impurity-transport/)
 
 ## Upcoming Changes
 
 
-- Restructure impurity transport routines to use SoA for efficient GPU implementation (ongoing)
+- Restructure impurity transport routines to use SoA for efficient memory and GPU implementation (ready for merge to main)
 - Couple to CGYRO and/or SOLEDGE3X (starting late 2026)
 - ~~Incorporate MPI to spread computation across multiple nodes~~ Merged to main 6/3/26
 - ~~Add time profiling~~ Merged to main 7/31/25
 - ~~Upgrade to Nanbu collision model~~ Merged to main 7/23/25
 - ~~Expand code to non-Cartesian geometries (e.g., tokamak coordinates)~~ Merged to main 5/30/25
 
-
-FLAN is dual-licensed under the GNU General Public License v3.0 (GPLv3) and a commercial license.
-
-- The GPLv3 license applies to all open-source use.
-- A commercial license is available for organizations that wish to use FLAN in proprietary software, avoid GPL obligations, or obtain commercial support.
-
-For commercial licensing inquiries, please contact: zamperinis@fusion.gat.com.
 

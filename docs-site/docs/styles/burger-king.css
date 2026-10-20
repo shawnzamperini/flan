@@ -1,0 +1,28 @@
+/* ------------------------------
+   Burger King Color Scheme
+   ------------------------------ */
+
+/* Light mode */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #EC1C24;          /* Flame orange/red */
+  --md-primary-fg-color--light: #F25A5F;
+  --md-primary-fg-color--dark: #A11218;
+
+  --md-accent-fg-color: #F2A900;           /* Golden yellow */
+
+  --md-default-bg-color: #F5EBDC;          /* Bun beige */
+  --md-default-fg-color: #000000;          /* Black text */
+}
+
+/* Dark mode */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #F2A900;          /* Golden yellow */
+  --md-primary-fg-color--light: #FFBE33;
+  --md-primary-fg-color--dark: #B37A00;
+
+  --md-accent-fg-color: #EC1C24;           /* Flame orange/red */
+
+  --md-default-bg-color: #4A2C2A;          /* Deep brown */
+  --md-default-fg-color: #F5EBDC;          /* Bun beige text */
+}
+

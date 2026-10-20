@@ -2,20 +2,19 @@
 * @file background.h
 * @brief Header file for background.cpp
 */
-#ifndef BACKGROUND_H
-#define BACKGROUND_H
+#pragma once
 
+#include <string>
 #include <vector>
 
+#include "background_device.h"
 #include "flan_types.h"
-#include "impurity.h"
-#include "mpi.h"
 #include "vectors.h"
 
-/**
-* @namespace Background
-* @brief Namespace to contain anything related to the background plasma
-*/
+#ifndef __CUDACC__
+#include "mpi.h"
+#endif
+
 namespace Background
 {
 	/**
@@ -94,6 +93,15 @@ namespace Background
 		int m_dim2 {};
 		int m_dim3 {};
 		int m_dim4 {};
+
+		BkgFPType m_t_min {};
+		BkgFPType m_t_max {};
+		BkgFPType m_x_min {};
+		BkgFPType m_x_max {};
+		BkgFPType m_y_min {};
+		BkgFPType m_y_max {};
+		BkgFPType m_z_min {};
+		BkgFPType m_z_max {};
 
 	public:
 
@@ -268,115 +276,42 @@ namespace Background
 		void move_into_b_y(Vectors::Vector3D<BkgFPType>& b_y);
 		void move_into_b_z(Vectors::Vector3D<BkgFPType>& b_z);
 
-		/**
-		* @brief Interpolate 4D data at a given t,x,y,z
-		*
-		* @param vec4d The Vector4D containing the data to interpolate
-		* @param t0 Coordinate to interpolate at
-		* @param x0 Coordinate to interpolate at
-		* @param y0 Coordinate to interpolate at
-		* @param z0 Coordinate to interpolate at
-		*/
-		const BkgFPType interp_4d(const Vectors::Vector4D<BkgFPType>& vec4d, 
+		BkgFPType interp_4d(const Vectors::Vector4D<BkgFPType>& vec4d, 
 			const double t0, const double x0, const double y0, const double z0) 
 			const;
 
-		/**
-		* @brief Interpolate Te at a given t,x,y,z
-		*/
-		const BkgFPType interp_te(const double t0, const double x0, 
+		BkgFPType interp_te(const double t0, const double x0, 
 			const double y0, const double z0) const;
 
-		/**
-		* @brief Interpolate Te at Impurity location
-		*
-		* @param imp Impurity object containing time, location to interpolate at
-		*
-		* @returns Interpolated value at Impurity t,x,y,z
-		*/
-		const BkgFPType interp_te_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_ti(const double t0, const double x0, 
+			const double y0, const double z0) const;
 
-		/**
-		* @brief Interpolate Ti at Impurity location
-		*
-		* @param imp Impurity object containing time, location to interpolate at
-		*
-		* @returns Interpolated value at Impurity t,x,y,z
-		*/
-		const BkgFPType interp_ti_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_ne(const double t0, const double x0, 
+			const double y0, const double z0) const;
 
-		/**
-		* @brief Interpolate ne at Impurity location
-		*
-		* @param imp Impurity object containing time, location to interpolate at
-		*
-		* @returns Interpolated value at Impurity t,x,y,z
-		*/
-		const BkgFPType interp_ne_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_uX(const double t0, const double x0, 
+			const double y0, const double z0) const;
 
-		/**
-		* @brief Interpolate uX at Impurity location
-		*
-		* @param imp Impurity object containing time, location to interpolate at
-		*
-		* @returns Interpolated value at Impurity t,x,y,z
-		*/
-		const BkgFPType interp_uX_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_uY(const double t0, const double x0, 
+			const double y0, const double z0) const;
 
-		/**
-		* @brief Interpolate uY at Impurity location
-		*
-		* @param imp Impurity object containing time, location to interpolate at
-		*
-		* @returns Interpolated value at Impurity t,x,y,z
-		*/
-		const BkgFPType interp_uY_at_imp(const Impurity::Impurity& imp) const;
+		BkgFPType interp_uZ(const double t0, const double x0, 
+			const double y0, const double z0) const;
 
-		/**
-		* @brief Interpolate uZ at Impurity location
-		*
-		* @param imp Impurity object containing time, location to interpolate at
-		*
-		* @returns Interpolated value at Impurity t,x,y,z
-		*/
-		const BkgFPType interp_uZ_at_imp(const Impurity::Impurity& imp) const;
+		std::string check_dim(const int m_dim, const int in_dim, 
+			const int dim_num);
 
-		/**
-		* @brief Safety check that any data that is read into Background is 
-		* consistent with the already-set dimension.
-		*
-		* @param m_dim Current dimension value
-		* @param in_dim New dimension value
-		* @param data Name of data (for print out)
-		* @param dim_num Dimension unmber (for print out)
-		* @return Returns true if dimensions match, false (and a error message) 
-		* if not
-		*/
-		bool check_dim(const int m_dim, const int in_dim, 
-			const std::string_view data, const int dim_num);
-
-		/**
-		* @brief Function to ensure dimensions are consistent across the 
-		* different vectors.
-		*
-		* Right now this just prints the appropriate error message and then lets
-		* the program crash. I'd like to work in some kind of intentional 
-		* terminate command, but not sure what the safest way is for that so I
-		* let it crash.
-		*
-		* @param v Vector4D containing the dimensions we're checking against
-		* @param data Name of data being loaded (for print out)
-		*/
 		template <typename T>
 		void set_dims(Vectors::Vector4D<T>& v, const std::string_view data);
 
-		/**
-		* @brief MPI broadcast
-		*/
+#ifndef __CUDACC__
 		void broadcast(MPI_Comm comm);
+#endif
+
+		BackgroundDevice to_device(int device_id = 0);
 
 		BkgFPType interp_te();
 	};
-}
 
-#endif
+	void free_bkg(BackgroundDevice& bkg_d, int device_id = 0);
+}

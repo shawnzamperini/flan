@@ -12,7 +12,7 @@ from scipy.optimize import root_scalar
 def equation(A, s):
 	return np.cosh(A) / np.sinh(A) - 1/A - np.exp(-s)
 
-def solve_for_A(s, guess=1.0):
+def solve_for_A(s):
 	
 	# We apply approximations mentioned in Nanbu because outside this range
 	# we actually struggle to converge anyways.
@@ -42,42 +42,92 @@ for i in range(len(s_test)):
 	print("{:4.2f}  {:9.5f}  {:9.5f}  {:5.2f}%".format(s_test[i], a_test[i], ans,
 		(ans - a_test[i]) / a_test[i] * 100)) 
 
-# Loop through a range of values, creating the file tabulated values nanbu_a.h
-s_values = np.arange(0.009, 5.002, 0.001)
-#s_values = np.arange(0.01, 5, 0.1)
+# Tabulate A over 0.009 <= s <= 5.001. Rounding makes the s values exact
+# (np.arange alone gives 0.009999... for 0.01, which falls below the s < 0.01
+# cutoff in solve_for_A). Flan interpolates in this table assuming the s
+# values are evenly spaced, so keep them that way.
+s_values = np.round(np.arange(0.009, 5.002, 0.001), 3)
 a_values = [solve_for_A(s) for s in s_values]
 
 vals_per_line = 3
+
+# Doxygen @file block written at the top of each header. The values are only
+# written by this script, so describe them here instead of by hand.
+def file_block(name, extra):
+	return (
+		"/**\n"
+		f"* @file  {name}\n"
+		"*\n"
+		"* @brief Tabulated values of A(s) for the Nanbu collision model.\n"
+		"*\n"
+		"* Generated automatically by python/calc_nanbu_A.py, don't edit by\n"
+		"* hand. A is found from coth(A) - 1/A = exp(-s) for evenly spaced s\n"
+		"* from 0.009 to 5.001 in steps of 0.001. Outside 0.01 <= s <= 5,\n"
+		"* Nanbu's approximations A = 1/s and A = 3 exp(-s) are used\n"
+		"* instead.\n"
+		f"{extra}"
+		"*/\n")
+
+def write_values(f, values, indent):
+	"""
+	Writes values to f, vals_per_line per line, separated by commas.
+	"""
+	for i in range(0, len(values), vals_per_line):
+		chunk = values[i:i+vals_per_line]
+		line = ", ".join("{:.6e}".format(v) for v in chunk)
+		end = "," if i + vals_per_line < len(values) else ""
+		f.write(f"{indent}{line}{end}\n")
+
+# CPU version, include/nanbu_s_a.h
 with open("nanbu_s_a.h", "w") as f:
 
 	# Header information
 	f.write("#ifndef NANBU_S_A_H\n")
 	f.write("#define NANBU_S_A_H\n\n")
-	f.write("// This file generated automatically by python/calc_nanbu_A.py\n")
+	f.write(file_block("nanbu_s_a.h", "*\n"
+		"* CPU version. The GPU version is cuda/nanbu_s_a.cuh.\n"))
 	f.write("#include <array>\n")
 	f.write("namespace Nanbu\n{\n")
 
 	# Write out s values
 	f.write("std::array<double, {:}> s {{\n".format(len(s_values)))
-	for i in range(0, len(s_values), vals_per_line):
-		chunk = s_values[i:i+vals_per_line]
-		line = ", ".join("{:.3f}".format(v) for v in chunk)
-		end = "," if i + 3 < len(s_values) else ""
-		f.write(f"    {line}{end}\n")
+	write_values(f, s_values, "    ")
 	f.write("};\n\n")
 
 	# Write out A values
 	f.write("std::array<double, {:}> A {{\n".format(len(a_values)))
-	for i in range(0, len(a_values), vals_per_line):
-		chunk = a_values[i:i+vals_per_line]
-		line = ", ".join("{:.3f}".format(v) for v in chunk)
-		end = "," if i + 3 < len(a_values) else ""
-		f.write(f"    {line}{end}\n")
+	write_values(f, a_values, "    ")
 	f.write("};\n\n")
 
 	# Closing namespace bracket
 	f.write("}\n\n")
 	f.write("#endif")
 
-print("nanbu_s_a.h has been created. Move to include/ so it gets compiled in")
+# GPU version, include/cuda/nanbu_s_a.cuh. Same values, but as plain
+# __device__ arrays since std::array can't be used in device code.
+with open("nanbu_s_a.cuh", "w") as f:
+
+	# Header information
+	f.write("#pragma once\n\n")
+	f.write(file_block("nanbu_s_a.cuh", "*\n"
+		"* GPU version, as plain __device__ arrays since std::array can't be\n"
+		"* used in device code. The CPU version is nanbu_s_a.h.\n"))
+	f.write("namespace Nanbu\n{\n")
+	f.write("\t__device__ constexpr size_t N = {:};\n\n".format(len(s_values)))
+
+	# Write out s values
+	f.write("\t__device__ const double s[N] = {\n")
+	write_values(f, s_values, "\t\t")
+	f.write("\t};\n\n")
+
+	# Write out A values
+	f.write("\t__device__ const double A[N] = {\n")
+	write_values(f, a_values, "\t\t")
+	f.write("\t};\n\n")
+
+	# Closing namespace bracket
+	f.write("}\n")
+
+print("nanbu_s_a.h and nanbu_s_a.cuh have been created. Move nanbu_s_a.h to")
+print("include/ and nanbu_s_a.cuh to include/cuda/ so they get compiled in")
 print("like any other header file.")

@@ -1,22 +1,18 @@
-#ifndef OPTIONS_H
-#define OPTIONS_H
+#pragma once
 
 /**
 * @file options.h
+* @brief Header file for options.cpp.
 */
+#include <string>
 #include <tuple>
 
 #include "flan_types.h"
+#include "options_device.h"
 
 
 namespace Options
 {
-	/** 
-	* @brief Default mapc2p that assumes computational coordinates are 
-	*        already the Cartesian coordinates.
-	*/
-	std::tuple<double, double, double> mapc2p_default 
-		(double xc, double yc, double zc);
 
 	/**
 	* @brief Class for storing all the options that control a simulation.
@@ -33,6 +29,10 @@ namespace Options
 
 		// Meta options for the simulation
 		std::string m_case_name              {"undefined"};
+		std::string m_use_gpu					   {"off"};
+		int m_seed                                    {-1};
+		int m_slot_cap                           {1048576};  
+		int m_print_interval                          {10};
 
 		// General background plasma options
 		std::string m_bkg_source                {"gkeyll"};
@@ -53,12 +53,26 @@ namespace Options
 		std::string m_gkyl_file_type            {"binary"};
 		std::string m_gkyl_moment_type    {"bimaxwellian"};
 		std::string m_calc_grad_elec               {"off"};
+		
+		// General background options
+		double m_min_ne                             {1e15};
+		double m_min_te                              {0.1};
+		double m_min_ti                              {0.1};
 
 		// Geometry options
-		std::string m_tbound_type              {"absorbing"};
-		double m_lcfs_x                              {0.0};
-		double m_imp_xbound_buffer                   {0.0};
+		std::string m_tbound_type            {"absorbing"};
 		std::string m_min_xbound_type        {"absorbing"};
+		std::string m_max_xbound_type        {"absorbing"};
+		std::string m_min_ybound_type        {"absorbing"};
+		std::string m_max_ybound_type        {"absorbing"};
+		std::string m_min_zbound_type        {"absorbing"};
+		std::string m_max_zbound_type        {"absorbing"};
+		double m_lcfs_x                              {0.0};
+		double m_lcfs_y                              {0.0};
+		double m_lcfs_z                              {0.0};
+		double m_imp_xbound_buffer                   {0.0};
+		double m_imp_ybound_buffer                   {0.0};
+		double m_imp_zbound_buffer                   {0.0};
 		double m_sep_x_bc_xp_z1                      {0.0};
 		double m_sep_x_bc_xp_z2                      {0.0};
 
@@ -93,7 +107,7 @@ namespace Options
 		double m_imp_time_step_min                 {1e-12};
 		double m_imp_source_scale_fact               {1.0};
 		std::string m_imp_iz_recomb                 {"on"};
-		int m_print_interval                          {10};
+		double m_imp_max_time                       {1e10};
 
 		// Variance reduction options
 		std::string m_var_red_split                {"off"};
@@ -108,18 +122,13 @@ namespace Options
 		std::string m_openadas_root          {"undefined"};
 		int m_openadas_year                           {50};
 
-		// Function to map between computational and physical (Cartesian)
-		// coordinates. Generally copy/pasted from Gkeyll input file. 
-		// mapc2p_default is defined at the beginning of this file before the
-		// class. Mapc2p_ptr is defined in flan_types.h.
-		Mapc2p_ptr m_mapc2p {&mapc2p_default};
-
 		// Internal control variables for string options. The string options
 		// are just there to be user-friendly, but it is more efficient to
 		// use integers instead of comparing strings all the time. These are
 		// all set automatically within the corresponding setters.
 		// IMPORTANT: All control integers should be initialized below as -1,
 		// which the code recognizes as "not assigned yet".
+		int m_use_gpu_int	        	{-1};
 		int m_bkg_source_int        	{-1};
 		int m_test_opt_int          	{-1};
 		int m_save_track_int          	{-1};
@@ -136,18 +145,13 @@ namespace Options
 		int m_imp_iz_recomb_int			{-1};
 		int m_tbound_type_int			{-1};
 		int m_min_xbound_type_int		{-1};
+		int m_max_xbound_type_int		{-1};
+		int m_min_ybound_type_int		{-1};
+		int m_max_ybound_type_int		{-1};
+		int m_min_zbound_type_int		{-1};
+		int m_max_zbound_type_int		{-1};
 		int m_calc_grad_elec_int		{-1};
 
-		/**
-		* @brief Check input against a list of valid options
-		*
-		* @param var String containing variable name
-		* @param value Template parameter of variable value
-		* @param valid_values initializer_list of valid values, 
-		*        e.g., {"on", "off"}
-		*
-		* @return true if valid, false if not
-		*/
 		template <typename T>
 		bool check_input(const std::string& var, const T& value, 
 			std::initializer_list<T> valid_values);
@@ -161,7 +165,10 @@ namespace Options
 		void initialize_control_ints();
 
 		// Setter declarations
+		void set_use_gpu(std::string use_gpu);
 		void set_case_name(std::string case_name);
+		void set_seed(int seed);
+		void set_slot_cap(int slot_cap);
 		void set_bkg_source(std::string bkg_source);
 		void set_test_opt(std::string test_opt);
 		void set_save_track(std::string save_track);
@@ -176,11 +183,24 @@ namespace Options
 		void set_gkyl_file_type(std::string gkyl_file_type);
 		void set_gkyl_moment_type(std::string gkyl_moment_type);
 		void set_calc_grad_elec(std::string calc_grad_elec);
+		void set_min_ne(double min_ne);
+		void set_min_te(double min_te);
+		void set_min_ti(double min_ti);
 		void set_tbound_type(std::string tbound_type);
 		void set_min_xbound_type(std::string min_xbound_type);
+		void set_max_xbound_type(std::string max_xbound_type);
+		void set_min_ybound_type(std::string min_ybound_type);
+		void set_max_ybound_type(std::string max_ybound_type);
+		void set_min_zbound_type(std::string min_zbound_type);
+		void set_max_zbound_type(std::string max_zbound_type);
 		void set_lcfs_x(double lcfs_x);
+		void set_lcfs_y(double lcfs_y);
+		void set_lcfs_z(double lcfs_z);
 		void set_sep_x_bc_xp_z1(double sep_x_bc_xp_z1);
 		void set_sep_x_bc_xp_z2(double sep_x_bc_xp_z2);
+		void set_imp_xbound_buffer(double imp_xbound_buffer);
+		void set_imp_ybound_buffer(double imp_ybound_buffer);
+		void set_imp_zbound_buffer(double imp_zbound_buffer);
 		void set_imp_atom_num(int imp_atom_num);
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
@@ -215,103 +235,126 @@ namespace Options
 		void set_imp_time_step(double imp_time_step);
 		void set_imp_time_step_min(double imp_time_step_min);
 		void set_imp_source_scale_fact(double imp_source_scale_fact);
-		void set_imp_xbound_buffer(double imp_xbound_buffer);
 		void set_imp_iz_recomb(std::string imp_iz_recomb);
+		void set_imp_max_time(double imp_max_time);
 		void set_print_interval(int print_interval);
 		void set_openadas_root(std::string openadas_root);
 		void set_openadas_year(int openadas_year);
-		void set_mapc2p(Mapc2p_ptr mapc2p);
 
 		// Accessor declarations
 		const std::string& case_name() const;
+		const std::string& use_gpu() const;
+		int seed() const;
+		int slot_cap() const;
 		const std::string& bkg_source() const;
 		const std::string& test_opt() const;
 		const std::string& save_track() const;
 		const std::string& gkyl_dir() const;
 		const std::string& gkyl_casename() const;
-		const int gkyl_frame_start() const;
-		const int gkyl_frame_end() const;
+		int gkyl_frame_start() const;
+		int gkyl_frame_end() const;
 		const std::string& gkyl_elec_name() const;
 		const std::string& gkyl_ion_name() const;
-		const double gkyl_elec_mass_amu() const;
-		const double gkyl_ion_mass_amu() const;
+		double gkyl_elec_mass_amu() const;
+		double gkyl_ion_mass_amu() const;
 		const std::string& gkyl_file_type() const;
 		const std::string& gkyl_moment_type() const;
 		const std::string& calc_grad_elec() const;
+		double min_ne() const;
+		double min_te() const;
+		double min_ti() const;
 		const std::string& tbound_type() const;
 		const std::string& min_xbound_type() const;
-		const double lcfs_x() const;
-		const double sep_x_bc_xp_z1() const;
-		const double sep_x_bc_xp_z2() const;
-		const int imp_atom_num() const;
-		const double imp_mass_amu() const;
-		const int imp_init_charge() const;
-		const int imp_num() const;
+		const std::string& max_xbound_type() const;
+		const std::string& min_ybound_type() const;
+		const std::string& max_ybound_type() const;
+		const std::string& min_zbound_type() const;
+		const std::string& max_zbound_type() const;
+		double lcfs_x() const;
+		double lcfs_y() const;
+		double lcfs_z() const;
+		double sep_x_bc_xp_z1() const;
+		double sep_x_bc_xp_z2() const;
+		double imp_xbound_buffer() const;
+		double imp_ybound_buffer() const;
+		double imp_zbound_buffer() const;
+		int imp_atom_num() const;
+		double imp_mass_amu() const;
+		int imp_init_charge() const;
+		int imp_num() const;
 		const std::string& imp_tstart_opt() const;
-		const double imp_tstart_val() const;
-		const double imp_trange_min() const;
-		const double imp_trange_max() const;
+		double imp_tstart_val() const;
+		double imp_trange_min() const;
+		double imp_trange_max() const;
 		const std::string& imp_xstart_opt() const;
-		const double imp_xstart_val() const;
-		const double imp_xrange_min() const;
-		const double imp_xrange_max() const;
+		double imp_xstart_val() const;
+		double imp_xrange_min() const;
+		double imp_xrange_max() const;
 		const std::string& imp_ystart_opt() const;
-		const double imp_ystart_val() const;
-		const double imp_yrange_min() const;
-		const double imp_yrange_max() const;
+		double imp_ystart_val() const;
+		double imp_yrange_min() const;
+		double imp_yrange_max() const;
 		const std::string& imp_zstart_opt() const;
-		const double imp_zstart_val() const;
-		const double imp_zrange_min() const;
-		const double imp_zrange_max() const;
+		double imp_zstart_val() const;
+		double imp_zrange_min() const;
+		double imp_zrange_max() const;
 		const std::string& imp_temp_start_opt() const;
-		const double imp_temp_start_val() const;
+		double imp_temp_start_val() const;
 		const std::string& imp_collisions() const;
 		const std::string& var_red_split() const;
 		const std::string& var_red_import() const;
-		const double var_red_freq() const;
-		const double var_red_min_weight() const;
-		const double var_red_med_mod() const;
+		double var_red_freq() const;
+		double var_red_min_weight() const;
+		double var_red_med_mod() const;
 		const std::string& var_red_rusrol() const;
-		const double var_red_rusrol_prob() const;
+		double var_red_rusrol_prob() const;
 		const std::string& imp_time_step_opt() const;
-		const double imp_time_step() const;
-		const double imp_time_step_min() const;
-		const double imp_source_scale_fact() const;
-		const double imp_xbound_buffer() const;
+		double imp_time_step() const;
+		double imp_time_step_min() const;
+		double imp_source_scale_fact() const;
 		const std::string& imp_iz_recomb() const;
-		const int print_interval() const;
+		double imp_max_time() const;
+		int print_interval() const;
 		const std::string& openadas_root() const;
-		const int openadas_year() const;
-		const Mapc2p_ptr mapc2p() const;
+		int openadas_year() const;
 
 		// Wrapper function for retrieving control integers that ensures they
 		// have been correctly set.
-		const int get_control_int(const std::string& var_name, 
+		int get_control_int(const std::string& var_name, 
 			const int control_int) const;
 
 		// Accessor declarations for internal control variables
-		const int bkg_source_int() const;
-		const int test_opt_int() const;
-		const int save_track_int() const;
-		const int imp_tstart_opt_int() const;
-		const int imp_xstart_opt_int() const;
-		const int imp_ystart_opt_int() const;
-		const int imp_zstart_opt_int() const;
-		const int imp_temp_start_opt_int() const;
-		const int imp_collisions_int() const;
-		const int var_red_split_int() const;
-		const int var_red_import_int() const;
-		const int var_red_rusrol_int() const;
-		const int imp_time_step_opt_int() const;
-		const int imp_iz_recomb_int() const;
-		const int tbound_type_int() const;
-		const int min_xbound_type_int() const;
-		const int calc_grad_elec_int() const;
+		int use_gpu_int() const;
+		int bkg_source_int() const;
+		int test_opt_int() const;
+		int save_track_int() const;
+		int imp_tstart_opt_int() const;
+		int imp_xstart_opt_int() const;
+		int imp_ystart_opt_int() const;
+		int imp_zstart_opt_int() const;
+		int imp_temp_start_opt_int() const;
+		int imp_collisions_int() const;
+		int var_red_split_int() const;
+		int var_red_import_int() const;
+		int var_red_rusrol_int() const;
+		int imp_time_step_opt_int() const;
+		int imp_iz_recomb_int() const;
+		int tbound_type_int() const;
+		int min_xbound_type_int() const;
+		int max_xbound_type_int() const;
+		int min_ybound_type_int() const;
+		int max_ybound_type_int() const;
+		int min_zbound_type_int() const;
+		int max_zbound_type_int() const;
+		int calc_grad_elec_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);
+
+		// Copy a select number of options to device
+		OptionsDevice* to_device(int device_id = 0);
 	};
-
+	
+	// Free options on device
+	void free_opts(OptionsDevice* opts_d, int device_id = 0);
 }
-
-#endif

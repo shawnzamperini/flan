@@ -2,6 +2,12 @@
 * @file read_test.cpp
 *
 * @brief Routines handling generating a test background plasma
+*
+* The test backgrounds are simple, analytic plasmas used to check that Flan
+* reproduces textbook single-particle motion (gyration and the ExB, grad-B,
+* polarization and curvature drifts) and the friction force from the
+* collision model. They are used with bkg_source = "test", and the case is
+* chosen with test_opt. The regression inputs in regression/ run them.
 */
 #include <cmath>
 
@@ -13,10 +19,39 @@
 
 namespace Test
 {
-	// Entry point for creating hardcoded test data for Flan
+	/**
+	* Creates the hardcoded test background chosen by the test_opt option.
+	*
+	* Every case uses the same grid: 128 time frames from 0 to 50 us, and
+	* 32 x 32 x 9 cells in x, y and z. The plasma is uniform, with
+	* ne = 1e20 m^-3 and Te = Ti = 1 eV. The cases are:
+	*
+	* - gyrate (0): slab, B_Z = 1 T, no electric field. The particle just
+	*   gyrates.
+	* - exb (1): slab, B_Z = 1 T and E_Y = 500 V/m, for an ExB drift.
+	* - gradb (2): slab, B_Z = 1 + 5 y T (a 5 T/m gradient in y), no
+	*   electric field, for a grad-B drift.
+	* - polarization (3): slab, B_Z = 1 T and E_Y = 5000 - 1e7 t V/m (falling
+	*   by 10 V/us), for a polarization drift.
+	* - curvature (4): cylindrical (x = R, y = Z, z = phi), a purely toroidal
+	*   B = 10 T, no electric field, for a curvature drift.
+	* - friction_force (5): slab, B_X = 1 T and a background flow of
+	*   u_X = 1000 m/s, no electric field, to show the friction force from
+	*   the collision model.
+	*
+	* The slab is 5 x 5 x 3 cm, x from 0 to 0.05 m, y from -0.025 to 0.025
+	* m and z from -0.015 to 0.015 m, with x = X, y = Y and z = Z. The
+	* cylindrical volume has R from 2.00 to 2.05 m, Z from -0.025 to 0.025 m
+	* and phi from 0 to about pi/2. Only the background flow is nonzero in
+	* the friction force case. The reciprocal basis vectors and Jacobian
+	* are set for each geometry. The tangent basis vectors are not set.
+	*
+	* @param opts Simulation options, used for test_opt.
+	* @return Background holding the test plasma.
+	*/
 	Background::Background read_test(const Options::Options& opts)
 	{	
-		// The test grid is 64x64x1. 		
+		// The test grid is 32x32x9 with 128 time frames
 		constexpr int tdim {128};
 		constexpr int xdim {32};
 		constexpr int ydim {32};
@@ -130,15 +165,15 @@ namespace Test
 
 				// x=X, y=Y and z=Z for a slab geometry
 				test_X.get_data()[idx] = test_x[i];
-				test_Y.get_data()[idx] = test_y[i];
-				test_Z.get_data()[idx] = test_z[i];
+				test_Y.get_data()[idx] = test_y[j];
+				test_Z.get_data()[idx] = test_z[k];
 			}
 			}
 			}
 		}
 	
-		// Cylindrical geometry options (curvature drift and numerical
-		// diffusion tests)
+		// Cylindrical geometry option (curvature drift test). The physical
+		// X, Y and Z coordinates are not set here, so they stay zero.
 		else if (opts.test_opt_int() == 4)
 		{
 			// Normal cylindrical coordinates: x = R, y = Z, z = phi. 
@@ -206,7 +241,9 @@ namespace Test
 			// All test cases use constant values for density and temperature
 			test_ne.get_data()[idx] = 1e20;
 			test_te.get_data()[idx] = 1;
+			//test_te.get_data()[idx] = 10;
 			test_ti.get_data()[idx] = 1;
+			//test_ti.get_data()[idx] = 10;
 			//test_vp.get_data()[idx] = 0.0; // Not needed
 
 			// Zero electric field in these tests
@@ -219,7 +256,7 @@ namespace Test
 				test_emag.get_data()[idx] = 0.0;
 			}
 
-			// Constant electric field of E_Y = 5000 V/m for ExB drift test
+			// Constant electric field of E_Y = 500 V/m for ExB drift test
 			else if (opts.test_opt_int() == 1)
 			{
 				//test_eY.get_data()[idx] = 5000.0;
@@ -229,10 +266,11 @@ namespace Test
 			}
 
 			// Time-varying electric field that starts at E_Y = 5000 V/m and
-			// decreases by 1 V every microsecond for polarization drift test
+			// decreases by 10 V/m every microsecond for polarization drift
+			// test
 			else if (opts.test_opt_int() == 3)
 			{
-				constexpr double slope {-10000000}; // 1000000 V/s or 1 V/us
+				constexpr double slope {-10000000}; // -1e7 V/m/s or -10 V/m/us
 				test_eY.get_data()[idx] = 5000.0 + slope 
 					* test_t[i];
 				test_emag.get_data()[idx] = test_eY.get_data()[idx];
@@ -260,7 +298,7 @@ namespace Test
 				test_bmag.get_data()[idx] = test_bZ.get_data()[idx];
 			}
 
-			// Cylindrical drift test gets a purely toroidal 1 T magnetic field
+			// Cylindrical drift test gets a purely toroidal 10 T magnetic field
 			else if (opts.test_opt_int() == 4)
 			{
 				double phi = test_z[l]; // z = phi

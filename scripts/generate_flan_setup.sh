@@ -37,6 +37,7 @@ cmake_minimum_required(VERSION 3.26)
 project(\$1 LANGUAGES CXX)
 find_package(flan REQUIRED HINTS "$1/lib/cmake")
 find_package(MPI REQUIRED)
+find_package(OpenMP REQUIRED)
 add_executable(\$1 \$1.cpp)
 include_directories("$1/include")
 target_link_libraries(\$1 
