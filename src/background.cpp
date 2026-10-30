@@ -276,6 +276,14 @@ namespace Background
 	///@}
 
 	/**
+	* Returns the wall mask, stored as a function of (zone, x, y, z). It is
+	* 1 in cells inside the wall and 0 in the plasma. Only SOLEDGE3X
+	* backgrounds have one, otherwise it is empty.
+	*/
+	const Vectors::ZonedVector<BkgFPType>& Background::get_chi() const
+		{return m_chi;}
+
+	/**
 	* @name Species masses
 	*
 	* Get or set the masses of the background electrons and main ions
@@ -1228,6 +1236,12 @@ namespace Background
 		m_b_z = std::move(b_z);
 	}
 
+	void Background::move_into_chi(Vectors::ZonedVector<BkgFPType>& chi)
+	{
+		set_dims(chi, "chi", false);
+		m_chi = std::move(chi);
+	}
+
 	void Background::move_into_grid_X(Vectors::ZonedVector<BkgFPType>& grid_X)
 	{
 		set_dims(grid_X, "grid_X", false, true);
@@ -1388,6 +1402,7 @@ namespace Background
 		m_dXdz.broadcast(comm);
 		m_dYdz.broadcast(comm);
 		m_dZdz.broadcast(comm);
+		m_chi.broadcast(comm);
 
 		// Broadcast plasma and fields
 		m_ne.broadcast(comm);

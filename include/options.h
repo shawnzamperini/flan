@@ -59,9 +59,7 @@ namespace Options
 		std::string m_s3x_mesh_file        {"mesh_S3X.h5"};
 		int m_s3x_frame_start                          {0};
 		int m_s3x_frame_end                            {1};
-		double m_s3x_n0                             {-1.0};
-		double m_s3x_T0                             {-1.0};
-		double m_s3x_tau0                           {-1.0};
+		std::string m_s3x_ref_file {"refParam_raptorX.h5"};
 		std::string m_s3x_chi_absorb                {"on"};
 		
 		// General background options
@@ -199,9 +197,7 @@ namespace Options
 		void set_s3x_mesh_file(std::string s3x_mesh_file);
 		void set_s3x_frame_start(int s3x_frame_start);
 		void set_s3x_frame_end(int s3x_frame_end);
-		void set_s3x_n0(double s3x_n0);
-		void set_s3x_T0(double s3x_T0);
-		void set_s3x_tau0(double s3x_tau0);
+		void set_s3x_ref_file(std::string s3x_ref_file);
 		void set_s3x_chi_absorb(std::string s3x_chi_absorb);
 		void set_min_ne(double min_ne);
 		void set_min_te(double min_te);
@@ -285,9 +281,7 @@ namespace Options
 		const std::string& s3x_mesh_file() const;
 		int s3x_frame_start() const;
 		int s3x_frame_end() const;
-		double s3x_n0() const;
-		double s3x_T0() const;
-		double s3x_tau0() const;
+		const std::string& s3x_ref_file() const;
 		const std::string& s3x_chi_absorb() const;
 		double min_ne() const;
 		double min_te() const;

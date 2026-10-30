@@ -476,39 +476,15 @@ namespace Options
 		{m_s3x_frame_end = s3x_frame_end;}
 
 	/**
-	* Sets the s3x_n0 option.
+	* Sets the s3x_ref_file option.
 	*
-	* SOLEDGE3X reference density (m^-3) that the plasma densities are
-	* normalized by. Must be set (> 0) for a SOLEDGE3X background.
+	* Name of the SOLEDGE3X file in s3x_dir with the reference values the
+	* output is normalized by (n0, T0, c0, tau0, phi0, ...).
 	*
-	* @param s3x_n0 New value of the s3x_n0 option.
+	* @param s3x_ref_file New value of the s3x_ref_file option.
 	*/
-	void Options::set_s3x_n0(double s3x_n0) 
-		{m_s3x_n0 = s3x_n0;}
-
-	/**
-	* Sets the s3x_T0 option.
-	*
-	* SOLEDGE3X reference temperature (eV) that the plasma temperatures
-	* and potential are normalized by. Must be set (> 0) for a SOLEDGE3X
-	* background.
-	*
-	* @param s3x_T0 New value of the s3x_T0 option.
-	*/
-	void Options::set_s3x_T0(double s3x_T0) 
-		{m_s3x_T0 = s3x_T0;}
-
-	/**
-	* Sets the s3x_tau0 option.
-	*
-	* SOLEDGE3X reference time (s) that the simulation time is normalized
-	* by. If not > 0, the inverse ion cyclotron frequency m_i / (e B0) is
-	* used, with B0 and m_i from the SOLEDGE3X files.
-	*
-	* @param s3x_tau0 New value of the s3x_tau0 option.
-	*/
-	void Options::set_s3x_tau0(double s3x_tau0) 
-		{m_s3x_tau0 = s3x_tau0;}
+	void Options::set_s3x_ref_file(std::string s3x_ref_file) 
+		{m_s3x_ref_file = s3x_ref_file;}
 
 	/**
 	* Sets the s3x_chi_absorb option.
@@ -1643,39 +1619,15 @@ namespace Options
 		{return m_s3x_frame_end;}
 
 	/**
-	* Returns the s3x_n0 option.
+	* Returns the s3x_ref_file option.
 	*
-	* SOLEDGE3X reference density (m^-3) that the plasma densities are
-	* normalized by. Must be set (> 0) for a SOLEDGE3X background.
+	* Name of the SOLEDGE3X file in s3x_dir with the reference values the
+	* output is normalized by (n0, T0, c0, tau0, phi0, ...).
 	*
-	* @return Value of the s3x_n0 option.
+	* @return Value of the s3x_ref_file option.
 	*/
-	double Options::s3x_n0() const 
-		{return m_s3x_n0;}
-
-	/**
-	* Returns the s3x_T0 option.
-	*
-	* SOLEDGE3X reference temperature (eV) that the plasma temperatures
-	* and potential are normalized by. Must be set (> 0) for a SOLEDGE3X
-	* background.
-	*
-	* @return Value of the s3x_T0 option.
-	*/
-	double Options::s3x_T0() const 
-		{return m_s3x_T0;}
-
-	/**
-	* Returns the s3x_tau0 option.
-	*
-	* SOLEDGE3X reference time (s) that the simulation time is normalized
-	* by. If not > 0, the inverse ion cyclotron frequency m_i / (e B0) is
-	* used, with B0 and m_i from the SOLEDGE3X files.
-	*
-	* @return Value of the s3x_tau0 option.
-	*/
-	double Options::s3x_tau0() const 
-		{return m_s3x_tau0;}
+	const std::string& Options::s3x_ref_file() const 
+		{return m_s3x_ref_file;}
 
 	/**
 	* Returns the s3x_chi_absorb option.

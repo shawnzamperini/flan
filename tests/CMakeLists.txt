@@ -51,6 +51,10 @@ add_executable(test_hdf5_utils_cpu test_hdf5_utils_cpu.cpp)
 target_link_libraries(test_hdf5_utils_cpu PRIVATE flan gtest_main hdf5)
 add_test(NAME Hdf5UtilsCPUTest COMMAND test_hdf5_utils_cpu)
 
+add_executable(test_read_s3xe_cpu test_read_s3xe_cpu.cpp)
+target_link_libraries(test_read_s3xe_cpu PRIVATE flan gtest_main hdf5)
+add_test(NAME ReadS3XECPUTest COMMAND test_read_s3xe_cpu)
+
 # MPI test. It has its own main to initialize MPI, so it links gtest instead
 # of gtest_main, and it's run on 3 ranks with the same mpiexec that CMake
 # found for the library. The timeout stops ctest from waiting forever if a

@@ -82,6 +82,9 @@ namespace Background
 		Vectors::ZonedVector<BkgFPType> m_dYdz {};
 		Vectors::ZonedVector<BkgFPType> m_dZdz {};
 
+		// Wall mask: 1 inside the wall, 0 in the plasma (SOLEDGE3X only)
+		Vectors::ZonedVector<BkgFPType> m_chi {};
+
 		// The following are just for debugging and post analysis
 		Vectors::ZonedVector<BkgFPType> m_bR {};
 		Vectors::ZonedVector<BkgFPType> m_b_x {};
@@ -195,6 +198,7 @@ namespace Background
 		const Vectors::ZonedVector<BkgFPType>& get_b_x() const;
 		const Vectors::ZonedVector<BkgFPType>& get_b_y() const;
 		const Vectors::ZonedVector<BkgFPType>& get_b_z() const;
+		const Vectors::ZonedVector<BkgFPType>& get_chi() const;
 		double get_elec_mass_amu() const;
 		double get_ion_mass_amu() const;
 		void set_elec_mass_amu(const double elec_mass_amu);
@@ -329,6 +333,7 @@ namespace Background
 		void move_into_b_x(Vectors::ZonedVector<BkgFPType>& b_x);
 		void move_into_b_y(Vectors::ZonedVector<BkgFPType>& b_y);
 		void move_into_b_z(Vectors::ZonedVector<BkgFPType>& b_z);
+		void move_into_chi(Vectors::ZonedVector<BkgFPType>& chi);
 		void move_into_grid_X(Vectors::ZonedVector<BkgFPType>& grid_X);
 		void move_into_grid_Y(Vectors::ZonedVector<BkgFPType>& grid_Y);
 		void move_into_grid_Z(Vectors::ZonedVector<BkgFPType>& grid_Z);

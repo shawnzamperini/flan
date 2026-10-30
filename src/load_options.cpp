@@ -237,25 +237,11 @@ namespace Options
 				assign_option<int>(set_func, var, key);
 			}
 
-			else if (key == "s3x_n0")
+			else if (key == "s3x_ref_file")
 			{
-				auto set_func = std::bind(&Options::set_s3x_n0, &opts,
+				auto set_func = std::bind(&Options::set_s3x_ref_file, &opts,
 					std::placeholders::_1);
-				assign_option<double>(set_func, var, key);
-			}
-
-			else if (key == "s3x_T0")
-			{
-				auto set_func = std::bind(&Options::set_s3x_T0, &opts,
-					std::placeholders::_1);
-				assign_option<double>(set_func, var, key);
-			}
-
-			else if (key == "s3x_tau0")
-			{
-				auto set_func = std::bind(&Options::set_s3x_tau0, &opts,
-					std::placeholders::_1);
-				assign_option<double>(set_func, var, key);
+				assign_option<std::string>(set_func, var, key);
 			}
 
 			else if (key == "s3x_chi_absorb")

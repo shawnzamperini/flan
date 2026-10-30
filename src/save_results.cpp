@@ -430,12 +430,8 @@ namespace SaveResults
 			"first SOLEDGE3X plasma frame to load", "");
 		save_scalar(input_group, opts.s3x_frame_end(), "s3x_frame_end", dim_scalar,
 			"last SOLEDGE3X plasma frame to load", "");
-		save_scalar(input_group, opts.s3x_n0(), "s3x_n0", dim_scalar,
-			"SOLEDGE3X reference density", "(m-3)");
-		save_scalar(input_group, opts.s3x_T0(), "s3x_T0", dim_scalar,
-			"SOLEDGE3X reference temperature", "(eV)");
-		save_scalar(input_group, opts.s3x_tau0(), "s3x_tau0", dim_scalar,
-			"SOLEDGE3X reference time (not > 0 = 1 / ion cyclotron frequency)", "(s)");
+		save_string(input_group, opts.s3x_ref_file(), "s3x_ref_file", dim_str,
+			"name of SOLEDGE3X reference (normalization) file");
 		save_string(input_group, opts.s3x_chi_absorb(), "s3x_chi_absorb", dim_str,
 			"absorb particles inside the SOLEDGE3X wall option");
 
