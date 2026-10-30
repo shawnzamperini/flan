@@ -118,7 +118,15 @@ namespace Zones
 
 		double get_z_max(const int zone) const;
 
+		int get_n(const int zone, const int dim) const;
+
+		double get_min(const int zone, const int dim) const;
+
+		double get_max(const int zone, const int dim) const;
+
 		std::vector<int> get_core_zones() const;
+
+		std::vector<int> get_core_zones(const Face face) const;
 
 		void validate() const;
 

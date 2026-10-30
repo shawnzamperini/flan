@@ -37,6 +37,11 @@ add_test(NAME OpenADASCPUTest COMMAND test_openadas_cpu)
 add_test(NAME ZonedVectorCPUTest COMMAND test_zoned_vector_cpu)
 add_test(NAME ZonesCPUTest COMMAND test_zones_cpu)
 
+add_executable(test_cross_zones_cpu test_cross_zones_cpu.cpp)
+target_link_libraries(test_cross_zones_cpu PRIVATE flan gtest_main
+	OpenMP::OpenMP_CXX)
+add_test(NAME CrossZonesCPUTest COMMAND test_cross_zones_cpu)
+
 # MPI test. It has its own main to initialize MPI, so it links gtest instead
 # of gtest_main, and it's run on 3 ranks with the same mpiexec that CMake
 # found for the library. The timeout stops ctest from waiting forever if a

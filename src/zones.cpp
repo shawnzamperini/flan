@@ -12,6 +12,9 @@
 * boundary (absorbing or core).
 */
 
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <string>
 #include <utility>
 #include <vector>
@@ -190,6 +193,37 @@ namespace Zones
 	///@}
 
 	/**
+	* @name Accessors by dimension
+	*
+	* Return the number of cells, or the first or last cell edge, of a zone
+	* in dimension dim, where 0 = x, 1 = y and 2 = z. These let code loop
+	* over the dimensions (e.g., over the faces, where a face's dimension is
+	* face / 2) instead of repeating itself for x, y and z.
+	*/
+	///@{
+	int Zones::get_n(const int zone, const int dim) const
+	{
+		const std::array<const std::vector<std::vector<double>>*, 3> centers
+			{&m_x, &m_y, &m_z};
+		return std::ssize((*centers[dim])[zone]);
+	}
+
+	double Zones::get_min(const int zone, const int dim) const
+	{
+		const std::array<const std::vector<std::vector<double>>*, 3> edges
+			{&m_grid_x, &m_grid_y, &m_grid_z};
+		return (*edges[dim])[zone].front();
+	}
+
+	double Zones::get_max(const int zone, const int dim) const
+	{
+		const std::array<const std::vector<std::vector<double>>*, 3> edges
+			{&m_grid_x, &m_grid_y, &m_grid_z};
+		return (*edges[dim])[zone].back();
+	}
+	///@}
+
+	/**
 	* Returns the zones that have at least one core face, in increasing
 	* order.
 	*
@@ -216,6 +250,26 @@ namespace Zones
 	}
 
 	/**
+	* Returns the zones whose given face is a core face, in increasing
+	* order.
+	*
+	* A particle that hits a core face is put back on one of the core faces
+	* of the same kind (e.g., any xmin core face), which these are.
+	*
+	* @param face Face to check.
+	* @return Indices of the zones.
+	*/
+	std::vector<int> Zones::get_core_zones(const Face face) const
+	{
+		std::vector<int> core {};
+		for (int zone {}; zone < get_nzones(); ++zone)
+		{
+			if (m_faces[face][zone] == face_core) core.push_back(zone);
+		}
+		return core;
+	}
+
+	/**
 	* Checks that the zones are consistent, stopping the run with
 	* Errors::fatal_error if not.
 	*
@@ -223,7 +277,8 @@ namespace Zones
 	* the edges increasing. Every face code must be a valid zone or face_*
 	* code. A shared face must be shared both ways (the opposite face of
 	* the zone across it points back), and the two zones must have the same
-	* number of cells along the face.
+	* cell edges along the face. That's what lets a particle cross the face
+	* by only shifting the coordinate normal to it.
 	*/
 	void Zones::validate() const
 	{
@@ -286,8 +341,8 @@ namespace Zones
 						+ std::to_string(m_faces[opposite][code]) + ".");
 				}
 
-				// Same number of cells along the face, i.e., in the two
-				// dimensions other than the one normal to the face.
+				// Same cells along the face, i.e., in the two dimensions
+				// other than the one normal to the face.
 				const int normal {face / 2};
 				for (int d {}; d < 3; ++d)
 				{
@@ -299,6 +354,21 @@ namespace Zones
 							+ std::to_string(code) + ", but they have "
 							"different numbers of cells in " + names[d]
 							+ ".");
+					}
+
+					const auto& e = (*edges[d])[zone];
+					const auto& e_other = (*edges[d])[code];
+					for (std::size_t n {}; n < e.size(); ++n)
+					{
+						const double tol {1e-9 * std::max(1.0,
+							std::abs(e[n]))};
+						if (std::abs(e[n] - e_other[n]) > tol)
+						{
+							Errors::fatal_error(fname + " connects to zone "
+								+ std::to_string(code) + ", but they have "
+								"different " + names[d] + " cell edges "
+								"along it.");
+						}
 					}
 				}
 			}

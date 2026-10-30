@@ -153,6 +153,20 @@ TEST(ZonesCPU, ValidateFailures)
 			"different numbers of cells in y");
 	}
 
+	// Same number of cells along the shared face, but different edges
+	{
+		Zones::Zones zones;
+		add_index_zone(zones, 4, 6, 2);
+		auto [x, gx] = uniform(3, 0.0, 3.0);
+		auto [y, gy] = uniform(6, 0.0, 12.0);
+		auto [z, gz] = uniform(2, 0.0, 6.283185307179586);
+		zones.add_zone(x, y, z, gx, gy, gz);
+		zones.set_face(0, Zones::xmax, 1);
+		zones.set_face(1, Zones::xmin, 0);
+		EXPECT_EXIT(zones.validate(), testing::ExitedWithCode(EXIT_FAILURE),
+			"different y cell edges");
+	}
+
 	// Zone that doesn't exist
 	{
 		Zones::Zones zones;

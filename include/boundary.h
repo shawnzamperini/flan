@@ -4,12 +4,14 @@
 */
 #pragma once
 
+#include <array>
 #include <vector>
 
 #include "background.h"
 #include "options.h"
 #include "pcg32.h"
 #include "slots.h"
+#include "zones.h"
 
 
 namespace Boundary
@@ -24,6 +26,11 @@ namespace Boundary
 		double a_max, double a_buffer, double b_min, double b_max,
 		double b_buffer, double c_min, double c_max, double c_buffer, 
 		bool max_bound, pcg32& rng);
+
+	void core_face(std::array<double, 3>& pos, int& zone,
+		const Zones::Face face, const std::vector<int>& core_zones,
+		const Zones::Zones& zones, const std::array<double, 3>& buffers,
+		pcg32& rng);
 
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,

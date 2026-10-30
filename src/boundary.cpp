@@ -3,13 +3,17 @@
 * @brief Routines for handling time and spatial boundary conditions.
 *
 * Each time step, every particle is checked against the time boundary and
-* the minimum and maximum x, y and z boundaries. Each boundary can be
-* absorbing (the particle is killed), periodic (the particle is wrapped to
-* the other side) or, for the spatial boundaries, core (the particle is put
-* back at the boundary at a random location along it). The simulation
-* bounds are the first and last background times and the outer cell edges.
-* The GPU version is in cuda/boundary.cu.
+* the faces of its zone. The time boundary can be absorbing (the particle
+* is killed) or periodic (the particle is wrapped to the other side). A
+* zone face can be absorbing, core (the particle is put back on a core face
+* at a random location along it), periodic, or shared with another zone
+* (the particle moves into that zone). The time bounds are the first and
+* last background times, and the zone faces are the zone's outer cell
+* edges. The GPU version is in cuda/boundary.cu, and only handles a single
+* zone.
 */
+#include <array>
+#include <iostream>
 #include <omp.h>
 #include <vector>
 
@@ -18,6 +22,7 @@
 #include "options.h"
 #include "pcg32.h"
 #include "slots.h"
+#include "zones.h"
 
 
 namespace Boundary
@@ -132,24 +137,104 @@ namespace Boundary
 
 
 	/**
-	* Checks every alive particle against the time and spatial boundaries
-	* and applies the boundary conditions (CPU implementation).
+	* Puts a particle that hit a core face back in on a core face.
 	*
-	* The boundaries are checked in the order t, then min/max x, y and z.
-	* Each boundary type is an integer from the *bound_type options:
-	* 0 = absorbing, 1 = periodic and 2 = core (x, y and z only). An
-	* absorbing boundary sets the slot's state and skips the remaining
-	* checks as soon as the particle is dead. For a core boundary in x, y
-	* and z are randomized, in y, z and x are randomized, and in z, x and y
-	* are randomized. The spatial buffers are the imp_*bound_buffer
-	* options, and the time boundary has no buffer. The loop over particles
-	* is parallelized with OpenMP.
+	* The particle is put back on a core face of the same kind as the one
+	* it hit (e.g., any xmin core face). If there is only one such face,
+	* which is always the case for a single-zone background, core_bc puts
+	* it back on that face exactly as it always has. If there are several,
+	* as in a SOLEDGE3X core split across zones, one is picked at random,
+	* weighted by its number of cells, and the particle is moved to that
+	* zone before core_bc puts it on the face.
 	*
-	* @param slots Particle slots. The state, t and positions are updated
-	*        in place.
-	* @param bkg Background plasma, used for the simulation bounds.
-	* @param opts Simulation options, used for the boundary types and
-	*        buffers.
+	* @param pos Particle position (x, y, z), updated in place.
+	* @param zone Particle's zone, updated in place.
+	* @param face Core face the particle is being checked against.
+	* @param core_zones Zones with a core face of the same kind, from
+	*        Zones::Zones::get_core_zones(face).
+	* @param zones The zones.
+	* @param buffers Boundary buffers in x, y and z.
+	* @param rng Random number generator for this thread.
+	*/
+	void core_face(std::array<double, 3>& pos, int& zone,
+		const Zones::Face face, const std::vector<int>& core_zones,
+		const Zones::Zones& zones, const std::array<double, 3>& buffers,
+		pcg32& rng)
+	{
+		// a is the dimension normal to the face, b and c the other two
+		const int a {face / 2};
+		const int b {(a + 1) % 3};
+		const int c {(a + 2) % 3};
+		const bool max_bound {(face & 1) == 1};
+
+		// Pick one of several core faces, but only if the particle hit
+		// this one. core_bc does the same check again below, but by then
+		// the particle is on the chosen face so it always passes.
+		if (core_zones.size() > 1)
+		{
+			const bool hit {max_bound
+				? (pos[a] + buffers[a]) >= zones.get_max(zone, a)
+				: (pos[a] - buffers[a]) <= zones.get_min(zone, a)};
+			if (!hit) return;
+
+			// Weighted by the number of cells on the face
+			std::vector<double> weights {};
+			double total {};
+			for (const int z : core_zones)
+			{
+				total += static_cast<double>(zones.get_n(z, b))
+					* zones.get_n(z, c);
+				weights.push_back(total);
+			}
+			const double r {rng.next_double() * total};
+			std::size_t pick {};
+			while (pick < weights.size() - 1 && r >= weights[pick]) ++pick;
+
+			zone = core_zones[pick];
+			pos[a] = max_bound ? zones.get_max(zone, a)
+				: zones.get_min(zone, a);
+		}
+
+		core_bc(pos[a], pos[b], pos[c],
+			zones.get_min(zone, a), zones.get_max(zone, a), buffers[a],
+			zones.get_min(zone, b), zones.get_max(zone, b), buffers[b],
+			zones.get_min(zone, c), zones.get_max(zone, c), buffers[c],
+			max_bound, rng);
+	}
+
+	/**
+	* Checks every alive particle against the time boundary and the faces
+	* of its zone, and applies the boundary conditions (CPU
+	* implementation).
+	*
+	* The time boundary comes from tbound_type: 0 = absorbing, 1 =
+	* periodic, with no buffer. Then the faces of the particle's zone are
+	* checked in the order xmin, xmax, ymin, ymax, zmin, zmax. What happens
+	* at a face depends on its code (see Zones::Zones):
+	*
+	* - face_absorbing: absorbing_bc with the imp_*bound_buffer of that
+	*   dimension. A dead particle skips the remaining checks.
+	* - face_core: the particle is put back on a core face with core_face.
+	* - The zone itself (periodic): periodic_bc.
+	* - Another zone: if the particle is past the face, it moves into that
+	*   zone. Its coordinate normal to the face is shifted from this zone's
+	*   frame to the other's, and the other two are unchanged since the
+	*   zones share the face's cell edges. There is no buffer. The faces of
+	*   the new zone are then checked from the start, so a particle can
+	*   cross more than one face in a step (e.g., near an X-point).
+	*
+	* For a single-zone background whose faces come from the *bound_type
+	* options, this does exactly what checking each bound_type in turn did
+	* before zones. A particle that crosses more than max_crossings faces in
+	* one step is absorbed with a warning, since that means the zones
+	* aren't connected the way they should be or the time step is far too
+	* big. The loop over particles is parallelized with OpenMP.
+	*
+	* @param slots Particle slots. The state, t, position and zone are
+	*        updated in place.
+	* @param bkg Background plasma, used for the time bounds and the zones.
+	* @param opts Simulation options, used for the time boundary type and
+	*        the spatial buffers.
 	* @param rngs Random number generators, one per OpenMP thread, used by
 	*        the core boundary.
 	*/
@@ -157,11 +242,19 @@ namespace Boundary
 		const Background::Background& bkg, const Options::Options& opts,
 		std::vector<pcg32>& rngs)
 	{
+		const Zones::Zones& zones {bkg.get_zones()};
+		const std::array<double, 3> buffers {opts.imp_xbound_buffer(),
+			opts.imp_ybound_buffer(), opts.imp_zbound_buffer()};
 
-		// The different bounds are
-		//   0: Absorbing
-		//   1: Periodic
-		//   2: Core (only x,y,z)
+		// Zones with a core face, for each kind of face
+		std::array<std::vector<int>, Zones::num_faces> core_zones {};
+		for (int f {}; f < Zones::num_faces; ++f)
+		{
+			core_zones[f] = zones.get_core_zones(static_cast<Zones::Face>(f));
+		}
+
+		// Far more crossings in one step than should ever happen
+		constexpr int max_crossings {8};
 
 		#pragma omp parallel
 		{
@@ -178,11 +271,6 @@ namespace Boundary
 			// Skip dead particles
 			if (slots.state()[i] > 0) continue;
 
-			// Used in all, just define up front
-			int state {};
-			double new_val {};
-			const int zone {slots.zone()[i]};
-
 			// --------------------
 			// Time boundary
 			// --------------------
@@ -190,7 +278,8 @@ namespace Boundary
 			// Maximum t: Absorbing boundary
 			if (opts.tbound_type_int() == 0)
 			{
-				state = absorbing_bc(slots.t()[i], bkg.get_t_max(), true);
+				const int state {absorbing_bc(slots.t()[i], bkg.get_t_max(), 
+					true)};
 				slots.set_state(i, state);
 
 				// If dead (>0) we can skip the rest of the checks.
@@ -205,287 +294,85 @@ namespace Boundary
 				// fast process since slots.t()[i] is loaded into L1, and 
 				// periodic_bc doesn't touch memory loads so the L1 cache never
 				// get evicted, so it's a very fast write.
-				new_val = periodic_bc(slots.t()[i], bkg.get_t_min(), 
-					bkg.get_t_max());
-				slots.set_t(i, new_val);
+				slots.set_t(i, periodic_bc(slots.t()[i], bkg.get_t_min(), 
+					bkg.get_t_max()));
 			}
 
 			// --------------------
-			// Minimum x boundary
-			// --------------------
-		
-			// Absorbing boundary
-			if (opts.min_xbound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.x()[i], bkg.get_x_min(zone), false, 
-					opts.imp_xbound_buffer());
-				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
-			}
-
-			// Periodic boundary
-			else if (opts.min_xbound_type_int() == 1)
-			{
-				new_val = periodic_bc(slots.x()[i], bkg.get_x_min(zone), 
-					bkg.get_x_max(zone));
-				slots.set_x(i, new_val);
-			}
-
-			// Core boundary
-			else if (opts.min_xbound_type_int() == 2)
-			{
-
-				// Temporaries that may get updated in core_bc, which we will
-				// write into slots after
-				double xtmp {slots.x()[i]};
-				double ytmp {slots.y()[i]};
-				double ztmp {slots.z()[i]};
-				core_bc(xtmp, ytmp, ztmp,
-					bkg.get_x_min(zone), bkg.get_x_max(zone),
-					opts.imp_xbound_buffer(),
-					bkg.get_y_min(zone), bkg.get_y_max(zone),
-					opts.imp_ybound_buffer(),
-					bkg.get_z_min(zone), bkg.get_z_max(zone),
-					opts.imp_zbound_buffer(), false, rng);
-
-				// Write back
-				slots.set_x(i, xtmp);
-				slots.set_y(i, ytmp);
-				slots.set_z(i, ztmp);
-			}
-
-			// --------------------
-			// Maximum x boundary
+			// Zone faces
 			// --------------------
 
-			// Absorbing boundary
-			if (opts.max_xbound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.x()[i], bkg.get_x_max(zone), true, 
-					opts.imp_xbound_buffer());
-				slots.set_state(i, state);
+			// Work on local copies, written back at the end
+			std::array<double, 3> pos {slots.x()[i], slots.y()[i], 
+				slots.z()[i]};
+			int zone {slots.zone()[i]};
+			int state {};
+			int crossings {};
 
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
+			// Check each face in turn. Crossing into another zone starts
+			// over at the first face of the new zone.
+			int f {};
+			while (f < Zones::num_faces)
+			{
+				const auto face {static_cast<Zones::Face>(f)};
+				const int code {zones.get_face(zone, face)};
+				const int a {f / 2};
+				const bool max_bound {(f & 1) == 1};
+				const double lo {zones.get_min(zone, a)};
+				const double hi {zones.get_max(zone, a)};
+
+				if (code == Zones::face_absorbing)
+				{
+					state = absorbing_bc(pos[a], max_bound ? hi : lo, 
+						max_bound, buffers[a]);
+					if (state) break;
+				}
+
+				else if (code == Zones::face_core)
+				{
+					core_face(pos, zone, face, core_zones[f], zones, buffers,
+						rng);
+				}
+
+				// Periodic
+				else if (code == zone)
+				{
+					pos[a] = periodic_bc(pos[a], lo, hi);
+				}
+
+				// Another zone, entered if past the face
+				else if (max_bound ? pos[a] > hi : pos[a] < lo)
+				{
+					if (++crossings > max_crossings)
+					{
+						#pragma omp critical
+						{
+							std::cerr << "Warning! A particle crossed more "
+								"than " << max_crossings << " zone faces in "
+								"one step and was absorbed. Check the zone "
+								"connections or use a smaller time step.\n";
+						}
+						state = 1;
+						break;
+					}
+
+					pos[a] = max_bound 
+						? pos[a] - hi + zones.get_min(code, a)
+						: pos[a] - lo + zones.get_max(code, a);
+					zone = code;
+					f = 0;
+					continue;
+				}
+
+				++f;
 			}
 
-			// Periodic boundary
-			else if (opts.max_xbound_type_int() == 1)
-			{
-				new_val = periodic_bc(slots.x()[i], bkg.get_x_min(zone), 
-					bkg.get_x_max(zone));
-				slots.set_x(i, new_val);
-			}
-
-			// Core boundary
-			else if (opts.max_xbound_type_int() == 2)
-			{
-
-				// Temporaries that may get updated in core_bc, which we will
-				// write into slots after
-				double xtmp {slots.x()[i]};
-				double ytmp {slots.y()[i]};
-				double ztmp {slots.z()[i]};
-				core_bc(xtmp, ytmp, ztmp,
-					bkg.get_x_min(zone), bkg.get_x_max(zone),
-					opts.imp_xbound_buffer(),
-					bkg.get_y_min(zone), bkg.get_y_max(zone),
-					opts.imp_ybound_buffer(),
-					bkg.get_z_min(zone), bkg.get_z_max(zone),
-					opts.imp_zbound_buffer(), true, rng);
-
-				// Write back
-				slots.set_x(i, xtmp);
-				slots.set_y(i, ytmp);
-				slots.set_z(i, ztmp);
-			}
-
-			// --------------------
-			// Minimum y boundary
-			// --------------------
-		
-			// Absorbing boundary
-			if (opts.min_ybound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.y()[i], bkg.get_y_min(zone), false, 
-					opts.imp_ybound_buffer());
-				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
-			}
-
-			// Periodic boundary
-			else if (opts.min_ybound_type_int() == 1)
-			{
-				new_val = periodic_bc(slots.y()[i], bkg.get_y_min(zone), 
-					bkg.get_y_max(zone));
-				slots.set_y(i, new_val);
-			}
-
-			// Core boundary
-			else if (opts.min_ybound_type_int() == 2)
-			{
-
-				// Temporaries that may get updated in core_bc, which we will
-				// write into slots after
-				double xtmp {slots.x()[i]};
-				double ytmp {slots.y()[i]};
-				double ztmp {slots.z()[i]};
-				core_bc(ytmp, ztmp, xtmp,
-					bkg.get_y_min(zone), bkg.get_y_max(zone),
-					opts.imp_ybound_buffer(),
-					bkg.get_z_min(zone), bkg.get_z_max(zone),
-					opts.imp_zbound_buffer(),
-					bkg.get_x_min(zone), bkg.get_x_max(zone),
-					opts.imp_xbound_buffer(), false, rng);
-
-				// Write back
-				slots.set_x(i, xtmp);
-				slots.set_y(i, ytmp);
-				slots.set_z(i, ztmp);
-			}
-
-			// --------------------
-			// Maximum y boundary
-			// --------------------
-
-			// Absorbing boundary
-			if (opts.max_ybound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.y()[i], bkg.get_y_max(zone), true, 
-					opts.imp_ybound_buffer());
-				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
-			}
-
-			// Periodic boundary
-			else if (opts.max_ybound_type_int() == 1)
-			{
-				new_val = periodic_bc(slots.y()[i], bkg.get_y_min(zone), 
-					bkg.get_y_max(zone));
-				slots.set_y(i, new_val);
-			}
-
-			// Core boundary
-			else if (opts.max_ybound_type_int() == 2)
-			{
-
-				// Temporaries that may get updated in core_bc, which we will
-				// write into slots after
-				double xtmp {slots.x()[i]};
-				double ytmp {slots.y()[i]};
-				double ztmp {slots.z()[i]};
-				core_bc(ytmp, ztmp, xtmp,
-					bkg.get_y_min(zone), bkg.get_y_max(zone),
-					opts.imp_ybound_buffer(),
-					bkg.get_z_min(zone), bkg.get_z_max(zone),
-					opts.imp_zbound_buffer(),
-					bkg.get_x_min(zone), bkg.get_x_max(zone),
-					opts.imp_xbound_buffer(), true, rng);
-
-				// Write back
-				slots.set_x(i, xtmp);
-				slots.set_y(i, ytmp);
-				slots.set_z(i, ztmp);
-			}
-
-
-			// --------------------
-			// Minimum z boundary
-			// --------------------
-		
-			// Absorbing boundary
-			if (opts.min_zbound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.z()[i], bkg.get_z_min(zone), false, 
-					opts.imp_zbound_buffer());
-				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
-			}
-
-			// Periodic boundary
-			else if (opts.min_zbound_type_int() == 1)
-			{
-				new_val = periodic_bc(slots.z()[i], bkg.get_z_min(zone), 
-					bkg.get_z_max(zone));
-				slots.set_z(i, new_val);
-			}
-
-			// Core boundary
-			else if (opts.min_zbound_type_int() == 2)
-			{
-
-				// Temporaries that may get updated in core_bc, which we will
-				// write into slots after
-				double xtmp {slots.x()[i]};
-				double ytmp {slots.y()[i]};
-				double ztmp {slots.z()[i]};
-				core_bc(ztmp, xtmp, ytmp,
-					bkg.get_z_min(zone), bkg.get_z_max(zone),
-					opts.imp_zbound_buffer(),
-					bkg.get_x_min(zone), bkg.get_x_max(zone),
-					opts.imp_xbound_buffer(),
-					bkg.get_y_min(zone), bkg.get_y_max(zone),
-					opts.imp_ybound_buffer(), false, rng);
-
-				// Write back
-				slots.set_x(i, xtmp);
-				slots.set_y(i, ytmp);
-				slots.set_z(i, ztmp);
-			}
-
-			// --------------------
-			// Maximum z boundary
-			// --------------------
-
-			// Absorbing boundary
-			if (opts.max_zbound_type_int() == 0)
-			{
-				state = absorbing_bc(slots.z()[i], bkg.get_z_max(zone), true, 
-					opts.imp_zbound_buffer());
-				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
-			}
-
-			// Periodic boundary
-			else if (opts.max_zbound_type_int() == 1)
-			{
-				new_val = periodic_bc(slots.z()[i], bkg.get_z_min(zone), 
-					bkg.get_z_max(zone));
-				slots.set_z(i, new_val);
-			}
-
-			// Core boundary
-			else if (opts.max_zbound_type_int() == 2)
-			{
-
-				// Temporaries that may get updated in core_bc, which we will
-				// write into slots after
-				double xtmp {slots.x()[i]};
-				double ytmp {slots.y()[i]};
-				double ztmp {slots.z()[i]};
-				core_bc(ztmp, xtmp, ytmp,
-					bkg.get_z_min(zone), bkg.get_z_max(zone),
-					opts.imp_zbound_buffer(),
-					bkg.get_x_min(zone), bkg.get_x_max(zone),
-					opts.imp_xbound_buffer(),
-					bkg.get_y_min(zone), bkg.get_y_max(zone),
-					opts.imp_ybound_buffer(), true, rng);
-
-				// Write back
-				slots.set_x(i, xtmp);
-				slots.set_y(i, ytmp);
-				slots.set_z(i, ztmp);
-			}
+			// Write back
+			slots.set_state(i, state);
+			slots.set_x(i, pos[0]);
+			slots.set_y(i, pos[1]);
+			slots.set_z(i, pos[2]);
+			slots.set_zone(i, zone);
 
 		} // slot loop
 		} // omp parallel
