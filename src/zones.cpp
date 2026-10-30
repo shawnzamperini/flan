@@ -253,6 +253,146 @@ namespace Zones
 	}
 
 	/**
+	* Returns a zone's cell centers in one dimension.
+	*
+	* @param zone Zone index.
+	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
+	* @return The cell centers, without ghost cells.
+	*/
+	const std::vector<double>& Zones::get_centers(const int zone,
+		const int dim) const
+	{
+		const std::array<const std::vector<std::vector<double>>*, 3> centers
+			{&m_x, &m_y, &m_z};
+		return (*centers[dim])[zone];
+	}
+
+	/**
+	* Returns the coordinate of a cell center in a zone's frame, including
+	* ghost cells.
+	*
+	* An interior cell's center is just its center. A ghost cell's center is
+	* the center of the cell it's a copy of in the zone across the face,
+	* shifted into this zone's frame, e.g., past the max face it's
+	* max(this zone) + (center - min(other zone)). This works for any cell
+	* widths, and steps through neighbors thinner than the ghost width the
+	* same way resolve_cell does. A ghost cell past an absorbing or core
+	* face has no center, which stops the run with Errors::fatal_error.
+	*
+	* @param zone Zone index.
+	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
+	* @param i Cell index, which may be a ghost cell index.
+	* @return Coordinate of the cell center.
+	*/
+	double Zones::center(const int zone, const int dim, int i) const
+	{
+		// Interior cell
+		if (i >= 0 && i < get_n(zone, dim)) return get_centers(zone, dim)[i];
+
+		// Step across faces, adding up how far each zone's frame is
+		// shifted from the next
+		double shift {};
+		int z {zone};
+		while (i < 0 || i >= get_n(z, dim))
+		{
+			const bool past_max {i >= get_n(z, dim)};
+			const int code {m_faces[2 * dim + past_max][z]};
+			if (code < 0)
+			{
+				Errors::fatal_error("Zone " + std::to_string(zone) + " has "
+					"no cell center at ghost index " + std::to_string(i)
+					+ ", since it's past an absorbing or core face.");
+			}
+
+			if (past_max)
+			{
+				shift += get_max(z, dim) - get_min(code, dim);
+				i -= get_n(z, dim);
+			}
+			else
+			{
+				shift += get_min(z, dim) - get_max(code, dim);
+				i += get_n(code, dim);
+			}
+			z = code;
+		}
+		return get_centers(z, dim)[i] + shift;
+	}
+
+	/**
+	* Returns the cell to interpolate towards from a particle's cell, in one
+	* dimension.
+	*
+	* This is Utilities::get_neighbor_index (the neighbor on the side of
+	* the cell center the particle is on, or the inward neighbor at the
+	* edge of the zone), except at the edge of a zone with ghost cells. If
+	* the particle is on the outer side of an edge cell's center and that
+	* face is shared with another zone (or periodic), the ghost cell (-1 or
+	* the number of cells) is returned, so interpolation continues into the
+	* zone across the face. Without ghost cells this is exactly
+	* Utilities::get_neighbor_index.
+	*
+	* @param zone Zone the particle is in.
+	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
+	* @param coord Particle's coordinate in that dimension.
+	* @param idx Index of the cell the particle is in.
+	* @return Index of the neighboring cell, which may be a ghost cell.
+	*/
+	int Zones::neighbor_index(const int zone, const int dim,
+		const double coord, const int idx) const
+	{
+		const auto& centers {get_centers(zone, dim)};
+		if (m_ghost > 0)
+		{
+			const int n {static_cast<int>(centers.size())};
+			const double dx_from_center {coord - centers[idx]};
+			if (idx == 0 && dx_from_center <= 0.0
+				&& m_faces[2 * dim][zone] >= 0)
+			{
+				return -1;
+			}
+			if (idx == n - 1 && dx_from_center > 0.0
+				&& m_faces[2 * dim + 1][zone] >= 0)
+			{
+				return n;
+			}
+		}
+		return Utilities::get_neighbor_index(coord, centers, idx);
+	}
+
+	/**
+	* Returns the two cells whose centers bracket a coordinate, in one
+	* dimension, for interpolating at it.
+	*
+	* This is Utilities::bracket_indices on the zone's cell centers, which
+	* holds at the first or last two cells past the outer centers, except
+	* at the edge of a zone with ghost cells. Past the first or last center,
+	* if that face is shared with another zone (or periodic), the pair is
+	* the ghost cell and the edge cell, so interpolation continues into the
+	* zone across the face.
+	*
+	* @param zone Zone the point is in.
+	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
+	* @param coord Coordinate of the point in that dimension.
+	* @return Indices of the lower and upper cells, either of which may be
+	*         a ghost cell.
+	*/
+	std::pair<int, int> Zones::bracket(const int zone, const int dim,
+		const double coord) const
+	{
+		const auto& centers {get_centers(zone, dim)};
+		if (m_ghost > 0)
+		{
+			const int n {static_cast<int>(centers.size())};
+			if (coord < centers.front() && m_faces[2 * dim][zone] >= 0)
+				return {-1, 0};
+			if (coord > centers.back() && m_faces[2 * dim + 1][zone] >= 0)
+				return {n - 1, n};
+		}
+		return Utilities::bracket_indices(centers, coord);
+	}
+
+	/**
 	* Returns the zones whose given face is a core face, in increasing
 	* order.
 	*

@@ -13,6 +13,7 @@
 #include "mpi.h"
 #include "utilities.h"
 #include "vectors.h"
+#include "zones.h"
 
 namespace Utilities
 {
@@ -386,17 +387,18 @@ namespace Utilities
 	*
 	* Trilinear interpolation is performed in the spatial dimensions
 	* (x, y, z) at the two time slices that bracket t0, followed by
-	* linear interpolation in time. Spatial coordinates are clamped
-	* to the grid boundaries to prevent extrapolation beyond the edge
-	* cell-center values.
+	* linear interpolation in time. The cells to interpolate between come
+	* from Zones::Zones::bracket. Inside a zone, and at the edges of zones
+	* without ghost cells, coordinates are clamped to the outer cell
+	* centers to prevent extrapolation. At an edge shared with another zone
+	* the ghost cells are used instead, so the field is continuous into the
+	* next zone.
 	*
 	* @tparam T Data type stored in the 4D field.
 	* @param vec 4D field to sample, indexed as (zone, t, x, y, z).
 	* @param zone Zone to sample in.
+	* @param zones The zones, which hold the cell centers.
 	* @param t Time coordinate array.
-	* @param x The zone's x coordinate array.
-	* @param y The zone's y coordinate array.
-	* @param z The zone's z coordinate array.
 	* @param t0 Time coordinate at which to evaluate the field.
 	* @param x0 X coordinate at which to evaluate the field.
 	* @param y0 Y coordinate at which to evaluate the field.
@@ -405,8 +407,7 @@ namespace Utilities
 	*/
 	template <typename T>
 	double interp_vec4d(const Vectors::ZonedVector<T>& vec, const int zone,
-		const std::vector<double>& t, const std::vector<double>& x,
-		const std::vector<double>& y, const std::vector<double>& z,
+		const Zones::Zones& zones, const std::vector<double>& t,
 		const double t0, const double x0, const double y0, const double z0)
 	{
 		// Shorthand for the field in this zone
@@ -420,25 +421,33 @@ namespace Utilities
 
 		// First find the bracketing indices for each dimension
 		auto [it0, it1] = bracket_indices(t, tc);
-		auto [ix0, ix1] = bracket_indices(x, x0);
-		auto [iy0, iy1] = bracket_indices(y, y0);
-		auto [iz0, iz1] = bracket_indices(z, z0);
+		auto [ix0, ix1] = zones.bracket(zone, 0, x0);
+		auto [iy0, iy1] = zones.bracket(zone, 1, y0);
+		auto [iz0, iz1] = zones.bracket(zone, 2, z0);
+
+		// Cell centers of the bracketing cells, which may be ghost cells
+		const double xc0 {zones.center(zone, 0, ix0)};
+		const double xc1 {zones.center(zone, 0, ix1)};
+		const double yc0 {zones.center(zone, 1, iy0)};
+		const double yc1 {zones.center(zone, 1, iy1)};
+		const double zc0 {zones.center(zone, 2, iz0)};
+		const double zc1 {zones.center(zone, 2, iz1)};
 
 		// Then perform trilinear interpolation in x,y,z dimensions at each
 		// time location. trilinear_interpolate prevents from interpolating
 		// outside  x[ix0] to x[ix1], which can happen when you're past the
 		// last cell center on the edge of the grid.
 		double interp_val0 {trilinear_interpolate(
-			x[ix0], y[iy0], z[iz0], 
-			x[ix1], y[iy1], z[iz1], 
+			xc0, yc0, zc0, 
+			xc1, yc1, zc1, 
 			vec4d(it0, ix0, iy0, iz0), vec4d(it0, ix1, iy0, iz0), // v000, v100
 			vec4d(it0, ix0, iy1, iz0), vec4d(it0, ix1, iy1, iz0), // v010, v110
 			vec4d(it0, ix0, iy0, iz1), vec4d(it0, ix1, iy0, iz1), // v001, v101
 			vec4d(it0, ix0, iy1, iz1), vec4d(it0, ix1, iy1, iz1), // v011, v111
 			x0, y0, z0)};
 		double interp_val1 {trilinear_interpolate(
-			x[ix0], y[iy0], z[iz0], 
-			x[ix1], y[iy1], z[iz1], 
+			xc0, yc0, zc0, 
+			xc1, yc1, zc1, 
 			vec4d(it1, ix0, iy0, iz0), vec4d(it1, ix1, iy0, iz0), // v000, v100
 			vec4d(it1, ix0, iy1, iz0), vec4d(it1, ix1, iy1, iz0), // v010, v110
 			vec4d(it1, ix0, iy0, iz1), vec4d(it1, ix1, iy0, iz1), // v001, v101
@@ -506,13 +515,11 @@ template int Utilities::get_neighbor_index<double>(
 
 template double Utilities::interp_vec4d<float>(
 	const Vectors::ZonedVector<float>& vec, const int zone,
-	const std::vector<double>& t, const std::vector<double>& x,
-	const std::vector<double>& y, const std::vector<double>& z,
+	const Zones::Zones& zones, const std::vector<double>& t,
 	const double t0, const double x0, const double y0, const double z0);
 template double Utilities::interp_vec4d<double>(
 	const Vectors::ZonedVector<double>& vec, const int zone,
-	const std::vector<double>& t, const std::vector<double>& x,
-	const std::vector<double>& y, const std::vector<double>& z,
+	const Zones::Zones& zones, const std::vector<double>& t,
 	const double t0, const double x0, const double y0, const double z0);
 
 template void Utilities::mpi_broadcast_vector(std::vector<int>&, int, 

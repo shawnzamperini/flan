@@ -57,24 +57,24 @@ namespace Boris
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
-		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
-			bkg.get_x(zone), xidx)};
-		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
-			bkg.get_y(zone), yidx)};
-		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
-			bkg.get_z(zone), zidx)};
+		const int xidx_neighbor {bkg.get_zones().neighbor_index(zone, 0,
+			x, xidx)};
+		const int yidx_neighbor {bkg.get_zones().neighbor_index(zone, 1,
+			y, yidx)};
+		const int zidx_neighbor {bkg.get_zones().neighbor_index(zone, 2,
+			z, zidx)};
 
 		// x, y, z coordinates of two bounding vertices to interpolate 
 		// between. Note these are not grid vertices, but rather are formed
 		// by cell center coordinates since that's where B/E are assumed
 		// to be defined. It is essentially a cell shifted by dx/2, dy/2
 		// and dz/2 if that helps.
-		const double x0 {bkg.get_x(zone)[xidx]};
-		const double x1 {bkg.get_x(zone)[xidx_neighbor]};
-		const double y0 {bkg.get_y(zone)[yidx]};
-		const double y1 {bkg.get_y(zone)[yidx_neighbor]};
-		const double z0 {bkg.get_z(zone)[zidx]};
-		const double z1 {bkg.get_z(zone)[zidx_neighbor]};
+		const double x0 {bkg.get_zones().center(zone, 0, xidx)};
+		const double x1 {bkg.get_zones().center(zone, 0, xidx_neighbor)};
+		const double y0 {bkg.get_zones().center(zone, 1, yidx)};
+		const double y1 {bkg.get_zones().center(zone, 1, yidx_neighbor)};
+		const double z0 {bkg.get_zones().center(zone, 2, zidx)};
+		const double z1 {bkg.get_zones().center(zone, 2, zidx_neighbor)};
 
 		// Array of references to each reciprocal basis vector
 		const std::array<std::reference_wrapper<
@@ -143,24 +143,24 @@ namespace Boris
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
-		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
-			bkg.get_x(zone), xidx)};
-		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
-			bkg.get_y(zone), yidx)};
-		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
-			bkg.get_z(zone), zidx)};
+		const int xidx_neighbor {bkg.get_zones().neighbor_index(zone, 0,
+			x, xidx)};
+		const int yidx_neighbor {bkg.get_zones().neighbor_index(zone, 1,
+			y, yidx)};
+		const int zidx_neighbor {bkg.get_zones().neighbor_index(zone, 2,
+			z, zidx)};
 
 		// x, y, z coordinates of two bounding vertices to interpolate 
 		// between. Note these are not grid vertices, but rather are formed
 		// by cell center coordinates since that's where B/E are assumed
 		// to be defined. It is essentially a cell shifted by dx/2, dy/2
 		// and dz/2 if that helps.
-		const double x0 {bkg.get_x(zone)[xidx]};
-		const double x1 {bkg.get_x(zone)[xidx_neighbor]};
-		const double y0 {bkg.get_y(zone)[yidx]};
-		const double y1 {bkg.get_y(zone)[yidx_neighbor]};
-		const double z0 {bkg.get_z(zone)[zidx]};
-		const double z1 {bkg.get_z(zone)[zidx_neighbor]};
+		const double x0 {bkg.get_zones().center(zone, 0, xidx)};
+		const double x1 {bkg.get_zones().center(zone, 0, xidx_neighbor)};
+		const double y0 {bkg.get_zones().center(zone, 1, yidx)};
+		const double y1 {bkg.get_zones().center(zone, 1, yidx_neighbor)};
+		const double z0 {bkg.get_zones().center(zone, 2, zidx)};
+		const double z1 {bkg.get_zones().center(zone, 2, zidx_neighbor)};
 
 		// Array of references to each tangent basis vector
 		const std::array<std::reference_wrapper<
@@ -245,12 +245,12 @@ namespace Boris
 			// is bounded by.
 			const int tidx_neighbor {Utilities::get_neighbor_index(slots.t()[i], 
 				bkg.get_times(), tidx)};
-			const int xidx_neighbor {Utilities::get_neighbor_index(slots.x()[i], 
-				bkg.get_x(zone), xidx)};
-			const int yidx_neighbor {Utilities::get_neighbor_index(slots.y()[i], 
-				bkg.get_y(zone), yidx)};
-			const int zidx_neighbor {Utilities::get_neighbor_index(slots.z()[i], 
-				bkg.get_z(zone), zidx)};
+			const int xidx_neighbor {bkg.get_zones().neighbor_index(zone, 0,
+				slots.x()[i], xidx)};
+			const int yidx_neighbor {bkg.get_zones().neighbor_index(zone, 1,
+				slots.y()[i], yidx)};
+			const int zidx_neighbor {bkg.get_zones().neighbor_index(zone, 2,
+				slots.z()[i], zidx)};
 
 			//std::cout << "t: " << tidx << "\t" << tidx_neighbor << "\n";
 			//std::cout << "x: " << xidx << "\t" << xidx_neighbor << "\n";
@@ -302,12 +302,12 @@ namespace Boris
 			// by cell center coordinates since that's where B/E are assumed
 			// to be defined. It is essentially a cell shifted by dx/2, dy/2
 			// and dz/2 if that helps.
-			const double x0 {bkg.get_x(zone)[xidx]};
-			const double x1 {bkg.get_x(zone)[xidx_neighbor]};
-			const double y0 {bkg.get_y(zone)[yidx]};
-			const double y1 {bkg.get_y(zone)[yidx_neighbor]};
-			const double z0 {bkg.get_z(zone)[zidx]};
-			const double z1 {bkg.get_z(zone)[zidx_neighbor]};
+			const double x0 {bkg.get_zones().center(zone, 0, xidx)};
+			const double x1 {bkg.get_zones().center(zone, 0, xidx_neighbor)};
+			const double y0 {bkg.get_zones().center(zone, 1, yidx)};
+			const double y1 {bkg.get_zones().center(zone, 1, yidx_neighbor)};
+			const double z0 {bkg.get_zones().center(zone, 2, zidx)};
+			const double z1 {bkg.get_zones().center(zone, 2, zidx_neighbor)};
 
 			// Loop through each B/E component, performing a trilinear interpolation
 			// to get the local value of each. First loop is to choose B or E.

@@ -357,7 +357,7 @@ namespace Background
 	* the zone, and stores the number of times if they are consistent.
 	*
 	* The zone must already be set with move_into_zones, and there must be
-	* exactly one. The first dimension of v is checked against the number
+	* exactly one, without ghost cells. The first dimension of v is checked against the number
 	* of times already loaded with check_dim, and the others against the
 	* zone's number of cells. If any don't match, the run is stopped with
 	* Errors::fatal_error, listing every dimension that doesn't match. A
@@ -374,6 +374,12 @@ namespace Background
 	{
 		check_single_zone("Loading " + std::string(data)
 			+ " as a Vector4D");
+		if (m_zones.get_ghost() != 0)
+		{
+			Errors::fatal_error("In Background, " + std::string(data)
+				+ " was loaded as a Vector4D, which has no ghost cells, but "
+				"the zones have ghost cells.");
+		}
 
 		// Check dimensions first, collecting a line for each one that
 		// doesn't match.
@@ -393,6 +399,81 @@ namespace Background
 		// Then overwrite the number of times. This either sets it from 0
 		// to its correct value, or overwrites it with the same value.
 		m_dim1 = v.get_dim1();
+	}
+
+	/**
+	* Checks the shape of a ZonedVector against the zones and the times,
+	* and stores the number of times if they are consistent.
+	*
+	* The zones must already be set with move_into_zones. The data must
+	* have the same number of zones and the same number of cells in each
+	* as the zones, and the zones' ghost width. Data at the cell corners
+	* (grid_X, grid_Y and grid_Z) has one more value in each dimension
+	* instead, and no ghost cells. Time-dependent data must have the same
+	* number of times as data already loaded (checked with check_dim),
+	* and other data a leading dimension of 1. If anything doesn't match,
+	* the run is stopped with Errors::fatal_error, listing every mismatch.
+	*
+	* @param v Data whose shape is checked.
+	* @param data Name of the data being loaded (for the error message).
+	* @param time_dependent True for data stored as (zone, t, x, y, z),
+	*        false for data stored as (zone, x, y, z).
+	* @param corners True for data at the cell corners.
+	*/
+	void Background::set_dims(const Vectors::ZonedVector<BkgFPType>& v,
+		const std::string_view data, const bool time_dependent,
+		const bool corners)
+	{
+		if (m_zones.get_nzones() == 0)
+		{
+			Errors::fatal_error("In Background, " + std::string(data)
+				+ " was loaded before the zones. Load the zones first with "
+				"move_into_zones.");
+		}
+
+		std::string mismatches {};
+		const int extra {corners ? 1 : 0};
+		const int ghost {corners ? 0 : m_zones.get_ghost()};
+		if (v.get_nzones() != m_zones.get_nzones())
+		{
+			mismatches += "\n  " + std::to_string(v.get_nzones())
+				+ " zones, but there are "
+				+ std::to_string(m_zones.get_nzones());
+		}
+		else
+		{
+			for (int z {}; z < v.get_nzones(); ++z)
+			{
+				if (v.get_nx(z) != m_zones.get_nx(z) + extra
+					|| v.get_ny(z) != m_zones.get_ny(z) + extra
+					|| v.get_nz(z) != m_zones.get_nz(z) + extra)
+				{
+					mismatches += "\n  zone " + std::to_string(z)
+						+ " has the wrong number of cells";
+				}
+			}
+		}
+		if (v.get_ghost() != ghost)
+		{
+			mismatches += "\n  ghost width is "
+				+ std::to_string(v.get_ghost()) + ", but should be "
+				+ std::to_string(ghost);
+		}
+		if (time_dependent) mismatches += check_dim(m_dim1, v.get_dim1(), 1);
+		else if (v.get_dim1() != 1)
+		{
+			mismatches += "\n  dim1 is " + std::to_string(v.get_dim1())
+				+ ", but should be 1";
+		}
+
+		if (!mismatches.empty())
+		{
+			Errors::fatal_error("In Background, " + std::string(data)
+				+ " doesn't match the zones or the data already loaded."
+				+ mismatches);
+		}
+
+		if (time_dependent) m_dim1 = v.get_dim1();
 	}
 
 	/**
@@ -800,13 +881,359 @@ namespace Background
 	///@}
 
 	/**
+	* @name Setters for data with any number of zones
+	*
+	* Move plasma, field and geometry data that is already a ZonedVector,
+	* with any number of zones and ghost cells, into the Background with
+	* move semantics. Before each move, set_dims checks that the data
+	* matches the zones and any data already loaded, and stops the run if
+	* not. See the accessors for what each quantity is.
+	*/
+	///@{
+	void Background::move_into_ne(Vectors::ZonedVector<BkgFPType>& ne)
+	{
+		set_dims(ne, "ne", true);
+		m_ne = std::move(ne);
+	}
+
+	void Background::move_into_te(Vectors::ZonedVector<BkgFPType>& te)
+	{
+		set_dims(te, "te", true);
+		m_te = std::move(te);
+	}
+
+	void Background::move_into_ti(Vectors::ZonedVector<BkgFPType>& ti)
+	{
+		set_dims(ti, "ti", true);
+		m_ti = std::move(ti);
+	}
+
+	void Background::move_into_vp(Vectors::ZonedVector<BkgFPType>& vp)
+	{
+		set_dims(vp, "vp", true);
+		m_vp = std::move(vp);
+	}
+
+	void Background::move_into_bX(Vectors::ZonedVector<BkgFPType>& bX)
+	{
+		set_dims(bX, "bX", true);
+		m_bX = std::move(bX);
+	}
+
+	void Background::move_into_bY(Vectors::ZonedVector<BkgFPType>& bY)
+	{
+		set_dims(bY, "bY", true);
+		m_bY = std::move(bY);
+	}
+
+	void Background::move_into_bZ(Vectors::ZonedVector<BkgFPType>& bZ)
+	{
+		set_dims(bZ, "bZ", true);
+		m_bZ = std::move(bZ);
+	}
+
+	void Background::move_into_bR(Vectors::ZonedVector<BkgFPType>& bR)
+	{
+		set_dims(bR, "bR", true);
+		m_bR = std::move(bR);
+	}
+
+	void Background::move_into_bmag(Vectors::ZonedVector<BkgFPType>& bmag)
+	{
+		set_dims(bmag, "bmag", true);
+		m_bmag = std::move(bmag);
+	}
+
+	void Background::move_into_gradbX(Vectors::ZonedVector<BkgFPType>& gradbX)
+	{
+		set_dims(gradbX, "gradbX", true);
+		m_gradbX = std::move(gradbX);
+	}
+
+	void Background::move_into_gradbY(Vectors::ZonedVector<BkgFPType>& gradbY)
+	{
+		set_dims(gradbY, "gradbY", true);
+		m_gradbY = std::move(gradbY);
+	}
+
+	void Background::move_into_gradbZ(Vectors::ZonedVector<BkgFPType>& gradbZ)
+	{
+		set_dims(gradbZ, "gradbZ", true);
+		m_gradbZ = std::move(gradbZ);
+	}
+
+	void Background::move_into_eX(Vectors::ZonedVector<BkgFPType>& eX)
+	{
+		set_dims(eX, "eX", true);
+		m_eX = std::move(eX);
+	}
+
+	void Background::move_into_eY(Vectors::ZonedVector<BkgFPType>& eY)
+	{
+		set_dims(eY, "eY", true);
+		m_eY = std::move(eY);
+	}
+
+	void Background::move_into_eZ(Vectors::ZonedVector<BkgFPType>& eZ)
+	{
+		set_dims(eZ, "eZ", true);
+		m_eZ = std::move(eZ);
+	}
+
+	void Background::move_into_emag(Vectors::ZonedVector<BkgFPType>& emag)
+	{
+		set_dims(emag, "emag", true);
+		m_emag = std::move(emag);
+	}
+
+	void Background::move_into_gradeX(Vectors::ZonedVector<BkgFPType>& gradeX)
+	{
+		set_dims(gradeX, "gradeX", true);
+		m_gradeX = std::move(gradeX);
+	}
+
+	void Background::move_into_gradeY(Vectors::ZonedVector<BkgFPType>& gradeY)
+	{
+		set_dims(gradeY, "gradeY", true);
+		m_gradeY = std::move(gradeY);
+	}
+
+	void Background::move_into_gradeZ(Vectors::ZonedVector<BkgFPType>& gradeZ)
+	{
+		set_dims(gradeZ, "gradeZ", true);
+		m_gradeZ = std::move(gradeZ);
+	}
+
+	void Background::move_into_uX(Vectors::ZonedVector<BkgFPType>& uX)
+	{
+		set_dims(uX, "uX", true);
+		m_uX = std::move(uX);
+	}
+
+	void Background::move_into_uY(Vectors::ZonedVector<BkgFPType>& uY)
+	{
+		set_dims(uY, "uY", true);
+		m_uY = std::move(uY);
+	}
+
+	void Background::move_into_uZ(Vectors::ZonedVector<BkgFPType>& uZ)
+	{
+		set_dims(uZ, "uZ", true);
+		m_uZ = std::move(uZ);
+	}
+
+	void Background::move_into_X(Vectors::ZonedVector<BkgFPType>& X)
+	{
+		set_dims(X, "X", false);
+		m_X = std::move(X);
+	}
+
+	void Background::move_into_Y(Vectors::ZonedVector<BkgFPType>& Y)
+	{
+		set_dims(Y, "Y", false);
+		m_Y = std::move(Y);
+	}
+
+	void Background::move_into_Z(Vectors::ZonedVector<BkgFPType>& Z)
+	{
+		set_dims(Z, "Z", false);
+		m_Z = std::move(Z);
+	}
+
+	void Background::move_into_J(Vectors::ZonedVector<BkgFPType>& J)
+	{
+		set_dims(J, "J", false);
+		m_J = std::move(J);
+	}
+
+	void Background::move_into_gij_00(Vectors::ZonedVector<BkgFPType>& gij_00)
+	{
+		set_dims(gij_00, "gij_00", false);
+		m_gij_00 = std::move(gij_00);
+	}
+
+	void Background::move_into_gij_01(Vectors::ZonedVector<BkgFPType>& gij_01)
+	{
+		set_dims(gij_01, "gij_01", false);
+		m_gij_01 = std::move(gij_01);
+	}
+
+	void Background::move_into_gij_02(Vectors::ZonedVector<BkgFPType>& gij_02)
+	{
+		set_dims(gij_02, "gij_02", false);
+		m_gij_02 = std::move(gij_02);
+	}
+
+	void Background::move_into_gij_11(Vectors::ZonedVector<BkgFPType>& gij_11)
+	{
+		set_dims(gij_11, "gij_11", false);
+		m_gij_11 = std::move(gij_11);
+	}
+
+	void Background::move_into_gij_12(Vectors::ZonedVector<BkgFPType>& gij_12)
+	{
+		set_dims(gij_12, "gij_12", false);
+		m_gij_12 = std::move(gij_12);
+	}
+
+	void Background::move_into_gij_22(Vectors::ZonedVector<BkgFPType>& gij_22)
+	{
+		set_dims(gij_22, "gij_22", false);
+		m_gij_22 = std::move(gij_22);
+	}
+
+	void Background::move_into_dxdX(Vectors::ZonedVector<BkgFPType>& dxdX)
+	{
+		set_dims(dxdX, "dxdX", false);
+		m_dxdX = std::move(dxdX);
+	}
+
+	void Background::move_into_dxdY(Vectors::ZonedVector<BkgFPType>& dxdY)
+	{
+		set_dims(dxdY, "dxdY", false);
+		m_dxdY = std::move(dxdY);
+	}
+
+	void Background::move_into_dxdZ(Vectors::ZonedVector<BkgFPType>& dxdZ)
+	{
+		set_dims(dxdZ, "dxdZ", false);
+		m_dxdZ = std::move(dxdZ);
+	}
+
+	void Background::move_into_dydX(Vectors::ZonedVector<BkgFPType>& dydX)
+	{
+		set_dims(dydX, "dydX", false);
+		m_dydX = std::move(dydX);
+	}
+
+	void Background::move_into_dydY(Vectors::ZonedVector<BkgFPType>& dydY)
+	{
+		set_dims(dydY, "dydY", false);
+		m_dydY = std::move(dydY);
+	}
+
+	void Background::move_into_dydZ(Vectors::ZonedVector<BkgFPType>& dydZ)
+	{
+		set_dims(dydZ, "dydZ", false);
+		m_dydZ = std::move(dydZ);
+	}
+
+	void Background::move_into_dzdX(Vectors::ZonedVector<BkgFPType>& dzdX)
+	{
+		set_dims(dzdX, "dzdX", false);
+		m_dzdX = std::move(dzdX);
+	}
+
+	void Background::move_into_dzdY(Vectors::ZonedVector<BkgFPType>& dzdY)
+	{
+		set_dims(dzdY, "dzdY", false);
+		m_dzdY = std::move(dzdY);
+	}
+
+	void Background::move_into_dzdZ(Vectors::ZonedVector<BkgFPType>& dzdZ)
+	{
+		set_dims(dzdZ, "dzdZ", false);
+		m_dzdZ = std::move(dzdZ);
+	}
+
+	void Background::move_into_dXdx(Vectors::ZonedVector<BkgFPType>& dXdx)
+	{
+		set_dims(dXdx, "dXdx", false);
+		m_dXdx = std::move(dXdx);
+	}
+
+	void Background::move_into_dYdx(Vectors::ZonedVector<BkgFPType>& dYdx)
+	{
+		set_dims(dYdx, "dYdx", false);
+		m_dYdx = std::move(dYdx);
+	}
+
+	void Background::move_into_dZdx(Vectors::ZonedVector<BkgFPType>& dZdx)
+	{
+		set_dims(dZdx, "dZdx", false);
+		m_dZdx = std::move(dZdx);
+	}
+
+	void Background::move_into_dXdy(Vectors::ZonedVector<BkgFPType>& dXdy)
+	{
+		set_dims(dXdy, "dXdy", false);
+		m_dXdy = std::move(dXdy);
+	}
+
+	void Background::move_into_dYdy(Vectors::ZonedVector<BkgFPType>& dYdy)
+	{
+		set_dims(dYdy, "dYdy", false);
+		m_dYdy = std::move(dYdy);
+	}
+
+	void Background::move_into_dZdy(Vectors::ZonedVector<BkgFPType>& dZdy)
+	{
+		set_dims(dZdy, "dZdy", false);
+		m_dZdy = std::move(dZdy);
+	}
+
+	void Background::move_into_dXdz(Vectors::ZonedVector<BkgFPType>& dXdz)
+	{
+		set_dims(dXdz, "dXdz", false);
+		m_dXdz = std::move(dXdz);
+	}
+
+	void Background::move_into_dYdz(Vectors::ZonedVector<BkgFPType>& dYdz)
+	{
+		set_dims(dYdz, "dYdz", false);
+		m_dYdz = std::move(dYdz);
+	}
+
+	void Background::move_into_dZdz(Vectors::ZonedVector<BkgFPType>& dZdz)
+	{
+		set_dims(dZdz, "dZdz", false);
+		m_dZdz = std::move(dZdz);
+	}
+
+	void Background::move_into_b_x(Vectors::ZonedVector<BkgFPType>& b_x)
+	{
+		set_dims(b_x, "b_x", false);
+		m_b_x = std::move(b_x);
+	}
+
+	void Background::move_into_b_y(Vectors::ZonedVector<BkgFPType>& b_y)
+	{
+		set_dims(b_y, "b_y", false);
+		m_b_y = std::move(b_y);
+	}
+
+	void Background::move_into_b_z(Vectors::ZonedVector<BkgFPType>& b_z)
+	{
+		set_dims(b_z, "b_z", false);
+		m_b_z = std::move(b_z);
+	}
+
+	void Background::move_into_grid_X(Vectors::ZonedVector<BkgFPType>& grid_X)
+	{
+		set_dims(grid_X, "grid_X", false, true);
+		m_grid_X = std::move(grid_X);
+	}
+
+	void Background::move_into_grid_Y(Vectors::ZonedVector<BkgFPType>& grid_Y)
+	{
+		set_dims(grid_Y, "grid_Y", false, true);
+		m_grid_Y = std::move(grid_Y);
+	}
+
+	void Background::move_into_grid_Z(Vectors::ZonedVector<BkgFPType>& grid_Z)
+	{
+		set_dims(grid_Z, "grid_Z", false, true);
+		m_grid_Z = std::move(grid_Z);
+	}
+	///@}
+
+	/**
 	* Interpolates 4D background data at a given time and position in a
 	* zone.
 	*
 	* This is a convenience wrapper around Utilities::interp_vec4d that
-	* passes in the background times and the zone's x, y and z cell
-	* centers, so callers only need to supply the data and the point to
-	* evaluate it at.
+	* passes in the background times and the zones, so callers only need
+	* to supply the data and the point to evaluate it at.
 	*
 	* @param vec Data to interpolate, stored as a function of
 	*            (zone, t, x, y, z).
@@ -824,9 +1251,8 @@ namespace Background
 	{
 		// This is really just a convenient wrapper to handle passing in
 		// times and the x, y, z vectors.
-		return Utilities::interp_vec4d(vec, zone, m_times,
-			m_zones.get_x(zone), m_zones.get_y(zone), m_zones.get_z(zone),
-			t0, x0, y0, z0);
+		return Utilities::interp_vec4d(vec, zone, m_zones, m_times, t0, x0,
+			y0, z0);
 	}
 
 	/**

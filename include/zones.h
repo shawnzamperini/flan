@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include <utility>
 #include <vector>
 
 #include "vectors.h"
@@ -162,6 +163,17 @@ namespace Zones
 		std::vector<int> get_core_zones() const;
 
 		std::vector<int> get_core_zones(const Face face) const;
+
+		const std::vector<double>& get_centers(const int zone,
+			const int dim) const;
+
+		double center(const int zone, const int dim, int i) const;
+
+		int neighbor_index(const int zone, const int dim, const double coord,
+			const int idx) const;
+
+		std::pair<int, int> bracket(const int zone, const int dim,
+			const double coord) const;
 
 		void validate() const;
 

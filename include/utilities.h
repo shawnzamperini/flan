@@ -19,6 +19,9 @@
 #include "mpi.h"
 #include "vectors.h"
 
+// Declared here instead of including zones.h, which includes this file
+namespace Zones {class Zones;}
+
 
 namespace Utilities
 {
@@ -54,8 +57,7 @@ namespace Utilities
 
 	template <typename T>
 	double interp_vec4d(const Vectors::ZonedVector<T>& vec, const int zone,
-		const std::vector<double>& t, const std::vector<double>& x,
-		const std::vector<double>& y, const std::vector<double>& z,
+		const Zones::Zones& zones, const std::vector<double>& t,
 		const double t0, const double x0, const double y0, const double z0);
 
 	std::pair<int, int> bracket_indices(const std::vector<double>& x, 
