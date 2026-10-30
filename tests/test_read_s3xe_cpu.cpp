@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <string>
@@ -14,6 +15,7 @@
 #include <vector>
 
 #include "background.h"
+#include "options.h"
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
 #include "zones.h"
@@ -32,7 +34,8 @@ namespace
 	}
 
 	// Cylindrical unit vectors in the Cartesian frame, with SOLEDGE3X's
-	// phi assumed to go clockwise seen from above
+	// phi going clockwise seen from above, since SOLEDGE3X's (R, Z, phi)
+	// is right-handed
 	Vec3 R_hat(double phi) {return {std::cos(phi), -std::sin(phi), 0.0};}
 	Vec3 phi_hat(double phi) {return {-std::sin(phi), -std::cos(phi), 0.0};}
 
@@ -271,10 +274,10 @@ TEST_F(ReadS3XE, Nphi)
 {
 	const std::string plasma {temp_path("s3x_plasma")};
 	S3XTest::write_nphi_only(plasma, m_mesh, m_mesh.nphi);
-	EXPECT_EQ(S3X::read_nphi(plasma, 3), m_mesh.nphi);
+	EXPECT_EQ(S3X::read_nphi(plasma), m_mesh.nphi);
 
 	S3XTest::write_nphi_only(plasma, m_mesh, m_mesh.nphi + 1);
-	EXPECT_EXIT(S3X::read_nphi(plasma, 3),
+	EXPECT_EXIT(S3X::read_nphi(plasma),
 		testing::ExitedWithCode(EXIT_FAILURE), "zone 3 has Nphi = 7");
 	std::filesystem::remove(plasma);
 }
@@ -342,4 +345,209 @@ TEST_F(ReadS3XE, Reference)
 	EXPECT_EXIT(S3X::read_reference(ref_path),
 		testing::ExitedWithCode(EXIT_FAILURE), "/T0 .* should be positive");
 	std::filesystem::remove(ref_path);
+}
+
+
+// -------------------------------------------------------------------------
+// Plasma frames and the whole reader
+// -------------------------------------------------------------------------
+
+namespace
+{
+	// A directory with the test mesh, reference file and two plasma frames,
+	// read with S3X::read_s3xe
+	class ReadS3XEPlasma : public testing::Test
+	{
+	protected:
+		S3XTest::TestMesh m_mesh {};
+		std::filesystem::path m_dir {std::filesystem::temp_directory_path()
+			/ ("flan_test_s3x_" + std::to_string(getpid()))};
+		std::array<S3XTest::TestFrame, 2> m_frames {};
+
+		void SetUp() override
+		{
+			std::filesystem::create_directories(m_dir);
+			m_frames[0].tsimu = 1.0e7;
+			m_frames[1].tsimu = 1.0e7 + 1000.0;
+		}
+
+		void TearDown() override {std::filesystem::remove_all(m_dir);}
+
+		// Writes the files with the current m_frames
+		void write_files()
+		{
+			const std::string mesh_path {(m_dir / "mesh_S3X.h5").string()};
+			S3XTest::write_mesh(mesh_path, m_mesh);
+			S3XTest::write_reference((m_dir / "refParam_raptorX.h5")
+				.string(), m_mesh);
+			const auto mesh {S3X::read_mesh(mesh_path, m_mesh.nphi)};
+			for (int t {}; t < 2; ++t)
+			{
+				char name[32];
+				std::snprintf(name, sizeof(name), "plasma_%05d.h5", t);
+				S3XTest::write_plasma((m_dir / name).string(), m_mesh,
+					mesh.zones, t, m_frames[t]);
+			}
+		}
+
+		Options::Options options()
+		{
+			Options::Options opts {};
+			opts.set_s3x_dir(m_dir.string());
+			opts.set_s3x_frame_start(0);
+			opts.set_s3x_frame_end(1);
+			return opts;
+		}
+
+		Background::Background read()
+		{
+			write_files();
+			return S3X::read_s3xe(options());
+		}
+	};
+
+	constexpr double n0 {1e19};
+	constexpr double T0 {100.0};
+	constexpr double c0 {98227.0};
+	constexpr double tau0 {5.23951e-9};
+	constexpr double phi0 {100.0};
+}
+
+// Densities, temperatures and potential are unnormalized with the
+// reference values, in every zone and frame, and so are the times. The
+// masses come from the plasma file.
+TEST_F(ReadS3XEPlasma, Plasma)
+{
+	const auto bkg {read()};
+	ASSERT_EQ(bkg.get_nzones(), 3);
+	EXPECT_DOUBLE_EQ(bkg.get_times()[0], 1.0e7 * tau0);
+	EXPECT_DOUBLE_EQ(bkg.get_times()[1], (1.0e7 + 1000.0) * tau0);
+	EXPECT_DOUBLE_EQ(bkg.get_elec_mass_amu(), 0.00054858);
+	EXPECT_DOUBLE_EQ(bkg.get_ion_mass_amu(), 2.014);
+
+	for (const auto [zone, i, j, k] : std::vector<std::array<int, 4>>
+		{{0, 0, 0, 0}, {1, 6, 21, 3}, {2, 7, 39, 5}})
+	for (int t {}; t < 2; ++t)
+	{
+		const double R {S3XTest::cell_R(m_mesh, zone, i, j)};
+		const double Z {S3XTest::cell_Z(m_mesh, zone, i, j)};
+		EXPECT_DOUBLE_EQ(bkg.get_ne()(zone, t, i, j, k),
+			S3XTest::test_ne(R, Z, t) * n0);
+		EXPECT_DOUBLE_EQ(bkg.get_te()(zone, t, i, j, k),
+			S3XTest::test_te(R, Z, t) * T0);
+		EXPECT_DOUBLE_EQ(bkg.get_ti()(zone, t, i, j, k),
+			S3XTest::test_ti(R, Z, t) * T0);
+		EXPECT_DOUBLE_EQ(bkg.get_vp()(zone, t, i, j, k),
+			S3XTest::test_phi(R, Z, t) * phi0);
+	}
+
+	// Ghost cells come from the zone across the face
+	EXPECT_DOUBLE_EQ(bkg.get_ne()(0, 1, 12, 5, 2), bkg.get_ne()(2, 1, 0, 5, 2));
+}
+
+// E = -grad vp = -0.5 phi0 Z_hat, to within the error of the curved grid.
+// The flow is u_par b + E x B / B^2 + Ti (B x grad B) / B^3, with
+// u_par = 0.3 c0.
+TEST_F(ReadS3XEPlasma, EfieldAndFlows)
+{
+	const auto bkg {read()};
+	const double E_want {0.5 * phi0};
+	for (const auto [zone, i, j, k] : std::vector<std::array<int, 4>>
+		{{0, 5, 10, 1}, {0, 11, 3, 4}, {2, 0, 20, 0}, {1, 6, 39, 2},
+		{2, 7, 15, 3}, {1, 0, 7, 5}})
+	for (int t {}; t < 2; ++t)
+	{
+		EXPECT_NEAR(bkg.get_eX()(zone, t, i, j, k), 0.0, 5e-3 * E_want)
+			<< zone << " " << i << " " << j;
+		EXPECT_NEAR(bkg.get_eY()(zone, t, i, j, k), 0.0, 5e-3 * E_want)
+			<< zone << " " << i << " " << j;
+		EXPECT_NEAR(bkg.get_eZ()(zone, t, i, j, k), -E_want, 5e-3 * E_want)
+			<< zone << " " << i << " " << j;
+
+		const Vec3 E {bkg.get_eX()(zone, t, i, j, k),
+			bkg.get_eY()(zone, t, i, j, k), bkg.get_eZ()(zone, t, i, j, k)};
+		EXPECT_DOUBLE_EQ(bkg.get_emag()(zone, t, i, j, k),
+			std::hypot(E[0], E[1], E[2]));
+
+		const Vec3 B {bkg.get_bX()(zone, t, i, j, k),
+			bkg.get_bY()(zone, t, i, j, k), bkg.get_bZ()(zone, t, i, j, k)};
+		const Vec3 gB {bkg.get_gradbX()(zone, t, i, j, k),
+			bkg.get_gradbY()(zone, t, i, j, k),
+			bkg.get_gradbZ()(zone, t, i, j, k)};
+		const double Ti {bkg.get_ti()(zone, t, i, j, k)};
+		const double B2 {B[0] * B[0] + B[1] * B[1] + B[2] * B[2]};
+		const double Bm {std::sqrt(B2)};
+		const Vec3 ExB {E[1] * B[2] - E[2] * B[1], E[2] * B[0] - E[0] * B[2],
+			E[0] * B[1] - E[1] * B[0]};
+		const Vec3 BxgB {B[1] * gB[2] - B[2] * gB[1],
+			B[2] * gB[0] - B[0] * gB[2], B[0] * gB[1] - B[1] * gB[0]};
+		const Vec3 u {bkg.get_uX()(zone, t, i, j, k),
+			bkg.get_uY()(zone, t, i, j, k), bkg.get_uZ()(zone, t, i, j, k)};
+		for (int c {}; c < 3; ++c)
+		{
+			const double want {0.3 * c0 * B[c] / Bm + ExB[c] / B2
+				+ Ti * BxgB[c] / (B2 * Bm)};
+			EXPECT_NEAR(u[c], want, 1e-9 * c0);
+		}
+
+		// The drifts are perpendicular to B, so u . b is u_par
+		EXPECT_NEAR((u[0] * B[0] + u[1] * B[1] + u[2] * B[2]) / Bm,
+			0.3 * c0, 1e-9 * c0);
+	}
+}
+
+// The ghost cells in the files are the ones fill_ghosts would give, so the
+// report shows no differences, along with the reference values
+TEST_F(ReadS3XEPlasma, Messages)
+{
+	write_files();
+	testing::internal::CaptureStdout();
+	S3X::read_s3xe(options());
+	const std::string out {testing::internal::GetCapturedStdout()};
+	EXPECT_NE(out.find("n0 = 1e+19 m-3, T0 = 100 eV, c0 = 98227 m/s"),
+		std::string::npos);
+	EXPECT_NE(out.find("ne: edges 0, corners 0, averaged corners 0, "
+		"boundaries 0"), std::string::npos) << out;
+	EXPECT_NE(out.find("u_par: edges 0, corners 0, averaged corners 0, "
+		"boundaries 0"), std::string::npos) << out;
+}
+
+// Problems with the frames stop the run with a message saying what's
+// wrong
+TEST_F(ReadS3XEPlasma, BadFrames)
+{
+	auto expect_fail = [&](const std::string& message)
+	{
+		write_files();
+		EXPECT_EXIT(S3X::read_s3xe(options()),
+			testing::ExitedWithCode(EXIT_FAILURE), message);
+	};
+
+	// Fewer than two frames
+	write_files();
+	auto opts {options()};
+	opts.set_s3x_frame_end(0);
+	EXPECT_EXIT(S3X::read_s3xe(opts), testing::ExitedWithCode(EXIT_FAILURE),
+		"at least two frames");
+
+	// A frame that doesn't exist
+	opts.set_s3x_frame_end(2);
+	EXPECT_EXIT(S3X::read_s3xe(opts), testing::ExitedWithCode(EXIT_FAILURE),
+		"plasma_00002.h5 does not exist");
+
+	m_frames[1].tsimu = m_frames[0].tsimu;
+	expect_fail("times don't increase");
+	SetUp();
+
+	m_frames[1].nzones_written = 4;
+	expect_fail("plasma_00001.h5 has 4 zones, but the mesh has 3");
+	m_frames[1].nzones_written = 3;
+
+	m_frames[0].nghosts = 3;
+	expect_fail("has 3 ghost cells on a side, but Flan expects 2");
+	m_frames[0].nghosts = 2;
+
+	m_frames[1].extra_theta = 1;
+	expect_fail("/zone2/spec0/n .* has shape \\(16, 45, 10\\), but should "
+		"have shape \\(16, 44, 10\\)");
 }

@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "hdf5.h"
+#include "zones.h"
 
 namespace S3XTest
 {
@@ -93,6 +94,33 @@ namespace S3XTest
 		}
 		return 0.25 * sum;
 	}
+
+	// Z (m) at the bilinear center of cell (i, j)
+	inline double cell_Z(const TestMesh& m, int zone, int i, int j)
+	{
+		double sum {};
+		for (int di {}; di < 2; ++di)
+		for (int dj {}; dj < 2; ++dj)
+		{
+			sum += m.a0 * corner_r(m, zone, i + di)
+				* std::sin(corner_theta(m, zone, j + dj));
+		}
+		return 0.25 * sum;
+	}
+
+	// Normalized plasma of the test frames, as functions of a cell's
+	// center (R, Z) in meters and the frame number t
+	inline double test_ne(double R, double Z, int t)
+		{return 2.0 + Z + 0.5 * t + 0.1 * R;}
+	inline double test_te(double R, double, int t)
+		{return 0.5 + 0.1 * R + 0.05 * t;}
+	inline double test_ti(double R, double, int t)
+		{return 0.8 + 0.1 * R + 0.05 * t;}
+	// PHI is linear in Z, so E = -0.5 phi0 Z_hat
+	inline double test_phi(double, double Z, int) {return 0.5 * Z;}
+	// G / n = 0.3, so u_par = 0.3 c0
+	inline double test_G(double R, double Z, int t)
+		{return 0.3 * test_ne(R, Z, t);}
 
 	inline void write(hid_t file, const std::string& name,
 		const std::vector<hsize_t>& shape, const std::vector<double>& data)
@@ -223,6 +251,74 @@ namespace S3XTest
 		H5Fclose(file);
 	}
 
+	// Things a test can break in a plasma file
+	struct TestFrame
+	{
+		int nzones_written {3};
+		int nghosts {2};
+		double tsimu {};
+		int extra_theta {0};	// Extra theta cells in zone 2's datasets
+	};
+
+	// Plasma file for frame t of the test mesh, whose zones (from
+	// S3X::read_mesh) give the ghost cells. Ghost cells get the value of
+	// the cells Flan fills them from, so they match fill_ghosts exactly.
+	inline void write_plasma(const std::string& path, const TestMesh& m,
+		const Zones::Zones& zones, int t, const TestFrame& frame)
+	{
+		const hid_t file {H5Fcreate(path.c_str(), H5F_ACC_TRUNC,
+			H5P_DEFAULT, H5P_DEFAULT)};
+		const int g {2};
+		write(file, "/NZones", {1},
+			std::vector<int64_t> {frame.nzones_written});
+		write(file, "/Nghosts", {6}, std::vector<int64_t>(6, frame.nghosts));
+		write(file, "/tsimu", {1}, std::vector<double> {frame.tsimu});
+		write(file, "/plasma_composition/spec0/mass", {1},
+			std::vector<double> {0.00054858});
+		write(file, "/plasma_composition/spec1/mass", {1},
+			std::vector<double> {2.014});
+
+		using Field = double (*)(double, double, int);
+		const std::vector<std::pair<std::string, Field>> fields {
+			{"/spec0/n", test_ne}, {"/spec0/T", test_te},
+			{"/spec1/T", test_ti}, {"/spec1/n", test_ne},
+			{"/spec1/G", test_G}, {"/PHI", test_phi}};
+
+		for (int zone {}; zone < 3; ++zone)
+		{
+			const int nx {zones.get_nx(zone)};
+			const int ny {zones.get_ny(zone)
+				+ (zone == 1 ? frame.extra_theta : 0)};
+			const int nz {zones.get_nz(zone)};
+			const std::string zg {"/zone" + std::to_string(zone + 1)};
+			write(file, zg + "/Nphi", {1}, std::vector<int64_t> {nz});
+
+			for (const auto& [name, f] : fields)
+			{
+				std::vector<double> data {};
+				for (int i {-g}; i < nx + g; ++i)
+				for (int j {-g}; j < ny + g; ++j)
+				for (int k {-g}; k < nz + g; ++k)
+				{
+					// Average over the cells this one is filled from
+					const auto sources {zones.resolve_cell({zone, i,
+						std::min(j, zones.get_ny(zone) + g - 1), k})};
+					double sum {};
+					for (const auto& c : sources)
+					{
+						sum += f(cell_R(m, c.zone, c.i, c.j),
+							cell_Z(m, c.zone, c.i, c.j), t);
+					}
+					data.push_back(sum / sources.size());
+				}
+				write(file, zg + name, {static_cast<hsize_t>(nx + 2 * g),
+					static_cast<hsize_t>(ny + 2 * g),
+					static_cast<hsize_t>(nz + 2 * g)}, data);
+			}
+		}
+		H5Fclose(file);
+	}
+
 	// Plasma file with only each zone's Nphi, for reading the number of
 	// toroidal planes. zone3_nphi lets a test make one zone different.
 	inline void write_nphi_only(const std::string& path, const TestMesh& m,
@@ -230,6 +326,7 @@ namespace S3XTest
 	{
 		const hid_t file {H5Fcreate(path.c_str(), H5F_ACC_TRUNC,
 			H5P_DEFAULT, H5P_DEFAULT)};
+		write(file, "/NZones", {1}, std::vector<int64_t> {3});
 		for (int zone {}; zone < 3; ++zone)
 		{
 			write(file, "/zone" + std::to_string(zone + 1) + "/Nphi", {1},

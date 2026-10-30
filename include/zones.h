@@ -179,6 +179,8 @@ namespace Zones
 
 		std::vector<Cell> resolve_cell(const Cell& cell) const;
 
+		const std::vector<GhostCell>& get_ghost_cells() const;
+
 		template <typename T>
 		void fill_ghosts(Vectors::ZonedVector<T>& v) const;
 

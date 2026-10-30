@@ -12,6 +12,7 @@
 
 #include "background.h"
 #include "flan_types.h"
+#include "options.h"
 #include "vectors.h"
 #include "zones.h"
 
@@ -19,11 +20,10 @@ namespace S3X
 {
 	/**
 	* Sign relating the SOLEDGE3X toroidal angle phi to the Cartesian
-	* frame, assuming (R, Z, phi) is right-handed. Then phi increases
-	* clockwise seen from above, the opposite of the usual (R, phi, Z), so
+	* frame. SOLEDGE3X's (R, Z, phi) is right-handed, so phi increases
+	* clockwise seen from above, the opposite of the usual (R, phi, Z), and
 	* a point is at (X, Y, Z) = (R cos phi, phi_sign R sin phi, Z) with
-	* phi_sign = -1. This still needs to be confirmed (see
-	* print_assumptions).
+	* phi_sign = -1.
 	*/
 	inline constexpr double phi_sign {-1.0};
 
@@ -69,15 +69,13 @@ namespace S3X
 		std::vector<std::vector<double>> chi {};
 	};
 
-	void print_assumptions();
-
 	Reference read_reference(const std::string& ref_path);
 
 	void print_reference(const Reference& ref);
 
 	void check_reference(const Reference& ref, const Mesh& mesh);
 
-	int read_nphi(const std::string& plasma_path, const int nzones);
+	int read_nphi(const std::string& plasma_path);
 
 	Mesh read_mesh(const std::string& mesh_path, const int nphi);
 
@@ -95,4 +93,16 @@ namespace S3X
 		Background::Background& bkg);
 
 	void load_chi(const Mesh& mesh, Background::Background& bkg);
+
+	void report_ghosts(const Zones::Zones& zones,
+		const Vectors::ZonedVector<BkgFPType>& v, const std::string& name);
+
+	void read_frames(const std::vector<std::string>& frame_paths,
+		const Reference& ref, Background::Background& bkg);
+
+	void calc_efield_and_flows(Background::Background& bkg,
+		const Vectors::ZonedVector<BkgFPType>& vp,
+		const Vectors::ZonedVector<BkgFPType>& upar);
+
+	Background::Background read_s3xe(const Options::Options& opts);
 }

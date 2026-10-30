@@ -18,8 +18,10 @@
 * every toroidal plane of the plasma.
 */
 
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <iostream>
 #include <string>
 #include <tuple>
@@ -30,6 +32,7 @@
 #include "errors.h"
 #include "flan_types.h"
 #include "hdf5_utils.h"
+#include "options.h"
 #include "read_s3xe.h"
 #include "vectors.h"
 #include "zones.h"
@@ -123,18 +126,6 @@ namespace S3X
 	}
 
 	/**
-	* Prints the assumption made about SOLEDGE3X that still needs to be
-	* checked: which way the toroidal angle goes.
-	*/
-	void print_assumptions()
-	{
-		std::cout << "Warning! SOLEDGE3X's (R, Z, phi) is assumed to be "
-			"right-handed, so phi increases clockwise seen from above. This "
-			"decides the direction of the toroidal field and of the ExB "
-			"drift, and still needs to be confirmed.\n";
-	}
-
-	/**
 	* Reads the reference values SOLEDGE3X output is normalized by.
 	*
 	* Every value must be positive, otherwise the run is stopped.
@@ -204,15 +195,16 @@ namespace S3X
 	/**
 	* Reads the number of toroidal planes (Nphi) of a SOLEDGE3X plasma file.
 	*
-	* Every zone must have the same Nphi, otherwise the run is stopped.
+	* The number of zones comes from the file's NZones. Every zone must have
+	* the same Nphi, otherwise the run is stopped.
 	*
 	* @param plasma_path Path to a plasma file.
-	* @param nzones Number of zones.
 	* @return Nphi.
 	*/
-	int read_nphi(const std::string& plasma_path, const int nzones)
+	int read_nphi(const std::string& plasma_path)
 	{
 		const Hdf5::File file(plasma_path);
+		const int nzones {Hdf5::read_scalar<int>(file, "/NZones")};
 		int nphi {};
 		for (int zone {}; zone < nzones; ++zone)
 		{
@@ -674,5 +666,346 @@ namespace S3X
 		}
 		zones.fill_ghosts(chi);
 		bkg.move_into_chi(chi);
+	}
+
+	/**
+	* Prints how SOLEDGE3X's own ghost cells in a field differ from what
+	* Zones::Zones::fill_ghosts gives, for the first entry of the leading
+	* dimension (e.g., the first time frame).
+	*
+	* The ghost cells are split into those past a single face shared with
+	* another zone or periodic (edges), those past two or three such faces
+	* (corners), corners averaged from more than one cell (e.g., at the
+	* X-point) and those past an absorbing or core face (boundaries). In
+	* each group, the largest difference is printed relative to the largest
+	* |value| of the field. SOLEDGE3X fills boundary ghost cells with its
+	* boundary conditions, so those are expected to differ.
+	*
+	* @param zones The zones.
+	* @param v Field holding SOLEDGE3X's ghost cells.
+	* @param name Name of the field (for the message).
+	*/
+	void report_ghosts(const Zones::Zones& zones,
+		const Vectors::ZonedVector<BkgFPType>& v, const std::string& name)
+	{
+		Vectors::ZonedVector<BkgFPType> ours {v};
+		zones.fill_ghosts(ours);
+
+		double scale {};
+		for (const double val : v.get_data())
+			scale = std::max(scale, std::abs(val));
+		if (scale == 0.0) scale = 1.0;
+
+		// edges, corners, averaged, boundaries
+		std::array<double, 4> max_diff {};
+		for (const auto& gc : zones.get_ghost_cells())
+		{
+			const Zones::Cell& c {gc.ghost};
+			const std::array<int, 3> idx {c.i, c.j, c.k};
+			int nout {};
+			bool boundary {};
+			for (int d {}; d < 3; ++d)
+			{
+				const bool below {idx[d] < 0};
+				if (!below && idx[d] < zones.get_n(c.zone, d)) continue;
+				++nout;
+				const auto face {static_cast<Zones::Face>(2 * d + !below)};
+				if (zones.get_face(c.zone, face) < 0) boundary = true;
+			}
+			const int group {boundary ? 3 : gc.sources.size() > 1 ? 2
+				: nout > 1 ? 1 : 0};
+			const double diff {std::abs(v(c.zone, 0, c.i, c.j, c.k)
+				- ours(c.zone, 0, c.i, c.j, c.k))};
+			max_diff[group] = std::max(max_diff[group], diff / scale);
+		}
+
+		std::cout << "  " << name << ": edges " << max_diff[0]
+			<< ", corners " << max_diff[1] << ", averaged corners "
+			<< max_diff[2] << ", boundaries " << max_diff[3] << '\n';
+	}
+
+	/**
+	* Reads the plasma of every frame and moves it into the background.
+	*
+	* The background must already have its zones, geometry and magnetic
+	* field. For each frame, the electron density and temperature (spec0),
+	* ion temperature (spec1) and potential (PHI) are read and unnormalized
+	* with the reference values: ne = n n0, Te = T T0, Ti = T T0 and
+	* vp = PHI phi0. The parallel ion flow is u_par = G / n c0, from the
+	* ion's G and n. The time is tsimu tau0, and the times must increase.
+	* The masses of the electrons and ions come from plasma_composition in
+	* the first frame.
+	*
+	* The plasma files already have ghost cells. How they differ from
+	* fill_ghosts is printed for the first frame (see report_ghosts), and
+	* then they are replaced with fill_ghosts, so the plasma uses the same
+	* ghost cells as the geometry. Then E and the flows are calculated with
+	* calc_efield_and_flows.
+	*
+	* Any missing dataset, wrong shape, or a number of zones or ghost cells
+	* that doesn't match the mesh stops the run.
+	*
+	* @param frame_paths Paths of the plasma files, in time order.
+	* @param ref Reference values.
+	* @param bkg Background to move the plasma into.
+	*/
+	void read_frames(const std::vector<std::string>& frame_paths,
+		const Reference& ref, Background::Background& bkg)
+	{
+		const Zones::Zones& zones {bkg.get_zones()};
+		const int nframes {static_cast<int>(frame_paths.size())};
+		const int g {zones.get_ghost()};
+		auto ne {zoned(zones, nframes)};
+		auto te {zoned(zones, nframes)};
+		auto ti {zoned(zones, nframes)};
+		auto vp {zoned(zones, nframes)};
+		auto upar {zoned(zones, nframes)};
+		std::vector<double> times {};
+
+		for (int t {}; t < nframes; ++t)
+		{
+			const std::string& path {frame_paths[t]};
+			const Hdf5::File file(path);
+			std::cout << "Reading " << path << '\n';
+
+			const int nzones {Hdf5::read_scalar<int>(file, "/NZones")};
+			if (nzones != zones.get_nzones())
+			{
+				Errors::fatal_error(path + " has " + std::to_string(nzones)
+					+ " zones, but the mesh has "
+					+ std::to_string(zones.get_nzones()) + ".");
+			}
+			const auto nghosts {Hdf5::read_dataset<int>(file, "/Nghosts")};
+			for (const int n : nghosts.data)
+			{
+				if (n != g)
+				{
+					Errors::fatal_error(path + " has " + std::to_string(n)
+						+ " ghost cells on a side, but Flan expects "
+						+ std::to_string(g) + ".");
+				}
+			}
+
+			times.push_back(Hdf5::read_scalar<double>(file, "/tsimu")
+				* ref.tau0);
+			if (t == 0)
+			{
+				bkg.set_elec_mass_amu(Hdf5::read_scalar<double>(file,
+					"/plasma_composition/spec0/mass"));
+				bkg.set_ion_mass_amu(Hdf5::read_scalar<double>(file,
+					"/plasma_composition/spec1/mass"));
+			}
+
+			for (int zone {}; zone < nzones; ++zone)
+			{
+				const std::string zg {zone_group(zone)};
+				const std::vector<hsize_t> shape {
+					static_cast<hsize_t>(zones.get_nx(zone) + 2 * g),
+					static_cast<hsize_t>(zones.get_ny(zone) + 2 * g),
+					static_cast<hsize_t>(zones.get_nz(zone) + 2 * g)};
+
+				// The file's layout, ghost cells included, is the same as
+				// this zone's block of a ZonedVector for frame t
+				const std::size_t start {ne.calc_index(zone, t, -g, -g,
+					-g)};
+				auto load = [&](const std::string& name,
+					Vectors::ZonedVector<BkgFPType>& v, const double scale)
+				{
+					const auto data {read_checked(file, zg + name, shape)};
+					for (std::size_t n {}; n < data.size(); ++n)
+						v.get_data()[start + n] = data[n] * scale;
+				};
+				load("/spec0/n", ne, ref.n0);
+				load("/spec0/T", te, ref.T0);
+				load("/spec1/T", ti, ref.T0);
+				load("/PHI", vp, ref.phi0);
+
+				const auto ni {read_checked(file, zg + "/spec1/n", shape)};
+				const auto G {read_checked(file, zg + "/spec1/G", shape)};
+				for (std::size_t n {}; n < ni.size(); ++n)
+				{
+					upar.get_data()[start + n] = ni[n] > 0.0
+						? G[n] / ni[n] * ref.c0 : 0.0;
+				}
+			}
+
+			if (t == 0)
+			{
+				std::cout << "Largest difference between SOLEDGE3X's ghost "
+					"cells and Flan's, relative to the largest value, in "
+					<< path << ":\n";
+				report_ghosts(zones, ne, "ne");
+				report_ghosts(zones, te, "Te");
+				report_ghosts(zones, ti, "Ti");
+				report_ghosts(zones, vp, "vp");
+				report_ghosts(zones, upar, "u_par");
+			}
+		}
+
+		for (int t {1}; t < nframes; ++t)
+		{
+			if (!(times[t] > times[t - 1]))
+			{
+				Errors::fatal_error("The SOLEDGE3X frames' times don't "
+					"increase: " + frame_paths[t] + " is at "
+					+ std::to_string(times[t]) + " s, but the frame before "
+					"it is at " + std::to_string(times[t - 1]) + " s.");
+			}
+		}
+
+		for (auto* v : {&ne, &te, &ti, &vp, &upar}) zones.fill_ghosts(*v);
+
+		// Ti goes in first, since the flows need it
+		bkg.move_into_times(times);
+		bkg.move_into_ne(ne);
+		bkg.move_into_te(te);
+		bkg.move_into_ti(ti);
+		calc_efield_and_flows(bkg, vp, upar);
+		bkg.move_into_vp(vp);
+	}
+
+	/**
+	* Calculates the electric field and the background ion flow, and moves
+	* them into the background.
+	*
+	* The background must already have its geometry and magnetic field,
+	* and should have its ion temperature, which is taken as 0 if it
+	* hasn't been loaded. E = -grad
+	* vp, calculated with gradient. The flow is the parallel flow plus the
+	* E x B and grad B drifts, the same as for Gkeyll backgrounds:
+	* u = u_par b + E x B / B^2 + Ti (B x grad B) / B^3, where the grad B
+	* drift uses v_perp^2 = 2 e Ti / m_i for a Maxwellian, so the mass
+	* cancels. Moved into the background are eX, eY, eZ, emag, uX, uY and
+	* uZ, with ghost cells filled.
+	*
+	* @param bkg Background with zones, geometry and magnetic field.
+	* @param vp Plasma potential (V), with ghost cells filled.
+	* @param upar Parallel ion flow (m/s).
+	*/
+	void calc_efield_and_flows(Background::Background& bkg,
+		const Vectors::ZonedVector<BkgFPType>& vp,
+		const Vectors::ZonedVector<BkgFPType>& upar)
+	{
+		const Zones::Zones& zones {bkg.get_zones()};
+		const int nframes {vp.get_dim1()};
+		auto eX {zoned(zones, nframes)};
+		auto eY {zoned(zones, nframes)};
+		auto eZ {zoned(zones, nframes)};
+		auto emag {zoned(zones, nframes)};
+		auto uX {zoned(zones, nframes)};
+		auto uY {zoned(zones, nframes)};
+		auto uZ {zoned(zones, nframes)};
+
+		const auto& bX {bkg.get_bX()};
+		const auto& bY {bkg.get_bY()};
+		const auto& bZ {bkg.get_bZ()};
+		const auto& gX {bkg.get_gradbX()};
+		const auto& gY {bkg.get_gradbY()};
+		const auto& gZ {bkg.get_gradbZ()};
+		const auto& ti {bkg.get_ti()};
+		const bool have_ti {!ti.get_data().empty()};
+
+		// Make sure the ghost cell sources are found before the threads
+		// start, since that isn't thread safe
+		zones.get_ghost_cells();
+
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			#pragma omp parallel for
+			for (int i = 0; i < zones.get_nx(zone); ++i)
+			for (int t {}; t < nframes; ++t)
+			for (int j {}; j < zones.get_ny(zone); ++j)
+			for (int k {}; k < zones.get_nz(zone); ++k)
+			{
+				const auto grad {gradient(bkg, vp, zone, t, i, j, k)};
+				const Vec3 E {-grad[0], -grad[1], -grad[2]};
+				const Vec3 B {bX(zone, t, i, j, k), bY(zone, t, i, j, k),
+					bZ(zone, t, i, j, k)};
+				const Vec3 gradB {gX(zone, t, i, j, k), gY(zone, t, i, j, k),
+					gZ(zone, t, i, j, k)};
+				const double B2 {dot(B, B)};
+				const double Bmag {std::sqrt(B2)};
+				const double Ti {have_ti ? ti(zone, t, i, j, k) : 0.0};
+
+				const Vec3 ExB {cross(E, B)};
+				const Vec3 BxgradB {cross(B, gradB)};
+				const double u_par {upar(zone, t, i, j, k)};
+				Vec3 u {};
+				for (int c {}; c < 3; ++c)
+				{
+					u[c] = u_par * B[c] / Bmag + ExB[c] / B2
+						+ Ti * BxgradB[c] / (B2 * Bmag);
+				}
+
+				eX(zone, t, i, j, k) = E[0];
+				eY(zone, t, i, j, k) = E[1];
+				eZ(zone, t, i, j, k) = E[2];
+				emag(zone, t, i, j, k) = std::sqrt(dot(E, E));
+				uX(zone, t, i, j, k) = u[0];
+				uY(zone, t, i, j, k) = u[1];
+				uZ(zone, t, i, j, k) = u[2];
+			}
+		}
+		for (auto* v : {&eX, &eY, &eZ, &emag, &uX, &uY, &uZ})
+			zones.fill_ghosts(*v);
+
+		bkg.move_into_eX(eX);
+		bkg.move_into_eY(eY);
+		bkg.move_into_eZ(eZ);
+		bkg.move_into_emag(emag);
+		bkg.move_into_uX(uX);
+		bkg.move_into_uY(uY);
+		bkg.move_into_uZ(uZ);
+	}
+
+	/**
+	* Reads a SOLEDGE3X simulation into a Background.
+	*
+	* The files are in s3x_dir: the mesh (s3x_mesh_file), the reference
+	* values (s3x_ref_file) and the plasma frames plasma_%05d.h5 from
+	* s3x_frame_start to s3x_frame_end, of which there must be at least
+	* two. The reference values are printed.
+	*
+	* @param opts Simulation options.
+	* @return The background.
+	*/
+	Background::Background read_s3xe(const Options::Options& opts)
+	{
+		const std::string dir {opts.s3x_dir()};
+		const int start {opts.s3x_frame_start()};
+		const int end {opts.s3x_frame_end()};
+		if (end - start + 1 < 2)
+		{
+			Errors::fatal_error("A SOLEDGE3X background needs at least two "
+				"frames, but s3x_frame_start = " + std::to_string(start)
+				+ " and s3x_frame_end = " + std::to_string(end) + ".");
+		}
+		std::vector<std::string> frame_paths {};
+		for (int frame {start}; frame <= end; ++frame)
+		{
+			char name[32];
+			std::snprintf(name, sizeof(name), "plasma_%05d.h5", frame);
+			frame_paths.push_back(dir + "/" + name);
+		}
+
+		const Reference ref {read_reference(dir + "/" + opts.s3x_ref_file())};
+		print_reference(ref);
+
+		const int nphi {read_nphi(frame_paths[0])};
+		const Mesh mesh {read_mesh(dir + "/" + opts.s3x_mesh_file(), nphi)};
+		check_reference(ref, mesh);
+
+		Background::Background bkg {};
+		auto zones {mesh.zones};
+		bkg.move_into_zones(zones);
+		calc_geometry(mesh, bkg);
+		calc_bfield(mesh, static_cast<int>(frame_paths.size()), bkg);
+		load_chi(mesh, bkg);
+
+		// The ion temperature is needed for the grad B drift, so the
+		// plasma (which includes calculating the flows) comes last
+		read_frames(frame_paths, ref, bkg);
+
+		return bkg;
 	}
 }

@@ -675,6 +675,18 @@ namespace Zones
 	}
 
 	/**
+	* Returns every ghost cell of every zone and its sources (see
+	* resolve_cell), the same ones fill_ghosts uses.
+	*
+	* @return The ghost cells.
+	*/
+	const std::vector<GhostCell>& Zones::get_ghost_cells() const
+	{
+		if (m_ghost_cells.empty()) build_ghost_cells();
+		return m_ghost_cells;
+	}
+
+	/**
 	* Fills the ghost cells of a ZonedVector from the zones around them.
 	*
 	* Each ghost cell gets the value (or average of values) of its sources
