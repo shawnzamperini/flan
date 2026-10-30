@@ -14,8 +14,10 @@
 #include "background.h"
 #include "flan_types.h"
 #include "options.h"
+#include "read_bkg.h"
 #include "utilities.h"
 #include "vectors.h"
+#include "zones.h"
 
 namespace Test
 {
@@ -349,12 +351,9 @@ namespace Test
 
 		// Move each of the vectors we've created into our bkg object
 		bkg.move_into_times(test_t);
-		bkg.move_into_x(test_x);
-		bkg.move_into_y(test_y);
-		bkg.move_into_z(test_z);
-		bkg.move_into_grid_x(test_grid_x);
-		bkg.move_into_grid_y(test_grid_y);
-		bkg.move_into_grid_z(test_grid_z);
+		Zones::Zones zones {Background::single_zone(test_x, test_y, test_z,
+			test_grid_x, test_grid_y, test_grid_z, opts)};
+		bkg.move_into_zones(zones);
 		bkg.move_into_ne(test_ne);
 		bkg.move_into_te(test_te);
 		bkg.move_into_ti(test_ti);

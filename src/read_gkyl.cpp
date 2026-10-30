@@ -28,8 +28,10 @@
 #include "errors.h"
 #include "flan_types.h"
 #include "options.h"
+#include "read_bkg.h"
 #include "read_gkyl.h"
 #include "vectors.h"
+#include "zones.h"
 
 namespace Gkyl
 {
@@ -331,12 +333,9 @@ namespace Gkyl
 
 		// Move each of the vectors we've created into our bkg object
 		bkg.move_into_times(gkyl_times);
-		bkg.move_into_x(gkyl_x);
-		bkg.move_into_y(gkyl_y);
-		bkg.move_into_z(gkyl_z);
-		bkg.move_into_grid_x(gkyl_grid_x);
-		bkg.move_into_grid_y(gkyl_grid_y);
-		bkg.move_into_grid_z(gkyl_grid_z);
+		Zones::Zones zones {Background::single_zone(gkyl_x, gkyl_y, gkyl_z,
+			gkyl_grid_x, gkyl_grid_y, gkyl_grid_z, opts)};
+		bkg.move_into_zones(zones);
 		bkg.move_into_ne(gkyl_ne);
 		bkg.move_into_te(gkyl_te);
 		bkg.move_into_ti(gkyl_ti);

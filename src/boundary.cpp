@@ -181,6 +181,7 @@ namespace Boundary
 			// Used in all, just define up front
 			int state {};
 			double new_val {};
+			const int zone {slots.zone()[i]};
 
 			// --------------------
 			// Time boundary
@@ -216,7 +217,7 @@ namespace Boundary
 			// Absorbing boundary
 			if (opts.min_xbound_type_int() == 0)
 			{
-				state = absorbing_bc(slots.x()[i], bkg.get_x_min(), false, 
+				state = absorbing_bc(slots.x()[i], bkg.get_x_min(zone), false, 
 					opts.imp_xbound_buffer());
 				slots.set_state(i, state);
 
@@ -227,8 +228,8 @@ namespace Boundary
 			// Periodic boundary
 			else if (opts.min_xbound_type_int() == 1)
 			{
-				new_val = periodic_bc(slots.x()[i], bkg.get_x_min(), 
-					bkg.get_x_max());
+				new_val = periodic_bc(slots.x()[i], bkg.get_x_min(zone), 
+					bkg.get_x_max(zone));
 				slots.set_x(i, new_val);
 			}
 
@@ -241,9 +242,12 @@ namespace Boundary
 				double xtmp {slots.x()[i]};
 				double ytmp {slots.y()[i]};
 				double ztmp {slots.z()[i]};
-				core_bc(xtmp, ytmp, ztmp, bkg.get_x_min(), bkg.get_x_max(), 
-					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
-					opts.imp_ybound_buffer(), bkg.get_z_min(), bkg.get_z_max(), 
+				core_bc(xtmp, ytmp, ztmp,
+					bkg.get_x_min(zone), bkg.get_x_max(zone),
+					opts.imp_xbound_buffer(),
+					bkg.get_y_min(zone), bkg.get_y_max(zone),
+					opts.imp_ybound_buffer(),
+					bkg.get_z_min(zone), bkg.get_z_max(zone),
 					opts.imp_zbound_buffer(), false, rng);
 
 				// Write back
@@ -259,7 +263,7 @@ namespace Boundary
 			// Absorbing boundary
 			if (opts.max_xbound_type_int() == 0)
 			{
-				state = absorbing_bc(slots.x()[i], bkg.get_x_max(), true, 
+				state = absorbing_bc(slots.x()[i], bkg.get_x_max(zone), true, 
 					opts.imp_xbound_buffer());
 				slots.set_state(i, state);
 
@@ -270,8 +274,8 @@ namespace Boundary
 			// Periodic boundary
 			else if (opts.max_xbound_type_int() == 1)
 			{
-				new_val = periodic_bc(slots.x()[i], bkg.get_x_min(), 
-					bkg.get_x_max());
+				new_val = periodic_bc(slots.x()[i], bkg.get_x_min(zone), 
+					bkg.get_x_max(zone));
 				slots.set_x(i, new_val);
 			}
 
@@ -284,9 +288,12 @@ namespace Boundary
 				double xtmp {slots.x()[i]};
 				double ytmp {slots.y()[i]};
 				double ztmp {slots.z()[i]};
-				core_bc(xtmp, ytmp, ztmp, bkg.get_x_min(), bkg.get_x_max(), 
-					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
-					opts.imp_ybound_buffer(), bkg.get_z_min(), bkg.get_z_max(), 
+				core_bc(xtmp, ytmp, ztmp,
+					bkg.get_x_min(zone), bkg.get_x_max(zone),
+					opts.imp_xbound_buffer(),
+					bkg.get_y_min(zone), bkg.get_y_max(zone),
+					opts.imp_ybound_buffer(),
+					bkg.get_z_min(zone), bkg.get_z_max(zone),
 					opts.imp_zbound_buffer(), true, rng);
 
 				// Write back
@@ -302,7 +309,7 @@ namespace Boundary
 			// Absorbing boundary
 			if (opts.min_ybound_type_int() == 0)
 			{
-				state = absorbing_bc(slots.y()[i], bkg.get_y_min(), false, 
+				state = absorbing_bc(slots.y()[i], bkg.get_y_min(zone), false, 
 					opts.imp_ybound_buffer());
 				slots.set_state(i, state);
 
@@ -313,8 +320,8 @@ namespace Boundary
 			// Periodic boundary
 			else if (opts.min_ybound_type_int() == 1)
 			{
-				new_val = periodic_bc(slots.y()[i], bkg.get_y_min(), 
-					bkg.get_y_max());
+				new_val = periodic_bc(slots.y()[i], bkg.get_y_min(zone), 
+					bkg.get_y_max(zone));
 				slots.set_y(i, new_val);
 			}
 
@@ -327,9 +334,12 @@ namespace Boundary
 				double xtmp {slots.x()[i]};
 				double ytmp {slots.y()[i]};
 				double ztmp {slots.z()[i]};
-				core_bc(ytmp, ztmp, xtmp, bkg.get_y_min(), bkg.get_y_max(), 
-					opts.imp_ybound_buffer(), bkg.get_z_min(), bkg.get_z_max(), 
-					opts.imp_zbound_buffer(), bkg.get_x_min(), bkg.get_x_max(), 
+				core_bc(ytmp, ztmp, xtmp,
+					bkg.get_y_min(zone), bkg.get_y_max(zone),
+					opts.imp_ybound_buffer(),
+					bkg.get_z_min(zone), bkg.get_z_max(zone),
+					opts.imp_zbound_buffer(),
+					bkg.get_x_min(zone), bkg.get_x_max(zone),
 					opts.imp_xbound_buffer(), false, rng);
 
 				// Write back
@@ -345,7 +355,7 @@ namespace Boundary
 			// Absorbing boundary
 			if (opts.max_ybound_type_int() == 0)
 			{
-				state = absorbing_bc(slots.y()[i], bkg.get_y_max(), true, 
+				state = absorbing_bc(slots.y()[i], bkg.get_y_max(zone), true, 
 					opts.imp_ybound_buffer());
 				slots.set_state(i, state);
 
@@ -356,8 +366,8 @@ namespace Boundary
 			// Periodic boundary
 			else if (opts.max_ybound_type_int() == 1)
 			{
-				new_val = periodic_bc(slots.y()[i], bkg.get_y_min(), 
-					bkg.get_y_max());
+				new_val = periodic_bc(slots.y()[i], bkg.get_y_min(zone), 
+					bkg.get_y_max(zone));
 				slots.set_y(i, new_val);
 			}
 
@@ -370,9 +380,12 @@ namespace Boundary
 				double xtmp {slots.x()[i]};
 				double ytmp {slots.y()[i]};
 				double ztmp {slots.z()[i]};
-				core_bc(ytmp, ztmp, xtmp, bkg.get_y_min(), bkg.get_y_max(), 
-					opts.imp_ybound_buffer(), bkg.get_z_min(), bkg.get_z_max(), 
-					opts.imp_zbound_buffer(), bkg.get_x_min(), bkg.get_x_max(), 
+				core_bc(ytmp, ztmp, xtmp,
+					bkg.get_y_min(zone), bkg.get_y_max(zone),
+					opts.imp_ybound_buffer(),
+					bkg.get_z_min(zone), bkg.get_z_max(zone),
+					opts.imp_zbound_buffer(),
+					bkg.get_x_min(zone), bkg.get_x_max(zone),
 					opts.imp_xbound_buffer(), true, rng);
 
 				// Write back
@@ -389,7 +402,7 @@ namespace Boundary
 			// Absorbing boundary
 			if (opts.min_zbound_type_int() == 0)
 			{
-				state = absorbing_bc(slots.z()[i], bkg.get_z_min(), false, 
+				state = absorbing_bc(slots.z()[i], bkg.get_z_min(zone), false, 
 					opts.imp_zbound_buffer());
 				slots.set_state(i, state);
 
@@ -400,8 +413,8 @@ namespace Boundary
 			// Periodic boundary
 			else if (opts.min_zbound_type_int() == 1)
 			{
-				new_val = periodic_bc(slots.z()[i], bkg.get_z_min(), 
-					bkg.get_z_max());
+				new_val = periodic_bc(slots.z()[i], bkg.get_z_min(zone), 
+					bkg.get_z_max(zone));
 				slots.set_z(i, new_val);
 			}
 
@@ -414,9 +427,12 @@ namespace Boundary
 				double xtmp {slots.x()[i]};
 				double ytmp {slots.y()[i]};
 				double ztmp {slots.z()[i]};
-				core_bc(ztmp, xtmp, ytmp, bkg.get_z_min(), bkg.get_z_max(), 
-					opts.imp_zbound_buffer(), bkg.get_x_min(), bkg.get_x_max(), 
-					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
+				core_bc(ztmp, xtmp, ytmp,
+					bkg.get_z_min(zone), bkg.get_z_max(zone),
+					opts.imp_zbound_buffer(),
+					bkg.get_x_min(zone), bkg.get_x_max(zone),
+					opts.imp_xbound_buffer(),
+					bkg.get_y_min(zone), bkg.get_y_max(zone),
 					opts.imp_ybound_buffer(), false, rng);
 
 				// Write back
@@ -432,7 +448,7 @@ namespace Boundary
 			// Absorbing boundary
 			if (opts.max_zbound_type_int() == 0)
 			{
-				state = absorbing_bc(slots.z()[i], bkg.get_z_max(), true, 
+				state = absorbing_bc(slots.z()[i], bkg.get_z_max(zone), true, 
 					opts.imp_zbound_buffer());
 				slots.set_state(i, state);
 
@@ -443,8 +459,8 @@ namespace Boundary
 			// Periodic boundary
 			else if (opts.max_zbound_type_int() == 1)
 			{
-				new_val = periodic_bc(slots.z()[i], bkg.get_z_min(), 
-					bkg.get_z_max());
+				new_val = periodic_bc(slots.z()[i], bkg.get_z_min(zone), 
+					bkg.get_z_max(zone));
 				slots.set_z(i, new_val);
 			}
 
@@ -457,9 +473,12 @@ namespace Boundary
 				double xtmp {slots.x()[i]};
 				double ytmp {slots.y()[i]};
 				double ztmp {slots.z()[i]};
-				core_bc(ztmp, xtmp, ytmp, bkg.get_z_min(), bkg.get_z_max(), 
-					opts.imp_zbound_buffer(), bkg.get_x_min(), bkg.get_x_max(), 
-					opts.imp_xbound_buffer(), bkg.get_y_min(), bkg.get_y_max(), 
+				core_bc(ztmp, xtmp, ytmp,
+					bkg.get_z_min(zone), bkg.get_z_max(zone),
+					opts.imp_zbound_buffer(),
+					bkg.get_x_min(zone), bkg.get_x_max(zone),
+					opts.imp_xbound_buffer(),
+					bkg.get_y_min(zone), bkg.get_y_max(zone),
 					opts.imp_ybound_buffer(), true, rng);
 
 				// Write back

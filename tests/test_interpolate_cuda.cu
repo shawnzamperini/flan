@@ -79,10 +79,10 @@ TEST(Interpolate3D, LinearField)
 		{
 			for (int k {}; k < bkg.get_dim4(); k++)
 			{
-				int idx {bkg.get_dxdX().calc_index(i,j,k)};
-				double x {bkg.get_x()[i]};
-				double y {bkg.get_y()[j]};
-				double z {bkg.get_z()[k]};
+				std::size_t idx {bkg.get_dxdX().calc_index(0, 0, i, j, k)};
+				double x {bkg.get_x(0)[i]};
+				double y {bkg.get_y(0)[j]};
+				double z {bkg.get_z(0)[k]};
 
 				bkg.get_dxdX().get_data()[idx] = x + 2 * y + 3 * z;
 			}
@@ -146,11 +146,11 @@ TEST(Interpolate4D, LinearField)
 			{
 				for (int k {}; k < bkg.get_dim4(); k++)
 				{
-					int idx {bkg.get_ne().calc_index(h,i,j,k)};
+					std::size_t idx {bkg.get_ne().calc_index(0, h, i, j, k)};
 					double t {bkg.get_times()[h]};
-					double x {bkg.get_x()[i]};
-					double y {bkg.get_y()[j]};
-					double z {bkg.get_z()[k]};
+					double x {bkg.get_x(0)[i]};
+					double y {bkg.get_y(0)[j]};
+					double z {bkg.get_z(0)[k]};
 
 					bkg.get_ne().get_data()[idx] = t + x + 2 * y + 3 * z;
 				}

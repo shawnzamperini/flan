@@ -13,6 +13,7 @@
 #include "mpi.h"
 #include "utilities.h"
 #include "vectors.h"
+#include "zones.h"
 
 
 /**
@@ -24,36 +25,38 @@ namespace Background
 	/**
 	* @name Time and computational grid accessors
 	*
-	* Return the background times and the computational (Gkeyll,
-	* curvilinear) coordinates. The x, y and z vectors hold the cell
-	* centers, and the grid_x, grid_y and grid_z vectors hold the cell
+	* Return the background times, the zones and each zone's computational
+	* (curvilinear) coordinates. The x, y and z vectors hold a zone's cell
+	* centers, and the grid_x, grid_y and grid_z vectors hold its cell
 	* edges. The background times are stored at "time centers", so there is
 	* no corresponding time grid.
 	*/
 	///@{
 	const std::vector<BkgFPType>& Background::get_times() const
 		{return m_times;}
-	const std::vector<BkgFPType>& Background::get_x() const 
-		{return m_x;}
-	const std::vector<BkgFPType>& Background::get_y() const 
-		{return m_y;}
-	const std::vector<BkgFPType>& Background::get_z() const 
-		{return m_z;}
-	std::vector<BkgFPType>& Background::get_z() 
-		{return m_z;}
-	const std::vector<BkgFPType>& Background::get_grid_x() const
-		{return m_grid_x;}
-	const std::vector<BkgFPType>& Background::get_grid_y() const
-		{return m_grid_y;}
-	const std::vector<BkgFPType>& Background::get_grid_z() const
-		{return m_grid_z;}
+	const Zones::Zones& Background::get_zones() const
+		{return m_zones;}
+	int Background::get_nzones() const
+		{return m_zones.get_nzones();}
+	const std::vector<BkgFPType>& Background::get_x(const int zone) const
+		{return m_zones.get_x(zone);}
+	const std::vector<BkgFPType>& Background::get_y(const int zone) const
+		{return m_zones.get_y(zone);}
+	const std::vector<BkgFPType>& Background::get_z(const int zone) const
+		{return m_zones.get_z(zone);}
+	const std::vector<BkgFPType>& Background::get_grid_x(const int zone) const
+		{return m_zones.get_grid_x(zone);}
+	const std::vector<BkgFPType>& Background::get_grid_y(const int zone) const
+		{return m_zones.get_grid_y(zone);}
+	const std::vector<BkgFPType>& Background::get_grid_z(const int zone) const
+		{return m_zones.get_grid_z(zone);}
 	///@}
 
 	/**
 	* @name Plasma and field accessors
 	*
 	* Return the plasma and field data, each stored as a function of
-	* (t, x, y, z). These are the electron density (ne), electron and ion
+	* (zone, t, x, y, z). These are the electron density (ne), electron and ion
 	* temperatures (te, ti), plasma potential (vp), magnetic field
 	* components and magnitude (bX, bY, bZ, bmag), magnetic field gradient
 	* (gradbX, gradbY, gradbZ), electric field components and magnitude
@@ -65,81 +68,81 @@ namespace Background
 	* data to be modified in place.
 	*/
 	///@{
-	const Vectors::Vector4D<BkgFPType>& Background::get_ne() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_ne() const
 		{return m_ne;}
-	Vectors::Vector4D<BkgFPType>& Background::get_ne() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_ne() 
 		{return m_ne;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_te() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_te() const
 		{return m_te;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_ti() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_ti() const
 		{return m_ti;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_vp() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_vp() const
 		{return m_vp;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_bX() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_bX() const
 		{return m_bX;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_bY() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_bY() const
 		{return m_bY;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_bZ() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_bZ() const
 		{return m_bZ;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_bR() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_bR() const
 		{return m_bR;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_bmag() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_bmag() const
 		{return m_bmag;}
-	Vectors::Vector4D<BkgFPType>& Background::get_te() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_te() 
 		{return m_te;}
-	Vectors::Vector4D<BkgFPType>& Background::get_ti() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_ti() 
 		{return m_ti;}
-	Vectors::Vector4D<BkgFPType>& Background::get_vp() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_vp() 
 		{return m_vp;}
-	Vectors::Vector4D<BkgFPType>& Background::get_bX() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_bX() 
 		{return m_bX;}
-	Vectors::Vector4D<BkgFPType>& Background::get_bY() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_bY() 
 		{return m_bY;}
-	Vectors::Vector4D<BkgFPType>& Background::get_bZ() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_bZ() 
 		{return m_bZ;}
-	Vectors::Vector4D<BkgFPType>& Background::get_bR() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_bR() 
 		{return m_bR;}
-	Vectors::Vector4D<BkgFPType>& Background::get_bmag() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_bmag() 
 		{return m_bmag;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_gradbX() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gradbX() const
 		{return m_gradbX;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_gradbY() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gradbY() const
 		{return m_gradbY;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_gradbZ() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gradbZ() const
 		{return m_gradbZ;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_eX() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_eX() const
 		{return m_eX;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_eY() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_eY() const
 		{return m_eY;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_eZ() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_eZ() const
 		{return m_eZ;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_emag() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_emag() const
 		{return m_emag;}
-	Vectors::Vector4D<BkgFPType>& Background::get_eX() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_eX() 
 		{return m_eX;}
-	Vectors::Vector4D<BkgFPType>& Background::get_eY() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_eY() 
 		{return m_eY;}
-	Vectors::Vector4D<BkgFPType>& Background::get_eZ() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_eZ() 
 		{return m_eZ;}
-	Vectors::Vector4D<BkgFPType>& Background::get_emag() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_emag() 
 		{return m_emag;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_gradeX() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gradeX() const
 		{return m_gradeX;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_gradeY() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gradeY() const
 		{return m_gradeY;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_gradeZ() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gradeZ() const
 		{return m_gradeZ;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_uX() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_uX() const
 		{return m_uX;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_uY() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_uY() const
 		{return m_uY;}
-	const Vectors::Vector4D<BkgFPType>& Background::get_uZ() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_uZ() const
 		{return m_uZ;}
-	Vectors::Vector4D<BkgFPType>& Background::get_uX() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_uX() 
 		{return m_uX;}
-	Vectors::Vector4D<BkgFPType>& Background::get_uY() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_uY() 
 		{return m_uY;}
-	Vectors::Vector4D<BkgFPType>& Background::get_uZ() 
+	Vectors::ZonedVector<BkgFPType>& Background::get_uZ() 
 		{return m_uZ;}
 	///@}
 
@@ -147,25 +150,25 @@ namespace Background
 	* @name Physical coordinate and Jacobian accessors
 	*
 	* Return the physical (Cartesian) coordinates of the grid, each stored
-	* as a function of (x, y, z). X, Y and Z hold the coordinates of the
+	* as a function of (zone, x, y, z). X, Y and Z hold the coordinates of the
 	* cell centers, and grid_X, grid_Y and grid_Z hold the coordinates of
 	* the cell edges. J is the Jacobian of the computational coordinate
 	* system.
 	*/
 	///@{
-	const Vectors::Vector3D<BkgFPType>& Background::get_X() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_X() const
 		{return m_X;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_Y() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_Y() const
 		{return m_Y;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_Z() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_Z() const
 		{return m_Z;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_grid_X() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_grid_X() const
 		{return m_grid_X;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_grid_Y() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_grid_Y() const
 		{return m_grid_Y;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_grid_Z() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_grid_Z() const
 		{return m_grid_Z;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_J() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_J() const
 		{return m_J;}
 	///@}
 
@@ -174,20 +177,20 @@ namespace Background
 	*
 	* Return the six independent components of the metric tensor g_ij of
 	* the computational coordinate system, each stored as a function of
-	* (x, y, z). The indices 0, 1 and 2 correspond to x, y and z.
+	* (zone, x, y, z). The indices 0, 1 and 2 correspond to x, y and z.
 	*/
 	///@{
-	const Vectors::Vector3D<BkgFPType>& Background::get_gij_00() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gij_00() const
 		{return m_gij_00;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_gij_01() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gij_01() const
 		{return m_gij_01;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_gij_02() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gij_02() const
 		{return m_gij_02;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_gij_11() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gij_11() const
 		{return m_gij_11;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_gij_12() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gij_12() const
 		{return m_gij_12;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_gij_22() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_gij_22() const
 		{return m_gij_22;}
 	///@}
 
@@ -196,7 +199,7 @@ namespace Background
 	*
 	* Return the components of the basis vectors that convert between the
 	* computational (x, y, z) and physical (X, Y, Z) coordinates, each
-	* stored as a function of (x, y, z).
+	* stored as a function of (zone, x, y, z).
 	*
 	* The reciprocal (contravariant) basis vectors are the derivatives of
 	* the computational coordinates with respect to the physical ones
@@ -206,53 +209,53 @@ namespace Background
 	* vectors have non-const versions.
 	*/
 	///@{
-	const Vectors::Vector3D<BkgFPType>& Background::get_dxdX() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dxdX() const
 		{return m_dxdX;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dxdY() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dxdY() const
 		{return m_dxdY;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dxdZ() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dxdZ() const
 		{return m_dxdZ;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dydX() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dydX() const
 		{return m_dydX;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dydY() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dydY() const
 		{return m_dydY;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dydZ() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dydZ() const
 		{return m_dydZ;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dzdX() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dzdX() const
 		{return m_dzdX;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dzdY() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dzdY() const
 		{return m_dzdY;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dzdZ() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dzdZ() const
 		{return m_dzdZ;}
 
-	const Vectors::Vector3D<BkgFPType>& Background::get_dXdx() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dXdx() const
 		{return m_dXdx;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dYdx() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dYdx() const
 		{return m_dYdx;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dZdx() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dZdx() const
 		{return m_dZdx;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dXdy() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dXdy() const
 		{return m_dXdy;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dYdy() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dYdy() const
 		{return m_dYdy;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dZdy() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dZdy() const
 		{return m_dZdy;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dXdz() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dXdz() const
 		{return m_dXdz;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dYdz() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dYdz() const
 		{return m_dYdz;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_dZdz() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_dZdz() const
 		{return m_dZdz;}
 
-	Vectors::Vector3D<BkgFPType>& Background::get_dxdX() {return m_dxdX;}
-	Vectors::Vector3D<BkgFPType>& Background::get_dxdY() {return m_dxdY;}
-	Vectors::Vector3D<BkgFPType>& Background::get_dxdZ() {return m_dxdZ;}
-	Vectors::Vector3D<BkgFPType>& Background::get_dydX() {return m_dydX;}
-	Vectors::Vector3D<BkgFPType>& Background::get_dydY() {return m_dydY;}
-	Vectors::Vector3D<BkgFPType>& Background::get_dydZ() {return m_dydZ;}
-	Vectors::Vector3D<BkgFPType>& Background::get_dzdX() {return m_dzdX;}
-	Vectors::Vector3D<BkgFPType>& Background::get_dzdY() {return m_dzdY;}
-	Vectors::Vector3D<BkgFPType>& Background::get_dzdZ() {return m_dzdZ;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dxdX() {return m_dxdX;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dxdY() {return m_dxdY;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dxdZ() {return m_dxdZ;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dydX() {return m_dydX;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dydY() {return m_dydY;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dydZ() {return m_dydZ;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dzdX() {return m_dzdX;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dzdY() {return m_dzdY;}
+	Vectors::ZonedVector<BkgFPType>& Background::get_dzdZ() {return m_dzdZ;}
 	///@}
 
 	/**
@@ -260,30 +263,66 @@ namespace Background
 	*
 	* Return the covariant components of the magnetic field (b_x, b_y,
 	* b_z) in the computational coordinate system, each stored as a
-	* function of (x, y, z). These are only kept for debugging and post
+	* function of (zone, x, y, z). These are only kept for debugging and post
 	* analysis.
 	*/
 	///@{
-	const Vectors::Vector3D<BkgFPType>& Background::get_b_x() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_b_x() const
 		{return m_b_x;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_b_y() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_b_y() const
 		{return m_b_y;}
-	const Vectors::Vector3D<BkgFPType>& Background::get_b_z() const
+	const Vectors::ZonedVector<BkgFPType>& Background::get_b_z() const
 		{return m_b_z;}
 	///@}
+
+	/**
+	* Stops the run with Errors::fatal_error if the background does not
+	* have exactly one zone.
+	*
+	* Used by the parts of the code that only handle a single zone so far.
+	*
+	* @param caller Name of the function or feature that needs a single
+	*        zone (for the message).
+	*/
+	void Background::check_single_zone(const std::string_view caller) const
+	{
+		if (m_zones.get_nzones() != 1)
+		{
+			Errors::fatal_error(std::string(caller) + " only works with a "
+				"single zone, but the background has "
+				+ std::to_string(m_zones.get_nzones()) + ".");
+		}
+	}
 
 	/**
 	* @name Dimension accessors
 	*
 	* Return the dimensions of the 4D plasma data. dim1 is the number of
 	* times, and dim2, dim3 and dim4 are the number of cells in x, y and z.
-	* A value of 0 means the dimension has not been set yet.
+	* A dim1 of 0 means it has not been set yet. dim2, dim3 and dim4 are
+	* only defined for a single-zone background, and stop the run with
+	* Errors::fatal_error otherwise. Use get_zones for the per-zone sizes.
 	*/
 	///@{
 	int Background::get_dim1() const {return m_dim1;}
-	int Background::get_dim2() const {return m_dim2;}
-	int Background::get_dim3() const {return m_dim3;}
-	int Background::get_dim4() const {return m_dim4;}
+
+	int Background::get_dim2() const
+	{
+		check_single_zone("Background::get_dim2");
+		return m_zones.get_nx(0);
+	}
+
+	int Background::get_dim3() const
+	{
+		check_single_zone("Background::get_dim3");
+		return m_zones.get_ny(0);
+	}
+
+	int Background::get_dim4() const
+	{
+		check_single_zone("Background::get_dim4");
+		return m_zones.get_nz(0);
+	}
 	///@}
 
 	/**
@@ -314,29 +353,34 @@ namespace Background
 	}
 
 	/**
-	* Checks the dimensions of a Vector4D against the stored dimensions
-	* and stores them if they are consistent.
+	* Checks the dimensions of a single-zone Vector4D against the times and
+	* the zone, and stores the number of times if they are consistent.
 	*
-	* Each of the four dimensions of v is checked with check_dim. If all
-	* four are consistent, they become the stored dimensions. If any are
-	* not, the run is stopped with Errors::fatal_error, listing every
-	* dimension that doesn't match. A mismatch means the data is not being
-	* read in correctly or is from different Gkeyll runs.
+	* The zone must already be set with move_into_zones, and there must be
+	* exactly one. The first dimension of v is checked against the number
+	* of times already loaded with check_dim, and the others against the
+	* zone's number of cells. If any don't match, the run is stopped with
+	* Errors::fatal_error, listing every dimension that doesn't match. A
+	* mismatch means the data is not being read in correctly or is from
+	* different Gkeyll runs.
 	*
 	* @tparam T Data type stored in the Vector4D.
 	* @param v Vector4D whose dimensions are checked.
 	* @param data Name of the data being loaded (for the error message).
 	*/
 	template <typename T>
-	void Background::set_dims(Vectors::Vector4D<T>& v,
+	void Background::set_dims(const Vectors::Vector4D<T>& v,
 		const std::string_view data)
 	{
+		check_single_zone("Loading " + std::string(data)
+			+ " as a Vector4D");
+
 		// Check dimensions first, collecting a line for each one that
 		// doesn't match.
 		const std::string mismatches {check_dim(m_dim1, v.get_dim1(), 1)
-			+ check_dim(m_dim2, v.get_dim2(), 2)
-			+ check_dim(m_dim3, v.get_dim3(), 3)
-			+ check_dim(m_dim4, v.get_dim4(), 4)};
+			+ check_dim(m_zones.get_nx(0), v.get_dim2(), 2)
+			+ check_dim(m_zones.get_ny(0), v.get_dim3(), 3)
+			+ check_dim(m_zones.get_nz(0), v.get_dim4(), 4)};
 
 		if (!mismatches.empty())
 		{
@@ -346,40 +390,43 @@ namespace Background
 				"correctly or is from different Gkeyll runs." + mismatches);
 		}
 
-		// Then overwrite the dimensions. This either sets them from 0 to
-		// their correct value, or overwrites them with the same value.
+		// Then overwrite the number of times. This either sets it from 0
+		// to its correct value, or overwrites it with the same value.
 		m_dim1 = v.get_dim1();
-		m_dim2 = v.get_dim2();
-		m_dim3 = v.get_dim3();
-		m_dim4 = v.get_dim4();
 	}
 
 	/**
 	* @name Range accessors
 	*
-	* Return the minimum and maximum values of the background times and of
-	* the x, y and z grid edges. These are computed when the times and
-	* grids are set with move_into_times and move_into_grid_x/y/z.
+	* Return the minimum and maximum values of the background times, or of
+	* a zone's x, y and z grid edges. The time range is computed when the
+	* times are set with move_into_times.
 	*/
 	///@{
 	BkgFPType Background::get_t_min() const {return m_t_min;}
 	BkgFPType Background::get_t_max() const {return m_t_max;}
-	BkgFPType Background::get_x_min() const {return m_x_min;}
-	BkgFPType Background::get_x_max() const {return m_x_max;}
-	BkgFPType Background::get_y_min() const {return m_y_min;}
-	BkgFPType Background::get_y_max() const {return m_y_max;}
-	BkgFPType Background::get_z_min() const {return m_z_min;}
-	BkgFPType Background::get_z_max() const {return m_z_max;}
+	BkgFPType Background::get_x_min(const int zone) const
+		{return m_zones.get_x_min(zone);}
+	BkgFPType Background::get_x_max(const int zone) const
+		{return m_zones.get_x_max(zone);}
+	BkgFPType Background::get_y_min(const int zone) const
+		{return m_zones.get_y_min(zone);}
+	BkgFPType Background::get_y_max(const int zone) const
+		{return m_zones.get_y_max(zone);}
+	BkgFPType Background::get_z_min(const int zone) const
+		{return m_zones.get_z_min(zone);}
+	BkgFPType Background::get_z_max(const int zone) const
+		{return m_zones.get_z_max(zone);}
 	///@}
 
 	/**
-	* @name Time and computational grid setters
+	* @name Time and zone setters
 	*
-	* Move the background times and the computational grid into the
-	* Background with move semantics, so no copy is made and the input
-	* vector is left empty. move_into_times and move_into_grid_x/y/z also
-	* store the minimum and maximum values, which are returned by the range
-	* accessors (get_t_min, get_x_max, etc.).
+	* Move the background times and the zones (each with its computational
+	* grid) into the Background with move semantics, so no copy is made.
+	* move_into_times also stores the minimum and maximum times, which are
+	* returned by get_t_min and get_t_max. move_into_zones checks the zones
+	* with Zones::Zones::validate first.
 	*/
 	///@{
 	void Background::move_into_times(std::vector<BkgFPType>& times)
@@ -393,52 +440,10 @@ namespace Background
 		m_t_max = *max_it;
 	}
 
-	void Background::move_into_x(std::vector<BkgFPType>& x)
+	void Background::move_into_zones(Zones::Zones& zones)
 	{
-		m_x = std::move(x);
-	}
-
-	void Background::move_into_y(std::vector<BkgFPType>& y)
-	{
-		m_y = std::move(y);
-	}
-
-	void Background::move_into_z(std::vector<BkgFPType>& z)
-	{
-		m_z = std::move(z);
-	}
-
-	void Background::move_into_grid_x(std::vector<BkgFPType>& grid_x)
-	{
-		m_grid_x = std::move(grid_x);
-
-		// Store min/max values
-		auto [min_it, max_it] = std::minmax_element(m_grid_x.begin(),
-			m_grid_x.end());
-		m_x_min = *min_it;
-		m_x_max = *max_it;
-	}
-
-	void Background::move_into_grid_y(std::vector<BkgFPType>& grid_y)
-	{
-		m_grid_y = std::move(grid_y);
-
-		// Store min/max values
-		auto [min_it, max_it] = std::minmax_element(m_grid_y.begin(),
-			m_grid_y.end());
-		m_y_min = *min_it;
-		m_y_max = *max_it;
-	}
-
-	void Background::move_into_grid_z(std::vector<BkgFPType>& grid_z)
-	{
-		m_grid_z = std::move(grid_z);
-
-		// Store min/max values
-		auto [min_it, max_it] = std::minmax_element(m_grid_z.begin(),
-			m_grid_z.end());
-		m_z_min = *min_it;
-		m_z_max = *max_it;
+		zones.validate();
+		m_zones = std::move(zones);
 	}
 	///@}
 
@@ -446,141 +451,143 @@ namespace Background
 	* @name Plasma and field setters
 	*
 	* Move plasma and field data into the Background with move semantics.
-	* Before each move, set_dims checks that the data has the same
-	* dimensions as any data already loaded and prints an error if not.
+	* The data comes in as a Vector4D for a single zone, which is moved
+	* into a ZonedVector without copying. Before each move, set_dims checks
+	* that the data has the same dimensions as the zone and any data
+	* already loaded, and stops the run if not.
 	* See the plasma and field accessors for what each quantity is.
 	*/
 	///@{
 	void Background::move_into_ne(Vectors::Vector4D<BkgFPType>& ne)
 	{
 		set_dims(ne, "ne");
-		m_ne.move_into_data(ne);
+		m_ne = Vectors::ZonedVector<BkgFPType>(std::move(ne));
 	}
 
 	void Background::move_into_te(Vectors::Vector4D<BkgFPType>& te)
 	{
 		set_dims(te, "te");
-		m_te.move_into_data(te);
+		m_te = Vectors::ZonedVector<BkgFPType>(std::move(te));
 	}
 
 	void Background::move_into_ti(Vectors::Vector4D<BkgFPType>& ti)
 	{
 		set_dims(ti, "ti");
-		m_ti.move_into_data(ti);
+		m_ti = Vectors::ZonedVector<BkgFPType>(std::move(ti));
 	}
 
 	void Background::move_into_vp(Vectors::Vector4D<BkgFPType>& vp)
 	{
 		set_dims(vp, "vp");
-		m_vp.move_into_data(vp);
+		m_vp = Vectors::ZonedVector<BkgFPType>(std::move(vp));
 	}
 
 	void Background::move_into_bX(Vectors::Vector4D<BkgFPType>& bX)
 	{
 		set_dims(bX, "bX");
-		m_bX.move_into_data(bX);
+		m_bX = Vectors::ZonedVector<BkgFPType>(std::move(bX));
 	}
 
 	void Background::move_into_bY(Vectors::Vector4D<BkgFPType>& bY)
 	{
 		set_dims(bY, "bY");
-		m_bY.move_into_data(bY);
+		m_bY = Vectors::ZonedVector<BkgFPType>(std::move(bY));
 	}
 
 	void Background::move_into_bZ(Vectors::Vector4D<BkgFPType>& bZ)
 	{
 		set_dims(bZ, "bZ");
-		m_bZ.move_into_data(bZ);
+		m_bZ = Vectors::ZonedVector<BkgFPType>(std::move(bZ));
 	}
 
 	void Background::move_into_bR(Vectors::Vector4D<BkgFPType>& bR)
 	{
 		set_dims(bR, "bR");
-		m_bR.move_into_data(bR);
+		m_bR = Vectors::ZonedVector<BkgFPType>(std::move(bR));
 	}
 
 	void Background::move_into_bmag(Vectors::Vector4D<BkgFPType>& bmag)
 	{
 		set_dims(bmag, "bmag");
-		m_bmag.move_into_data(bmag);
+		m_bmag = Vectors::ZonedVector<BkgFPType>(std::move(bmag));
 	}
 
 	void Background::move_into_gradbX(Vectors::Vector4D<BkgFPType>& gradbX)
 	{
 		set_dims(gradbX, "gradbX");
-		m_gradbX.move_into_data(gradbX);
+		m_gradbX = Vectors::ZonedVector<BkgFPType>(std::move(gradbX));
 	}
 
 	void Background::move_into_gradbY(Vectors::Vector4D<BkgFPType>& gradbY)
 	{
 		set_dims(gradbY, "gradbY");
-		m_gradbY.move_into_data(gradbY);
+		m_gradbY = Vectors::ZonedVector<BkgFPType>(std::move(gradbY));
 	}
 
 	void Background::move_into_gradbZ(Vectors::Vector4D<BkgFPType>& gradbZ)
 	{
 		set_dims(gradbZ, "gradbZ");
-		m_gradbZ.move_into_data(gradbZ);
+		m_gradbZ = Vectors::ZonedVector<BkgFPType>(std::move(gradbZ));
 	}
 
 	void Background::move_into_eX(Vectors::Vector4D<BkgFPType>& eX)
 	{
 		set_dims(eX, "eX");
-		m_eX.move_into_data(eX);
+		m_eX = Vectors::ZonedVector<BkgFPType>(std::move(eX));
 	}
 
 	void Background::move_into_eY(Vectors::Vector4D<BkgFPType>& eY)
 	{
 		set_dims(eY, "eY");
-		m_eY.move_into_data(eY);
+		m_eY = Vectors::ZonedVector<BkgFPType>(std::move(eY));
 	}
 
 	void Background::move_into_eZ(Vectors::Vector4D<BkgFPType>& eZ)
 	{
 		set_dims(eZ, "eZ");
-		m_eZ.move_into_data(eZ);
+		m_eZ = Vectors::ZonedVector<BkgFPType>(std::move(eZ));
 	}
 
 	void Background::move_into_emag(Vectors::Vector4D<BkgFPType>& emag)
 	{
 		set_dims(emag, "emag");
-		m_emag.move_into_data(emag);
+		m_emag = Vectors::ZonedVector<BkgFPType>(std::move(emag));
 	}
 
 	void Background::move_into_gradeX(Vectors::Vector4D<BkgFPType>& gradeX)
 	{
 		set_dims(gradeX, "gradeX");
-		m_gradeX.move_into_data(gradeX);
+		m_gradeX = Vectors::ZonedVector<BkgFPType>(std::move(gradeX));
 	}
 
 	void Background::move_into_gradeY(Vectors::Vector4D<BkgFPType>& gradeY)
 	{
 		set_dims(gradeY, "gradeY");
-		m_gradeY.move_into_data(gradeY);
+		m_gradeY = Vectors::ZonedVector<BkgFPType>(std::move(gradeY));
 	}
 
 	void Background::move_into_gradeZ(Vectors::Vector4D<BkgFPType>& gradeZ)
 	{
 		set_dims(gradeZ, "gradeZ");
-		m_gradeZ.move_into_data(gradeZ);
+		m_gradeZ = Vectors::ZonedVector<BkgFPType>(std::move(gradeZ));
 	}
 
 	void Background::move_into_uX(Vectors::Vector4D<BkgFPType>& uX)
 	{
 		set_dims(uX, "uX");
-		m_uX.move_into_data(uX);
+		m_uX = Vectors::ZonedVector<BkgFPType>(std::move(uX));
 	}
 
 	void Background::move_into_uY(Vectors::Vector4D<BkgFPType>& uY)
 	{
 		set_dims(uY, "uY");
-		m_uY.move_into_data(uY);
+		m_uY = Vectors::ZonedVector<BkgFPType>(std::move(uY));
 	}
 
 	void Background::move_into_uZ(Vectors::Vector4D<BkgFPType>& uZ)
 	{
 		set_dims(uZ, "uZ");
-		m_uZ.move_into_data(uZ);
+		m_uZ = Vectors::ZonedVector<BkgFPType>(std::move(uZ));
 	}
 	///@}
 
@@ -589,9 +596,9 @@ namespace Background
 	*
 	* Move geometry data (physical coordinates, Jacobian, metric
 	* coefficients, basis vectors and covariant magnetic field components)
-	* into the Background with move semantics. Unlike the plasma and field
-	* setters, these do not check dimensions, because set_dims only
-	* handles Vector4D data. See the geometry accessors for what each
+	* for a single zone into the Background with move semantics, without
+	* copying. Unlike the plasma and field setters, these do not check
+	* dimensions, because set_dims only handles Vector4D data. See the geometry accessors for what each
 	* quantity is.
 	*/
 	///@{
@@ -599,209 +606,211 @@ namespace Background
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(X, "X");
-		m_X.move_into_data(X);
+		m_X = Vectors::ZonedVector<BkgFPType>(std::move(X));
 	}
 
 	void Background::move_into_Y(Vectors::Vector3D<BkgFPType>& Y)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(Y, "Y");
-		m_Y.move_into_data(Y);
+		m_Y = Vectors::ZonedVector<BkgFPType>(std::move(Y));
 	}
 
 	void Background::move_into_Z(Vectors::Vector3D<BkgFPType>& Z)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(Z, "Z");
-		m_Z.move_into_data(Z);
+		m_Z = Vectors::ZonedVector<BkgFPType>(std::move(Z));
 	}
 
 	void Background::move_into_grid_X(Vectors::Vector3D<BkgFPType>& grid_X)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(grid_X, "grid_X");
-		m_grid_X.move_into_data(grid_X);
+		m_grid_X = Vectors::ZonedVector<BkgFPType>(std::move(grid_X));
 	}
 
 	void Background::move_into_grid_Y(Vectors::Vector3D<BkgFPType>& grid_Y)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(grid_Y, "grid_Y");
-		m_grid_Y.move_into_data(grid_Y);
+		m_grid_Y = Vectors::ZonedVector<BkgFPType>(std::move(grid_Y));
 	}
 
 	void Background::move_into_grid_Z(Vectors::Vector3D<BkgFPType>& grid_Z)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(grid_Z, "grid_Z");
-		m_grid_Z.move_into_data(grid_Z);
+		m_grid_Z = Vectors::ZonedVector<BkgFPType>(std::move(grid_Z));
 	}
 
 	void Background::move_into_J(Vectors::Vector3D<BkgFPType>& J)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(J, "J");
-		m_J.move_into_data(J);
+		m_J = Vectors::ZonedVector<BkgFPType>(std::move(J));
 	}
 
 	void Background::move_into_gij_00(Vectors::Vector3D<BkgFPType>& gij_00)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(gij_00, "gij_00");
-		m_gij_00.move_into_data(gij_00);
+		m_gij_00 = Vectors::ZonedVector<BkgFPType>(std::move(gij_00));
 	}
 
 	void Background::move_into_gij_01(Vectors::Vector3D<BkgFPType>& gij_01)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(gij_01, "gij_01");
-		m_gij_01.move_into_data(gij_01);
+		m_gij_01 = Vectors::ZonedVector<BkgFPType>(std::move(gij_01));
 	}
 
 	void Background::move_into_gij_02(Vectors::Vector3D<BkgFPType>& gij_02)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(gij_02, "gij_02");
-		m_gij_02.move_into_data(gij_02);
+		m_gij_02 = Vectors::ZonedVector<BkgFPType>(std::move(gij_02));
 	}
 
 	void Background::move_into_gij_11(Vectors::Vector3D<BkgFPType>& gij_11)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(gij_11, "gij_11");
-		m_gij_11.move_into_data(gij_11);
+		m_gij_11 = Vectors::ZonedVector<BkgFPType>(std::move(gij_11));
 	}
 
 	void Background::move_into_gij_12(Vectors::Vector3D<BkgFPType>& gij_12)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(gij_12, "gij_12");
-		m_gij_12.move_into_data(gij_12);
+		m_gij_12 = Vectors::ZonedVector<BkgFPType>(std::move(gij_12));
 	}
 
 	void Background::move_into_gij_22(Vectors::Vector3D<BkgFPType>& gij_22)
 	{
 		// Need a Vector3D version of set_dims
 		//set_dims(gij_22, "gij_22");
-		m_gij_22.move_into_data(gij_22);
+		m_gij_22 = Vectors::ZonedVector<BkgFPType>(std::move(gij_22));
 	}
 
 	void Background::move_into_dxdX(Vectors::Vector3D<BkgFPType>& dxdX)
 	{
-		m_dxdX.move_into_data(dxdX);
+		m_dxdX = Vectors::ZonedVector<BkgFPType>(std::move(dxdX));
 	}
 
 	void Background::move_into_dxdY(Vectors::Vector3D<BkgFPType>& dxdY)
 	{
-		m_dxdY.move_into_data(dxdY);
+		m_dxdY = Vectors::ZonedVector<BkgFPType>(std::move(dxdY));
 	}
 
 	void Background::move_into_dxdZ(Vectors::Vector3D<BkgFPType>& dxdZ)
 	{
-		m_dxdZ.move_into_data(dxdZ);
+		m_dxdZ = Vectors::ZonedVector<BkgFPType>(std::move(dxdZ));
 	}
 
 	void Background::move_into_dydX(Vectors::Vector3D<BkgFPType>& dydX)
 	{
-		m_dydX.move_into_data(dydX);
+		m_dydX = Vectors::ZonedVector<BkgFPType>(std::move(dydX));
 	}
 
 	void Background::move_into_dydY(Vectors::Vector3D<BkgFPType>& dydY)
 	{
-		m_dydY.move_into_data(dydY);
+		m_dydY = Vectors::ZonedVector<BkgFPType>(std::move(dydY));
 	}
 
 	void Background::move_into_dydZ(Vectors::Vector3D<BkgFPType>& dydZ)
 	{
-		m_dydZ.move_into_data(dydZ);
+		m_dydZ = Vectors::ZonedVector<BkgFPType>(std::move(dydZ));
 	}
 
 	void Background::move_into_dzdX(Vectors::Vector3D<BkgFPType>& dzdX)
 	{
-		m_dzdX.move_into_data(dzdX);
+		m_dzdX = Vectors::ZonedVector<BkgFPType>(std::move(dzdX));
 	}
 
 	void Background::move_into_dzdY(Vectors::Vector3D<BkgFPType>& dzdY)
 	{
-		m_dzdY.move_into_data(dzdY);
+		m_dzdY = Vectors::ZonedVector<BkgFPType>(std::move(dzdY));
 	}
 
 	void Background::move_into_dzdZ(Vectors::Vector3D<BkgFPType>& dzdZ)
 	{
-		m_dzdZ.move_into_data(dzdZ);
+		m_dzdZ = Vectors::ZonedVector<BkgFPType>(std::move(dzdZ));
 	}
 
 	void Background::move_into_dXdx(Vectors::Vector3D<BkgFPType>& dXdx)
 	{
-		m_dXdx.move_into_data(dXdx);
+		m_dXdx = Vectors::ZonedVector<BkgFPType>(std::move(dXdx));
 	}
 
 	void Background::move_into_dYdx(Vectors::Vector3D<BkgFPType>& dYdx)
 	{
-		m_dYdx.move_into_data(dYdx);
+		m_dYdx = Vectors::ZonedVector<BkgFPType>(std::move(dYdx));
 	}
 
 	void Background::move_into_dZdx(Vectors::Vector3D<BkgFPType>& dZdx)
 	{
-		m_dZdx.move_into_data(dZdx);
+		m_dZdx = Vectors::ZonedVector<BkgFPType>(std::move(dZdx));
 	}
 
 	void Background::move_into_dXdy(Vectors::Vector3D<BkgFPType>& dXdy)
 	{
-		m_dXdy.move_into_data(dXdy);
+		m_dXdy = Vectors::ZonedVector<BkgFPType>(std::move(dXdy));
 	}
 
 	void Background::move_into_dYdy(Vectors::Vector3D<BkgFPType>& dYdy)
 	{
-		m_dYdy.move_into_data(dYdy);
+		m_dYdy = Vectors::ZonedVector<BkgFPType>(std::move(dYdy));
 	}
 
 	void Background::move_into_dZdy(Vectors::Vector3D<BkgFPType>& dZdy)
 	{
-		m_dZdy.move_into_data(dZdy);
+		m_dZdy = Vectors::ZonedVector<BkgFPType>(std::move(dZdy));
 	}
 
 	void Background::move_into_dXdz(Vectors::Vector3D<BkgFPType>& dXdz)
 	{
-		m_dXdz.move_into_data(dXdz);
+		m_dXdz = Vectors::ZonedVector<BkgFPType>(std::move(dXdz));
 	}
 
 	void Background::move_into_dYdz(Vectors::Vector3D<BkgFPType>& dYdz)
 	{
-		m_dYdz.move_into_data(dYdz);
+		m_dYdz = Vectors::ZonedVector<BkgFPType>(std::move(dYdz));
 	}
 
 	void Background::move_into_dZdz(Vectors::Vector3D<BkgFPType>& dZdz)
 	{
-		m_dZdz.move_into_data(dZdz);
+		m_dZdz = Vectors::ZonedVector<BkgFPType>(std::move(dZdz));
 	}
 
 	void Background::move_into_b_x(Vectors::Vector3D<BkgFPType>& b_x)
 	{
-		m_b_x.move_into_data(b_x);
+		m_b_x = Vectors::ZonedVector<BkgFPType>(std::move(b_x));
 	}
 
 	void Background::move_into_b_y(Vectors::Vector3D<BkgFPType>& b_y)
 	{
-		m_b_y.move_into_data(b_y);
+		m_b_y = Vectors::ZonedVector<BkgFPType>(std::move(b_y));
 	}
 
 	void Background::move_into_b_z(Vectors::Vector3D<BkgFPType>& b_z)
 	{
-		m_b_z.move_into_data(b_z);
+		m_b_z = Vectors::ZonedVector<BkgFPType>(std::move(b_z));
 	}
 	///@}
 
 	/**
-	* Interpolates 4D background data at a given time and position.
+	* Interpolates 4D background data at a given time and position in a
+	* zone.
 	*
 	* This is a convenience wrapper around Utilities::interp_vec4d that
-	* passes in the background times and the x, y and z cell centers, so
-	* callers only need to supply the data and the point to evaluate it
-	* at.
+	* passes in the background times and the zone's x, y and z cell
+	* centers, so callers only need to supply the data and the point to
+	* evaluate it at.
 	*
-	* @param vec4d Data to interpolate, stored as a function of
-	*              (t, x, y, z).
+	* @param vec Data to interpolate, stored as a function of
+	*            (zone, t, x, y, z).
+	* @param zone Zone the point is in.
 	* @param t0 Time at which to evaluate the data.
 	* @param x0 x-coordinate at which to evaluate the data.
 	* @param y0 y-coordinate at which to evaluate the data.
@@ -809,58 +818,60 @@ namespace Background
 	* @return Interpolated value at (t0, x0, y0, z0).
 	*/
 	BkgFPType Background::interp_4d(
-		const Vectors::Vector4D<BkgFPType>& vec4d, const double t0,
-		const double x0, const double y0, const double z0) const
+		const Vectors::ZonedVector<BkgFPType>& vec, const int zone,
+		const double t0, const double x0, const double y0,
+		const double z0) const
 	{
 		// This is really just a convenient wrapper to handle passing in
 		// times and the x, y, z vectors.
-		return Utilities::interp_vec4d(vec4d, m_times, m_x, m_y, m_z, t0,
-			x0, y0, z0);
+		return Utilities::interp_vec4d(vec, zone, m_times,
+			m_zones.get_x(zone), m_zones.get_y(zone), m_zones.get_z(zone),
+			t0, x0, y0, z0);
 	}
 
 	/**
 	* @name Interpolation at a point
 	*
 	* Interpolate one plasma quantity at the time and position (t0, x0,
-	* y0, z0) using interp_4d. The quantities are the electron temperature
-	* (te), ion temperature (ti), electron density (ne) and the background
-	* flow components (uX, uY, uZ).
+	* y0, z0) in a zone using interp_4d. The quantities are the electron
+	* temperature (te), ion temperature (ti), electron density (ne) and the
+	* background flow components (uX, uY, uZ).
 	*/
 	///@{
-	BkgFPType Background::interp_te(const double t0, const double x0,
-		const double y0, const double z0) const
+	BkgFPType Background::interp_te(const int zone, const double t0,
+		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_te, t0, x0, y0, z0);
+		return interp_4d(m_te, zone, t0, x0, y0, z0);
 	}
 
-	BkgFPType Background::interp_ti(const double t0, const double x0,
-		const double y0, const double z0) const
+	BkgFPType Background::interp_ti(const int zone, const double t0,
+		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_ti, t0, x0, y0, z0);
+		return interp_4d(m_ti, zone, t0, x0, y0, z0);
 	}
 
-	BkgFPType Background::interp_ne(const double t0, const double x0,
-		const double y0, const double z0) const
+	BkgFPType Background::interp_ne(const int zone, const double t0,
+		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_ne, t0, x0, y0, z0);
+		return interp_4d(m_ne, zone, t0, x0, y0, z0);
 	}
 
-	BkgFPType Background::interp_uX(const double t0, const double x0,
-		const double y0, const double z0) const
+	BkgFPType Background::interp_uX(const int zone, const double t0,
+		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_uX, t0, x0, y0, z0);
+		return interp_4d(m_uX, zone, t0, x0, y0, z0);
 	}
 
-	BkgFPType Background::interp_uY(const double t0, const double x0,
-		const double y0, const double z0) const
+	BkgFPType Background::interp_uY(const int zone, const double t0,
+		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_uY, t0, x0, y0, z0);
+		return interp_4d(m_uY, zone, t0, x0, y0, z0);
 	}
 
-	BkgFPType Background::interp_uZ(const double t0, const double x0,
-		const double y0, const double z0) const
+	BkgFPType Background::interp_uZ(const int zone, const double t0,
+		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_uZ, t0, x0, y0, z0);
+		return interp_4d(m_uZ, zone, t0, x0, y0, z0);
 	}
 	///@}
 
@@ -868,8 +879,8 @@ namespace Background
 	* Broadcasts the background from rank 0 to every other MPI rank.
 	*
 	* Every rank must call this. After it returns, every rank holds a copy
-	* of the dimensions, the simulation bounds (t, x, y and z min/max), the
-	* times and computational grid, the geometry data and the plasma and
+	* of the number of times, the time bounds, the times, the zones (with
+	* their computational grids), the geometry data and the plasma and
 	* field data loaded on rank 0. Not broadcast are bR, the covariant
 	* magnetic field components (b_x, b_y, b_z) and the electric field
 	* gradient (gradeX, gradeY, gradeZ), which are only saved to the output
@@ -881,33 +892,20 @@ namespace Background
 	{
 		// Broadcast scalars
 		MPI_Bcast(&m_dim1, 1, MPI_INT, 0, comm);
-		MPI_Bcast(&m_dim2, 1, MPI_INT, 0, comm);
-		MPI_Bcast(&m_dim3, 1, MPI_INT, 0, comm);
-		MPI_Bcast(&m_dim4, 1, MPI_INT, 0, comm);
 
-		// Broadcast the simulation bounds. Rank 0 sets these in
-		// move_into_times and move_into_grid_x/y/z while loading the grid, so
-		// the other ranks only get them from here.
+		// Broadcast the time bounds. Rank 0 sets these in move_into_times
+		// while loading the background, so the other ranks only get them
+		// from here.
 		const MPI_Datatype bkg_type {mpi_type<BkgFPType>::type};
 		MPI_Bcast(&m_t_min, 1, bkg_type, 0, comm);
 		MPI_Bcast(&m_t_max, 1, bkg_type, 0, comm);
-		MPI_Bcast(&m_x_min, 1, bkg_type, 0, comm);
-		MPI_Bcast(&m_x_max, 1, bkg_type, 0, comm);
-		MPI_Bcast(&m_y_min, 1, bkg_type, 0, comm);
-		MPI_Bcast(&m_y_max, 1, bkg_type, 0, comm);
-		MPI_Bcast(&m_z_min, 1, bkg_type, 0, comm);
-		MPI_Bcast(&m_z_max, 1, bkg_type, 0, comm);
 
-		// Broadcast 1D vectors
+		// Broadcast the times and the zones, which hold the computational
+		// grids
 		Utilities::mpi_broadcast_vector(m_times, 0, comm);
-		Utilities::mpi_broadcast_vector(m_x, 0, comm);
-		Utilities::mpi_broadcast_vector(m_y, 0, comm);
-		Utilities::mpi_broadcast_vector(m_z, 0, comm);
-		Utilities::mpi_broadcast_vector(m_grid_x, 0, comm);
-		Utilities::mpi_broadcast_vector(m_grid_y, 0, comm);
-		Utilities::mpi_broadcast_vector(m_grid_z, 0, comm);
+		m_zones.broadcast(comm);
 
-		// Broadcast Vector3Ds
+		// Broadcast geometry
 		m_X.broadcast(comm);
 		m_Y.broadcast(comm);
 		m_Z.broadcast(comm);
@@ -940,7 +938,7 @@ namespace Background
 		m_dYdz.broadcast(comm);
 		m_dZdz.broadcast(comm);
 
-		// Broadcast Vector4Ds
+		// Broadcast plasma and fields
 		m_ne.broadcast(comm);
 		m_te.broadcast(comm);
 		m_ti.broadcast(comm);
@@ -1007,6 +1005,6 @@ namespace Background
 // the needed definitions so the linker can see them. Hurts flexibility, but
 // not an issue since it's pretty straightforward.
 template void Background::Background::set_dims<int>(
-	Vectors::Vector4D<int>& v, const std::string_view data);
+	const Vectors::Vector4D<int>& v, const std::string_view data);
 template void Background::Background::set_dims<BkgFPType>(
-	Vectors::Vector4D<BkgFPType>& v, const std::string_view data);
+	const Vectors::Vector4D<BkgFPType>& v, const std::string_view data);

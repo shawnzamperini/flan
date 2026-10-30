@@ -67,21 +67,24 @@ namespace ImpurityTransport
 	* @param slots Particle slots whose positions are read and whose time
 	*              and cell indices are updated.
 	* @param bkg Background plasma that provides the time array and the
-	*            x, y and z grid edges.
+	*            x, y and z grid edges of the zone each particle is in.
 	*/
 	void find_containing_cell_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg)
 	{
-		// Variables for each grid to avoid repeatedly calling in the loop
+		// Variable for the times to avoid repeatedly calling in the loop
 		const auto& times = bkg.get_times();
-		const auto& grid_x = bkg.get_grid_x();
-		const auto& grid_y = bkg.get_grid_y();
-		const auto& grid_z = bkg.get_grid_z();
 
 		// Loop through each slot
 		#pragma omp parallel for
 		for (int i = 0; i < slots.N(); i++)
 		{
+			// Grid of the zone the particle is in
+			const int zone {slots.zone()[i]};
+			const auto& grid_x = bkg.get_grid_x(zone);
+			const auto& grid_y = bkg.get_grid_y(zone);
+			const auto& grid_z = bkg.get_grid_z(zone);
+
 			// We don't have a "time grid" since time is stored at 
 			// "time centers", if that helps think about it. So we just find
 			// the nearest index for it. The spatial coordinates have a grid

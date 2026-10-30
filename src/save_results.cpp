@@ -210,13 +210,15 @@ namespace SaveResults
 	}
 
 	/**
-	* Saves a Vector3D as a variable in nc_group.
+	* Saves a Vector3D, or a single-zone ZonedVector without ghost cells, as
+	* a variable in nc_group.
 	*
 	* The flattened data is written as is, since netCDF uses the same
 	* row-major order. An empty vector is skipped with a warning. The
 	* dimensions must match the shape of vec.
 	*
-	* @tparam T Type of the values: double, float or int.
+	* @tparam V Type of the vector. Its values must be double, float or
+	*         int.
 	* @param nc_group Group (or file) to save into.
 	* @param vec Values to save.
 	* @param var_name Name of the variable.
@@ -226,13 +228,15 @@ namespace SaveResults
 	* @param description Description attribute.
 	* @param units Units attribute.
 	*/
-	template <typename T>
-	void save_vector_3d(const netCDF::NcGroup& nc_group, 
-		const Vectors::Vector3D<T>& vec, 
+	template <typename V>
+	void save_vector_3d(const netCDF::NcGroup& nc_group, const V& vec,
 		const std::string& var_name, const netCDF::NcDim& dim1,
 		const netCDF::NcDim& dim2, const netCDF::NcDim& dim3, 
 		const std::string& description, const std::string& units)
 	{
+		// Type of the values
+		using T = std::remove_cvref_t<decltype(vec.get_data()[0])>;
+
 		if (vec.get_data().size() == 0)
 		{
 			std::cerr << "Warning! " << var_name << " is zero-length."
@@ -274,13 +278,15 @@ namespace SaveResults
 	}
 
 	/**
-	* Saves a Vector4D as a variable in nc_group.
+	* Saves a Vector4D, or a single-zone ZonedVector without ghost cells, as
+	* a variable in nc_group.
 	*
 	* The flattened data is written as is, since netCDF uses the same
 	* row-major order. An empty vector is skipped with a warning. The
 	* dimensions must match the shape of vec.
 	*
-	* @tparam T Type of the values: double, float or int.
+	* @tparam V Type of the vector. Its values must be double, float or
+	*         int.
 	* @param nc_group Group (or file) to save into.
 	* @param vec Values to save.
 	* @param var_name Name of the variable.
@@ -291,14 +297,16 @@ namespace SaveResults
 	* @param description Description attribute.
 	* @param units Units attribute.
 	*/
-	template <typename T>
-	void save_vector_4d(const netCDF::NcGroup& nc_group, 
-		const Vectors::Vector4D<T>& vec, 
+	template <typename V>
+	void save_vector_4d(const netCDF::NcGroup& nc_group, const V& vec,
 		const std::string& var_name, const netCDF::NcDim& dim1,
 		const netCDF::NcDim& dim2, const netCDF::NcDim& dim3, 
 		const netCDF::NcDim& dim4, const std::string& description, 
 		const std::string& units)
 	{
+		// Type of the values
+		using T = std::remove_cvref_t<decltype(vec.get_data()[0])>;
+
 		if (vec.get_data().size() == 0)
 		{
 			std::cerr << "Warning! " << var_name << " is zero-length."
@@ -586,21 +594,21 @@ namespace SaveResults
 		// Cell centers in computational space - x, y, z
 		// We don't actually know what the units will be, since it depends
 		// on the computational coordinates used.
-		save_vector_1d(geo_group, bkg.get_x(), "x", dim2, "x cell centers", 
+		save_vector_1d(geo_group, bkg.get_x(0), "x", dim2, "x cell centers", 
 			"(?)");
-		save_vector_1d(geo_group, bkg.get_y(), "y", dim3, "y cell centers", 
+		save_vector_1d(geo_group, bkg.get_y(0), "y", dim3, "y cell centers", 
 			"(?)");
-		save_vector_1d(geo_group, bkg.get_z(), "z", dim4, "z cell centers", 
+		save_vector_1d(geo_group, bkg.get_z(0), "z", dim4, "z cell centers", 
 			"(?)");
 
 		// Grid edges - x, y, z
 		// We don't actually know what the units will be, since it depends
 		// on the computational coordinates used.
-		save_vector_1d(geo_group, bkg.get_grid_x(), "grid_x", grid_dim2, 
+		save_vector_1d(geo_group, bkg.get_grid_x(0), "grid_x", grid_dim2, 
 			"x grid edges", "(?)");
-		save_vector_1d(geo_group, bkg.get_grid_y(), "grid_y", grid_dim3, 
+		save_vector_1d(geo_group, bkg.get_grid_y(0), "grid_y", grid_dim3, 
 			"y grid edges", "(?)");
-		save_vector_1d(geo_group, bkg.get_grid_z(), "grid_z", grid_dim4, 
+		save_vector_1d(geo_group, bkg.get_grid_z(0), "grid_z", grid_dim4, 
 			"z grid edges", "(?)");
 
 		// Cell centers in physical space - X, Y, Z

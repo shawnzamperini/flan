@@ -483,6 +483,7 @@ namespace OpenADAS
 	* @param oa_ioniz OpenADAS ionization (scd) rate coefficients.
 	* @param oa_recomb OpenADAS recombination (acd) rate coefficients.
 	* @param dt Time step (s).
+	* @param zone Zone containing the particle.
 	* @param t Time of the particle (s).
 	* @param x Computational x coordinate of the particle.
 	* @param y Computational y coordinate of the particle.
@@ -495,12 +496,12 @@ namespace OpenADAS
 	std::pair<double, double> calc_ioniz_recomb_probs(
 		const Background::Background& bkg,
 		const OpenADAS& oa_ioniz, const OpenADAS& oa_recomb,
-		const double dt, const double t, const double x,
+		const double dt, const int zone, const double t, const double x,
 		const double y, const double z, const double q, const double Z)
 	{
 		// Interpolate at the particle location
-		double local_ne {bkg.interp_ne(t, x, y, z)};
-		double local_te {bkg.interp_te(t, x, y, z)};
+		double local_ne {bkg.interp_ne(zone, t, x, y, z)};
+		double local_te {bkg.interp_te(zone, t, x, y, z)};
 
 		// Branchless masks
 		const bool can_ionize {q < Z};
@@ -574,6 +575,7 @@ namespace OpenADAS
 
 				// Pull into local variables
 				int q {slots.q()[i]};
+				int zone {slots.zone()[i]};
 				double t {slots.t()[i]};
 				double x {slots.x()[i]};
 				double y {slots.y()[i]};
@@ -581,7 +583,7 @@ namespace OpenADAS
 
 				// Get ionization/recombination probabilities.
 				auto [ioniz_prob, recomb_prob] = calc_ioniz_recomb_probs(bkg,
-					oa_ioniz, oa_recomb, dt, t, x, y, z, q, Z);
+					oa_ioniz, oa_recomb, dt, zone, t, x, y, z, q, Z);
 
 				// Track number of times the probabilities are greater than 1.
 				// This indicates that a smaller timestep should be used if

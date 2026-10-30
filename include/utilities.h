@@ -53,9 +53,9 @@ namespace Utilities
 	std::vector<double> linspace(double a, double b, std::size_t N);
 
 	template <typename T>
-	double interp_vec4d(const Vectors::Vector4D<T>& vec4d, 
-		const std::vector<double> t, const std::vector<double> x,
-		const std::vector<double> y, const std::vector<double> z,
+	double interp_vec4d(const Vectors::ZonedVector<T>& vec, const int zone,
+		const std::vector<double>& t, const std::vector<double>& x,
+		const std::vector<double>& y, const std::vector<double>& z,
 		const double t0, const double x0, const double y0, const double z0);
 
 	std::pair<int, int> bracket_indices(const std::vector<double>& x, 

@@ -719,6 +719,7 @@ namespace Slots
 	*
 	* @param bkg Background plasma, used for the ion temperature.
 	* @param opts Simulation options.
+	* @param zone Zone the particle starts in.
 	* @param t Starting time of the particle (s).
 	* @param x Starting computational x coordinate.
 	* @param y Starting computational y coordinate.
@@ -736,9 +737,9 @@ namespace Slots
 	* @return Starting velocity {vX, vY, vZ} in Cartesian space (m/s).
 	*/
 	std::array<double, 3> get_birth_vXYZ(const Background::Background& bkg, 
-		const Options::Options& opts, const double t, const double x, 
-		const double y, const double z, const int tidx, const int xidx,
-		const int yidx, const int zidx, pcg32& rng)
+		const Options::Options& opts, const int zone, const double t,
+		const double x, const double y, const double z, const int tidx,
+		const int xidx, const int yidx, const int zidx, pcg32& rng)
 	{
 		// If we're running a test we will want to start at predetermined
 		// velocities to make sure things work correctly. Ideally there
@@ -782,7 +783,7 @@ namespace Slots
 		// Start at main ion temperature
 		else if (opts.imp_temp_start_opt_int() == 1)
 		{
-			start_temp = bkg.interp_ti(t, x, y, z); 
+			start_temp = bkg.interp_ti(zone, t, x, y, z); 
 			start_temp = std::max(start_temp, opts.min_ti());
 		}
 
@@ -819,11 +820,15 @@ namespace Slots
 	{
 		ParticleInit p;
 
+		// Particles are born in the first zone. Starting positions in other
+		// zones come with the SOLEDGE3X start options.
+		p.zone = 0;
+
 		// Variables for each grid to avoid repeatedly calling in the loop
 		const auto& times = bkg.get_times();
-		const auto& grid_x = bkg.get_grid_x();
-		const auto& grid_y = bkg.get_grid_y();
-		const auto& grid_z = bkg.get_grid_z();
+		const auto& grid_x = bkg.get_grid_x(p.zone);
+		const auto& grid_y = bkg.get_grid_y(p.zone);
+		const auto& grid_z = bkg.get_grid_z(p.zone);
 
 		// Initialize starting time/location based on input options
 		p.t = get_birth_val(opts.imp_tstart_opt_int(), 
@@ -832,19 +837,15 @@ namespace Slots
 
 		p.x = get_birth_val(opts.imp_xstart_opt_int(), 
 			opts.imp_xstart_val(), opts.imp_xrange_min(), opts.imp_xrange_max(), 
-			bkg.get_x_min(), bkg.get_x_max(), rng);
+			bkg.get_x_min(p.zone), bkg.get_x_max(p.zone), rng);
 
 		p.y = get_birth_val(opts.imp_ystart_opt_int(), 
 			opts.imp_ystart_val(), opts.imp_yrange_min(), opts.imp_yrange_max(), 
-			bkg.get_y_min(), bkg.get_y_max(), rng);
+			bkg.get_y_min(p.zone), bkg.get_y_max(p.zone), rng);
 
 		p.z = get_birth_val(opts.imp_zstart_opt_int(), 
 			opts.imp_zstart_val(), opts.imp_zrange_min(), opts.imp_zrange_max(), 
-			bkg.get_z_min(), bkg.get_z_max(), rng);
-
-		// Particles are born in the first zone. Starting positions in other
-		// zones come with the SOLEDGE3X start options.
-		p.zone = 0;
+			bkg.get_z_min(p.zone), bkg.get_z_max(p.zone), rng);
 
 		// Get indices, same process as in impurity_transport.cpp
 		p.tidx = Indices::get_nearest_index_cpu(times, p.t);
@@ -853,8 +854,8 @@ namespace Slots
 		p.zidx = Indices::get_nearest_cell_index_cpu(grid_z, p.z);
 
 		// Get velocity components in Cartesian space
-		auto [vX, vY, vZ] = get_birth_vXYZ(bkg, opts, p.t, p.x, p.y, p.z, 
-			p.tidx, p.xidx, p.yidx, p.zidx, rng);
+		auto [vX, vY, vZ] = get_birth_vXYZ(bkg, opts, p.zone, p.t, p.x, p.y,
+			p.z, p.tidx, p.xidx, p.yidx, p.zidx, rng);
 		p.vX = vX;
 		p.vY = vY;
 		p.vZ = vZ;

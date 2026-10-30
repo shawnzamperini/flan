@@ -21,9 +21,11 @@
 #include "impurity_stats.h"
 #include "mpi.h"
 #include "options.h"
+#include "read_bkg.h"
 #include "read_test.h"
 #include "utilities.h"
 #include "vectors.h"
+#include "zones.h"
 
 
 namespace
@@ -76,6 +78,16 @@ namespace
 		EXPECT_EQ(got.get_dim1(), want.get_dim1()) << name;
 		EXPECT_EQ(got.get_dim2(), want.get_dim2()) << name;
 		EXPECT_EQ(got.get_dim3(), want.get_dim3()) << name;
+		EXPECT_EQ(got.get_data(), want.get_data()) << name;
+	}
+
+	template <typename T>
+	void expect_same(const Vectors::ZonedVector<T>& got,
+		const Vectors::ZonedVector<T>& want, const std::string& name)
+	{
+		EXPECT_FALSE(want.get_data().empty()) << name << " is empty, so the "
+			"comparison wouldn't check anything";
+		EXPECT_TRUE(got.check_same_shape(want)) << name;
 		EXPECT_EQ(got.get_data(), want.get_data()) << name;
 	}
 
@@ -206,6 +218,11 @@ Background::Background make_full_background(const std::string& test_opt)
 	Options::Options opts {};
 	opts.set_bkg_source("test");
 	opts.set_test_opt(test_opt);
+
+	// Faces of every kind, so the zone's face codes are all different
+	opts.set_min_xbound_type("core");
+	opts.set_min_ybound_type("periodic");
+	opts.set_max_ybound_type("periodic");
 	Background::Background bkg {Test::read_test(opts)};
 
 	auto shift = [](std::vector<BkgFPType> v)
@@ -214,19 +231,15 @@ Background::Background make_full_background(const std::string& test_opt)
 		return v;
 	};
 	std::vector<BkgFPType> t {shift(bkg.get_times())};
-	std::vector<BkgFPType> x {shift(bkg.get_x())};
-	std::vector<BkgFPType> y {shift(bkg.get_y())};
-	std::vector<BkgFPType> z {shift(bkg.get_z())};
-	std::vector<BkgFPType> gx {shift(bkg.get_grid_x())};
-	std::vector<BkgFPType> gy {shift(bkg.get_grid_y())};
-	std::vector<BkgFPType> gz {shift(bkg.get_grid_z())};
+	std::vector<BkgFPType> x {shift(bkg.get_x(0))};
+	std::vector<BkgFPType> y {shift(bkg.get_y(0))};
+	std::vector<BkgFPType> z {shift(bkg.get_z(0))};
+	std::vector<BkgFPType> gx {shift(bkg.get_grid_x(0))};
+	std::vector<BkgFPType> gy {shift(bkg.get_grid_y(0))};
+	std::vector<BkgFPType> gz {shift(bkg.get_grid_z(0))};
 	bkg.move_into_times(t);
-	bkg.move_into_x(x);
-	bkg.move_into_y(y);
-	bkg.move_into_z(z);
-	bkg.move_into_grid_x(gx);
-	bkg.move_into_grid_y(gy);
-	bkg.move_into_grid_z(gz);
+	Zones::Zones zones {Background::single_zone(x, y, z, gx, gy, gz, opts)};
+	bkg.move_into_zones(zones);
 
 	const int nt {bkg.get_dim1()};
 	const int nx {bkg.get_dim2()};
@@ -289,9 +302,9 @@ void check_background_broadcast(const std::string& test_opt)
 	// Check the test itself: no bound is 0, so a missing broadcast of any
 	// of them is caught
 	EXPECT_NE(want.get_t_min(), 0);
-	EXPECT_NE(want.get_x_min(), 0);
-	EXPECT_NE(want.get_y_min(), 0);
-	EXPECT_NE(want.get_z_min(), 0);
+	EXPECT_NE(want.get_x_min(0), 0);
+	EXPECT_NE(want.get_y_min(0), 0);
+	EXPECT_NE(want.get_z_min(0), 0);
 
 	// Dimensions and the simulation bounds. The bounds are used by the
 	// boundary conditions and when starting particles, so wrong ones kill
@@ -302,21 +315,31 @@ void check_background_broadcast(const std::string& test_opt)
 	EXPECT_EQ(bkg.get_dim4(), want.get_dim4());
 	EXPECT_EQ(bkg.get_t_min(), want.get_t_min());
 	EXPECT_EQ(bkg.get_t_max(), want.get_t_max());
-	EXPECT_EQ(bkg.get_x_min(), want.get_x_min());
-	EXPECT_EQ(bkg.get_x_max(), want.get_x_max());
-	EXPECT_EQ(bkg.get_y_min(), want.get_y_min());
-	EXPECT_EQ(bkg.get_y_max(), want.get_y_max());
-	EXPECT_EQ(bkg.get_z_min(), want.get_z_min());
-	EXPECT_EQ(bkg.get_z_max(), want.get_z_max());
+	EXPECT_EQ(bkg.get_x_min(0), want.get_x_min(0));
+	EXPECT_EQ(bkg.get_x_max(0), want.get_x_max(0));
+	EXPECT_EQ(bkg.get_y_min(0), want.get_y_min(0));
+	EXPECT_EQ(bkg.get_y_max(0), want.get_y_max(0));
+	EXPECT_EQ(bkg.get_z_min(0), want.get_z_min(0));
+	EXPECT_EQ(bkg.get_z_max(0), want.get_z_max(0));
 
-	// Times and grid
+	// Times, grid and zone faces
 	EXPECT_EQ(bkg.get_times(), want.get_times());
-	EXPECT_EQ(bkg.get_x(), want.get_x());
-	EXPECT_EQ(bkg.get_y(), want.get_y());
-	EXPECT_EQ(bkg.get_z(), want.get_z());
-	EXPECT_EQ(bkg.get_grid_x(), want.get_grid_x());
-	EXPECT_EQ(bkg.get_grid_y(), want.get_grid_y());
-	EXPECT_EQ(bkg.get_grid_z(), want.get_grid_z());
+	EXPECT_EQ(bkg.get_nzones(), 1);
+	EXPECT_EQ(bkg.get_zones().get_ghost(), want.get_zones().get_ghost());
+	EXPECT_EQ(bkg.get_x(0), want.get_x(0));
+	EXPECT_EQ(bkg.get_y(0), want.get_y(0));
+	EXPECT_EQ(bkg.get_z(0), want.get_z(0));
+	EXPECT_EQ(bkg.get_grid_x(0), want.get_grid_x(0));
+	EXPECT_EQ(bkg.get_grid_y(0), want.get_grid_y(0));
+	EXPECT_EQ(bkg.get_grid_z(0), want.get_grid_z(0));
+	for (int f {}; f < Zones::num_faces; ++f)
+	{
+		const auto face {static_cast<Zones::Face>(f)};
+		EXPECT_EQ(bkg.get_zones().get_face(0, face),
+			want.get_zones().get_face(0, face)) << "face " << f;
+	}
+	EXPECT_EQ(want.get_zones().get_face(0, Zones::xmin), Zones::face_core);
+	EXPECT_EQ(want.get_zones().get_face(0, Zones::ymin), 0);
 
 	// Plasma and fields
 	expect_same(bkg.get_ne(), want.get_ne(), "ne");

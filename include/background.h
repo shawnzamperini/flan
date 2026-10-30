@@ -5,11 +5,13 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "background_device.h"
 #include "flan_types.h"
 #include "vectors.h"
+#include "zones.h"
 
 #ifndef __CUDACC__
 #include "mpi.h"
@@ -19,182 +21,176 @@ namespace Background
 {
 	/**
 	* @brief Contains time-dependent background plasma for simulation
+	*
+	* The simulation volume is split into one or more zones (see
+	* Zones::Zones), each with its own computational grid. Every plasma,
+	* field and geometry array is stored per zone in a ZonedVector, indexed
+	* as (zone, t, x, y, z) or (zone, x, y, z).
 	*/
 	class Background
 	{
 	private:
 		std::vector<BkgFPType> m_times {};
-		std::vector<BkgFPType> m_x {};
-		std::vector<BkgFPType> m_y {};
-		std::vector<BkgFPType> m_z {};
-		std::vector<BkgFPType> m_grid_x {};
-		std::vector<BkgFPType> m_grid_y {};
-		std::vector<BkgFPType> m_grid_z {};
-		Vectors::Vector4D<BkgFPType> m_ne {};
-		Vectors::Vector4D<BkgFPType> m_te {};
-		Vectors::Vector4D<BkgFPType> m_ti {};
-		Vectors::Vector4D<BkgFPType> m_vp {};
-		Vectors::Vector4D<BkgFPType> m_bX {};
-		Vectors::Vector4D<BkgFPType> m_bY {};
-		Vectors::Vector4D<BkgFPType> m_bZ {};
-		Vectors::Vector4D<BkgFPType> m_bmag {};
-		Vectors::Vector4D<BkgFPType> m_gradbX {};
-		Vectors::Vector4D<BkgFPType> m_gradbY {};
-		Vectors::Vector4D<BkgFPType> m_gradbZ {};
-		Vectors::Vector4D<BkgFPType> m_eX {};
-		Vectors::Vector4D<BkgFPType> m_eY {};
-		Vectors::Vector4D<BkgFPType> m_eZ {};
-		Vectors::Vector4D<BkgFPType> m_emag {};
-		Vectors::Vector4D<BkgFPType> m_uX {};
-		Vectors::Vector4D<BkgFPType> m_uY {};
-		Vectors::Vector4D<BkgFPType> m_uZ {};
-		Vectors::Vector3D<BkgFPType> m_X {};
-		Vectors::Vector3D<BkgFPType> m_Y {};
-		Vectors::Vector3D<BkgFPType> m_Z {};
-		Vectors::Vector3D<BkgFPType> m_grid_X {};
-		Vectors::Vector3D<BkgFPType> m_grid_Y {};
-		Vectors::Vector3D<BkgFPType> m_grid_Z {};
-		Vectors::Vector3D<BkgFPType> m_J {};
-		Vectors::Vector3D<BkgFPType> m_gij_00 {};
-		Vectors::Vector3D<BkgFPType> m_gij_01 {};
-		Vectors::Vector3D<BkgFPType> m_gij_02 {};
-		Vectors::Vector3D<BkgFPType> m_gij_11 {};
-		Vectors::Vector3D<BkgFPType> m_gij_12 {};
-		Vectors::Vector3D<BkgFPType> m_gij_22 {};
-		Vectors::Vector3D<BkgFPType> m_dxdX {};
-		Vectors::Vector3D<BkgFPType> m_dxdY {};
-		Vectors::Vector3D<BkgFPType> m_dxdZ {};
-		Vectors::Vector3D<BkgFPType> m_dydX {};
-		Vectors::Vector3D<BkgFPType> m_dydY {};
-		Vectors::Vector3D<BkgFPType> m_dydZ {};
-		Vectors::Vector3D<BkgFPType> m_dzdX {};
-		Vectors::Vector3D<BkgFPType> m_dzdY {};
-		Vectors::Vector3D<BkgFPType> m_dzdZ {};
-		Vectors::Vector3D<BkgFPType> m_dXdx {};
-		Vectors::Vector3D<BkgFPType> m_dYdx {};
-		Vectors::Vector3D<BkgFPType> m_dZdx {};
-		Vectors::Vector3D<BkgFPType> m_dXdy {};
-		Vectors::Vector3D<BkgFPType> m_dYdy {};
-		Vectors::Vector3D<BkgFPType> m_dZdy {};
-		Vectors::Vector3D<BkgFPType> m_dXdz {};
-		Vectors::Vector3D<BkgFPType> m_dYdz {};
-		Vectors::Vector3D<BkgFPType> m_dZdz {};
+		Zones::Zones m_zones {};
+		Vectors::ZonedVector<BkgFPType> m_ne {};
+		Vectors::ZonedVector<BkgFPType> m_te {};
+		Vectors::ZonedVector<BkgFPType> m_ti {};
+		Vectors::ZonedVector<BkgFPType> m_vp {};
+		Vectors::ZonedVector<BkgFPType> m_bX {};
+		Vectors::ZonedVector<BkgFPType> m_bY {};
+		Vectors::ZonedVector<BkgFPType> m_bZ {};
+		Vectors::ZonedVector<BkgFPType> m_bmag {};
+		Vectors::ZonedVector<BkgFPType> m_gradbX {};
+		Vectors::ZonedVector<BkgFPType> m_gradbY {};
+		Vectors::ZonedVector<BkgFPType> m_gradbZ {};
+		Vectors::ZonedVector<BkgFPType> m_eX {};
+		Vectors::ZonedVector<BkgFPType> m_eY {};
+		Vectors::ZonedVector<BkgFPType> m_eZ {};
+		Vectors::ZonedVector<BkgFPType> m_emag {};
+		Vectors::ZonedVector<BkgFPType> m_uX {};
+		Vectors::ZonedVector<BkgFPType> m_uY {};
+		Vectors::ZonedVector<BkgFPType> m_uZ {};
+		Vectors::ZonedVector<BkgFPType> m_X {};
+		Vectors::ZonedVector<BkgFPType> m_Y {};
+		Vectors::ZonedVector<BkgFPType> m_Z {};
+		Vectors::ZonedVector<BkgFPType> m_grid_X {};
+		Vectors::ZonedVector<BkgFPType> m_grid_Y {};
+		Vectors::ZonedVector<BkgFPType> m_grid_Z {};
+		Vectors::ZonedVector<BkgFPType> m_J {};
+		Vectors::ZonedVector<BkgFPType> m_gij_00 {};
+		Vectors::ZonedVector<BkgFPType> m_gij_01 {};
+		Vectors::ZonedVector<BkgFPType> m_gij_02 {};
+		Vectors::ZonedVector<BkgFPType> m_gij_11 {};
+		Vectors::ZonedVector<BkgFPType> m_gij_12 {};
+		Vectors::ZonedVector<BkgFPType> m_gij_22 {};
+		Vectors::ZonedVector<BkgFPType> m_dxdX {};
+		Vectors::ZonedVector<BkgFPType> m_dxdY {};
+		Vectors::ZonedVector<BkgFPType> m_dxdZ {};
+		Vectors::ZonedVector<BkgFPType> m_dydX {};
+		Vectors::ZonedVector<BkgFPType> m_dydY {};
+		Vectors::ZonedVector<BkgFPType> m_dydZ {};
+		Vectors::ZonedVector<BkgFPType> m_dzdX {};
+		Vectors::ZonedVector<BkgFPType> m_dzdY {};
+		Vectors::ZonedVector<BkgFPType> m_dzdZ {};
+		Vectors::ZonedVector<BkgFPType> m_dXdx {};
+		Vectors::ZonedVector<BkgFPType> m_dYdx {};
+		Vectors::ZonedVector<BkgFPType> m_dZdx {};
+		Vectors::ZonedVector<BkgFPType> m_dXdy {};
+		Vectors::ZonedVector<BkgFPType> m_dYdy {};
+		Vectors::ZonedVector<BkgFPType> m_dZdy {};
+		Vectors::ZonedVector<BkgFPType> m_dXdz {};
+		Vectors::ZonedVector<BkgFPType> m_dYdz {};
+		Vectors::ZonedVector<BkgFPType> m_dZdz {};
 
 		// The following are just for debugging and post analysis
-		Vectors::Vector4D<BkgFPType> m_bR {};
-		Vectors::Vector3D<BkgFPType> m_b_x {};
-		Vectors::Vector3D<BkgFPType> m_b_y {};
-		Vectors::Vector3D<BkgFPType> m_b_z {};
-		Vectors::Vector4D<BkgFPType> m_gradeX {};
-		Vectors::Vector4D<BkgFPType> m_gradeY {};
-		Vectors::Vector4D<BkgFPType> m_gradeZ {};
+		Vectors::ZonedVector<BkgFPType> m_bR {};
+		Vectors::ZonedVector<BkgFPType> m_b_x {};
+		Vectors::ZonedVector<BkgFPType> m_b_y {};
+		Vectors::ZonedVector<BkgFPType> m_b_z {};
+		Vectors::ZonedVector<BkgFPType> m_gradeX {};
+		Vectors::ZonedVector<BkgFPType> m_gradeY {};
+		Vectors::ZonedVector<BkgFPType> m_gradeZ {};
 
 		int m_dim1 {};
-		int m_dim2 {};
-		int m_dim3 {};
-		int m_dim4 {};
 
 		BkgFPType m_t_min {};
 		BkgFPType m_t_max {};
-		BkgFPType m_x_min {};
-		BkgFPType m_x_max {};
-		BkgFPType m_y_min {};
-		BkgFPType m_y_max {};
-		BkgFPType m_z_min {};
-		BkgFPType m_z_max {};
+
+		void check_single_zone(const std::string_view caller) const;
 
 	public:
 
 		// Accessors
 		const std::vector<BkgFPType>& get_times() const;
-		const std::vector<BkgFPType>& get_x() const;
-		const std::vector<BkgFPType>& get_y() const;
-		std::vector<BkgFPType>& get_z();
-		const std::vector<BkgFPType>& get_z() const;
-		const std::vector<BkgFPType>& get_grid_x() const;
-		const std::vector<BkgFPType>& get_grid_y() const;
-		const std::vector<BkgFPType>& get_grid_z() const;
-		const Vectors::Vector4D<BkgFPType>& get_ne() const;
-		Vectors::Vector4D<BkgFPType>& get_ne();
-		const Vectors::Vector4D<BkgFPType>& get_te() const;
-		Vectors::Vector4D<BkgFPType>& get_te();
-		const Vectors::Vector4D<BkgFPType>& get_ti() const;
-		Vectors::Vector4D<BkgFPType>& get_ti();
-		const Vectors::Vector4D<BkgFPType>& get_vp() const;
-		Vectors::Vector4D<BkgFPType>& get_vp();
-		const Vectors::Vector4D<BkgFPType>& get_bX() const;
-		Vectors::Vector4D<BkgFPType>& get_bX();
-		const Vectors::Vector4D<BkgFPType>& get_bY() const;
-		Vectors::Vector4D<BkgFPType>& get_bY();
-		const Vectors::Vector4D<BkgFPType>& get_bZ() const;
-		Vectors::Vector4D<BkgFPType>& get_bZ();
-		const Vectors::Vector4D<BkgFPType>& get_bR() const;
-		Vectors::Vector4D<BkgFPType>& get_bR();
-		const Vectors::Vector4D<BkgFPType>& get_bmag() const;
-		Vectors::Vector4D<BkgFPType>& get_bmag();
-		const Vectors::Vector4D<BkgFPType>& get_gradbX() const;
-		const Vectors::Vector4D<BkgFPType>& get_gradbY() const;
-		const Vectors::Vector4D<BkgFPType>& get_gradbZ() const;
-		const Vectors::Vector4D<BkgFPType>& get_eX() const;
-		const Vectors::Vector4D<BkgFPType>& get_eY() const;
-		const Vectors::Vector4D<BkgFPType>& get_eZ() const;
-		const Vectors::Vector4D<BkgFPType>& get_emag() const;
-		Vectors::Vector4D<BkgFPType>& get_eX();
-		Vectors::Vector4D<BkgFPType>& get_eY();
-		Vectors::Vector4D<BkgFPType>& get_eZ();
-		Vectors::Vector4D<BkgFPType>& get_emag();
-		const Vectors::Vector4D<BkgFPType>& get_gradeX() const;
-		const Vectors::Vector4D<BkgFPType>& get_gradeY() const;
-		const Vectors::Vector4D<BkgFPType>& get_gradeZ() const;
-		const Vectors::Vector4D<BkgFPType>& get_uX() const;
-		const Vectors::Vector4D<BkgFPType>& get_uY() const;
-		const Vectors::Vector4D<BkgFPType>& get_uZ() const;
-		Vectors::Vector4D<BkgFPType>& get_uX();
-		Vectors::Vector4D<BkgFPType>& get_uY();
-		Vectors::Vector4D<BkgFPType>& get_uZ();
-		const Vectors::Vector3D<BkgFPType>& get_X() const;
-		const Vectors::Vector3D<BkgFPType>& get_Y() const;
-		const Vectors::Vector3D<BkgFPType>& get_Z() const;
-		const Vectors::Vector3D<BkgFPType>& get_grid_X() const;
-		const Vectors::Vector3D<BkgFPType>& get_grid_Y() const;
-		const Vectors::Vector3D<BkgFPType>& get_grid_Z() const;
-		const Vectors::Vector3D<BkgFPType>& get_J() const;
-		const Vectors::Vector3D<BkgFPType>& get_gij_00() const;
-		const Vectors::Vector3D<BkgFPType>& get_gij_01() const;
-		const Vectors::Vector3D<BkgFPType>& get_gij_02() const;
-		const Vectors::Vector3D<BkgFPType>& get_gij_11() const;
-		const Vectors::Vector3D<BkgFPType>& get_gij_12() const;
-		const Vectors::Vector3D<BkgFPType>& get_gij_22() const;
-		const Vectors::Vector3D<BkgFPType>& get_dxdX() const;
-		const Vectors::Vector3D<BkgFPType>& get_dxdY() const;
-		const Vectors::Vector3D<BkgFPType>& get_dxdZ() const;
-		const Vectors::Vector3D<BkgFPType>& get_dydX() const;
-		const Vectors::Vector3D<BkgFPType>& get_dydY() const;
-		const Vectors::Vector3D<BkgFPType>& get_dydZ() const;
-		const Vectors::Vector3D<BkgFPType>& get_dzdX() const;
-		const Vectors::Vector3D<BkgFPType>& get_dzdY() const;
-		const Vectors::Vector3D<BkgFPType>& get_dzdZ() const;
-		Vectors::Vector3D<BkgFPType>& get_dxdX();
-		Vectors::Vector3D<BkgFPType>& get_dxdY();
-		Vectors::Vector3D<BkgFPType>& get_dxdZ();
-		Vectors::Vector3D<BkgFPType>& get_dydX();
-		Vectors::Vector3D<BkgFPType>& get_dydY();
-		Vectors::Vector3D<BkgFPType>& get_dydZ();
-		Vectors::Vector3D<BkgFPType>& get_dzdX();
-		Vectors::Vector3D<BkgFPType>& get_dzdY();
-		Vectors::Vector3D<BkgFPType>& get_dzdZ();
-		const Vectors::Vector3D<BkgFPType>& get_dXdx() const;
-		const Vectors::Vector3D<BkgFPType>& get_dYdx() const;
-		const Vectors::Vector3D<BkgFPType>& get_dZdx() const;
-		const Vectors::Vector3D<BkgFPType>& get_dXdy() const;
-		const Vectors::Vector3D<BkgFPType>& get_dYdy() const;
-		const Vectors::Vector3D<BkgFPType>& get_dZdy() const;
-		const Vectors::Vector3D<BkgFPType>& get_dXdz() const;
-		const Vectors::Vector3D<BkgFPType>& get_dYdz() const;
-		const Vectors::Vector3D<BkgFPType>& get_dZdz() const;
-		const Vectors::Vector3D<BkgFPType>& get_b_x() const;
-		const Vectors::Vector3D<BkgFPType>& get_b_y() const;
-		const Vectors::Vector3D<BkgFPType>& get_b_z() const;
+		const Zones::Zones& get_zones() const;
+		int get_nzones() const;
+		const std::vector<BkgFPType>& get_x(const int zone) const;
+		const std::vector<BkgFPType>& get_y(const int zone) const;
+		const std::vector<BkgFPType>& get_z(const int zone) const;
+		const std::vector<BkgFPType>& get_grid_x(const int zone) const;
+		const std::vector<BkgFPType>& get_grid_y(const int zone) const;
+		const std::vector<BkgFPType>& get_grid_z(const int zone) const;
+		const Vectors::ZonedVector<BkgFPType>& get_ne() const;
+		Vectors::ZonedVector<BkgFPType>& get_ne();
+		const Vectors::ZonedVector<BkgFPType>& get_te() const;
+		Vectors::ZonedVector<BkgFPType>& get_te();
+		const Vectors::ZonedVector<BkgFPType>& get_ti() const;
+		Vectors::ZonedVector<BkgFPType>& get_ti();
+		const Vectors::ZonedVector<BkgFPType>& get_vp() const;
+		Vectors::ZonedVector<BkgFPType>& get_vp();
+		const Vectors::ZonedVector<BkgFPType>& get_bX() const;
+		Vectors::ZonedVector<BkgFPType>& get_bX();
+		const Vectors::ZonedVector<BkgFPType>& get_bY() const;
+		Vectors::ZonedVector<BkgFPType>& get_bY();
+		const Vectors::ZonedVector<BkgFPType>& get_bZ() const;
+		Vectors::ZonedVector<BkgFPType>& get_bZ();
+		const Vectors::ZonedVector<BkgFPType>& get_bR() const;
+		Vectors::ZonedVector<BkgFPType>& get_bR();
+		const Vectors::ZonedVector<BkgFPType>& get_bmag() const;
+		Vectors::ZonedVector<BkgFPType>& get_bmag();
+		const Vectors::ZonedVector<BkgFPType>& get_gradbX() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gradbY() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gradbZ() const;
+		const Vectors::ZonedVector<BkgFPType>& get_eX() const;
+		const Vectors::ZonedVector<BkgFPType>& get_eY() const;
+		const Vectors::ZonedVector<BkgFPType>& get_eZ() const;
+		const Vectors::ZonedVector<BkgFPType>& get_emag() const;
+		Vectors::ZonedVector<BkgFPType>& get_eX();
+		Vectors::ZonedVector<BkgFPType>& get_eY();
+		Vectors::ZonedVector<BkgFPType>& get_eZ();
+		Vectors::ZonedVector<BkgFPType>& get_emag();
+		const Vectors::ZonedVector<BkgFPType>& get_gradeX() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gradeY() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gradeZ() const;
+		const Vectors::ZonedVector<BkgFPType>& get_uX() const;
+		const Vectors::ZonedVector<BkgFPType>& get_uY() const;
+		const Vectors::ZonedVector<BkgFPType>& get_uZ() const;
+		Vectors::ZonedVector<BkgFPType>& get_uX();
+		Vectors::ZonedVector<BkgFPType>& get_uY();
+		Vectors::ZonedVector<BkgFPType>& get_uZ();
+		const Vectors::ZonedVector<BkgFPType>& get_X() const;
+		const Vectors::ZonedVector<BkgFPType>& get_Y() const;
+		const Vectors::ZonedVector<BkgFPType>& get_Z() const;
+		const Vectors::ZonedVector<BkgFPType>& get_grid_X() const;
+		const Vectors::ZonedVector<BkgFPType>& get_grid_Y() const;
+		const Vectors::ZonedVector<BkgFPType>& get_grid_Z() const;
+		const Vectors::ZonedVector<BkgFPType>& get_J() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gij_00() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gij_01() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gij_02() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gij_11() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gij_12() const;
+		const Vectors::ZonedVector<BkgFPType>& get_gij_22() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dxdX() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dxdY() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dxdZ() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dydX() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dydY() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dydZ() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dzdX() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dzdY() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dzdZ() const;
+		Vectors::ZonedVector<BkgFPType>& get_dxdX();
+		Vectors::ZonedVector<BkgFPType>& get_dxdY();
+		Vectors::ZonedVector<BkgFPType>& get_dxdZ();
+		Vectors::ZonedVector<BkgFPType>& get_dydX();
+		Vectors::ZonedVector<BkgFPType>& get_dydY();
+		Vectors::ZonedVector<BkgFPType>& get_dydZ();
+		Vectors::ZonedVector<BkgFPType>& get_dzdX();
+		Vectors::ZonedVector<BkgFPType>& get_dzdY();
+		Vectors::ZonedVector<BkgFPType>& get_dzdZ();
+		const Vectors::ZonedVector<BkgFPType>& get_dXdx() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dYdx() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dZdx() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dXdy() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dYdy() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dZdy() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dXdz() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dYdz() const;
+		const Vectors::ZonedVector<BkgFPType>& get_dZdz() const;
+		const Vectors::ZonedVector<BkgFPType>& get_b_x() const;
+		const Vectors::ZonedVector<BkgFPType>& get_b_y() const;
+		const Vectors::ZonedVector<BkgFPType>& get_b_z() const;
 		int get_dim1() const;
 		int get_dim2() const;
 		int get_dim3() const;
@@ -203,22 +199,17 @@ namespace Background
 		// Psuedo-accessors to get the bound of the simulation spacetime.
 		BkgFPType get_t_min() const;
 		BkgFPType get_t_max() const;
-		BkgFPType get_x_min() const;
-		BkgFPType get_x_max() const;
-		BkgFPType get_y_min() const;
-		BkgFPType get_y_max() const;
-		BkgFPType get_z_min() const;
-		BkgFPType get_z_max() const;
+		BkgFPType get_x_min(const int zone) const;
+		BkgFPType get_x_max(const int zone) const;
+		BkgFPType get_y_min(const int zone) const;
+		BkgFPType get_y_max(const int zone) const;
+		BkgFPType get_z_min(const int zone) const;
+		BkgFPType get_z_max(const int zone) const;
 
 		// Setters using move semantics. No idea if this is the proper
 		// way to do it but it works.
 		void move_into_times(std::vector<BkgFPType>& times);
-		void move_into_x(std::vector<BkgFPType>& x);
-		void move_into_y(std::vector<BkgFPType>& y);
-		void move_into_z(std::vector<BkgFPType>& z);
-		void move_into_grid_x(std::vector<BkgFPType>& grid_x);
-		void move_into_grid_y(std::vector<BkgFPType>& grid_y);
-		void move_into_grid_z(std::vector<BkgFPType>& grid_z);
+		void move_into_zones(Zones::Zones& zones);
 		void move_into_ne(Vectors::Vector4D<BkgFPType>& ne);
 		void move_into_te(Vectors::Vector4D<BkgFPType>& te);
 		void move_into_ti(Vectors::Vector4D<BkgFPType>& ti);
@@ -276,33 +267,34 @@ namespace Background
 		void move_into_b_y(Vectors::Vector3D<BkgFPType>& b_y);
 		void move_into_b_z(Vectors::Vector3D<BkgFPType>& b_z);
 
-		BkgFPType interp_4d(const Vectors::Vector4D<BkgFPType>& vec4d, 
-			const double t0, const double x0, const double y0, const double z0) 
-			const;
+		BkgFPType interp_4d(const Vectors::ZonedVector<BkgFPType>& vec,
+			const int zone, const double t0, const double x0, const double y0,
+			const double z0) const;
 
-		BkgFPType interp_te(const double t0, const double x0, 
+		BkgFPType interp_te(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
 
-		BkgFPType interp_ti(const double t0, const double x0, 
+		BkgFPType interp_ti(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
 
-		BkgFPType interp_ne(const double t0, const double x0, 
+		BkgFPType interp_ne(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
 
-		BkgFPType interp_uX(const double t0, const double x0, 
+		BkgFPType interp_uX(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
 
-		BkgFPType interp_uY(const double t0, const double x0, 
+		BkgFPType interp_uY(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
 
-		BkgFPType interp_uZ(const double t0, const double x0, 
+		BkgFPType interp_uZ(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
 
 		std::string check_dim(const int m_dim, const int in_dim, 
 			const int dim_num);
 
 		template <typename T>
-		void set_dims(Vectors::Vector4D<T>& v, const std::string_view data);
+		void set_dims(const Vectors::Vector4D<T>& v,
+			const std::string_view data);
 
 #ifndef __CUDACC__
 		void broadcast(MPI_Comm comm);

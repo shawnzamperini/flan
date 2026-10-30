@@ -382,7 +382,7 @@ namespace Utilities
 
 	/**
 	* Interpolates a value from a 4D field defined on a structured
-	* (t, x, y, z) grid.
+	* (t, x, y, z) grid in one zone.
 	*
 	* Trilinear interpolation is performed in the spatial dimensions
 	* (x, y, z) at the two time slices that bracket t0, followed by
@@ -391,11 +391,12 @@ namespace Utilities
 	* cell-center values.
 	*
 	* @tparam T Data type stored in the 4D field.
-	* @param vec4d 4D field to sample.
+	* @param vec 4D field to sample, indexed as (zone, t, x, y, z).
+	* @param zone Zone to sample in.
 	* @param t Time coordinate array.
-	* @param x X coordinate array.
-	* @param y Y coordinate array.
-	* @param z Z coordinate array.
+	* @param x The zone's x coordinate array.
+	* @param y The zone's y coordinate array.
+	* @param z The zone's z coordinate array.
 	* @param t0 Time coordinate at which to evaluate the field.
 	* @param x0 X coordinate at which to evaluate the field.
 	* @param y0 Y coordinate at which to evaluate the field.
@@ -403,12 +404,15 @@ namespace Utilities
 	* @return Interpolated field value.
 	*/
 	template <typename T>
-	double interp_vec4d(const Vectors::Vector4D<T>& vec4d, 
-		const std::vector<double> t, const std::vector<double> x,
-		const std::vector<double> y, const std::vector<double> z,
+	double interp_vec4d(const Vectors::ZonedVector<T>& vec, const int zone,
+		const std::vector<double>& t, const std::vector<double>& x,
+		const std::vector<double>& y, const std::vector<double>& z,
 		const double t0, const double x0, const double y0, const double z0)
 	{
-	
+		// Shorthand for the field in this zone
+		auto vec4d = [&](int it, int ix, int iy, int iz)
+			{return vec(zone, it, ix, iy, iz);};
+
 		// Similar to trilinear_interpolate, don't attempt to interpolate past
 		// the last time value (since there's no way we would know what the
 		// value should be). 
@@ -501,14 +505,14 @@ template int Utilities::get_neighbor_index<double>(
     double, const std::vector<double>&, int);
 
 template double Utilities::interp_vec4d<float>(
-	const Vectors::Vector4D<float>& vec4d, 
-	const std::vector<double> t, const std::vector<double> x,
-	const std::vector<double> y, const std::vector<double> z,
+	const Vectors::ZonedVector<float>& vec, const int zone,
+	const std::vector<double>& t, const std::vector<double>& x,
+	const std::vector<double>& y, const std::vector<double>& z,
 	const double t0, const double x0, const double y0, const double z0);
 template double Utilities::interp_vec4d<double>(
-	const Vectors::Vector4D<double>& vec4d, 
-	const std::vector<double> t, const std::vector<double> x,
-	const std::vector<double> y, const std::vector<double> z,
+	const Vectors::ZonedVector<double>& vec, const int zone,
+	const std::vector<double>& t, const std::vector<double>& x,
+	const std::vector<double>& y, const std::vector<double>& z,
 	const double t0, const double x0, const double y0, const double z0);
 
 template void Utilities::mpi_broadcast_vector(std::vector<int>&, int, 

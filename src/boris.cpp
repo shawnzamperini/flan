@@ -38,6 +38,7 @@ namespace Boris
 	* defined.
 	*
 	* @param bkg Background plasma holding the basis vectors.
+	* @param zone Zone containing the particle.
 	* @param xidx x index of the grid cell containing the particle.
 	* @param yidx y index of the grid cell containing the particle.
 	* @param zidx z index of the grid cell containing the particle.
@@ -48,35 +49,36 @@ namespace Boris
 	*         dydY, dydZ, dzdX, dzdY, dzdZ.
 	*/
 	std::array<double, 9> interp_recp(
-		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx, const double x, const double y, const double z)
+		const Background::Background& bkg, const int zone, const int xidx,
+		const int yidx, const int zidx, const double x, const double y,
+		const double z)
 	{
 		// Get nearest neighbor indices for each direction. These tell us
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
 		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
-			bkg.get_x(), xidx)};
+			bkg.get_x(zone), xidx)};
 		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
-			bkg.get_y(), yidx)};
+			bkg.get_y(zone), yidx)};
 		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
-			bkg.get_z(), zidx)};
+			bkg.get_z(zone), zidx)};
 
 		// x, y, z coordinates of two bounding vertices to interpolate 
 		// between. Note these are not grid vertices, but rather are formed
 		// by cell center coordinates since that's where B/E are assumed
 		// to be defined. It is essentially a cell shifted by dx/2, dy/2
 		// and dz/2 if that helps.
-		const double x0 {bkg.get_x()[xidx]};
-		const double x1 {bkg.get_x()[xidx_neighbor]};
-		const double y0 {bkg.get_y()[yidx]};
-		const double y1 {bkg.get_y()[yidx_neighbor]};
-		const double z0 {bkg.get_z()[zidx]};
-		const double z1 {bkg.get_z()[zidx_neighbor]};
+		const double x0 {bkg.get_x(zone)[xidx]};
+		const double x1 {bkg.get_x(zone)[xidx_neighbor]};
+		const double y0 {bkg.get_y(zone)[yidx]};
+		const double y1 {bkg.get_y(zone)[yidx_neighbor]};
+		const double z0 {bkg.get_z(zone)[zidx]};
+		const double z1 {bkg.get_z(zone)[zidx_neighbor]};
 
 		// Array of references to each reciprocal basis vector
 		const std::array<std::reference_wrapper<
-			const Vectors::Vector3D<BkgFPType>>, 9> recp_basis {
+			const Vectors::ZonedVector<BkgFPType>>, 9> recp_basis {
 			bkg.get_dxdX(), bkg.get_dxdY(), bkg.get_dxdZ(),
 			bkg.get_dydX(), bkg.get_dydY(), bkg.get_dydZ(),
 			bkg.get_dzdX(), bkg.get_dzdY(), bkg.get_dzdZ()};
@@ -86,17 +88,17 @@ namespace Boris
 		for (int i {}; i < 9; ++i)
 		{
 			// Values at each vertex, 8 total because it's a rectangle.
-			const double v000 {recp_basis[i](xidx, yidx, zidx)};
-			const double v100 {recp_basis[i](xidx_neighbor, yidx, zidx)};
-			const double v010 {recp_basis[i](xidx, yidx_neighbor, zidx)};
-			const double v110 {recp_basis[i](xidx_neighbor, yidx_neighbor, 
+			const double v000 {recp_basis[i](zone, xidx, yidx, zidx)};
+			const double v100 {recp_basis[i](zone, xidx_neighbor, yidx, zidx)};
+			const double v010 {recp_basis[i](zone, xidx, yidx_neighbor, zidx)};
+			const double v110 {recp_basis[i](zone, xidx_neighbor, yidx_neighbor, 
 				zidx)};
-			const double v001 {recp_basis[i](xidx, yidx, zidx_neighbor)};
-			const double v101 {recp_basis[i](xidx_neighbor, yidx, 
+			const double v001 {recp_basis[i](zone, xidx, yidx, zidx_neighbor)};
+			const double v101 {recp_basis[i](zone, xidx_neighbor, yidx, 
 				zidx_neighbor)};
-			const double v011 {recp_basis[i](xidx, yidx_neighbor, 
+			const double v011 {recp_basis[i](zone, xidx, yidx_neighbor, 
 				zidx_neighbor)};
-			const double v111 {recp_basis[i](xidx_neighbor, yidx_neighbor,	
+			const double v111 {recp_basis[i](zone, xidx_neighbor, yidx_neighbor,	
 				zidx_neighbor)};
 
 			// Perform interpolation, storing value in our local array
@@ -122,6 +124,7 @@ namespace Boris
 	* defined.
 	*
 	* @param bkg Background plasma holding the basis vectors.
+	* @param zone Zone containing the particle.
 	* @param xidx x index of the grid cell containing the particle.
 	* @param yidx y index of the grid cell containing the particle.
 	* @param zidx z index of the grid cell containing the particle.
@@ -132,35 +135,36 @@ namespace Boris
 	*         dYdy, dZdy, dXdz, dYdz, dZdz.
 	*/
 	std::array<double, 9> interp_tang(
-		const Background::Background& bkg, const int xidx, const int yidx, 
-		const int zidx, const double x, const double y, const double z)
+		const Background::Background& bkg, const int zone, const int xidx,
+		const int yidx, const int zidx, const double x, const double y,
+		const double z)
 	{
 		// Get nearest neighbor indices for each direction. These tell us
 		// which direction we should interpolate towards, i.e., which
 		// rectangle made by the neighboring cell centers our particle
 		// is bounded by.
 		const int xidx_neighbor {Utilities::get_neighbor_index(x, 
-			bkg.get_x(), xidx)};
+			bkg.get_x(zone), xidx)};
 		const int yidx_neighbor {Utilities::get_neighbor_index(y, 
-			bkg.get_y(), yidx)};
+			bkg.get_y(zone), yidx)};
 		const int zidx_neighbor {Utilities::get_neighbor_index(z, 
-			bkg.get_z(), zidx)};
+			bkg.get_z(zone), zidx)};
 
 		// x, y, z coordinates of two bounding vertices to interpolate 
 		// between. Note these are not grid vertices, but rather are formed
 		// by cell center coordinates since that's where B/E are assumed
 		// to be defined. It is essentially a cell shifted by dx/2, dy/2
 		// and dz/2 if that helps.
-		const double x0 {bkg.get_x()[xidx]};
-		const double x1 {bkg.get_x()[xidx_neighbor]};
-		const double y0 {bkg.get_y()[yidx]};
-		const double y1 {bkg.get_y()[yidx_neighbor]};
-		const double z0 {bkg.get_z()[zidx]};
-		const double z1 {bkg.get_z()[zidx_neighbor]};
+		const double x0 {bkg.get_x(zone)[xidx]};
+		const double x1 {bkg.get_x(zone)[xidx_neighbor]};
+		const double y0 {bkg.get_y(zone)[yidx]};
+		const double y1 {bkg.get_y(zone)[yidx_neighbor]};
+		const double z0 {bkg.get_z(zone)[zidx]};
+		const double z1 {bkg.get_z(zone)[zidx_neighbor]};
 
 		// Array of references to each tangent basis vector
 		const std::array<std::reference_wrapper<
-			const Vectors::Vector3D<BkgFPType>>, 9> tang_basis {
+			const Vectors::ZonedVector<BkgFPType>>, 9> tang_basis {
 			bkg.get_dXdx(), bkg.get_dYdx(), bkg.get_dZdx(),
 			bkg.get_dXdy(), bkg.get_dYdy(), bkg.get_dZdy(),
 			bkg.get_dXdz(), bkg.get_dYdz(), bkg.get_dZdz()};
@@ -170,17 +174,17 @@ namespace Boris
 		for (int i {}; i < 9; ++i)
 		{
 			// Values at each vertex, 8 total because it's a rectangle.
-			const double v000 {tang_basis[i](xidx, yidx, zidx)};
-			const double v100 {tang_basis[i](xidx_neighbor, yidx, zidx)};
-			const double v010 {tang_basis[i](xidx, yidx_neighbor, zidx)};
-			const double v110 {tang_basis[i](xidx_neighbor, yidx_neighbor, 
+			const double v000 {tang_basis[i](zone, xidx, yidx, zidx)};
+			const double v100 {tang_basis[i](zone, xidx_neighbor, yidx, zidx)};
+			const double v010 {tang_basis[i](zone, xidx, yidx_neighbor, zidx)};
+			const double v110 {tang_basis[i](zone, xidx_neighbor, yidx_neighbor, 
 				zidx)};
-			const double v001 {tang_basis[i](xidx, yidx, zidx_neighbor)};
-			const double v101 {tang_basis[i](xidx_neighbor, yidx, 
+			const double v001 {tang_basis[i](zone, xidx, yidx, zidx_neighbor)};
+			const double v101 {tang_basis[i](zone, xidx_neighbor, yidx, 
 				zidx_neighbor)};
-			const double v011 {tang_basis[i](xidx, yidx_neighbor, 
+			const double v011 {tang_basis[i](zone, xidx, yidx_neighbor, 
 				zidx_neighbor)};
-			const double v111 {tang_basis[i](xidx_neighbor, yidx_neighbor,	
+			const double v111 {tang_basis[i](zone, xidx_neighbor, yidx_neighbor,	
 				zidx_neighbor)};
 
 			// Perform interpolation, storing value in our local array
@@ -229,6 +233,7 @@ namespace Boris
 			if (slots.state()[i] > 0) continue;
 
 			// Local variables
+			const int zone {slots.zone()[i]};
 			int tidx {slots.tidx()[i]};
 			int xidx {slots.xidx()[i]};
 			int yidx {slots.yidx()[i]};
@@ -241,11 +246,11 @@ namespace Boris
 			const int tidx_neighbor {Utilities::get_neighbor_index(slots.t()[i], 
 				bkg.get_times(), tidx)};
 			const int xidx_neighbor {Utilities::get_neighbor_index(slots.x()[i], 
-				bkg.get_x(), xidx)};
+				bkg.get_x(zone), xidx)};
 			const int yidx_neighbor {Utilities::get_neighbor_index(slots.y()[i], 
-				bkg.get_y(), yidx)};
+				bkg.get_y(zone), yidx)};
 			const int zidx_neighbor {Utilities::get_neighbor_index(slots.z()[i], 
-				bkg.get_z(), zidx)};
+				bkg.get_z(zone), zidx)};
 
 			//std::cout << "t: " << tidx << "\t" << tidx_neighbor << "\n";
 			//std::cout << "x: " << xidx << "\t" << xidx_neighbor << "\n";
@@ -277,10 +282,10 @@ namespace Boris
 			// Wrap in convienent array. Need a const reference in reference_wrapper
 			// because bkg.get_bX() returns a const ref. Need to match the getter. 
 			const std::array<std::reference_wrapper<
-				const Vectors::Vector4D<BkgFPType>>, 4> B 
+				const Vectors::ZonedVector<BkgFPType>>, 4> B 
 				{bkg.get_bX(), bkg.get_bY(), bkg.get_bZ(), bkg.get_bmag()};
 			const std::array<std::reference_wrapper<
-				const Vectors::Vector4D<BkgFPType>>, 4> E 
+				const Vectors::ZonedVector<BkgFPType>>, 4> E 
 				{bkg.get_eX(), bkg.get_eY(), bkg.get_eZ(), bkg.get_emag()};
 
 			// And put again into single array so we can make an outer loop out
@@ -297,12 +302,12 @@ namespace Boris
 			// by cell center coordinates since that's where B/E are assumed
 			// to be defined. It is essentially a cell shifted by dx/2, dy/2
 			// and dz/2 if that helps.
-			const double x0 {bkg.get_x()[xidx]};
-			const double x1 {bkg.get_x()[xidx_neighbor]};
-			const double y0 {bkg.get_y()[yidx]};
-			const double y1 {bkg.get_y()[yidx_neighbor]};
-			const double z0 {bkg.get_z()[zidx]};
-			const double z1 {bkg.get_z()[zidx_neighbor]};
+			const double x0 {bkg.get_x(zone)[xidx]};
+			const double x1 {bkg.get_x(zone)[xidx_neighbor]};
+			const double y0 {bkg.get_y(zone)[yidx]};
+			const double y1 {bkg.get_y(zone)[yidx_neighbor]};
+			const double z0 {bkg.get_z(zone)[zidx]};
+			const double z1 {bkg.get_z(zone)[zidx_neighbor]};
 
 			// Loop through each B/E component, performing a trilinear interpolation
 			// to get the local value of each. First loop is to choose B or E.
@@ -320,17 +325,17 @@ namespace Boris
 				for (int k = 0; k < 4; ++k) 
 				{
 					// Values at each vertex, 8 total because it's a rectangle.
-					double v000 {comps[k](tidx, xidx, yidx, zidx)};
-					double v100 {comps[k](tidx, xidx_neighbor, yidx, zidx)};
-					double v010 {comps[k](tidx, xidx, yidx_neighbor, zidx)};
-					double v110 {comps[k](tidx, xidx_neighbor, yidx_neighbor, 
+					double v000 {comps[k](zone, tidx, xidx, yidx, zidx)};
+					double v100 {comps[k](zone, tidx, xidx_neighbor, yidx, zidx)};
+					double v010 {comps[k](zone, tidx, xidx, yidx_neighbor, zidx)};
+					double v110 {comps[k](zone, tidx, xidx_neighbor, yidx_neighbor, 
 						zidx)};
-					double v001 {comps[k](tidx, xidx, yidx, zidx_neighbor)};
-					double v101 {comps[k](tidx, xidx_neighbor, yidx, 
+					double v001 {comps[k](zone, tidx, xidx, yidx, zidx_neighbor)};
+					double v101 {comps[k](zone, tidx, xidx_neighbor, yidx, 
 						zidx_neighbor)};
-					double v011 {comps[k](tidx, xidx, yidx_neighbor, 
+					double v011 {comps[k](zone, tidx, xidx, yidx_neighbor, 
 						zidx_neighbor)};
-					double v111 {comps[k](tidx, xidx_neighbor, yidx_neighbor,	
+					double v111 {comps[k](zone, tidx, xidx_neighbor, yidx_neighbor,	
 						zidx_neighbor)};
 
 					// Perform interpolation, storing value in our local array
@@ -344,17 +349,17 @@ namespace Boris
 					// If we don't do this, the field will be discontinuous each
 					// time the particle enters a new time frame, causing 
 					// unphysical kicks.
-					v000 = comps[k](tidx_neighbor, xidx, yidx, zidx);
-					v100 = comps[k](tidx_neighbor, xidx_neighbor, yidx, zidx);
-					v010 = comps[k](tidx_neighbor, xidx, yidx_neighbor, zidx);
-					v110 = comps[k](tidx_neighbor, xidx_neighbor, 
+					v000 = comps[k](zone, tidx_neighbor, xidx, yidx, zidx);
+					v100 = comps[k](zone, tidx_neighbor, xidx_neighbor, yidx, zidx);
+					v010 = comps[k](zone, tidx_neighbor, xidx, yidx_neighbor, zidx);
+					v110 = comps[k](zone, tidx_neighbor, xidx_neighbor, 
 						yidx_neighbor, zidx);
-					v001 = comps[k](tidx_neighbor, xidx, yidx, zidx_neighbor);
-					v101 = comps[k](tidx_neighbor, xidx_neighbor, yidx, 
+					v001 = comps[k](zone, tidx_neighbor, xidx, yidx, zidx_neighbor);
+					v101 = comps[k](zone, tidx_neighbor, xidx_neighbor, yidx, 
 						zidx_neighbor);
-					v011 = comps[k](tidx_neighbor, xidx, yidx_neighbor, 
+					v011 = comps[k](zone, tidx_neighbor, xidx, yidx_neighbor, 
 						zidx_neighbor);
-					v111 = comps[k](tidx_neighbor, xidx_neighbor, 
+					v111 = comps[k](zone, tidx_neighbor, xidx_neighbor, 
 						yidx_neighbor, zidx_neighbor);
 
 					// Interpolate again at new time frame
@@ -439,9 +444,9 @@ namespace Boris
 			slots.set_vZ(i, vplus[2] + q_m * E_local[2] * 0.5 * dt);
 
 			// Interpolate reciprocal and tangent basis vector at impurity location
-			std::array<double, 9> int_rec_bas {interp_recp(bkg, slots.xidx()[i], 
-				slots.yidx()[i], slots.zidx()[i], slots.x()[i], slots.y()[i], 
-				slots.z()[i])};
+			std::array<double, 9> int_rec_bas {interp_recp(bkg, zone,
+				slots.xidx()[i], slots.yidx()[i], slots.zidx()[i], slots.x()[i],
+				slots.y()[i], slots.z()[i])};
 
 			//std::array<double, 9> int_tan_bas {interp_tang(imp, bkg, xidx, 
 			//	yidx, zidx)};

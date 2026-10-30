@@ -38,8 +38,10 @@ namespace Background
 	* Copying a second one to the same GPU overwrites the constant memory of
 	* the first.
 	*
-	* Stops the run with Errors::fatal_error if a dimension is too big for
-	* the constant memory arrays (see MAX_1D in device_constants.cuh).
+	* Stops the run with Errors::fatal_error if the background has more
+	* than one zone, which the GPU doesn't handle yet, or if a dimension is
+	* too big for the constant memory arrays (see MAX_1D in
+	* device_constants.cuh).
 	*
 	* @param device_id ID of the GPU to copy to.
 	* @return The device-side background. Its pointers are to global memory
@@ -53,33 +55,47 @@ namespace Background
 
 		bkg_d.device_id = device_id;
 
+		// The GPU only handles a single zone so far. A single zone without
+		// ghost cells has the same layout as a Vector4D, so its data is
+		// copied as-is.
+		check_single_zone("Background::to_device");
+		const int dim2 {m_zones.get_nx(0)};
+		const int dim3 {m_zones.get_ny(0)};
+		const int dim4 {m_zones.get_nz(0)};
+		const auto& x = m_zones.get_x(0);
+		const auto& y = m_zones.get_y(0);
+		const auto& z = m_zones.get_z(0);
+		const auto& grid_x = m_zones.get_grid_x(0);
+		const auto& grid_y = m_zones.get_grid_y(0);
+		const auto& grid_z = m_zones.get_grid_z(0);
+
 		// The times, cell centers and cell edges go in constant memory
 		// arrays of size MAX_1D (see device_constants.cuh). If a dimension
 		// doesn't fit, the copies below would write past the end of the
 		// arrays, so stop the run. The cell edges have dim + 1 values, so
 		// the spatial dimensions must be less than MAX_1D. dim1 is the time
 		// dimension, which has no edges, so it can equal MAX_1D.
-		if (m_dim1 > MAX_1D || m_dim2+1 > MAX_1D
-			|| m_dim3+1 > MAX_1D || m_dim4+1 > MAX_1D)
+		if (m_dim1 > MAX_1D || dim2+1 > MAX_1D
+			|| dim3+1 > MAX_1D || dim4+1 > MAX_1D)
 		{
 			std::ostringstream msg;
 			msg << "MAX_1D is too small. Increase it in "
 				<< "include/cuda/device_constants.cuh.\n"
 				<< "  dim1 = " << m_dim1 << " (must be <= MAX_1D)\n"
-				<< "  dim2 = " << m_dim2 << " (must be < MAX_1D)\n"
-				<< "  dim3 = " << m_dim3 << " (must be < MAX_1D)\n"
-				<< "  dim4 = " << m_dim4 << " (must be < MAX_1D)\n"
+				<< "  dim2 = " << dim2 << " (must be < MAX_1D)\n"
+				<< "  dim3 = " << dim3 << " (must be < MAX_1D)\n"
+				<< "  dim4 = " << dim4 << " (must be < MAX_1D)\n"
 				<< "  MAX_1D = " << MAX_1D;
 			Errors::fatal_error(msg.str());
 		}
 
 		bkg_d.tdim = m_dim1;
-		bkg_d.xdim = m_dim2;
-		bkg_d.ydim = m_dim3;
-		bkg_d.zdim = m_dim4;
+		bkg_d.xdim = dim2;
+		bkg_d.ydim = dim3;
+		bkg_d.zdim = dim4;
 
-		int N_3D {m_dim2 * m_dim3 * m_dim4};
-		int N_4D {m_dim1 * m_dim2 * m_dim3 * m_dim4};
+		int N_3D {dim2 * dim3 * dim4};
+		int N_4D {m_dim1 * dim2 * dim3 * dim4};
 
 		cudaSetDevice(device_id);
 
@@ -92,14 +108,14 @@ namespace Background
 		// device_constants.cu, and cudaMemcpyToSymbol copies into them on
 		// the current GPU. The copies assume BkgFPType is double.
 		cudaMemcpyToSymbol(d_t, m_times.data(), m_dim1 * sizeof(double));
-		cudaMemcpyToSymbol(d_x, m_x.data(), m_dim2 * sizeof(double));
-		cudaMemcpyToSymbol(d_y, m_y.data(), m_dim3 * sizeof(double));
-		cudaMemcpyToSymbol(d_z, m_z.data(), m_dim4 * sizeof(double));
-		cudaMemcpyToSymbol(d_grid_x, m_grid_x.data(), (m_dim2+1) 
+		cudaMemcpyToSymbol(d_x, x.data(), dim2 * sizeof(double));
+		cudaMemcpyToSymbol(d_y, y.data(), dim3 * sizeof(double));
+		cudaMemcpyToSymbol(d_z, z.data(), dim4 * sizeof(double));
+		cudaMemcpyToSymbol(d_grid_x, grid_x.data(), (dim2+1) 
 			* sizeof(double));
-		cudaMemcpyToSymbol(d_grid_y, m_grid_y.data(), (m_dim3+1) 
+		cudaMemcpyToSymbol(d_grid_y, grid_y.data(), (dim3+1) 
 			* sizeof(double));
-		cudaMemcpyToSymbol(d_grid_z, m_grid_z.data(), (m_dim4+1) 
+		cudaMemcpyToSymbol(d_grid_z, grid_z.data(), (dim4+1) 
 			* sizeof(double));
 
 		// cudaMemcpyToSymbol copies from a host address, so for scalars we
@@ -107,12 +123,12 @@ namespace Background
 		// the outer cell edges, the same as the CPU uses.
 		const double t_min {m_t_min};
 		const double t_max {m_t_max};
-		const double x_min {m_x_min};
-		const double x_max {m_x_max};
-		const double y_min {m_y_min};
-		const double y_max {m_y_max};
-		const double z_min {m_z_min};
-		const double z_max {m_z_max};
+		const double x_min {grid_x.front()};
+		const double x_max {grid_x.back()};
+		const double y_min {grid_y.front()};
+		const double y_max {grid_y.back()};
+		const double z_min {grid_z.front()};
+		const double z_max {grid_z.back()};
 		cudaMemcpyToSymbol(d_t_min, &t_min, sizeof(double));
 		cudaMemcpyToSymbol(d_t_max, &t_max, sizeof(double));
 		cudaMemcpyToSymbol(d_x_min, &x_min, sizeof(double));

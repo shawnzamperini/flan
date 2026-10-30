@@ -101,6 +101,7 @@ namespace Collisions
 	* @param mass_kg Mass of the background species (kg).
 	* @param Te Electron temperature (eV), used for the Debye length.
 	* @param ne Electron density (m^-3).
+	* @param zone Zone containing the particle.
 	* @param t Time of the particle (s).
 	* @param x Computational x coordinate of the particle.
 	* @param y Computational y coordinate of the particle.
@@ -117,7 +118,7 @@ namespace Collisions
 	std::tuple<double, double, double, double> nanbu_calc_s(
 		const Background::Background& bkg, 
 		const double imp_time_step, const double T, const double mass_kg, 
-		const double Te, const double ne, const double t,
+		const double Te, const double ne, const int zone, const double t,
 		const double x, const double y, const double z, const double vX,
 		const double vY, const double vZ, const int q, Slots::Slots& slots,
 		pcg32& rng)
@@ -144,9 +145,9 @@ namespace Collisions
 		//     the mean flow. We call this the mean relative velocity.
 
 		// Background flow at impurity location
-		double uX {bkg.interp_uX(t, x, y, z)}; 
-		double uY {bkg.interp_uY(t, x, y, z)}; 
-		double uZ {bkg.interp_uZ(t, x, y, z)}; 
+		double uX {bkg.interp_uX(zone, t, x, y, z)}; 
+		double uY {bkg.interp_uY(zone, t, x, y, z)}; 
+		double uZ {bkg.interp_uZ(zone, t, x, y, z)}; 
 
 		// Random sample of background species instantanoues velocity 
 		// (flow + thermal sampling) that particle is colliding with.
@@ -478,6 +479,7 @@ namespace Collisions
 			if (slots.q()[i] == 0) continue;
 
 			// Local variables
+			int zone {slots.zone()[i]};
 			double t {slots.t()[i]};
 			double x {slots.x()[i]};
 			double y {slots.y()[i]};
@@ -490,8 +492,8 @@ namespace Collisions
 
 			// Will always need electron temperature/density. Trilinearly
 			// interpolate in space and then linearly interpolate in time.
-			double ne {bkg.interp_ne(t, x, y, z)}; 
-			double Te {bkg.interp_te(t, x, y, z)}; 
+			double ne {bkg.interp_ne(zone, t, x, y, z)}; 
+			double Te {bkg.interp_te(zone, t, x, y, z)}; 
 
 			// Don't let it go below a minimum. This can prevent extrapolating
 			// near the edges going below zero.
@@ -534,7 +536,7 @@ namespace Collisions
 			else
 			{
 				mass_kg = opts.gkyl_ion_mass_amu() * Constants::amu_to_kg;	
-				T = bkg.interp_ti(t, x, y, z); 
+				T = bkg.interp_ti(zone, t, x, y, z); 
 				T = std::max(opts.min_ti(), T);
 			}
 
@@ -548,7 +550,7 @@ namespace Collisions
 			// Calculate s (Eq. 19), making sure to pass in the full time step
 			// velocities.
 			auto [s, gX, gY, gZ] = nanbu_calc_s(bkg, dt, T, 
-				mass_kg, Te, ne, t, x, y, z, vX, vY, vZ, q, slots, rng);
+				mass_kg, Te, ne, zone, t, x, y, z, vX, vY, vZ, q, slots, rng);
 
 			// Add to running sum of s values in each cell so we can do an average
 			// later. Only consider for ions since they are the dominant collision

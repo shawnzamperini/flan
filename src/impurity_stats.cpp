@@ -513,7 +513,8 @@ namespace Impurity
 	* number of particles, and the particle weights were normalized by the
 	* number of particles when each particle was created. The density is
 	* then just the weight divided by the cell volume in physical space,
-	* J * dx * dy * dz. The density array is allocated here.
+	* J * dx * dy * dz. The density array is allocated here. The
+	* statistics are for a single zone (zone 0) for now.
 	*
 	* @param bkg Background plasma, used for the grid and Jacobian.
 	* @param tot_imp_num Total number of impurities followed. Currently
@@ -541,12 +542,12 @@ namespace Impurity
 		for (int l {}; l < m_dim4; ++l)
 		{
 			// Cell width in each direction 
-			double dx {bkg.get_grid_x()[j+1] - bkg.get_grid_x()[j]};
-			double dy {bkg.get_grid_y()[k+1] - bkg.get_grid_y()[k]};
-			double dz {bkg.get_grid_z()[l+1] - bkg.get_grid_z()[l]};
+			double dx {bkg.get_grid_x(0)[j+1] - bkg.get_grid_x(0)[j]};
+			double dy {bkg.get_grid_y(0)[k+1] - bkg.get_grid_y(0)[k]};
+			double dz {bkg.get_grid_z(0)[l+1] - bkg.get_grid_z(0)[l]};
 
 			// Volume in physical space is jacob * dx * dy * dz
-			double cell_vol {bkg.get_J()(j,k,l) * dx * dy * dz};
+			double cell_vol {bkg.get_J()(0, j, k, l) * dx * dy * dz};
 
 			// Normalize each weight value by the volume and total number of
 			// particles launched. This goes from units of (s) to (s/m3). 
