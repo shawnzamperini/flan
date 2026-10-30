@@ -14,6 +14,7 @@ add_executable(test_boundary_cpu test_boundary_cpu.cpp)
 add_executable(test_boris_cpu test_boris_cpu.cpp)
 add_executable(test_openadas_cpu test_openadas_cpu.cpp)
 add_executable(test_zoned_vector_cpu test_zoned_vector_cpu.cpp)
+add_executable(test_zones_cpu test_zones_cpu.cpp)
 
 # Link your main library + GoogleTest. Tests that involve OpenMP need to link
 # against those as well as the flan library.
@@ -24,6 +25,7 @@ target_link_libraries(test_boundary_cpu PRIVATE flan gtest_main OpenMP::OpenMP_C
 target_link_libraries(test_boris_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_openadas_cpu PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 target_link_libraries(test_zoned_vector_cpu PRIVATE flan gtest_main)
+target_link_libraries(test_zones_cpu PRIVATE flan gtest_main)
 
 # Register with CTest
 add_test(NAME GetNearestIndexCPUTest COMMAND test_get_nearest_index_cpu)
@@ -33,6 +35,7 @@ add_test(NAME BoundaryCPUTest COMMAND test_boundary_cpu)
 add_test(NAME BorisCPUTest COMMAND test_boris_cpu)
 add_test(NAME OpenADASCPUTest COMMAND test_openadas_cpu)
 add_test(NAME ZonedVectorCPUTest COMMAND test_zoned_vector_cpu)
+add_test(NAME ZonesCPUTest COMMAND test_zones_cpu)
 
 # MPI test. It has its own main to initialize MPI, so it links gtest instead
 # of gtest_main, and it's run on 3 ranks with the same mpiexec that CMake

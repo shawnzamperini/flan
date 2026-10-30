@@ -54,6 +54,7 @@ namespace Slots
 		m_vY.resize(N);
 		m_vZ.resize(N);
 		m_iters.resize(N);
+		m_zone.resize(N);
 		m_tidx.resize(N);
 		m_xidx.resize(N);
 		m_yidx.resize(N);
@@ -176,6 +177,17 @@ namespace Slots
 	* @return Vector of length N() with one entry per slot.
 	*/
 	const std::vector<int>& Slots::iters() const noexcept {return m_iters;}
+
+	/**
+	* Returns the index of the zone each particle is in.
+	*
+	* The cell indices and computational coordinates are relative to this
+	* zone. Only kept on the host: the GPU only supports single-zone
+	* backgrounds, so to_device doesn't copy it and to_host leaves it at 0.
+	*
+	* @return Vector of length N() with one entry per slot.
+	*/
+	const std::vector<int>& Slots::zone() const noexcept {return m_zone;}
 
 	/**
 	* Returns the index of the background time frame nearest to each particle.
@@ -336,6 +348,15 @@ namespace Slots
 	* @param val Number of time steps taken to store in slot i.
 	*/
 	void Slots::set_iters(int i, int val) {m_iters[i] = val;}
+
+	/**
+	* Sets the zone value of a single slot.
+	*
+	* @param i Index of the slot.
+	* @param val Index of the zone containing the particle to store in slot
+	*        i.
+	*/
+	void Slots::set_zone(int i, int val) {m_zone[i] = val;}
 
 	/**
 	* Sets the tidx value of a single slot.
@@ -821,6 +842,10 @@ namespace Slots
 			opts.imp_zstart_val(), opts.imp_zrange_min(), opts.imp_zrange_max(), 
 			bkg.get_z_min(), bkg.get_z_max(), rng);
 
+		// Particles are born in the first zone. Starting positions in other
+		// zones come with the SOLEDGE3X start options.
+		p.zone = 0;
+
 		// Get indices, same process as in impurity_transport.cpp
 		p.tidx = Indices::get_nearest_index_cpu(times, p.t);
 		p.xidx = Indices::get_nearest_cell_index_cpu(grid_x, p.x);
@@ -916,6 +941,7 @@ namespace Slots
 					slots.set_x(i, p.x);
 					slots.set_y(i, p.y);
 					slots.set_z(i, p.z);
+					slots.set_zone(i, p.zone);
 					slots.set_tidx(i, p.tidx);
 					slots.set_xidx(i, p.xidx);
 					slots.set_yidx(i, p.yidx);

@@ -22,7 +22,7 @@ namespace Slots
 		double vx, vy, vz;
 		double vX, vY, vZ;
 		double weight;
-		int tidx, xidx, yidx, zidx, q, state;
+		int zone, tidx, xidx, yidx, zidx, q, state;
 	};
 
 	/**
@@ -55,6 +55,7 @@ namespace Slots
         std::vector<double> m_vZ;
 
         std::vector<int> m_iters;
+        std::vector<int> m_zone;  // host only, see zone()
         std::vector<int> m_tidx;
         std::vector<int> m_xidx;
         std::vector<int> m_yidx;
@@ -85,6 +86,7 @@ namespace Slots
         const std::vector<double>& vY() const noexcept;
         const std::vector<double>& vZ() const noexcept;
         const std::vector<int>& iters() const noexcept;
+        const std::vector<int>& zone() const noexcept;
         const std::vector<int>& tidx() const noexcept;
         const std::vector<int>& xidx() const noexcept;
         const std::vector<int>& yidx() const noexcept;
@@ -110,6 +112,7 @@ namespace Slots
         void set_vY(int i, double val);
         void set_vZ(int i, double val);
         void set_iters(int i, int val);
+        void set_zone(int i, int val);
         void set_tidx(int i, int val);
         void set_xidx(int i, int val);
         void set_yidx(int i, int val);
