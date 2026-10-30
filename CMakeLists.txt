@@ -89,6 +89,7 @@ include_directories(
     include
     ${FLANSOFT}/netcdf-cxx4/include
     ${FLANSOFT}/netcdf-c/include
+    ${FLANSOFT}/hdf5/include
 )
 
 if(ENABLE_CUDA)
@@ -102,6 +103,7 @@ link_directories(
     ${FLANSOFT}/netcdf-cxx4/lib
     ${FLANSOFT}/netcdf-cxx4/lib64
     ${FLANSOFT}/netcdf-c/lib
+    ${FLANSOFT}/hdf5/lib
 )
 
 # ------------------------------------------------------------
@@ -150,6 +152,7 @@ target_link_libraries(flan
     PRIVATE
         netcdf
         netcdf-cxx4
+        hdf5
         OpenMP::OpenMP_CXX
 )
 
@@ -158,11 +161,11 @@ target_link_libraries(flan
 target_link_libraries(flan PUBLIC MPI::MPI_CXX)
 
 # ------------------------------------------------------------
-# RPATH for netCDF
+# RPATH for netCDF and HDF5
 # ------------------------------------------------------------
 set_target_properties(flan PROPERTIES
     BUILD_WITH_INSTALL_RPATH TRUE
-    INSTALL_RPATH "${FLANSOFT}/netcdf-c/lib;${FLANSOFT}/netcdf-cxx4/lib;${FLANSOFT}/netcdf-cxx4/lib64"
+    INSTALL_RPATH "${FLANSOFT}/netcdf-c/lib;${FLANSOFT}/netcdf-cxx4/lib;${FLANSOFT}/netcdf-cxx4/lib64;${FLANSOFT}/hdf5/lib"
 )
 
 # ------------------------------------------------------------

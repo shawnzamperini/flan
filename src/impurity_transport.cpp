@@ -644,7 +644,7 @@ namespace ImpurityTransport
 		{
 			// Defined in cuda/collision.cu. First call is for ions (the false)
 			Collisions::collision_gpu(slots_d, bkg_d, false, dt, imp_stats_d,
-				rngs_d, opts.gkyl_elec_mass_amu(), opts.gkyl_ion_mass_amu(), 
+				rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(), 
 				opts_d);
 
 			// friction_force test case only considers ion collisions to compare
@@ -652,7 +652,7 @@ namespace ImpurityTransport
 			if (opts.test_opt_int() != 5)
 			{
 				Collisions::collision_gpu(slots_d, bkg_d, true, dt, imp_stats_d,
-					rngs_d, opts.gkyl_elec_mass_amu(), opts.gkyl_ion_mass_amu(),
+					rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(),
 					opts_d);
 			}
 			return;

@@ -351,6 +351,8 @@ namespace Test
 
 		// Move each of the vectors we've created into our bkg object
 		bkg.move_into_times(test_t);
+		bkg.set_elec_mass_amu(opts.gkyl_elec_mass_amu());
+		bkg.set_ion_mass_amu(opts.gkyl_ion_mass_amu());
 		Zones::Zones zones {Background::single_zone(test_x, test_y, test_z,
 			test_grid_x, test_grid_y, test_grid_z, opts)};
 		bkg.move_into_zones(zones);

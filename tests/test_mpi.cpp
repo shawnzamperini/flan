@@ -313,6 +313,9 @@ void check_background_broadcast(const std::string& test_opt)
 	EXPECT_EQ(bkg.get_dim2(), want.get_dim2());
 	EXPECT_EQ(bkg.get_dim3(), want.get_dim3());
 	EXPECT_EQ(bkg.get_dim4(), want.get_dim4());
+	EXPECT_EQ(bkg.get_elec_mass_amu(), want.get_elec_mass_amu());
+	EXPECT_EQ(bkg.get_ion_mass_amu(), want.get_ion_mass_amu());
+	EXPECT_NE(want.get_ion_mass_amu(), 0);
 	EXPECT_EQ(bkg.get_t_min(), want.get_t_min());
 	EXPECT_EQ(bkg.get_t_max(), want.get_t_max());
 	EXPECT_EQ(bkg.get_x_min(0), want.get_x_min(0));

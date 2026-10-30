@@ -96,6 +96,10 @@ namespace Background
 		BkgFPType m_t_min {};
 		BkgFPType m_t_max {};
 
+		// Masses of the background electrons and main ions (amu)
+		double m_elec_mass_amu {};
+		double m_ion_mass_amu {};
+
 		void check_single_zone(const std::string_view caller) const;
 
 	public:
@@ -191,6 +195,10 @@ namespace Background
 		const Vectors::ZonedVector<BkgFPType>& get_b_x() const;
 		const Vectors::ZonedVector<BkgFPType>& get_b_y() const;
 		const Vectors::ZonedVector<BkgFPType>& get_b_z() const;
+		double get_elec_mass_amu() const;
+		double get_ion_mass_amu() const;
+		void set_elec_mass_amu(const double elec_mass_amu);
+		void set_ion_mass_amu(const double ion_mass_amu);
 		int get_dim1() const;
 		int get_dim2() const;
 		int get_dim3() const;

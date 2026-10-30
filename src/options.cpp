@@ -78,6 +78,7 @@ namespace Options
 		set_min_zbound_type(m_min_zbound_type);
 		set_max_zbound_type(m_max_zbound_type);
 		set_calc_grad_elec(m_calc_grad_elec);
+		set_s3x_chi_absorb(m_s3x_chi_absorb);
 	}
 
 	// Setter definitions. They're all the same, so just throwing together
@@ -145,20 +146,21 @@ namespace Options
 	/**
 	* Sets the bkg_source option.
 	*
-	* Source of the background plasma, either a built-in test background or
-	* a Gkeyll simulation.
+	* Source of the background plasma: a built-in test background, a
+	* Gkeyll simulation or a SOLEDGE3X simulation.
 	*
-	* Valid values are "test" and "gkeyll". An invalid value prints an error
-	* and leaves the option unchanged. Also sets the control integer
-	* returned by bkg_source_int() to 0 for "test", 1 for "gkeyll". An
-	* invalid value leaves the control integer unchanged.
+	* Valid values are "test", "gkeyll" and "soledge3x". An invalid value
+	* prints an error and leaves the option unchanged. Also sets the
+	* control integer returned by bkg_source_int() to 0 for "test", 1 for
+	* "gkeyll", 2 for "soledge3x". An invalid value leaves the control
+	* integer unchanged.
 	*
 	* @param bkg_source New value of the bkg_source option.
 	*/
 	void Options::set_bkg_source(std::string bkg_source) 
 	{
 		if (check_input<std::string>("bkg_source", bkg_source,
-			{"test", "gkeyll"}))
+			{"test", "gkeyll", "soledge3x"}))
 		{
 			m_bkg_source = bkg_source;
 		}
@@ -166,6 +168,7 @@ namespace Options
 		// Assign control integers
 		if (bkg_source == "test") m_bkg_source_int = 0;
 		else if (bkg_source == "gkeyll") m_bkg_source_int = 1;
+		else if (bkg_source == "soledge3x") m_bkg_source_int = 2;
 	}
 
 	/**
@@ -429,6 +432,111 @@ namespace Options
 		if (tbound_type == "absorbing") m_tbound_type_int = 0;
 		else if (tbound_type == "periodic") m_tbound_type_int = 1;
 	}
+	/**
+	* Sets the s3x_dir option.
+	*
+	* Directory containing the SOLEDGE3X mesh and plasma files.
+	*
+	* @param s3x_dir New value of the s3x_dir option.
+	*/
+	void Options::set_s3x_dir(std::string s3x_dir) 
+		{m_s3x_dir = s3x_dir;}
+
+	/**
+	* Sets the s3x_mesh_file option.
+	*
+	* Name of the SOLEDGE3X mesh file in s3x_dir.
+	*
+	* @param s3x_mesh_file New value of the s3x_mesh_file option.
+	*/
+	void Options::set_s3x_mesh_file(std::string s3x_mesh_file) 
+		{m_s3x_mesh_file = s3x_mesh_file;}
+
+	/**
+	* Sets the s3x_frame_start option.
+	*
+	* First SOLEDGE3X plasma frame to load, i.e., the number in
+	* plasma_%05d.h5.
+	*
+	* @param s3x_frame_start New value of the s3x_frame_start option.
+	*/
+	void Options::set_s3x_frame_start(int s3x_frame_start) 
+		{m_s3x_frame_start = s3x_frame_start;}
+
+	/**
+	* Sets the s3x_frame_end option.
+	*
+	* Last SOLEDGE3X plasma frame to load. The range from
+	* s3x_frame_start to s3x_frame_end is inclusive, and must have at least
+	* two frames.
+	*
+	* @param s3x_frame_end New value of the s3x_frame_end option.
+	*/
+	void Options::set_s3x_frame_end(int s3x_frame_end) 
+		{m_s3x_frame_end = s3x_frame_end;}
+
+	/**
+	* Sets the s3x_n0 option.
+	*
+	* SOLEDGE3X reference density (m^-3) that the plasma densities are
+	* normalized by. Must be set (> 0) for a SOLEDGE3X background.
+	*
+	* @param s3x_n0 New value of the s3x_n0 option.
+	*/
+	void Options::set_s3x_n0(double s3x_n0) 
+		{m_s3x_n0 = s3x_n0;}
+
+	/**
+	* Sets the s3x_T0 option.
+	*
+	* SOLEDGE3X reference temperature (eV) that the plasma temperatures
+	* and potential are normalized by. Must be set (> 0) for a SOLEDGE3X
+	* background.
+	*
+	* @param s3x_T0 New value of the s3x_T0 option.
+	*/
+	void Options::set_s3x_T0(double s3x_T0) 
+		{m_s3x_T0 = s3x_T0;}
+
+	/**
+	* Sets the s3x_tau0 option.
+	*
+	* SOLEDGE3X reference time (s) that the simulation time is normalized
+	* by. If not > 0, the inverse ion cyclotron frequency m_i / (e B0) is
+	* used, with B0 and m_i from the SOLEDGE3X files.
+	*
+	* @param s3x_tau0 New value of the s3x_tau0 option.
+	*/
+	void Options::set_s3x_tau0(double s3x_tau0) 
+		{m_s3x_tau0 = s3x_tau0;}
+
+	/**
+	* Sets the s3x_chi_absorb option.
+	*
+	* Whether particles are absorbed when they enter a cell inside the
+	* SOLEDGE3X wall (chi = 1).
+	*
+	* Valid values are "off" and "on". An invalid value prints an error and
+	* leaves the option unchanged. Also sets the control integer returned by
+	* s3x_chi_absorb_int() to 0 for "off", 1 for "on". An invalid value
+	* leaves the control integer unchanged.
+	*
+	* @param s3x_chi_absorb New value of the s3x_chi_absorb option.
+	*/
+	void Options::set_s3x_chi_absorb(std::string s3x_chi_absorb) 
+	{
+		// Only assign if valid option, leaving as default if not
+		if (check_input<std::string>("s3x_chi_absorb", s3x_chi_absorb, 
+			{"off", "on"}))
+		{
+			m_s3x_chi_absorb = s3x_chi_absorb;
+		}
+
+		// Assign control integers
+		if (s3x_chi_absorb == "off") m_s3x_chi_absorb_int = 0;
+		else if (s3x_chi_absorb == "on") m_s3x_chi_absorb_int = 1;
+	}
+
 
 	/**
 	* Sets the min_xbound_type option.
@@ -915,6 +1023,18 @@ namespace Options
 	*/
 	void Options::set_imp_zstart_val(double imp_zstart_val) 
 		{m_imp_zstart_val = imp_zstart_val;}
+
+	/**
+	* Sets the imp_zone_start_val option.
+	*
+	* Zone every impurity starts in, numbered from 1 like the SOLEDGE3X
+	* zones. The starting x, y and z are in that zone's coordinates. Only
+	* used for backgrounds with more than one zone.
+	*
+	* @param imp_zone_start_val New value of the imp_zone_start_val option.
+	*/
+	void Options::set_imp_zone_start_val(int imp_zone_start_val) 
+		{m_imp_zone_start_val = imp_zone_start_val;}
 
 	/**
 	* Sets the imp_zrange_min option.
@@ -1480,6 +1600,95 @@ namespace Options
 		{return m_calc_grad_elec;}
 
 	/**
+	* Returns the s3x_dir option.
+	*
+	* Directory containing the SOLEDGE3X mesh and plasma files.
+	*
+	* @return Value of the s3x_dir option.
+	*/
+	const std::string& Options::s3x_dir() const 
+		{return m_s3x_dir;}
+
+	/**
+	* Returns the s3x_mesh_file option.
+	*
+	* Name of the SOLEDGE3X mesh file in s3x_dir.
+	*
+	* @return Value of the s3x_mesh_file option.
+	*/
+	const std::string& Options::s3x_mesh_file() const 
+		{return m_s3x_mesh_file;}
+
+	/**
+	* Returns the s3x_frame_start option.
+	*
+	* First SOLEDGE3X plasma frame to load, i.e., the number in
+	* plasma_%05d.h5.
+	*
+	* @return Value of the s3x_frame_start option.
+	*/
+	int Options::s3x_frame_start() const 
+		{return m_s3x_frame_start;}
+
+	/**
+	* Returns the s3x_frame_end option.
+	*
+	* Last SOLEDGE3X plasma frame to load. The range from
+	* s3x_frame_start to s3x_frame_end is inclusive, and must have at least
+	* two frames.
+	*
+	* @return Value of the s3x_frame_end option.
+	*/
+	int Options::s3x_frame_end() const 
+		{return m_s3x_frame_end;}
+
+	/**
+	* Returns the s3x_n0 option.
+	*
+	* SOLEDGE3X reference density (m^-3) that the plasma densities are
+	* normalized by. Must be set (> 0) for a SOLEDGE3X background.
+	*
+	* @return Value of the s3x_n0 option.
+	*/
+	double Options::s3x_n0() const 
+		{return m_s3x_n0;}
+
+	/**
+	* Returns the s3x_T0 option.
+	*
+	* SOLEDGE3X reference temperature (eV) that the plasma temperatures
+	* and potential are normalized by. Must be set (> 0) for a SOLEDGE3X
+	* background.
+	*
+	* @return Value of the s3x_T0 option.
+	*/
+	double Options::s3x_T0() const 
+		{return m_s3x_T0;}
+
+	/**
+	* Returns the s3x_tau0 option.
+	*
+	* SOLEDGE3X reference time (s) that the simulation time is normalized
+	* by. If not > 0, the inverse ion cyclotron frequency m_i / (e B0) is
+	* used, with B0 and m_i from the SOLEDGE3X files.
+	*
+	* @return Value of the s3x_tau0 option.
+	*/
+	double Options::s3x_tau0() const 
+		{return m_s3x_tau0;}
+
+	/**
+	* Returns the s3x_chi_absorb option.
+	*
+	* Whether particles are absorbed when they enter a cell inside the
+	* SOLEDGE3X wall (chi = 1).
+	*
+	* @return Value of the s3x_chi_absorb option.
+	*/
+	const std::string& Options::s3x_chi_absorb() const 
+		{return m_s3x_chi_absorb;}
+
+	/**
 	* Returns the min_ne option.
 	*
 	* Lower limit on the electron density (m^-3).
@@ -1858,6 +2067,17 @@ namespace Options
 	*/
 	double Options::imp_zstart_val() const 
 		{return m_imp_zstart_val;}
+
+	/**
+	* Returns the imp_zone_start_val option.
+	*
+	* Zone every impurity starts in, numbered from 1 like the SOLEDGE3X
+	* zones.
+	*
+	* @return Value of the imp_zone_start_val option.
+	*/
+	int Options::imp_zone_start_val() const 
+		{return m_imp_zone_start_val;}
 
 	/**
 	* Returns the imp_zrange_min option.
@@ -2406,6 +2626,9 @@ namespace Options
 	*/
 	int Options::calc_grad_elec_int() const
 		{return get_control_int("calc_grad_elec", m_calc_grad_elec_int);}
+
+	int Options::s3x_chi_absorb_int() const
+		{return get_control_int("s3x_chi_absorb", m_s3x_chi_absorb_int);}
 
 	// Setter declarations for internal control variables
 

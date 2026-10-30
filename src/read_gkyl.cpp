@@ -333,6 +333,8 @@ namespace Gkyl
 
 		// Move each of the vectors we've created into our bkg object
 		bkg.move_into_times(gkyl_times);
+		bkg.set_elec_mass_amu(opts.gkyl_elec_mass_amu());
+		bkg.set_ion_mass_amu(opts.gkyl_ion_mass_amu());
 		Zones::Zones zones {Background::single_zone(gkyl_x, gkyl_y, gkyl_z,
 			gkyl_grid_x, gkyl_grid_y, gkyl_grid_z, opts)};
 		bkg.move_into_zones(zones);

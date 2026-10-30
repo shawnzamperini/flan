@@ -53,6 +53,16 @@ namespace Options
 		std::string m_gkyl_file_type            {"binary"};
 		std::string m_gkyl_moment_type    {"bimaxwellian"};
 		std::string m_calc_grad_elec               {"off"};
+
+		// Options related to reading in SOLEDGE3X files
+		std::string m_s3x_dir                {"undefined"};
+		std::string m_s3x_mesh_file        {"mesh_S3X.h5"};
+		int m_s3x_frame_start                          {0};
+		int m_s3x_frame_end                            {1};
+		double m_s3x_n0                             {-1.0};
+		double m_s3x_T0                             {-1.0};
+		double m_s3x_tau0                           {-1.0};
+		std::string m_s3x_chi_absorb                {"on"};
 		
 		// General background options
 		double m_min_ne                             {1e15};
@@ -97,6 +107,7 @@ namespace Options
 		double m_imp_yrange_max                      {0.0};
 		std::string m_imp_zstart_opt      {"single_value"};
 		double m_imp_zstart_val                      {0.0};
+		int m_imp_zone_start_val                       {1};
 		double m_imp_zrange_min                      {0.0};
 		double m_imp_zrange_max                      {0.0};
 		std::string m_imp_temp_start_opt      {"main_ion"};
@@ -151,6 +162,7 @@ namespace Options
 		int m_min_zbound_type_int		{-1};
 		int m_max_zbound_type_int		{-1};
 		int m_calc_grad_elec_int		{-1};
+		int m_s3x_chi_absorb_int                      {-1};
 
 		template <typename T>
 		bool check_input(const std::string& var, const T& value, 
@@ -183,6 +195,14 @@ namespace Options
 		void set_gkyl_file_type(std::string gkyl_file_type);
 		void set_gkyl_moment_type(std::string gkyl_moment_type);
 		void set_calc_grad_elec(std::string calc_grad_elec);
+		void set_s3x_dir(std::string s3x_dir);
+		void set_s3x_mesh_file(std::string s3x_mesh_file);
+		void set_s3x_frame_start(int s3x_frame_start);
+		void set_s3x_frame_end(int s3x_frame_end);
+		void set_s3x_n0(double s3x_n0);
+		void set_s3x_T0(double s3x_T0);
+		void set_s3x_tau0(double s3x_tau0);
+		void set_s3x_chi_absorb(std::string s3x_chi_absorb);
 		void set_min_ne(double min_ne);
 		void set_min_te(double min_te);
 		void set_min_ti(double min_ti);
@@ -219,6 +239,7 @@ namespace Options
 		void set_imp_yrange_max(double imp_yrange_max);
 		void set_imp_zstart_opt(std::string imp_zstart_opt);
 		void set_imp_zstart_val(double imp_zstart_val);
+		void set_imp_zone_start_val(int imp_zone_start_val);
 		void set_imp_zrange_min(double imp_zrange_min);
 		void set_imp_zrange_max(double imp_zrange_max);
 		void set_imp_temp_start_opt(std::string imp_temp_start_opt);
@@ -260,6 +281,14 @@ namespace Options
 		const std::string& gkyl_file_type() const;
 		const std::string& gkyl_moment_type() const;
 		const std::string& calc_grad_elec() const;
+		const std::string& s3x_dir() const;
+		const std::string& s3x_mesh_file() const;
+		int s3x_frame_start() const;
+		int s3x_frame_end() const;
+		double s3x_n0() const;
+		double s3x_T0() const;
+		double s3x_tau0() const;
+		const std::string& s3x_chi_absorb() const;
 		double min_ne() const;
 		double min_te() const;
 		double min_ti() const;
@@ -296,6 +325,7 @@ namespace Options
 		double imp_yrange_max() const;
 		const std::string& imp_zstart_opt() const;
 		double imp_zstart_val() const;
+		int imp_zone_start_val() const;
 		double imp_zrange_min() const;
 		double imp_zrange_max() const;
 		const std::string& imp_temp_start_opt() const;
@@ -347,6 +377,7 @@ namespace Options
 		int min_zbound_type_int() const;
 		int max_zbound_type_int() const;
 		int calc_grad_elec_int() const;
+		int s3x_chi_absorb_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);

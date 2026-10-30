@@ -209,6 +209,62 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "s3x_dir")
+			{
+				auto set_func = std::bind(&Options::set_s3x_dir, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "s3x_mesh_file")
+			{
+				auto set_func = std::bind(&Options::set_s3x_mesh_file, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "s3x_frame_start")
+			{
+				auto set_func = std::bind(&Options::set_s3x_frame_start, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
+			else if (key == "s3x_frame_end")
+			{
+				auto set_func = std::bind(&Options::set_s3x_frame_end, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
+			else if (key == "s3x_n0")
+			{
+				auto set_func = std::bind(&Options::set_s3x_n0, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "s3x_T0")
+			{
+				auto set_func = std::bind(&Options::set_s3x_T0, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "s3x_tau0")
+			{
+				auto set_func = std::bind(&Options::set_s3x_tau0, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "s3x_chi_absorb")
+			{
+				auto set_func = std::bind(&Options::set_s3x_chi_absorb, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "min_ne")
 			{
 				auto set_func = std::bind(&Options::set_min_ne, &opts,
@@ -438,6 +494,13 @@ namespace Options
 				auto set_func = std::bind(&Options::set_imp_zstart_val, &opts,
 					std::placeholders::_1);
 				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_zone_start_val")
+			{
+				auto set_func = std::bind(&Options::set_imp_zone_start_val,
+					&opts, std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
 			}
 
 			else if (key == "imp_zrange_min")

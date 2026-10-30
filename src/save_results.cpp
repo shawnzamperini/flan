@@ -421,6 +421,24 @@ namespace SaveResults
 		save_string(input_group, opts.calc_grad_elec(), "calc_grad_elec", 
 			dim_str, "calculate the electric field gradient option");
 
+		// Options related to reading in SOLEDGE3X files
+		save_string(input_group, opts.s3x_dir(), "s3x_dir", dim_str,
+			"directory containing SOLEDGE3X data");
+		save_string(input_group, opts.s3x_mesh_file(), "s3x_mesh_file", dim_str,
+			"name of SOLEDGE3X mesh file");
+		save_scalar(input_group, opts.s3x_frame_start(), "s3x_frame_start", dim_scalar,
+			"first SOLEDGE3X plasma frame to load", "");
+		save_scalar(input_group, opts.s3x_frame_end(), "s3x_frame_end", dim_scalar,
+			"last SOLEDGE3X plasma frame to load", "");
+		save_scalar(input_group, opts.s3x_n0(), "s3x_n0", dim_scalar,
+			"SOLEDGE3X reference density", "(m-3)");
+		save_scalar(input_group, opts.s3x_T0(), "s3x_T0", dim_scalar,
+			"SOLEDGE3X reference temperature", "(eV)");
+		save_scalar(input_group, opts.s3x_tau0(), "s3x_tau0", dim_scalar,
+			"SOLEDGE3X reference time (not > 0 = 1 / ion cyclotron frequency)", "(s)");
+		save_string(input_group, opts.s3x_chi_absorb(), "s3x_chi_absorb", dim_str,
+			"absorb particles inside the SOLEDGE3X wall option");
+
 		// Geometry and boundaries
 		save_string(input_group, opts.tbound_type(), "tbound_type", 
 			dim_str, "time boundary condition");
@@ -506,6 +524,9 @@ namespace SaveResults
 		save_scalar(input_group, opts.imp_zstart_val(), "imp_zstart_val", 
 			dim_scalar, 
 			"impurity starting z (imp_zstart_opt = single_value)", "(?)");
+		save_scalar(input_group, opts.imp_zone_start_val(),
+			"imp_zone_start_val", dim_scalar,
+			"zone impurities start in (numbered from 1)", "");
 		save_scalar(input_group, opts.imp_zrange_min(), "imp_zrange_min", 
 			dim_scalar, 
 			"impurity starting z minimum (imp_zstart_opt = range)", "(?)");

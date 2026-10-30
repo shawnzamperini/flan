@@ -276,6 +276,26 @@ namespace Background
 	///@}
 
 	/**
+	* @name Species masses
+	*
+	* Get or set the masses of the background electrons and main ions
+	* (amu), which the impurities collide with. The reader sets them, e.g.,
+	* from the gkyl_*_mass_amu options for Gkeyll or from the plasma files
+	* for SOLEDGE3X.
+	*/
+	///@{
+	double Background::get_elec_mass_amu() const {return m_elec_mass_amu;}
+
+	double Background::get_ion_mass_amu() const {return m_ion_mass_amu;}
+
+	void Background::set_elec_mass_amu(const double elec_mass_amu)
+		{m_elec_mass_amu = elec_mass_amu;}
+
+	void Background::set_ion_mass_amu(const double ion_mass_amu)
+		{m_ion_mass_amu = ion_mass_amu;}
+	///@}
+
+	/**
 	* Stops the run with Errors::fatal_error if the background does not
 	* have exactly one zone.
 	*
@@ -1305,7 +1325,8 @@ namespace Background
 	* Broadcasts the background from rank 0 to every other MPI rank.
 	*
 	* Every rank must call this. After it returns, every rank holds a copy
-	* of the number of times, the time bounds, the times, the zones (with
+	* of the number of times, the time bounds, the species masses, the
+	* times, the zones (with
 	* their computational grids), the geometry data and the plasma and
 	* field data loaded on rank 0. Not broadcast are bR, the covariant
 	* magnetic field components (b_x, b_y, b_z) and the electric field
@@ -1325,6 +1346,10 @@ namespace Background
 		const MPI_Datatype bkg_type {mpi_type<BkgFPType>::type};
 		MPI_Bcast(&m_t_min, 1, bkg_type, 0, comm);
 		MPI_Bcast(&m_t_max, 1, bkg_type, 0, comm);
+
+		// Species masses
+		MPI_Bcast(&m_elec_mass_amu, 1, MPI_DOUBLE, 0, comm);
+		MPI_Bcast(&m_ion_mass_amu, 1, MPI_DOUBLE, 0, comm);
 
 		// Broadcast the times and the zones, which hold the computational
 		// grids

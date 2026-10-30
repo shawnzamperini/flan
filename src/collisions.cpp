@@ -441,9 +441,9 @@ namespace Collisions
 	* average s in each cell can be calculated later.
 	*
 	* @param slots Particle slots. The velocities are updated in place.
-	* @param bkg Background plasma.
-	* @param opts Simulation options, used for the background masses
-	*        (gkyl_elec_mass_amu, gkyl_ion_mass_amu) and min_ti.
+	* @param bkg Background plasma, which also holds the masses of the
+	*        background electrons and ions.
+	* @param opts Simulation options, used for min_ti.
 	* @param elec If true, collide with electrons (Te). Otherwise collide
 	*        with ions (Ti, limited to at least min_ti).
 	* @param dt Time step (s).
@@ -530,12 +530,12 @@ namespace Collisions
 			double T {};
 			if (elec)
 			{
-				mass_kg = opts.gkyl_elec_mass_amu() * Constants::amu_to_kg;	
+				mass_kg = bkg.get_elec_mass_amu() * Constants::amu_to_kg;	
 				T = Te;
 			}
 			else
 			{
-				mass_kg = opts.gkyl_ion_mass_amu() * Constants::amu_to_kg;	
+				mass_kg = bkg.get_ion_mass_amu() * Constants::amu_to_kg;	
 				T = bkg.interp_ti(zone, t, x, y, z); 
 				T = std::max(opts.min_ti(), T);
 			}
