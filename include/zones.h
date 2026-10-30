@@ -9,6 +9,8 @@
 #include <array>
 #include <vector>
 
+#include "vectors.h"
+
 #ifndef __CUDACC__
 #include "mpi.h"
 #endif
@@ -37,6 +39,28 @@ namespace Zones
 	/// Face code for a face where particles are put back in at the core
 	inline constexpr int face_core {-2};
 
+	/// A cell of a zone. i, j and k may be ghost cell indices.
+	struct Cell
+	{
+		int zone {};
+		int i {};
+		int j {};
+		int k {};
+
+		bool operator==(const Cell& other) const
+		{
+			return zone == other.zone && i == other.i && j == other.j
+				&& k == other.k;
+		}
+	};
+
+	/// A ghost cell and the interior cells its value is the average of
+	struct GhostCell
+	{
+		Cell ghost {};
+		std::vector<Cell> sources {};
+	};
+
 	/**
 	* Describes how the simulation volume is split into logically
 	* rectangular zones and how the zones connect.
@@ -63,6 +87,17 @@ namespace Zones
 		std::vector<std::vector<double>> m_grid_y {};	///< y cell edges
 		std::vector<std::vector<double>> m_grid_z {};	///< z cell edges
 		std::array<std::vector<int>, num_faces> m_faces {};	///< Face codes
+
+		/// Every ghost cell and its sources, built by fill_ghosts the first
+		/// time it's needed and cleared whenever the zones change
+		mutable std::vector<GhostCell> m_ghost_cells {};
+
+		bool in_range(const Cell& cell, const int dim) const;
+
+		bool step_across(Cell& cell, const std::array<int, 3>& order,
+			const int ndims) const;
+
+		void build_ghost_cells() const;
 
 	public:
 
@@ -129,6 +164,11 @@ namespace Zones
 		std::vector<int> get_core_zones(const Face face) const;
 
 		void validate() const;
+
+		std::vector<Cell> resolve_cell(const Cell& cell) const;
+
+		template <typename T>
+		void fill_ghosts(Vectors::ZonedVector<T>& v) const;
 
 #ifndef __CUDACC__
 		void broadcast(MPI_Comm comm);

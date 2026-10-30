@@ -22,6 +22,7 @@
 #include "errors.h"
 #include "mpi.h"
 #include "utilities.h"
+#include "vectors.h"
 #include "zones.h"
 
 namespace Zones
@@ -73,6 +74,7 @@ namespace Zones
 		m_grid_y.push_back(std::move(grid_y));
 		m_grid_z.push_back(std::move(grid_z));
 		for (auto& faces : m_faces) faces.push_back(face_absorbing);
+		m_ghost_cells.clear();
 
 		return get_nzones() - 1;
 	}
@@ -88,6 +90,7 @@ namespace Zones
 	void Zones::set_face(const int zone, const Face face, const int code)
 	{
 		m_faces[face][zone] = code;
+		m_ghost_cells.clear();
 	}
 
 	/**
@@ -376,6 +379,216 @@ namespace Zones
 	}
 
 	/**
+	* Checks whether a cell's index in one dimension is inside its zone,
+	* i.e., not a ghost cell index.
+	*
+	* @param cell Cell to check.
+	* @param dim Dimension to check: 0 = x, 1 = y, 2 = z.
+	* @return True if the index is between 0 and the number of cells.
+	*/
+	bool Zones::in_range(const Cell& cell, const int dim) const
+	{
+		const std::array<int, 3> idx {cell.i, cell.j, cell.k};
+		return idx[dim] >= 0 && idx[dim] < get_n(cell.zone, dim);
+	}
+
+	/**
+	* Moves a cell across zone faces until its indices are inside a zone,
+	* one dimension at a time in the given order.
+	*
+	* For each dimension in order, while the cell's index is past one of
+	* the zone's faces in that dimension, the cell moves into the zone
+	* across that face and the index is shifted into that zone's frame
+	* (e.g., i < 0 becomes nx(neighbor) + i). Several steps are needed
+	* when a neighbor is thinner than the distance past the face. The other
+	* two indices don't change, since zones that share a face have the same
+	* cells along it.
+	*
+	* @param[in,out] cell Cell to move. Only valid if true is returned.
+	* @param order Dimensions to move in, in order (0 = x, 1 = y, 2 = z).
+	* @param ndims Number of entries of order to use.
+	* @return False if an absorbing or core face was hit, which has nothing
+	*         across it.
+	*/
+	bool Zones::step_across(Cell& cell, const std::array<int, 3>& order,
+		const int ndims) const
+	{
+		// Far more steps than any real zone layout needs
+		constexpr int max_steps {100};
+
+		for (int n {}; n < ndims; ++n)
+		{
+			const int dim {order[n]};
+			std::array<int*, 3> idx {&cell.i, &cell.j, &cell.k};
+			int steps {};
+			while (!in_range(cell, dim))
+			{
+				const bool past_max {*idx[dim] >= get_n(cell.zone, dim)};
+				const int face {2 * dim + past_max};
+				const int code {m_faces[face][cell.zone]};
+				if (code < 0) return false;
+
+				// Shift into the frame of the zone across the face
+				if (past_max) *idx[dim] -= get_n(cell.zone, dim);
+				else *idx[dim] += get_n(code, dim);
+				cell.zone = code;
+
+				if (++steps > max_steps)
+				{
+					Errors::fatal_error("A ghost cell of zone "
+						+ std::to_string(cell.zone) + " didn't reach the "
+						"inside of a zone after " + std::to_string(max_steps)
+						+ " steps across zone faces.");
+				}
+			}
+		}
+		return true;
+	}
+
+	/**
+	* Finds the interior cells that a cell's value comes from.
+	*
+	* An interior cell is its own source. A ghost cell past one face is a
+	* copy of the cell it lands on after stepping across the faces (see
+	* step_across). A ghost cell past faces in two or three dimensions (a
+	* corner ghost) is stepped across in every order of those dimensions,
+	* and its sources are the different cells reached:
+	*
+	* - Normally every order reaches the same cell, which is the source.
+	* - If some orders hit an absorbing or core face, the cells the others
+	*   reach are used.
+	* - If orders reach different cells, as at an X-point where the cells
+	*   meeting there aren't a regular 2x2 block, the value is the average
+	*   of them.
+	*
+	* If no order reaches an interior cell (e.g., past an absorbing face),
+	* the source is the nearest interior cell of the cell's own zone, so
+	* the ghost copies the edge of the zone.
+	*
+	* @param cell Cell to resolve.
+	* @return The interior cells whose average is the cell's value.
+	*/
+	std::vector<Cell> Zones::resolve_cell(const Cell& cell) const
+	{
+		// Dimensions the cell is outside its zone in
+		std::array<int, 3> out {};
+		int nout {};
+		for (int dim {}; dim < 3; ++dim)
+		{
+			if (!in_range(cell, dim)) out[nout++] = dim;
+		}
+		if (nout == 0) return {cell};
+
+		// Step across the faces in every order of those dimensions,
+		// keeping each different cell reached
+		std::vector<Cell> sources {};
+		do
+		{
+			Cell c {cell};
+			if (step_across(c, out, nout)
+				&& std::ranges::find(sources, c) == sources.end())
+			{
+				sources.push_back(c);
+			}
+		} while (std::next_permutation(out.begin(), out.begin() + nout));
+
+		// Nothing across the faces, so use the zone's own edge
+		if (sources.empty())
+		{
+			Cell c {cell};
+			c.i = std::clamp(c.i, 0, get_nx(c.zone) - 1);
+			c.j = std::clamp(c.j, 0, get_ny(c.zone) - 1);
+			c.k = std::clamp(c.k, 0, get_nz(c.zone) - 1);
+			sources.push_back(c);
+		}
+		return sources;
+	}
+
+	/**
+	* Finds the sources of every ghost cell of every zone with
+	* resolve_cell and stores them in m_ghost_cells.
+	*/
+	void Zones::build_ghost_cells() const
+	{
+		m_ghost_cells.clear();
+		const int g {m_ghost};
+		for (int zone {}; zone < get_nzones(); ++zone)
+		{
+			for (int i {-g}; i < get_nx(zone) + g; ++i)
+			for (int j {-g}; j < get_ny(zone) + g; ++j)
+			for (int k {-g}; k < get_nz(zone) + g; ++k)
+			{
+				const Cell cell {zone, i, j, k};
+				if (in_range(cell, 0) && in_range(cell, 1)
+					&& in_range(cell, 2))
+				{
+					continue;
+				}
+				m_ghost_cells.push_back({cell, resolve_cell(cell)});
+			}
+		}
+	}
+
+	/**
+	* Fills the ghost cells of a ZonedVector from the zones around them.
+	*
+	* Each ghost cell gets the value (or average of values) of its sources
+	* from resolve_cell, for every entry of the leading dimension (e.g.,
+	* every time frame). Copying is correct for scalars, Cartesian vector
+	* components and the basis vectors, since crossing a face only shifts a
+	* computational coordinate by a constant. The sources are found the
+	* first time this is called and reused after that.
+	*
+	* v must have the same zones and ghost width as this, otherwise the
+	* run is stopped with Errors::fatal_error. Without ghost cells (e.g., a
+	* Gkeyll background) this does nothing.
+	*
+	* @tparam T Type of the values.
+	* @param v Vector whose ghost cells are filled.
+	*/
+	template <typename T>
+	void Zones::fill_ghosts(Vectors::ZonedVector<T>& v) const
+	{
+		bool same {v.get_nzones() == get_nzones()
+			&& v.get_ghost() == m_ghost};
+		for (int zone {}; same && zone < get_nzones(); ++zone)
+		{
+			same = v.get_nx(zone) == get_nx(zone)
+				&& v.get_ny(zone) == get_ny(zone)
+				&& v.get_nz(zone) == get_nz(zone);
+		}
+		if (!same)
+		{
+			Errors::fatal_error("fill_ghosts was given a ZonedVector whose "
+				"zones or ghost width don't match the zones.");
+		}
+		if (m_ghost == 0) return;
+
+		if (m_ghost_cells.empty()) build_ghost_cells();
+
+		for (int t {}; t < v.get_dim1(); ++t)
+		{
+			for (const auto& gc : m_ghost_cells)
+			{
+				const Cell& g {gc.ghost};
+				if (gc.sources.size() == 1)
+				{
+					const Cell& s {gc.sources[0]};
+					v(g.zone, t, g.i, g.j, g.k) = v(s.zone, t, s.i, s.j, s.k);
+				}
+				else
+				{
+					double sum {};
+					for (const auto& s : gc.sources)
+						sum += v(s.zone, t, s.i, s.j, s.k);
+					v(g.zone, t, g.i, g.j, g.k)
+						= static_cast<T>(sum / gc.sources.size());
+				}
+			}
+		}
+	}
+
+	/**
 	* Broadcasts the zones from rank 0 to every other rank.
 	*
 	* Must be called by every rank in comm. The other ranks' zones are
@@ -398,6 +611,7 @@ namespace Zones
 		}
 		for (auto& faces : m_faces)
 			Utilities::mpi_broadcast_vector(faces, 0, comm);
+		m_ghost_cells.clear();
 	}
 
 	/**
@@ -423,3 +637,11 @@ namespace Zones
 			+ " has no matching face code.");
 	}
 }
+
+// Instantiate the templates since the definitions are in this file
+template void Zones::Zones::fill_ghosts<int>(
+	Vectors::ZonedVector<int>& v) const;
+template void Zones::Zones::fill_ghosts<float>(
+	Vectors::ZonedVector<float>& v) const;
+template void Zones::Zones::fill_ghosts<double>(
+	Vectors::ZonedVector<double>& v) const;

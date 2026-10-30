@@ -202,3 +202,232 @@ TEST(ZonesCPU, SlotsZone)
 	EXPECT_EQ(slots.zone()[2], 7);
 	EXPECT_EQ(slots.zone()[1], 0);
 }
+
+
+// -------------------------------------------------------------------------
+// Ghost cells
+// -------------------------------------------------------------------------
+
+namespace
+{
+	// Zones in index space with the given ghost width, the same layout as
+	// in test_cross_zones_cpu:
+	//
+	//        +-------+
+	//        |   2   |  ny = 5
+	//        +-------+
+	//   core |   0   | 1 |  ny = 6
+	//        +-------+---+
+	//         nx = 4  nx = 3
+	//
+	// Every zone is periodic in z with nz = 3, and every other face in x
+	// and y is absorbing.
+	Zones::Zones make_three_zones(int ghost)
+	{
+		Zones::Zones zones(ghost);
+		add_index_zone(zones, 4, 6, 3);
+		add_index_zone(zones, 3, 6, 3);
+		add_index_zone(zones, 4, 5, 3);
+		zones.set_face(0, Zones::xmax, 1);
+		zones.set_face(1, Zones::xmin, 0);
+		zones.set_face(0, Zones::ymax, 2);
+		zones.set_face(2, Zones::ymin, 0);
+		zones.set_face(0, Zones::xmin, Zones::face_core);
+		for (int z {}; z < 3; ++z)
+		{
+			zones.set_face(z, Zones::zmin, z);
+			zones.set_face(z, Zones::zmax, z);
+		}
+		zones.validate();
+		return zones;
+	}
+
+	// Where each zone of make_three_zones sits in a global (x, y) index
+	// space
+	const std::array<std::array<int, 2>, 3> three_zone_offsets
+		{{{0, 0}, {4, 0}, {0, 6}}};
+
+	// A field that is linear in the global indices and periodic in k
+	double global_field(int t, int gi, int gj, int k, int nz)
+	{
+		const int kk {((k % nz) + nz) % nz};
+		return 1.0 + 100.0 * t + 2.0 * gi + 3.0 * gj + 5.0 * kk;
+	}
+
+	// ZonedVector shaped like zones, with every interior cell set to
+	// global_field and every ghost cell set to -1
+	Vectors::ZonedVector<double> make_global_field(const Zones::Zones& zones,
+		int dim1)
+	{
+		const int g {zones.get_ghost()};
+		Vectors::ZonedVector<double> v(dim1, zones.get_nx_all(),
+			zones.get_ny_all(), zones.get_nz_all(), g);
+		for (int z {}; z < zones.get_nzones(); ++z)
+		for (int t {}; t < dim1; ++t)
+		for (int i {-g}; i < zones.get_nx(z) + g; ++i)
+		for (int j {-g}; j < zones.get_ny(z) + g; ++j)
+		for (int k {-g}; k < zones.get_nz(z) + g; ++k)
+		{
+			const bool interior {i >= 0 && i < zones.get_nx(z) && j >= 0
+				&& j < zones.get_ny(z) && k >= 0 && k < zones.get_nz(z)};
+			v(z, t, i, j, k) = interior
+				? global_field(t, i + three_zone_offsets[z][0],
+					j + three_zone_offsets[z][1], k, zones.get_nz(z))
+				: -1.0;
+		}
+		return v;
+	}
+}
+
+// Ghost cells past one face shared with another zone (or periodic in z)
+// get the value at their position in the global layout, in every time
+// frame
+TEST(ZonesCPU, FillGhostsEdges)
+{
+	const Zones::Zones zones {make_three_zones(2)};
+	auto v {make_global_field(zones, 2)};
+	zones.fill_ghosts(v);
+
+	int checked {};
+	for (int z {}; z < 3; ++z)
+	for (int t {}; t < 2; ++t)
+	for (int i {-2}; i < zones.get_nx(z) + 2; ++i)
+	for (int j {-2}; j < zones.get_ny(z) + 2; ++j)
+	for (int k {-2}; k < zones.get_nz(z) + 2; ++k)
+	{
+		const bool out_x {i < 0 || i >= zones.get_nx(z)};
+		const bool out_y {j < 0 || j >= zones.get_ny(z)};
+		if (out_x && out_y) continue;
+
+		// Only ghosts across a face shared with another zone
+		if (out_x && zones.get_face(z, i < 0 ? Zones::xmin : Zones::xmax) < 0)
+			continue;
+		if (out_y && zones.get_face(z, j < 0 ? Zones::ymin : Zones::ymax) < 0)
+			continue;
+
+		EXPECT_DOUBLE_EQ(v(z, t, i, j, k), global_field(t,
+			i + three_zone_offsets[z][0], j + three_zone_offsets[z][1], k,
+			zones.get_nz(z))) << z << " " << t << " " << i << " " << j
+			<< " " << k;
+		++checked;
+	}
+	EXPECT_GT(checked, 0);
+}
+
+// Ghost cells past absorbing and core faces copy the zone's edge cell
+TEST(ZonesCPU, FillGhostsBoundaryFaces)
+{
+	const Zones::Zones zones {make_three_zones(2)};
+	auto v {make_global_field(zones, 1)};
+	zones.fill_ghosts(v);
+
+	// Core face of zone 0
+	EXPECT_DOUBLE_EQ(v(0, 0, -1, 2, 1), v(0, 0, 0, 2, 1));
+	EXPECT_DOUBLE_EQ(v(0, 0, -2, 2, 1), v(0, 0, 0, 2, 1));
+
+	// Absorbing faces of zone 1
+	EXPECT_DOUBLE_EQ(v(1, 0, 4, 3, 0), v(1, 0, 2, 3, 0));
+	EXPECT_DOUBLE_EQ(v(1, 0, 1, -1, 0), v(1, 0, 1, 0, 0));
+}
+
+// Corner ghosts. Where only one order of crossing reaches another zone,
+// that's the source. Where neither does, the zone's own corner cell is.
+TEST(ZonesCPU, FillGhostsCorners)
+{
+	const Zones::Zones zones {make_three_zones(2)};
+	auto v {make_global_field(zones, 1)};
+	zones.fill_ghosts(v);
+
+	// Zone 1 past xmin and ymax: through zone 0 into zone 2, at global
+	// (3, 6). Crossing ymax first hits an absorbing face.
+	EXPECT_DOUBLE_EQ(v(1, 0, -1, 6, 1), global_field(0, 3, 6, 1, 3));
+
+	// Zone 2 past xmax and ymin: through zone 0 into zone 1, at global
+	// (4, 5)
+	EXPECT_DOUBLE_EQ(v(2, 0, 4, -1, 1), global_field(0, 4, 5, 1, 3));
+
+	// Zone 0 past xmax and ymax: both orders hit an absorbing face, so it
+	// copies its own corner cell
+	EXPECT_DOUBLE_EQ(v(0, 0, 4, 6, 1), v(0, 0, 3, 5, 1));
+}
+
+// Where the two orders of crossing reach different cells, as at an
+// X-point, the ghost is the average of them:
+//
+//   C | E
+//   --+--
+//   A | B   with D above B
+//
+// Past A's xmax then ymax is D, past A's ymax then xmax is E.
+TEST(ZonesCPU, FillGhostsXPointAverage)
+{
+	Zones::Zones zones(1);
+	for (int z {}; z < 5; ++z) add_index_zone(zones, 2, 2, 1);
+	const int A {0}, B {1}, C {2}, D {3}, E {4};
+	zones.set_face(A, Zones::xmax, B);
+	zones.set_face(B, Zones::xmin, A);
+	zones.set_face(A, Zones::ymax, C);
+	zones.set_face(C, Zones::ymin, A);
+	zones.set_face(B, Zones::ymax, D);
+	zones.set_face(D, Zones::ymin, B);
+	zones.set_face(C, Zones::xmax, E);
+	zones.set_face(E, Zones::xmin, C);
+	zones.validate();
+
+	EXPECT_EQ(zones.resolve_cell({A, 2, 2, 0}),
+		(std::vector<Zones::Cell> {{D, 0, 0, 0}, {E, 0, 0, 0}}));
+
+	Vectors::ZonedVector<double> v(1, zones.get_nx_all(),
+		zones.get_ny_all(), zones.get_nz_all(), 1);
+	v(D, 0, 0, 0) = 10.0;
+	v(E, 0, 0, 0) = 20.0;
+	zones.fill_ghosts(v);
+	EXPECT_DOUBLE_EQ(v(A, 0, 2, 2, 0), 15.0);
+}
+
+// A neighbor thinner than the ghost width is stepped through into the zone
+// beyond it
+TEST(ZonesCPU, FillGhostsThinNeighbor)
+{
+	Zones::Zones zones(2);
+	add_index_zone(zones, 4, 3, 1);
+	add_index_zone(zones, 1, 3, 1);
+	add_index_zone(zones, 3, 3, 1);
+	zones.set_face(0, Zones::xmax, 1);
+	zones.set_face(1, Zones::xmin, 0);
+	zones.set_face(1, Zones::xmax, 2);
+	zones.set_face(2, Zones::xmin, 1);
+	zones.validate();
+
+	EXPECT_EQ(zones.resolve_cell({0, 5, 1, 0}),
+		(std::vector<Zones::Cell> {{2, 0, 1, 0}}));
+	EXPECT_EQ(zones.resolve_cell({2, -2, 1, 0}),
+		(std::vector<Zones::Cell> {{0, 3, 1, 0}}));
+}
+
+// Every ghost cell of the real DIII-D mesh resolves to interior cells
+TEST(ZonesCPU, FillGhostsDIIIDMesh)
+{
+	const Zones::Zones zones {make_diiid_zones()};
+	Vectors::ZonedVector<double> v(1, zones.get_nx_all(),
+		zones.get_ny_all(), zones.get_nz_all(), 2);
+	for (int z {}; z < zones.get_nzones(); ++z)
+	for (int i {}; i < zones.get_nx(z); ++i)
+	for (int j {}; j < zones.get_ny(z); ++j)
+	for (int k {}; k < zones.get_nz(z); ++k)
+	{
+		v(z, i, j, k) = 1.0;
+	}
+	zones.fill_ghosts(v);
+	for (const double val : v.get_data()) ASSERT_DOUBLE_EQ(val, 1.0);
+}
+
+// A vector that doesn't match the zones stops the run
+TEST(ZonesCPU, FillGhostsMismatch)
+{
+	const Zones::Zones zones {make_three_zones(2)};
+	Vectors::ZonedVector<double> v(1, zones.get_nx_all(),
+		zones.get_ny_all(), zones.get_nz_all(), 1);
+	EXPECT_EXIT(zones.fill_ghosts(v), testing::ExitedWithCode(EXIT_FAILURE),
+		"don't match the zones");
+}
