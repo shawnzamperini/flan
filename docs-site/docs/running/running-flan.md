@@ -151,6 +151,52 @@ fp = flan_plots.FlanPlots("my_case.nc")
 fp.plot_frame_xy("nz", frame=0, z0=0.0)  # Impurity density at z = 0
 ```
 
+### Gkeyll files
+
+A run with a Gkeyll background reads the Gkeyll output files from `gkyl_dir`.
+Each file name starts with `gkyl_casename`. In the names below, `<case>` is
+`gkyl_casename`, `<elc>` and `<ion>` are `gkyl_elec_name` and
+`gkyl_ion_name` (`elc` and `ion` by default), and `<n>` is the frame number,
+for every frame from `gkyl_frame_start` to `gkyl_frame_end`.
+
+These files are needed for every frame. Which moment files are needed
+depends on `gkyl_moment_type`:
+
+| `gkyl_moment_type` | Files for each frame |
+|---|---|
+| `"bimaxwellian"` (default) | `<case>-<elc>_BiMaxwellianMoments_<n>.gkyl`<br>`<case>-<ion>_BiMaxwellianMoments_<n>.gkyl` |
+| `"maxwellian"` | `<case>-<elc>_MaxwellianMoments_<n>.gkyl`<br>`<case>-<ion>_MaxwellianMoments_<n>.gkyl` |
+| `"m0m1m2"` | `<case>-<elc>_M0_<n>.gkyl`<br>`<case>-<elc>_prim_moms_<n>.gkyl`<br>`<case>-<ion>_prim_moms_<n>.gkyl` |
+
+The potential, `<case>-field_<n>.gkyl`, is needed for every frame,
+whatever the moment type.
+
+The geometry files are read once. They have no frame number:
+
+| File | What Flan uses it for |
+|---|---|
+| `<case>-bmag.gkyl` | Magnetic field strength |
+| `<case>-bcart.gkyl` | Direction of the magnetic field, in Cartesian (X, Y, Z) components |
+| `<case>-b_i.gkyl` | Covariant components of the magnetic field direction |
+| `<case>-jacobgeo.gkyl` | Jacobian |
+| `<case>-gij.gkyl` | Metric coefficients, saved to the output for post-analysis |
+| `<case>-dxdz.gkyl` | Tangent basis vectors |
+| `<case>-dzdx.gkyl` | Reciprocal basis vectors, used to calculate the electric field and the gradient of B |
+
+For example, with `gkyl_casename = "d3d"` and the default species names,
+frame 5 needs `d3d-elc_BiMaxwellianMoments_5.gkyl`,
+`d3d-ion_BiMaxwellianMoments_5.gkyl` and `d3d-field_5.gkyl`.
+
+From the moments, Flan reads the electron density and the electron and ion
+temperatures. The ion density isn't used. Only the `"bimaxwellian"` files
+have the ion parallel flow and perpendicular thermal velocity. Flan uses
+these to calculate the background flow, so collisions need `"bimaxwellian"`
+(see [Input Options](../input-options.md)). Only Gkeyll's binary `.gkyl`
+format can be read.
+
+Once the `bkg_from_pgkyl_*` files have been saved (see below), Flan doesn't
+read the Gkeyll files again.
+
 ### Gkeyll background files
 
 The first time a case runs with a Gkeyll background, Flan reads the Gkeyll
