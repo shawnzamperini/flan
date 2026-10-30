@@ -6,6 +6,7 @@
 #ifndef VECTORS_H
 #define VECTORS_H
 
+#include <cstddef>
 #include <iomanip>
 #include <iostream>
 #include <vector>
@@ -161,6 +162,93 @@ namespace Vectors
 
         void resize(const int dim1, const int dim2, const int dim3,
             const int dim4);
+
+#ifndef __CUDACC__
+		void broadcast(MPI_Comm comm);
+#endif
+	};
+
+	/**
+	* Values on a grid split into zones, stored as a single flattened 1D
+	* vector.
+	*
+	* Each zone is a logically rectangular block of nx x ny x nz cells
+	* surrounded by a layer of ghost cells ghost wide on every side, and has
+	* a leading dimension of size dim1 (the number of background times, or 1
+	* for time-independent quantities like the geometry). A value is
+	* accessed with vec(zone, t, i, j, k), or vec(zone, i, j, k) when dim1
+	* is 1, where i, j and k are interior cell indices that may extend into
+	* the ghost cells, i.e., -ghost <= i < nx + ghost.
+	*
+	* The zones are stored one after the other, each in row-major order
+	* (k varies fastest). With a single zone and no ghost cells the layout
+	* is identical to a Vector4D(dim1, nx, ny, nz). See vectors.cpp for the
+	* member function docs.
+	*/
+	template <typename T>
+	class ZonedVector
+	{
+	private:
+		std::vector<T> m_data {};			///< Values, zone after zone
+		int m_dim1 {};						///< Size of the leading dimension
+		int m_ghost {};						///< Ghost cells on each side
+		std::vector<int> m_nx {};			///< Interior cells in x per zone
+		std::vector<int> m_ny {};			///< Interior cells in y per zone
+		std::vector<int> m_nz {};			///< Interior cells in z per zone
+		std::vector<std::size_t> m_offset {};	///< Start of each zone
+		std::vector<std::size_t> m_stride_t {};	///< Stride of dim1 per zone
+		std::vector<std::size_t> m_stride_i {};	///< Stride of i per zone
+		std::vector<std::size_t> m_stride_j {};	///< Stride of j per zone
+
+		void calc_layout();
+
+	public:
+
+		ZonedVector();
+
+		ZonedVector(int dim1, const std::vector<int>& nx,
+			const std::vector<int>& ny, const std::vector<int>& nz,
+			int ghost = 0);
+
+		explicit ZonedVector(Vector4D<T>&& vec);
+
+		explicit ZonedVector(Vector3D<T>&& vec);
+
+		int get_nzones() const;
+
+		int get_dim1() const;
+
+		int get_ghost() const;
+
+		int get_nx(const int zone) const;
+
+		int get_ny(const int zone) const;
+
+		int get_nz(const int zone) const;
+
+		std::size_t get_zone_offset(const int zone) const;
+
+		std::size_t get_zone_size(const int zone) const;
+
+		const std::vector<T>& get_data() const;
+
+		std::vector<T>& get_data();
+
+		std::size_t calc_index(const int zone, const int t, const int i,
+			const int j, const int k) const;
+
+		T& operator()(const int zone, const int t, const int i, const int j,
+			const int k);
+
+		const T& operator()(const int zone, const int t, const int i,
+			const int j, const int k) const;
+
+		T& operator()(const int zone, const int i, const int j, const int k);
+
+		const T& operator()(const int zone, const int i, const int j,
+			const int k) const;
+
+		bool check_same_shape(const ZonedVector& other) const;
 
 #ifndef __CUDACC__
 		void broadcast(MPI_Comm comm);

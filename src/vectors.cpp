@@ -789,7 +789,323 @@ namespace Vectors
 		MPI_Bcast(&m_dim3, 1, MPI_INT, 0, comm);
 		MPI_Bcast(&m_dim4, 1, MPI_INT, 0, comm);
 
-		// Broadcast underlying 1D data from root (assumed to be rank 0) to 
+		// Broadcast underlying 1D data from root (assumed to be rank 0) to
+		// other ranks
+		Utilities::mpi_broadcast_vector(m_data, 0, comm);
+	}
+
+	// ***************************
+	// * ZonedVector definitions *
+	// ***************************
+
+	/**
+	* Creates an empty ZonedVector with no zones.
+	*/
+	template <typename T>
+	ZonedVector<T>::ZonedVector()
+	{}
+
+	/**
+	* Creates a ZonedVector with the given zone sizes, with every element
+	* value initialized (zero for numbers).
+	*
+	* nx, ny and nz must have one entry per zone. The run is stopped with
+	* Errors::fatal_error if they don't or if any size is negative.
+	*
+	* @param dim1 Size of the leading dimension, e.g., the number of
+	*        background times, or 1 for time-independent values.
+	* @param nx Number of interior cells in x for each zone.
+	* @param ny Number of interior cells in y for each zone.
+	* @param nz Number of interior cells in z for each zone.
+	* @param ghost Number of ghost cells on each side of every zone.
+	*/
+	template <typename T>
+	ZonedVector<T>::ZonedVector(int dim1, const std::vector<int>& nx,
+		const std::vector<int>& ny, const std::vector<int>& nz, int ghost)
+		: m_dim1 {dim1}
+		, m_ghost {ghost}
+		, m_nx {nx}
+		, m_ny {ny}
+		, m_nz {nz}
+	{
+		if (nx.size() != ny.size() || nx.size() != nz.size())
+		{
+			Errors::fatal_error("ZonedVector was given zone sizes for "
+				+ std::to_string(nx.size()) + ", " + std::to_string(ny.size())
+				+ " and " + std::to_string(nz.size()) + " zones in x, y and "
+				"z. These must be equal.");
+		}
+		if (dim1 < 0 || ghost < 0
+			|| std::ranges::any_of(nx, [](int n) {return n < 0;})
+			|| std::ranges::any_of(ny, [](int n) {return n < 0;})
+			|| std::ranges::any_of(nz, [](int n) {return n < 0;}))
+		{
+			Errors::fatal_error("ZonedVector was given a negative size.");
+		}
+
+		calc_layout();
+		m_data.resize(m_offset.back());
+	}
+
+	/**
+	* Creates a single-zone ZonedVector without ghost cells by moving in
+	* the data of a Vector4D, without copying it.
+	*
+	* The dimensions of vec are taken as (dim1, nx, ny, nz). The layout is
+	* identical, so the data is used as-is. vec's data is left empty.
+	*
+	* @param vec Vector to move from.
+	*/
+	template <typename T>
+	ZonedVector<T>::ZonedVector(Vector4D<T>&& vec)
+		: m_dim1 {vec.get_dim1()}
+		, m_ghost {0}
+		, m_nx {vec.get_dim2()}
+		, m_ny {vec.get_dim3()}
+		, m_nz {vec.get_dim4()}
+	{
+		calc_layout();
+		m_data = std::move(vec.get_data());
+	}
+
+	/**
+	* Creates a single-zone ZonedVector without ghost cells and with
+	* dim1 = 1 by moving in the data of a Vector3D, without copying it.
+	*
+	* The dimensions of vec are taken as (nx, ny, nz). vec's data is left
+	* empty.
+	*
+	* @param vec Vector to move from.
+	*/
+	template <typename T>
+	ZonedVector<T>::ZonedVector(Vector3D<T>&& vec)
+		: m_dim1 {1}
+		, m_ghost {0}
+		, m_nx {vec.get_dim1()}
+		, m_ny {vec.get_dim2()}
+		, m_nz {vec.get_dim3()}
+	{
+		calc_layout();
+		m_data = std::move(vec.get_data());
+	}
+
+	/**
+	* Calculates the offset of each zone into the flattened data and the
+	* strides used for indexing within each zone.
+	*
+	* m_offset gets one more entry than there are zones, with the last
+	* being the total number of elements. Called whenever the zone sizes
+	* change.
+	*/
+	template <typename T>
+	void ZonedVector<T>::calc_layout()
+	{
+		const std::size_t nzones {m_nx.size()};
+		m_offset.assign(nzones + 1, 0);
+		m_stride_t.resize(nzones);
+		m_stride_i.resize(nzones);
+		m_stride_j.resize(nzones);
+
+		for (std::size_t z {}; z < nzones; ++z)
+		{
+			// Size of each dimension, including ghost cells
+			const std::size_t px {static_cast<std::size_t>(m_nx[z]
+				+ 2 * m_ghost)};
+			const std::size_t py {static_cast<std::size_t>(m_ny[z]
+				+ 2 * m_ghost)};
+			const std::size_t pz {static_cast<std::size_t>(m_nz[z]
+				+ 2 * m_ghost)};
+
+			m_stride_j[z] = pz;
+			m_stride_i[z] = py * pz;
+			m_stride_t[z] = px * py * pz;
+			m_offset[z + 1] = m_offset[z]
+				+ static_cast<std::size_t>(m_dim1) * m_stride_t[z];
+		}
+	}
+
+	/**
+	* @name Dimension accessors
+	*
+	* Return the number of zones, the size of the leading dimension, the
+	* ghost cell width, or the number of interior cells of a zone in x, y
+	* or z.
+	*/
+	///@{
+	template <typename T>
+	int ZonedVector<T>::get_nzones() const {return std::ssize(m_nx);}
+
+	template <typename T>
+	int ZonedVector<T>::get_dim1() const {return m_dim1;}
+
+	template <typename T>
+	int ZonedVector<T>::get_ghost() const {return m_ghost;}
+
+	template <typename T>
+	int ZonedVector<T>::get_nx(const int zone) const {return m_nx[zone];}
+
+	template <typename T>
+	int ZonedVector<T>::get_ny(const int zone) const {return m_ny[zone];}
+
+	template <typename T>
+	int ZonedVector<T>::get_nz(const int zone) const {return m_nz[zone];}
+	///@}
+
+	/**
+	* Returns the index into get_data() where a zone's values start.
+	*
+	* @param zone Zone index.
+	* @return Offset of the zone into the flattened data.
+	*/
+	template <typename T>
+	std::size_t ZonedVector<T>::get_zone_offset(const int zone) const
+	{
+		return m_offset[zone];
+	}
+
+	/**
+	* Returns the number of values stored for a zone, including ghost
+	* cells and every entry of the leading dimension.
+	*
+	* @param zone Zone index.
+	* @return Number of values in the zone.
+	*/
+	template <typename T>
+	std::size_t ZonedVector<T>::get_zone_size(const int zone) const
+	{
+		return m_offset[zone + 1] - m_offset[zone];
+	}
+
+	/**
+	* @name Data accessors
+	*
+	* Return the underlying flattened data. The non-const version lets the
+	* data be filled in or changed in place.
+	*/
+	///@{
+	template <typename T>
+	const std::vector<T>& ZonedVector<T>::get_data() const {return m_data;}
+
+	template <typename T>
+	std::vector<T>& ZonedVector<T>::get_data() {return m_data;}
+	///@}
+
+	/**
+	* Converts a zone and cell index to the index into the flattened data.
+	*
+	* i, j and k are interior cell indices and may extend into the ghost
+	* cells, e.g., i = -1 is the first ghost cell below the zone in x. In
+	* Debug builds, out of range indices stop the run with
+	* Errors::fatal_error. Otherwise there is no bounds checking.
+	*
+	* @param zone Zone index.
+	* @param t Index along the leading dimension.
+	* @param i Cell index in x.
+	* @param j Cell index in y.
+	* @param k Cell index in z.
+	* @return Index into get_data().
+	*/
+	template <typename T>
+	std::size_t ZonedVector<T>::calc_index(const int zone, const int t,
+		const int i, const int j, const int k) const
+	{
+#ifdef DEBUG
+		if (zone < 0 || zone >= get_nzones() || t < 0 || t >= m_dim1
+			|| i < -m_ghost || i >= m_nx[zone] + m_ghost
+			|| j < -m_ghost || j >= m_ny[zone] + m_ghost
+			|| k < -m_ghost || k >= m_nz[zone] + m_ghost)
+		{
+			Errors::fatal_error("ZonedVector index (" + std::to_string(zone)
+				+ ", " + std::to_string(t) + ", " + std::to_string(i) + ", "
+				+ std::to_string(j) + ", " + std::to_string(k)
+				+ ") is out of range.");
+		}
+#endif
+		return m_offset[zone] + t * m_stride_t[zone]
+			+ (i + m_ghost) * m_stride_i[zone]
+			+ (j + m_ghost) * m_stride_j[zone] + (k + m_ghost);
+	}
+
+	/**
+	* @name Element access
+	*
+	* Return a reference to the element at (zone, t, i, j, k). The versions
+	* without t are for vectors with dim1 = 1 and use t = 0. See calc_index
+	* for the allowed index ranges.
+	*
+	* @param zone Zone index.
+	* @param t Index along the leading dimension.
+	* @param i Cell index in x.
+	* @param j Cell index in y.
+	* @param k Cell index in z.
+	*/
+	///@{
+	template <typename T>
+	T& ZonedVector<T>::operator()(const int zone, const int t, const int i,
+		const int j, const int k)
+	{
+		return m_data[calc_index(zone, t, i, j, k)];
+	}
+
+	template <typename T>
+	const T& ZonedVector<T>::operator()(const int zone, const int t,
+		const int i, const int j, const int k) const
+	{
+		return m_data[calc_index(zone, t, i, j, k)];
+	}
+
+	template <typename T>
+	T& ZonedVector<T>::operator()(const int zone, const int i, const int j,
+		const int k)
+	{
+		return m_data[calc_index(zone, 0, i, j, k)];
+	}
+
+	template <typename T>
+	const T& ZonedVector<T>::operator()(const int zone, const int i,
+		const int j, const int k) const
+	{
+		return m_data[calc_index(zone, 0, i, j, k)];
+	}
+	///@}
+
+	/**
+	* Checks whether another ZonedVector has the same number of zones, zone
+	* sizes, ghost width and leading dimension.
+	*
+	* @param other Vector to compare against.
+	* @return True if the shapes are the same.
+	*/
+	template <typename T>
+	bool ZonedVector<T>::check_same_shape(const ZonedVector<T>& other) const
+	{
+		return m_dim1 == other.m_dim1 && m_ghost == other.m_ghost
+			&& m_nx == other.m_nx && m_ny == other.m_ny
+			&& m_nz == other.m_nz;
+	}
+
+	/**
+	* Broadcasts the vector from rank 0 to every other rank.
+	*
+	* Must be called by every rank in comm. The other ranks' zone sizes and
+	* data are overwritten with rank 0's, and their layout is recalculated.
+	*
+	* @param comm MPI communicator to broadcast over.
+	*/
+	template <typename T>
+	void ZonedVector<T>::broadcast(MPI_Comm comm)
+	{
+		// Broadcast dimensions
+		MPI_Bcast(&m_dim1, 1, MPI_INT, 0, comm);
+		MPI_Bcast(&m_ghost, 1, MPI_INT, 0, comm);
+		Utilities::mpi_broadcast_vector(m_nx, 0, comm);
+		Utilities::mpi_broadcast_vector(m_ny, 0, comm);
+		Utilities::mpi_broadcast_vector(m_nz, 0, comm);
+
+		// The offsets and strides follow from the dimensions
+		calc_layout();
+
+		// Broadcast underlying 1D data from root (assumed to be rank 0) to
 		// other ranks
 		Utilities::mpi_broadcast_vector(m_data, 0, comm);
 	}
@@ -805,3 +1121,6 @@ template class Vectors::Vector3D<double>;
 template class Vectors::Vector4D<int>;
 template class Vectors::Vector4D<float>;
 template class Vectors::Vector4D<double>;
+template class Vectors::ZonedVector<int>;
+template class Vectors::ZonedVector<float>;
+template class Vectors::ZonedVector<double>;
