@@ -8,6 +8,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 #include <omp.h>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -311,4 +312,264 @@ TEST(CrossZonesCPU, SingleZoneCoreMatchesCoreBC)
 	EXPECT_DOUBLE_EQ(slots.x()[0], a);
 	EXPECT_DOUBLE_EQ(slots.y()[0], b);
 	EXPECT_DOUBLE_EQ(slots.z()[0], c);
+}
+
+// Crossing zone 2's ymin puts the particle at the top of zone 0
+TEST(CrossZonesCPU, CrossYmin)
+{
+	const auto bkg {make_background(make_three_zones())};
+	auto slots {one_particle(2, 1.5, -0.3)};
+	check_bounds(slots, bkg);
+
+	EXPECT_EQ(slots.zone()[0], 0);
+	EXPECT_DOUBLE_EQ(slots.x()[0], 1.5);
+	EXPECT_NEAR(slots.y()[0], 5.7, 1e-12);
+}
+
+// A particle exactly on a shared face hasn't crossed it
+TEST(CrossZonesCPU, OnSharedFaceStays)
+{
+	const auto bkg {make_background(make_three_zones())};
+
+	auto on_max {one_particle(0, 4.0, 2.5)};
+	check_bounds(on_max, bkg);
+	EXPECT_EQ(on_max.zone()[0], 0);
+	EXPECT_DOUBLE_EQ(on_max.x()[0], 4.0);
+
+	auto on_min {one_particle(1, 0.0, 2.5)};
+	check_bounds(on_min, bkg);
+	EXPECT_EQ(on_min.zone()[0], 1);
+	EXPECT_DOUBLE_EQ(on_min.x()[0], 0.0);
+}
+
+// After crossing, the new zone's faces are checked too. Here the particle
+// lands past (or within the buffer of) zone 1's absorbing xmax.
+TEST(CrossZonesCPU, AbsorbedAfterCrossing)
+{
+	const auto bkg {make_background(make_three_zones())};
+
+	auto past {one_particle(0, 7.5, 2.5)};
+	check_bounds(past, bkg);
+	EXPECT_EQ(past.state()[0], 1);
+	EXPECT_EQ(past.zone()[0], 1);
+
+	auto in_buffer {one_particle(0, 6.9, 2.5)};
+	check_bounds(in_buffer, bkg, 0.2);
+	EXPECT_EQ(in_buffer.state()[0], 1);
+}
+
+// Crossing two zones in the same direction in one step: all the way
+// through zone 0 of the ring and back into zone 1
+TEST(CrossZonesCPU, TwoCrossingsSameDirection)
+{
+	const auto bkg {make_background(make_ring())};
+	auto slots {one_particle(1, 1.5, 7.0 + 4.0 + 0.5)};
+	check_bounds(slots, bkg);
+
+	EXPECT_EQ(slots.state()[0], 0);
+	EXPECT_EQ(slots.zone()[0], 1);
+	EXPECT_NEAR(slots.y()[0], 0.5, 1e-12);
+}
+
+// Dead particles are left alone, even if they're outside their zone
+TEST(CrossZonesCPU, DeadParticlesUntouched)
+{
+	const auto bkg {make_background(make_three_zones())};
+	auto slots {one_particle(0, 4.3, -0.5)};
+	slots.set_state(0, 1);
+	check_bounds(slots, bkg);
+
+	EXPECT_EQ(slots.state()[0], 1);
+	EXPECT_EQ(slots.zone()[0], 0);
+	EXPECT_DOUBLE_EQ(slots.x()[0], 4.3);
+	EXPECT_DOUBLE_EQ(slots.y()[0], -0.5);
+}
+
+// The time boundary is checked before the faces. An absorbing one kills
+// the particle without moving it, and a periodic one wraps t.
+TEST(CrossZonesCPU, TimeBoundary)
+{
+	const auto bkg {make_background(make_three_zones())};
+	auto rngs {make_rngs()};
+
+	Options::Options opts {};
+	auto late {one_particle(0, 4.3, 2.5)};
+	late.set_t(0, 1.2);
+	Boundary::check_bounds_cpu(late, bkg, opts, rngs);
+	EXPECT_EQ(late.state()[0], 1);
+	EXPECT_EQ(late.zone()[0], 0);
+	EXPECT_DOUBLE_EQ(late.x()[0], 4.3);
+
+	opts.set_tbound_type("periodic");
+	auto wrapped {one_particle(0, 4.3, 2.5)};
+	wrapped.set_t(0, 1.2);
+	Boundary::check_bounds_cpu(wrapped, bkg, opts, rngs);
+	EXPECT_EQ(wrapped.state()[0], 0);
+	EXPECT_NEAR(wrapped.t()[0], 0.2, 1e-12);
+	EXPECT_EQ(wrapped.zone()[0], 1);
+}
+
+// With several core faces, a particle that hasn't reached one isn't moved
+TEST(CrossZonesCPU, CoreNotHit)
+{
+	const auto bkg {make_background(make_three_zones())};
+	auto slots {one_particle(2, 0.3, 2.5)};
+	check_bounds(slots, bkg, 0.1);
+
+	EXPECT_EQ(slots.zone()[0], 2);
+	EXPECT_DOUBLE_EQ(slots.x()[0], 0.3);
+	EXPECT_DOUBLE_EQ(slots.y()[0], 2.5);
+	EXPECT_DOUBLE_EQ(slots.z()[0], 1.0);
+}
+
+// A particle hitting the core face of the other core zone (zone 2) is put
+// back on either core face too, inside that zone's bounds in y and z
+TEST(CrossZonesCPU, CoreFromSecondZone)
+{
+	const auto bkg {make_background(make_three_zones())};
+	const int n {2000};
+	Slots::Slots slots(n);
+	for (int i {}; i < n; ++i)
+	{
+		slots.set_t(i, 0.5);
+		slots.set_x(i, -0.01);
+		slots.set_y(i, 4.5);
+		slots.set_z(i, 1.0);
+		slots.set_zone(i, 2);
+	}
+	check_bounds(slots, bkg);
+
+	int in_zone0 {};
+	for (int i {}; i < n; ++i)
+	{
+		const int zone {slots.zone()[i]};
+		ASSERT_TRUE(zone == 0 || zone == 2) << zone;
+		EXPECT_DOUBLE_EQ(slots.x()[i], 0.0);
+		EXPECT_LE(slots.y()[i], bkg.get_y_max(zone));
+		EXPECT_GE(slots.z()[i], 0.0);
+		EXPECT_LE(slots.z()[i], two_pi);
+		in_zone0 += (zone == 0);
+	}
+	EXPECT_GT(in_zone0, 0);
+	EXPECT_LT(in_zone0, n);
+}
+
+// -------------------------------------------------------------------------
+// Single zone: same as before zones
+// -------------------------------------------------------------------------
+
+namespace
+{
+	// The spatial part of check_bounds_cpu as it was before zones (commit
+	// d6077ba), for one particle: each bound in the order xmin, xmax,
+	// ymin, ymax, zmin, zmax, with the type from the *bound_type options
+	// and the outer cell edges as the bounds. Returns the state.
+	int old_spatial_bounds(std::array<double, 3>& pos,
+		const std::array<int, 6>& types, const std::array<double, 3>& lo,
+		const std::array<double, 3>& hi, const std::array<double, 3>& buf,
+		pcg32& rng)
+	{
+		for (int f {}; f < 6; ++f)
+		{
+			const int a {f / 2};
+			const int b {(a + 1) % 3};
+			const int c {(a + 2) % 3};
+			const bool max_bound {(f & 1) == 1};
+			if (types[f] == 0)
+			{
+				const int state {Boundary::absorbing_bc(pos[a],
+					max_bound ? hi[a] : lo[a], max_bound, buf[a])};
+				if (state) return state;
+			}
+			else if (types[f] == 1)
+			{
+				pos[a] = Boundary::periodic_bc(pos[a], lo[a], hi[a]);
+			}
+			else if (types[f] == 2)
+			{
+				Boundary::core_bc(pos[a], pos[b], pos[c], lo[a], hi[a],
+					buf[a], lo[b], hi[b], buf[b], lo[c], hi[c], buf[c],
+					max_bound, rng);
+			}
+		}
+		return 0;
+	}
+}
+
+// For every combination of bound types, a single-zone background made
+// with single_zone gives exactly what the old bound checks did, including
+// the random draws of core boundaries, for particles inside, near and
+// outside every bound
+TEST(CrossZonesCPU, SingleZoneMatchesOldBounds)
+{
+	// One thread, so check_bounds_cpu draws from the RNG in particle order
+	const int threads {omp_get_max_threads()};
+	omp_set_num_threads(1);
+
+	const std::array<std::string, 3> names {"absorbing", "periodic",
+		"core"};
+	const std::array<double, 3> lo {-0.1, 0.0, -1.0};
+	const std::array<double, 3> hi {0.1, 2.0, 1.0};
+	const std::array<double, 3> buf {0.01, 0.02, 0.03};
+	const int n {60};
+
+	for (int combo {}; combo < 729; ++combo)
+	{
+		std::array<int, 6> types {};
+		int rest {combo};
+		for (auto& type : types) {type = rest % 3; rest /= 3;}
+
+		Options::Options opts {};
+		opts.set_min_xbound_type(names[types[0]]);
+		opts.set_max_xbound_type(names[types[1]]);
+		opts.set_min_ybound_type(names[types[2]]);
+		opts.set_max_ybound_type(names[types[3]]);
+		opts.set_min_zbound_type(names[types[4]]);
+		opts.set_max_zbound_type(names[types[5]]);
+		opts.set_imp_xbound_buffer(buf[0]);
+		opts.set_imp_ybound_buffer(buf[1]);
+		opts.set_imp_zbound_buffer(buf[2]);
+
+		auto [x, gx] = uniform(10, lo[0], hi[0]);
+		auto [y, gy] = uniform(8, lo[1], hi[1]);
+		auto [z, gz] = uniform(6, lo[2], hi[2]);
+		auto zones {Background::single_zone(x, y, z, gx, gy, gz, opts)};
+		const auto bkg {make_background(std::move(zones))};
+
+		// Positions spread from 30% of the domain below each bound to 30%
+		// above it
+		pcg32 pos_rng(combo, 1);
+		Slots::Slots slots(n);
+		std::vector<std::array<double, 3>> want(n);
+		for (int i {}; i < n; ++i)
+		{
+			for (int d {}; d < 3; ++d)
+			{
+				const double L {hi[d] - lo[d]};
+				want[i][d] = lo[d] - 0.3 * L + 1.6 * L * pos_rng.next_double();
+			}
+			slots.set_t(i, 0.5);
+			slots.set_x(i, want[i][0]);
+			slots.set_y(i, want[i][1]);
+			slots.set_z(i, want[i][2]);
+		}
+
+		std::vector<pcg32> rngs {pcg32(combo, 2)};
+		Boundary::check_bounds_cpu(slots, bkg, opts, rngs);
+
+		pcg32 rng(combo, 2);
+		for (int i {}; i < n; ++i)
+		{
+			const int state {old_spatial_bounds(want[i], types, lo, hi, buf,
+				rng)};
+			ASSERT_EQ(slots.state()[i], state) << "combo " << combo
+				<< ", particle " << i;
+			EXPECT_EQ(slots.zone()[i], 0);
+			EXPECT_EQ(slots.x()[i], want[i][0]) << combo << " " << i;
+			EXPECT_EQ(slots.y()[i], want[i][1]) << combo << " " << i;
+			EXPECT_EQ(slots.z()[i], want[i][2]) << combo << " " << i;
+		}
+	}
+
+	omp_set_num_threads(threads);
 }

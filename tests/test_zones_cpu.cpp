@@ -3,6 +3,7 @@
 * split into zones and how they connect.
 */
 
+#include <algorithm>
 #include <array>
 #include <gtest/gtest.h>
 #include <vector>
@@ -125,6 +126,11 @@ TEST(ZonesCPU, SingleZoneFromBoundTypes)
 
 	EXPECT_EQ(zones.get_ghost(), 0);
 	EXPECT_EQ(zones.get_face(0, Zones::xmax), Zones::face_absorbing);
+
+	// Periodic on one side only is allowed, as it always has been for
+	// Gkeyll backgrounds
+	zones.set_face(0, Zones::ymax, Zones::face_from_bound_type(0, 0));
+	zones.validate();
 	EXPECT_EQ(zones.get_core_zones(), (std::vector<int> {0}));
 	EXPECT_DOUBLE_EQ(zones.get_z_min(0), -1.0);
 }
@@ -312,6 +318,18 @@ TEST(ZonesCPU, FillGhostsEdges)
 		++checked;
 	}
 	EXPECT_GT(checked, 0);
+
+	// Interior cells are left alone
+	for (int z {}; z < 3; ++z)
+	for (int t {}; t < 2; ++t)
+	for (int i {}; i < zones.get_nx(z); ++i)
+	for (int j {}; j < zones.get_ny(z); ++j)
+	for (int k {}; k < zones.get_nz(z); ++k)
+	{
+		ASSERT_DOUBLE_EQ(v(z, t, i, j, k), global_field(t,
+			i + three_zone_offsets[z][0], j + three_zone_offsets[z][1], k,
+			zones.get_nz(z)));
+	}
 }
 
 // Ghost cells past absorbing and core faces copy the zone's edge cell
@@ -430,4 +448,138 @@ TEST(ZonesCPU, FillGhostsMismatch)
 		zones.get_ny_all(), zones.get_nz_all(), 1);
 	EXPECT_EXIT(zones.fill_ghosts(v), testing::ExitedWithCode(EXIT_FAILURE),
 		"don't match the zones");
+}
+
+// Four zones in a 2x2 block, so every corner where they meet is regular
+// and both orders of crossing reach the same cell:
+//
+//   2 | 3
+//   --+--
+//   0 | 1
+//
+// Every ghost cell that lands inside the block, including corner ghosts in
+// x and y and in x, y and z, gets the value at its global position.
+TEST(ZonesCPU, FillGhostsRegularCorners)
+{
+	Zones::Zones zones(2);
+	const std::array<std::array<int, 2>, 4> offsets {{{0, 0}, {3, 0},
+		{0, 3}, {3, 3}}};
+	for (int z {}; z < 4; ++z)
+	{
+		add_index_zone(zones, 3, 3, 3);
+		zones.set_face(z, Zones::zmin, z);
+		zones.set_face(z, Zones::zmax, z);
+	}
+	auto connect = [&](int a, Zones::Face face, int b)
+	{
+		zones.set_face(a, face, b);
+		zones.set_face(b, static_cast<Zones::Face>(face ^ 1), a);
+	};
+	connect(0, Zones::xmax, 1);
+	connect(2, Zones::xmax, 3);
+	connect(0, Zones::ymax, 2);
+	connect(1, Zones::ymax, 3);
+	zones.validate();
+
+	EXPECT_EQ(zones.resolve_cell({0, 3, 3, 0}),
+		(std::vector<Zones::Cell> {{3, 0, 0, 0}}));
+	EXPECT_EQ(zones.resolve_cell({3, -1, -2, 4}),
+		(std::vector<Zones::Cell> {{0, 2, 1, 1}}));
+
+	Vectors::ZonedVector<double> v(2, zones.get_nx_all(),
+		zones.get_ny_all(), zones.get_nz_all(), 2);
+	for (int z {}; z < 4; ++z)
+	for (int t {}; t < 2; ++t)
+	for (int i {}; i < 3; ++i)
+	for (int j {}; j < 3; ++j)
+	for (int k {}; k < 3; ++k)
+	{
+		v(z, t, i, j, k) = global_field(t, i + offsets[z][0],
+			j + offsets[z][1], k, 3);
+	}
+	zones.fill_ghosts(v);
+
+	int corners {};
+	for (int z {}; z < 4; ++z)
+	for (int t {}; t < 2; ++t)
+	for (int i {-2}; i < 5; ++i)
+	for (int j {-2}; j < 5; ++j)
+	for (int k {-2}; k < 5; ++k)
+	{
+		const int gi {i + offsets[z][0]};
+		const int gj {j + offsets[z][1]};
+		if (gi < 0 || gi >= 6 || gj < 0 || gj >= 6) continue;
+		EXPECT_DOUBLE_EQ(v(z, t, i, j, k), global_field(t, gi, gj, k, 3))
+			<< z << " " << t << " " << i << " " << j << " " << k;
+		corners += ((i < 0 || i >= 3) && (j < 0 || j >= 3));
+	}
+	EXPECT_GT(corners, 0);
+}
+
+// Ghost cells wrap around a ring of zones, like the core
+TEST(ZonesCPU, FillGhostsRing)
+{
+	Zones::Zones zones(2);
+	add_index_zone(zones, 3, 4, 1);
+	add_index_zone(zones, 3, 7, 1);
+	zones.set_face(0, Zones::ymax, 1);
+	zones.set_face(1, Zones::ymin, 0);
+	zones.set_face(1, Zones::ymax, 0);
+	zones.set_face(0, Zones::ymin, 1);
+	zones.validate();
+
+	Vectors::ZonedVector<double> v(1, zones.get_nx_all(),
+		zones.get_ny_all(), zones.get_nz_all(), 2);
+	for (int z {}; z < 2; ++z)
+	for (int i {}; i < 3; ++i)
+	for (int j {}; j < zones.get_ny(z); ++j)
+	{
+		v(z, i, j, 0) = 100 * z + 10 * i + j;
+	}
+	zones.fill_ghosts(v);
+
+	for (int i {}; i < 3; ++i)
+	{
+		EXPECT_DOUBLE_EQ(v(0, i, -1, 0), v(1, i, 6, 0));
+		EXPECT_DOUBLE_EQ(v(0, i, -2, 0), v(1, i, 5, 0));
+		EXPECT_DOUBLE_EQ(v(0, i, 4, 0), v(1, i, 0, 0));
+		EXPECT_DOUBLE_EQ(v(1, i, -1, 0), v(0, i, 3, 0));
+		EXPECT_DOUBLE_EQ(v(1, i, 7, 0), v(0, i, 0, 0));
+		EXPECT_DOUBLE_EQ(v(1, i, 8, 0), v(0, i, 1, 0));
+	}
+}
+
+// Changing a face after fill_ghosts has run makes the next call use the
+// new connections, not the cached ones
+TEST(ZonesCPU, FillGhostsAfterFaceChange)
+{
+	Zones::Zones zones {make_three_zones(2)};
+	auto v {make_global_field(zones, 1)};
+	zones.fill_ghosts(v);
+	EXPECT_DOUBLE_EQ(v(0, 0, 4, 2, 1), global_field(0, 4, 2, 1, 3));
+
+	zones.set_face(0, Zones::xmax, Zones::face_absorbing);
+	zones.set_face(1, Zones::xmin, Zones::face_absorbing);
+	zones.fill_ghosts(v);
+	EXPECT_DOUBLE_EQ(v(0, 0, 4, 2, 1), v(0, 0, 3, 2, 1));
+}
+
+// Spot checks on the real DIII-D mesh (0-based zones): across the core's
+// psi+ face into the SOL, around the core ring, and the X-point corner
+// averaged from the divertor leg and SOL zones on either side
+TEST(ZonesCPU, ResolveDIIIDMesh)
+{
+	const Zones::Zones zones {make_diiid_zones()};
+
+	EXPECT_EQ(zones.resolve_cell({0, 67, 10, 3}),
+		(std::vector<Zones::Cell> {{6, 0, 10, 3}}));
+	EXPECT_EQ(zones.resolve_cell({0, 10, 976, 3}),
+		(std::vector<Zones::Cell> {{1, 10, 0, 3}}));
+	EXPECT_EQ(zones.resolve_cell({1, 10, -1, 3}),
+		(std::vector<Zones::Cell> {{0, 10, 975, 3}}));
+
+	auto xpoint {zones.resolve_cell({0, 67, 976, 3})};
+	std::ranges::sort(xpoint, {}, &Zones::Cell::zone);
+	EXPECT_EQ(xpoint,
+		(std::vector<Zones::Cell> {{5, 0, 0, 3}, {7, 0, 0, 3}}));
 }

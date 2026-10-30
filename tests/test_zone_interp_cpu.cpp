@@ -83,10 +83,11 @@ namespace
 	// time frame and toroidal plane
 	double linear(double gx, double y) {return 1.0 + 2.0 * gx + 3.0 * y;}
 
-	// ZonedVector shaped like zones with dim1 time frames, set to f at the
-	// interior cell centers, with the ghost cells then filled
+	// ZonedVector shaped like zones with dim1 time frames, set to f(zone,
+	// t, x, y) at the interior cell centers, with the ghost cells then
+	// filled
 	template <typename F>
-	Vectors::ZonedVector<BkgFPType> make_field(const Zones::Zones& zones,
+	Vectors::ZonedVector<BkgFPType> make_field_t(const Zones::Zones& zones,
 		int dim1, F f)
 	{
 		Vectors::ZonedVector<BkgFPType> v(dim1, zones.get_nx_all(),
@@ -97,10 +98,20 @@ namespace
 		for (int j {}; j < zones.get_ny(z); ++j)
 		for (int k {}; k < zones.get_nz(z); ++k)
 		{
-			v(z, t, i, j, k) = f(z, zones.get_x(z)[i], zones.get_y(z)[j]);
+			v(z, t, i, j, k) = f(z, t, zones.get_x(z)[i],
+				zones.get_y(z)[j]);
 		}
 		zones.fill_ghosts(v);
 		return v;
+	}
+
+	// The same, for an f(zone, x, y) that doesn't depend on time
+	template <typename F>
+	Vectors::ZonedVector<BkgFPType> make_field(const Zones::Zones& zones,
+		int dim1, F f)
+	{
+		return make_field_t(zones, dim1, [&](int z, int, double x, double y)
+			{return f(z, x, y);});
 	}
 
 	// Background over make_two_zones(2) with times {0, 1}
@@ -263,19 +274,23 @@ TEST(ZoneInterpCPU, InterpContinuousAcrossZones)
 }
 
 // Boris sees the same continuous field. With B = 0 and E = (Ex, 0, 0)
-// linear in x, a particle's velocity changes by q E / m dt using the exact
-// local Ex, on both sides of the shared face.
+// linear in x and time, a particle's velocity changes by q E / m dt using
+// the exact local Ex, on both sides of the shared face.
 TEST(ZoneInterpCPU, BorisContinuousAcrossZones)
 {
 	auto bkg {make_background()};
 	const auto& zones {bkg.get_zones()};
-	auto global_ex = [](int z, double x, double y)
+	// E is 10 V/m larger in the second time frame, so the particle at
+	// t = 0.5 sees 5 V/m more than in the first
+	auto global_ex = [](int z, int t, double x, double y)
+		{return linear(x + x_offsets[z], y) + 10.0 * t;};
+	auto global_lin = [](int z, double x, double y)
 		{return linear(x + x_offsets[z], y);};
 	auto zero = [](int, double, double) {return 0.0;};
 	auto one = [](int, double, double) {return 1.0;};
 
-	auto eX {make_field(zones, 2, global_ex)};
-	auto emag {make_field(zones, 2, global_ex)};
+	auto eX {make_field_t(zones, 2, global_ex)};
+	auto emag {make_field_t(zones, 2, global_ex)};
 	auto eY {make_field(zones, 2, zero)};
 	auto eZ {make_field(zones, 2, zero)};
 	auto bX {make_field(zones, 2, zero)};
@@ -291,8 +306,10 @@ TEST(ZoneInterpCPU, BorisContinuousAcrossZones)
 	bkg.move_into_bZ(bZ);
 	bkg.move_into_bmag(bmag);
 
-	// Identity reciprocal basis
-	auto dxdX {make_field(zones, 1, one)};
+	// Reciprocal basis that is the identity except for dxdX, which is
+	// linear in x like E, so the computational velocity vx = dxdX vX also
+	// checks the basis is interpolated through the ghost cells
+	auto dxdX {make_field(zones, 1, global_lin)};
 	auto dydY {make_field(zones, 1, one)};
 	auto dzdZ {make_field(zones, 1, one)};
 	auto dxdY {make_field(zones, 1, zero)};
@@ -345,10 +362,14 @@ TEST(ZoneInterpCPU, BorisContinuousAcrossZones)
 	for (int i {}; i < n; ++i)
 	{
 		const auto [zone, x] = particles[i];
-		const double want {q_m * linear(x + x_offsets[zone], y) * dt};
+		const double gx {x + x_offsets[zone]};
+		const double want {q_m * (linear(gx, y) + 5.0) * dt};
 		EXPECT_NEAR(slots.vX()[i], want, 1e-12 * std::abs(want))
 			<< "zone " << zone << ", x = " << x;
 		EXPECT_NEAR(slots.vY()[i], 0.0, 1e-12 * std::abs(want));
+		EXPECT_NEAR(slots.vx()[i], linear(gx, y) * slots.vX()[i],
+			1e-12 * std::abs(linear(gx, y) * want))
+			<< "zone " << zone << ", x = " << x;
 	}
 }
 
@@ -384,4 +405,63 @@ TEST(ZoneInterpCPU, ZonedSettersCheckShape)
 		zones.get_ny_all(), zones.get_nz_all(), 2);
 	EXPECT_EXIT(bkg.move_into_ti(three_frames),
 		testing::ExitedWithCode(EXIT_FAILURE), "dim1");
+}
+
+// A field that changes between time frames is interpolated in time on top
+// of across the zones
+TEST(ZoneInterpCPU, InterpTimeAcrossZones)
+{
+	auto bkg {make_background()};
+	auto ne {make_field_t(bkg.get_zones(), 2,
+		[](int z, int t, double x, double y)
+		{return linear(x + x_offsets[z], y) + 10.0 * t;})};
+	bkg.move_into_ne(ne);
+
+	EXPECT_NEAR(bkg.interp_ne(0, 0.25, 3.9, 1.2, 1.0),
+		linear(3.9, 1.2) + 2.5, 1e-12);
+	EXPECT_NEAR(bkg.interp_ne(1, 0.75, 0.1, 1.2, 1.0),
+		linear(4.1, 1.2) + 7.5, 1e-12);
+}
+
+// Near the corner where four zones meet in a 2x2 block, interpolation
+// uses the corner ghosts and is still exact for a field linear in x and y,
+// from every zone
+//
+//   2 | 3
+//   --+--
+//   0 | 1
+TEST(ZoneInterpCPU, InterpAcrossCorner)
+{
+	Zones::Zones zones(2);
+	const std::array<std::array<double, 2>, 4> offsets {{{0, 0}, {3, 0},
+		{0, 3}, {3, 3}}};
+	for (int z {}; z < 4; ++z) add_index_zone(zones, 3, 3, 2);
+	auto connect = [&](int a, Zones::Face face, int b)
+	{
+		zones.set_face(a, face, b);
+		zones.set_face(b, static_cast<Zones::Face>(face ^ 1), a);
+	};
+	connect(0, Zones::xmax, 1);
+	connect(2, Zones::xmax, 3);
+	connect(0, Zones::ymax, 2);
+	connect(1, Zones::ymax, 3);
+
+	Background::Background bkg {};
+	std::vector<double> times {0.0, 1.0};
+	bkg.move_into_times(times);
+	bkg.move_into_zones(zones);
+	auto ne {make_field(bkg.get_zones(), 2, [&](int z, double x, double y)
+		{return linear(x + offsets[z][0], y + offsets[z][1]);})};
+	bkg.move_into_ne(ne);
+
+	// Points within half a cell of the corner at global (3, 3)
+	const std::vector<std::array<double, 3>> points {{0, 2.8, 2.9},
+		{1, 0.2, 2.7}, {2, 2.6, 0.3}, {3, 0.1, 0.1}, {3, 0.0, 0.0}};
+	for (const auto& [zd, x, y] : points)
+	{
+		const int z {static_cast<int>(zd)};
+		EXPECT_NEAR(bkg.interp_ne(z, 0.5, x, y, 1.0),
+			linear(x + offsets[z][0], y + offsets[z][1]), 1e-12)
+			<< "zone " << z << ", (" << x << ", " << y << ")";
+	}
 }

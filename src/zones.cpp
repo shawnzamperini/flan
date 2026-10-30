@@ -418,9 +418,10 @@ namespace Zones
 	*
 	* For every zone, the cell centers and edges must be the right sizes and
 	* the edges increasing. Every face code must be a valid zone or face_*
-	* code. A shared face must be shared both ways (the opposite face of
-	* the zone across it points back), and the two zones must have the same
-	* cell edges along the face. That's what lets a particle cross the face
+	* code. A face shared with another zone must be shared both ways (the
+	* opposite face of the zone across it points back), and the two zones
+	* must have the same cell edges along the face. A periodic face (the
+	* zone itself) may have a non-periodic opposite face. That's what lets a particle cross the face
 	* by only shifting the coordinate normal to it.
 	*/
 	void Zones::validate() const
@@ -474,9 +475,13 @@ namespace Zones
 						+ std::to_string(code) + ".");
 				}
 
-				// The neighbor must point back across its opposite face
+				// The neighbor must point back across its opposite face. A
+				// face connecting the zone to itself (periodic) doesn't
+				// need its opposite face to be periodic too, since Gkeyll
+				// backgrounds have always allowed a periodic bound on one
+				// side only.
 				const int opposite {face ^ 1};
-				if (m_faces[opposite][code] != zone)
+				if (code != zone && m_faces[opposite][code] != zone)
 				{
 					Errors::fatal_error(fname + " connects to zone "
 						+ std::to_string(code) + ", but that zone's "
