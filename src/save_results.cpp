@@ -13,7 +13,18 @@
 * "grid x", "grid y" and "grid z" dimensions, one longer than x, y and z.
 * Every variable has a description attribute, and numeric ones a units
 * attribute. Units of "(?)" depend on the computational coordinates used.
+*
+* A background with more than one zone (e.g., SOLEDGE3X) is saved
+* differently, since each zone has its own grid. The input group and the
+* times (geometry/time) are the same. A zones group holds the number of
+* cells in each zone and what is across each zone face. Then each zone has
+* its own group, zone1, zone2, ... (numbered from 1), with its own x, y, z
+* and grid dimensions and geometry, background and output subgroups. These
+* hold the same variables as for a single zone, interior cells only (no
+* ghost cells), plus the wall mask chi and the poloidal cell corners
+* R_corners and Z_corners for plotting.
 */
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -29,6 +40,8 @@
 #include "netcdf"
 #include "options.h"
 #include "save_results.h"
+#include "vectors.h"
+#include "zones.h"
 
 namespace SaveResults
 {
@@ -887,6 +900,315 @@ namespace SaveResults
 	}
 
 	/**
+	* Returns the netCDF type matching T: double, float or int.
+	*
+	* @tparam T C++ type of the values.
+	* @return netCDF type.
+	*/
+	template <typename T>
+	netCDF::NcType nc_type()
+	{
+		if constexpr (std::is_same_v<T, double>) return netCDF::ncDouble;
+		else if constexpr (std::is_same_v<T, float>) return netCDF::ncFloat;
+		else
+		{
+			static_assert(std::is_same_v<T, int>, "nc_type only handles "
+				"double, float and int.");
+			return netCDF::ncInt;
+		}
+	}
+
+	/**
+	* Saves one zone of a ZonedVector as a variable in nc_group.
+	*
+	* Only the zone's interior cells are saved, without ghost cells, as
+	* (dim1, nx, ny, nz) flattened in C order. dims must match that shape,
+	* without dim1 if it's 1 (e.g., geometry). An empty vector (data the
+	* background doesn't have) is skipped without a warning.
+	*
+	* @tparam T Type of the values: double, float or int.
+	* @param nc_group Group to save into.
+	* @param vec Values to save.
+	* @param zone Zone to save.
+	* @param var_name Name of the variable.
+	* @param dims Dimensions of the variable.
+	* @param description Description attribute.
+	* @param units Units attribute.
+	*/
+	template <typename T>
+	void save_zone_var(const netCDF::NcGroup& nc_group,
+		const Vectors::ZonedVector<T>& vec, const int zone,
+		const std::string& var_name, const std::vector<netCDF::NcDim>& dims,
+		const std::string& description, const std::string& units)
+	{
+		if (vec.get_data().empty()) return;
+
+		std::vector<T> data {};
+		data.reserve(static_cast<std::size_t>(vec.get_dim1())
+			* vec.get_nx(zone) * vec.get_ny(zone) * vec.get_nz(zone));
+		for (int t {}; t < vec.get_dim1(); ++t)
+		for (int i {}; i < vec.get_nx(zone); ++i)
+		for (int j {}; j < vec.get_ny(zone); ++j)
+		for (int k {}; k < vec.get_nz(zone); ++k)
+		{
+			data.push_back(vec(zone, t, i, j, k));
+		}
+
+		netCDF::NcVar var {nc_group.addVar(var_name, nc_type<T>(), dims)};
+		var.putVar(data.data());
+		var.putAtt("description", description);
+		var.putAtt("units", units);
+	}
+
+	/// A background or statistics array to save, with its name, description
+	/// and units in the file
+	struct ZoneVar
+	{
+		const Vectors::ZonedVector<BkgFPType>* vec;
+		std::string name;
+		std::string description;
+		std::string units;
+	};
+
+	/**
+	* Saves the zones of a background with more than one zone.
+	*
+	* A zones group holds nx, ny and nz (the number of cells in each zone)
+	* and faces, what is across each face of each zone (rows xmin, xmax,
+	* ymin, ymax, zmin, zmax): a zone number from 1, matching the zone
+	* groups (the zone itself means periodic), -1 for an absorbing face or
+	* -2 for a core face.
+	*
+	* Then each zone gets a group zone1, zone2, ... with its own x, y, z and
+	* grid x, grid y and grid z dimensions, and geometry, background and
+	* output subgroups with the same variables as a single-zone file, for
+	* the zone's interior cells. The geometry also has the wall mask chi, if
+	* the background has one, and the cell corners in the first toroidal
+	* plane as R_corners and Z_corners (m), for plotting. Data the background
+	* doesn't have (e.g., the metric coefficients of a SOLEDGE3X background)
+	* is left out.
+	*
+	* @param nc_file File to save into. The time dimension must already
+	*        exist.
+	* @param opts Simulation options, used for calc_grad_elec.
+	* @param bkg Background plasma to save.
+	* @param imp_stats Impurity statistics to save.
+	*/
+	void save_zones(const netCDF::NcFile& nc_file,
+		const Options::Options& opts, const Background::Background& bkg,
+		Impurity::Statistics& imp_stats)
+	{
+		const Zones::Zones& zones {bkg.get_zones()};
+		const int nzones {zones.get_nzones()};
+		const netCDF::NcDim dim_time {nc_file.getDim("time")};
+
+		// Zone table
+		netCDF::NcGroup zones_group {nc_file.addGroup("zones")};
+		const netCDF::NcDim dim_zone {zones_group.addDim("zone", nzones)};
+		const netCDF::NcDim dim_face {zones_group.addDim("face",
+			Zones::num_faces)};
+		save_vector_1d(zones_group, zones.get_nx_all(), "nx", dim_zone,
+			"number of x cells in each zone", "");
+		save_vector_1d(zones_group, zones.get_ny_all(), "ny", dim_zone,
+			"number of y cells in each zone", "");
+		save_vector_1d(zones_group, zones.get_nz_all(), "nz", dim_zone,
+			"number of z cells in each zone", "");
+		std::vector<int> faces {};
+		for (int f {}; f < Zones::num_faces; ++f)
+		for (int zone {}; zone < nzones; ++zone)
+		{
+			const int code {zones.get_face(zone,
+				static_cast<Zones::Face>(f))};
+			faces.push_back(code >= 0 ? code + 1 : code);
+		}
+		netCDF::NcVar faces_var {zones_group.addVar("faces", netCDF::ncInt,
+			{dim_face, dim_zone})};
+		faces_var.putVar(faces.data());
+		faces_var.putAtt("description", "what is across each face (rows "
+			"xmin, xmax, ymin, ymax, zmin, zmax) of each zone: a zone number "
+			"from 1 (the zone itself is periodic), -1 absorbing or -2 core");
+
+		// Geometry arrays at the cell centers
+		const std::vector<ZoneVar> geometry {
+			{&bkg.get_X(), "X", "X cell centers", "(m)"},
+			{&bkg.get_Y(), "Y", "Y cell centers", "(m)"},
+			{&bkg.get_Z(), "Z", "Z cell centers", "(m)"},
+			{&bkg.get_J(), "J", "Jacobian", "()"},
+			{&bkg.get_gij_00(), "gij_00", "metric coefficient (00)", "(?)"},
+			{&bkg.get_gij_01(), "gij_01", "metric coefficient (01)", "(?)"},
+			{&bkg.get_gij_02(), "gij_02", "metric coefficient (02)", "(?)"},
+			{&bkg.get_gij_11(), "gij_11", "metric coefficient (11)", "(?)"},
+			{&bkg.get_gij_12(), "gij_12", "metric coefficient (12)", "(?)"},
+			{&bkg.get_gij_22(), "gij_22", "metric coefficient (22)", "(?)"},
+			{&bkg.get_dXdx(), "dXdx", "tangent basis vector (dX/dx)", "(?)"},
+			{&bkg.get_dYdx(), "dYdx", "tangent basis vector (dY/dx)", "(?)"},
+			{&bkg.get_dZdx(), "dZdx", "tangent basis vector (dZ/dx)", "(?)"},
+			{&bkg.get_dXdy(), "dXdy", "tangent basis vector (dX/dy)", "(?)"},
+			{&bkg.get_dYdy(), "dYdy", "tangent basis vector (dY/dy)", "(?)"},
+			{&bkg.get_dZdy(), "dZdy", "tangent basis vector (dZ/dy)", "(?)"},
+			{&bkg.get_dXdz(), "dXdz", "tangent basis vector (dX/dz)", "(?)"},
+			{&bkg.get_dYdz(), "dYdz", "tangent basis vector (dY/dz)", "(?)"},
+			{&bkg.get_dZdz(), "dZdz", "tangent basis vector (dZ/dz)", "(?)"},
+			{&bkg.get_dxdX(), "dxdX", "reciprocal basis vector (dx/dX)",
+				"(?)"},
+			{&bkg.get_dxdY(), "dxdY", "reciprocal basis vector (dx/dY)",
+				"(?)"},
+			{&bkg.get_dxdZ(), "dxdZ", "reciprocal basis vector (dx/dZ)",
+				"(?)"},
+			{&bkg.get_dydX(), "dydX", "reciprocal basis vector (dy/dX)",
+				"(?)"},
+			{&bkg.get_dydY(), "dydY", "reciprocal basis vector (dy/dY)",
+				"(?)"},
+			{&bkg.get_dydZ(), "dydZ", "reciprocal basis vector (dy/dZ)",
+				"(?)"},
+			{&bkg.get_dzdX(), "dzdX", "reciprocal basis vector (dz/dX)",
+				"(?)"},
+			{&bkg.get_dzdY(), "dzdY", "reciprocal basis vector (dz/dY)",
+				"(?)"},
+			{&bkg.get_dzdZ(), "dzdZ", "reciprocal basis vector (dz/dZ)",
+				"(?)"},
+			{&bkg.get_b_x(), "b_x", "dual basis magnetic vector (x)", "(?)"},
+			{&bkg.get_b_y(), "b_y", "dual basis magnetic vector (y)", "(?)"},
+			{&bkg.get_b_z(), "b_z", "dual basis magnetic vector (z)", "(?)"},
+			{&bkg.get_chi(), "chi", "wall mask (1 inside the wall)", "()"}};
+
+		std::vector<ZoneVar> background {
+			{&bkg.get_ne(), "ne", "electron density", "(m-3)"},
+			{&bkg.get_te(), "Te", "electron temperature", "(eV)"},
+			{&bkg.get_ti(), "Ti", "ion temperature", "(eV)"},
+			{&bkg.get_vp(), "Vp", "plasma potential", "(V)"},
+			{&bkg.get_eX(), "E_X", "electric field (X)", "(V/m)"},
+			{&bkg.get_eY(), "E_Y", "electric field (Y)", "(V/m)"},
+			{&bkg.get_eZ(), "E_Z", "electric field (Z)", "(V/m)"},
+			{&bkg.get_uX(), "Ui_X", "background flow (X)", "(m/s)"},
+			{&bkg.get_uY(), "Ui_Y", "background flow (Y)", "(m/s)"},
+			{&bkg.get_uZ(), "Ui_Z", "background flow (Z)", "(m/s)"},
+			{&bkg.get_bX(), "B_X", "magnetic field (X)", "(T)"},
+			{&bkg.get_bY(), "B_Y", "magnetic field (Y)", "(T)"},
+			{&bkg.get_bZ(), "B_Z", "magnetic field (Z)", "(T)"},
+			{&bkg.get_bR(), "B_R", "magnetic field (R)", "(T)"},
+			{&bkg.get_gradbX(), "dBdX", "magnetic field gradient (X)",
+				"(T/m)"},
+			{&bkg.get_gradbY(), "dBdY", "magnetic field gradient (Y)",
+				"(T/m)"},
+			{&bkg.get_gradbZ(), "dBdZ", "magnetic field gradient (Z)",
+				"(T/m)"}};
+		if (opts.calc_grad_elec_int() == 1)
+		{
+			background.push_back({&bkg.get_gradeX(), "dEdX",
+				"electric field gradient (X)", "(V/m2)"});
+			background.push_back({&bkg.get_gradeY(), "dEdY",
+				"electric field gradient (Y)", "(V/m2)"});
+			background.push_back({&bkg.get_gradeZ(), "dEdZ",
+				"electric field gradient (Z)", "(V/m2)"});
+		}
+
+		const std::vector<ZoneVar> output {
+			{&imp_stats.get_density(), "nz", "impurity density", "(m-3)"},
+			{&imp_stats.get_vX(), "v_X", "average impurity X velocity",
+				"(m/s)"},
+			{&imp_stats.get_vY(), "v_Y", "average impurity Y velocity",
+				"(m/s)"},
+			{&imp_stats.get_vZ(), "v_Z", "average impurity Z velocity",
+				"(m/s)"},
+			{&imp_stats.get_vx(), "v_x", "average impurity x velocity",
+				"(?/s)"},
+			{&imp_stats.get_vy(), "v_y", "average impurity y velocity",
+				"(?/s)"},
+			{&imp_stats.get_vz(), "v_z", "average impurity z velocity",
+				"(?/s)"},
+			{&imp_stats.get_charge(), "qz", "average impurity charge", "()"},
+			{&imp_stats.get_s(), "nanbu_s",
+				"average Nanbu imp-ion collisionality strength", "()"}};
+
+		for (int zone {}; zone < nzones; ++zone)
+		{
+			netCDF::NcGroup zone_group {nc_file.addGroup("zone"
+				+ std::to_string(zone + 1))};
+			const netCDF::NcDim dx {zone_group.addDim("x",
+				zones.get_nx(zone))};
+			const netCDF::NcDim dy {zone_group.addDim("y",
+				zones.get_ny(zone))};
+			const netCDF::NcDim dz {zone_group.addDim("z",
+				zones.get_nz(zone))};
+			const netCDF::NcDim gdx {zone_group.addDim("grid x",
+				zones.get_nx(zone) + 1)};
+			const netCDF::NcDim gdy {zone_group.addDim("grid y",
+				zones.get_ny(zone) + 1)};
+			const netCDF::NcDim gdz {zone_group.addDim("grid z",
+				zones.get_nz(zone) + 1)};
+
+			// Geometry
+			netCDF::NcGroup geo {zone_group.addGroup("geometry")};
+			save_vector_1d(geo, zones.get_x(zone), "x", dx,
+				"x cell centers", "(?)");
+			save_vector_1d(geo, zones.get_y(zone), "y", dy,
+				"y cell centers", "(?)");
+			save_vector_1d(geo, zones.get_z(zone), "z", dz,
+				"z cell centers", "(?)");
+			save_vector_1d(geo, zones.get_grid_x(zone), "grid_x", gdx,
+				"x grid edges", "(?)");
+			save_vector_1d(geo, zones.get_grid_y(zone), "grid_y", gdy,
+				"y grid edges", "(?)");
+			save_vector_1d(geo, zones.get_grid_z(zone), "grid_z", gdz,
+				"z grid edges", "(?)");
+			for (const auto& v : geometry)
+			{
+				save_zone_var(geo, *v.vec, zone, v.name, {dx, dy, dz},
+					v.description, v.units);
+			}
+			save_zone_var(geo, bkg.get_grid_X(), zone, "grid_X",
+				{gdx, gdy, gdz}, "X grid edges", "(m)");
+			save_zone_var(geo, bkg.get_grid_Y(), zone, "grid_Y",
+				{gdx, gdy, gdz}, "Y grid edges", "(m)");
+			save_zone_var(geo, bkg.get_grid_Z(), zone, "grid_Z",
+				{gdx, gdy, gdz}, "Z grid edges", "(m)");
+
+			// Poloidal cell corners in the first toroidal plane
+			const auto& grid_X {bkg.get_grid_X()};
+			if (!grid_X.get_data().empty())
+			{
+				std::vector<double> R {}, Z {};
+				for (int i {}; i <= zones.get_nx(zone); ++i)
+				for (int j {}; j <= zones.get_ny(zone); ++j)
+				{
+					R.push_back(std::hypot(grid_X(zone, i, j, 0),
+						bkg.get_grid_Y()(zone, i, j, 0)));
+					Z.push_back(bkg.get_grid_Z()(zone, i, j, 0));
+				}
+				netCDF::NcVar R_var {geo.addVar("R_corners",
+					netCDF::ncDouble, {gdx, gdy})};
+				R_var.putVar(R.data());
+				R_var.putAtt("description", "R of the cell corners");
+				R_var.putAtt("units", "(m)");
+				netCDF::NcVar Z_var {geo.addVar("Z_corners",
+					netCDF::ncDouble, {gdx, gdy})};
+				Z_var.putVar(Z.data());
+				Z_var.putAtt("description", "Z of the cell corners");
+				Z_var.putAtt("units", "(m)");
+			}
+
+			// Background
+			netCDF::NcGroup bkg_group {zone_group.addGroup("background")};
+			for (const auto& v : background)
+			{
+				save_zone_var(bkg_group, *v.vec, zone, v.name,
+					{dim_time, dx, dy, dz}, v.description, v.units);
+			}
+
+			// Output
+			netCDF::NcGroup out_group {zone_group.addGroup("output")};
+			save_zone_var(out_group, imp_stats.get_counts(), zone, "Nz",
+				{dim_time, dx, dy, dz}, "impurity counts", "");
+			for (const auto& v : output)
+			{
+				save_zone_var(out_group, *v.vec, zone, v.name,
+					{dim_time, dx, dy, dz}, v.description, v.units);
+			}
+		}
+	}
+
+	/**
 	* Saves everything into a netCDF file named <case_name>.nc.
 	*
 	* An existing file with that name is deleted first. The dimensions are
@@ -929,21 +1251,25 @@ namespace SaveResults
 		netCDF::NcDim dim_str {nc_file.addDim("num_string", 1)};
 
 		// Dimensions for the arrays containing data at the cell centers. 
-		// First dimension is time, then x, y, z.
+		// First dimension is time, then x, y, z. With more than one zone,
+		// each zone's group has its own x, y and z (see save_zones).
 		netCDF::NcDim dim1 {nc_file.addDim("time", bkg.get_dim1())};
-		netCDF::NcDim dim2 {nc_file.addDim("x", bkg.get_dim2())};
-		netCDF::NcDim dim3 {nc_file.addDim("y", bkg.get_dim3())};
-		netCDF::NcDim dim4 {nc_file.addDim("z", bkg.get_dim4())};
+		const bool one_zone {bkg.get_nzones() == 1};
+		if (one_zone)
+		{
+			nc_file.addDim("x", bkg.get_dim2());
+			nc_file.addDim("y", bkg.get_dim3());
+			nc_file.addDim("z", bkg.get_dim4());
 
-		// Dimensions for the grid points. They're just bigger than the
-		// cell center lengths.
-		netCDF::NcDim grid_dim2 {nc_file.addDim("grid x", bkg.get_dim2() + 1)};
-		netCDF::NcDim grid_dim3 {nc_file.addDim("grid y", bkg.get_dim3() + 1)};
-		netCDF::NcDim grid_dim4 {nc_file.addDim("grid z", bkg.get_dim4() + 1)};
+			// Dimensions for the grid points. They're just bigger than the
+			// cell center lengths.
+			nc_file.addDim("grid x", bkg.get_dim2() + 1);
+			nc_file.addDim("grid y", bkg.get_dim3() + 1);
+			nc_file.addDim("grid z", bkg.get_dim4() + 1);
 
-		// Dimensions for the particle track
-		netCDF::NcDim track_dim {nc_file.addDim("track", 
-			imp_stats.get_track_x().size())};
+			// Dimensions for the particle track
+			nc_file.addDim("track", imp_stats.get_track_x().size());
+		}
 
 		// Details about the simulation (system, time run, time spent, etc.)
 		// To-do
@@ -956,14 +1282,27 @@ namespace SaveResults
 		// Save all input options used for this case
 		save_input_options(nc_file, opts);
 
-		// Save all geometry related variables
-		save_geometry(nc_file, bkg);
+		if (one_zone)
+		{
+			// Save all geometry related variables
+			save_geometry(nc_file, bkg);
 
-		// Save all background related variables
-		save_background(nc_file, opts, bkg);
+			// Save all background related variables
+			save_background(nc_file, opts, bkg);
 
-		// Save impurity transport results
-		save_output(nc_file, opts, bkg, imp_stats);
+			// Save impurity transport results
+			save_output(nc_file, opts, bkg, imp_stats);
+		}
+
+		// With more than one zone, only the times are in the top-level
+		// geometry group, and everything else is per zone
+		else
+		{
+			netCDF::NcGroup geo_group {nc_file.addGroup("geometry")};
+			save_vector_1d(geo_group, bkg.get_times(), "time", dim1,
+				"time for each frame", "(s)");
+			save_zones(nc_file, opts, bkg, imp_stats);
+		}
 
 		std::cout << "Saved as " << nc_filename << '\n';
 	}
