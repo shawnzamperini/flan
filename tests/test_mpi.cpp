@@ -520,21 +520,20 @@ TEST_F(MPITest, BroadcastS3XBackground)
 // pattern for each array, and reduce_stats sums them onto rank 0. Rank 0
 // should get the pattern times 1 + 2 + ... + nprocs. The patterns differ so
 // that two arrays swapped in the packing would be caught.
-TEST_F(MPITest, ReduceStats)
+void check_reduce_stats(Impurity::Statistics stats)
 {
 	const int rank {mpi_rank()};
 	const int nprocs {mpi_size()};
 	const int scale {rank + 1};
 	const int total_scale {nprocs * (nprocs + 1) / 2};
 
-	Impurity::Statistics stats {2, 3, 4, 5};
 	const int n {static_cast<int>(stats.get_counts().get_data().size())};
 
 	// Each array's value in cell i for a scale of 1
 	auto pattern = [](int field, int i) {return 10.0 * field + i % 13 + 1;};
 
 	// Arrays to fill, in no particular order
-	std::vector<Vectors::Vector4D<BkgFPType>*> arrays {&stats.get_weights(),
+	std::vector<Vectors::ZonedVector<BkgFPType>*> arrays {&stats.get_weights(),
 		&stats.get_vX(), &stats.get_vY(), &stats.get_vZ(), &stats.get_vx(),
 		&stats.get_vy(), &stats.get_vz(), &stats.get_charge(),
 		&stats.get_s()};
@@ -553,16 +552,15 @@ TEST_F(MPITest, ReduceStats)
 	const int count_scale {rank == 0 ? total_scale : 0};
 	const double array_scale {rank == 0 ? double(total_scale) : 0.0};
 
-	std::vector<Vectors::Vector4D<BkgFPType>*> sums {&sum.get_weights(),
+	std::vector<Vectors::ZonedVector<BkgFPType>*> sums {&sum.get_weights(),
 		&sum.get_vX(), &sum.get_vY(), &sum.get_vZ(), &sum.get_vx(),
 		&sum.get_vy(), &sum.get_vz(), &sum.get_charge(), &sum.get_s()};
 	const std::vector<std::string> names {"weights", "vX", "vY", "vZ", "vx",
 		"vy", "vz", "charge", "s"};
 
-	EXPECT_EQ(sum.get_dim1(), 2);
-	EXPECT_EQ(sum.get_dim2(), 3);
-	EXPECT_EQ(sum.get_dim3(), 4);
-	EXPECT_EQ(sum.get_dim4(), 5);
+	EXPECT_EQ(sum.get_dim1(), stats.get_dim1());
+	EXPECT_EQ(sum.get_nzones(), stats.get_nzones());
+	EXPECT_TRUE(sum.get_counts().check_same_shape(stats.get_counts()));
 	EXPECT_EQ(static_cast<int>(sum.get_counts().get_data().size()), n);
 	for (const auto* a : sums)
 		EXPECT_EQ(static_cast<int>(a->get_data().size()), n);
@@ -580,6 +578,20 @@ TEST_F(MPITest, ReduceStats)
 	EXPECT_EQ(bad_counts, 0) << "counts on rank " << rank;
 	for (std::size_t f {}; f < sums.size(); ++f)
 		EXPECT_EQ(bad[f], 0) << names[f] << " on rank " << rank;
+}
+
+TEST_F(MPITest, ReduceStats)
+{
+	const Impurity::Statistics stats {2, 3, 4, 5};
+	EXPECT_EQ(stats.get_dim2(), 3);
+	check_reduce_stats(stats);
+}
+
+// The same with statistics for three zones of different sizes
+TEST_F(MPITest, ReduceStatsZones)
+{
+	check_reduce_stats(Impurity::Statistics {2, {3, 2, 4}, {4, 5, 1},
+		{5, 1, 3}});
 }
 
 

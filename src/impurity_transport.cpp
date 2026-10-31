@@ -1085,8 +1085,7 @@ namespace ImpurityTransport
 
 		// Initialize particle statistics vectors, all contained within a
 		// Statistics object. 
-		Impurity::Statistics imp_stats {bkg.get_dim1(), bkg.get_dim2(), 
-			bkg.get_dim3(), bkg.get_dim4()};
+		Impurity::Statistics imp_stats {bkg};
 
 		// Load OpenADAS data needed for ionization/recombination rates if
 		// ionization/recombination is on. Believe it or not, this is the

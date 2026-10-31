@@ -60,6 +60,11 @@ target_link_libraries(test_s3x_bkg_cpu PRIVATE flan gtest_main hdf5
 	OpenMP::OpenMP_CXX)
 add_test(NAME S3XBkgCPUTest COMMAND test_s3x_bkg_cpu)
 
+add_executable(test_stats_cpu test_stats_cpu.cpp)
+target_link_libraries(test_stats_cpu PRIVATE flan gtest_main
+	OpenMP::OpenMP_CXX)
+add_test(NAME StatsCPUTest COMMAND test_stats_cpu)
+
 # MPI test. It has its own main to initialize MPI, so it links gtest instead
 # of gtest_main, and it's run on 3 ranks with the same mpiexec that CMake
 # found for the library. The timeout stops ctest from waiting forever if a

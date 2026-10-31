@@ -13,11 +13,13 @@
 #include <cmath>
 #include <iomanip>
 #include <numeric>
+#include <type_traits>
 #include <omp.h>
 #include <vector>
 
 #include "background.h"
 #include "constants.h"
+#include "errors.h"
 #include "flan_types.h"
 #include "impurity_stats.h"
 #include "impurity_stats_device.h"
@@ -36,8 +38,10 @@ namespace Impurity
 	* @class Statistics
 	*
 	* Class to hold all the vectors related to tracking the statistics of
-	* an impurity transport simulation. Each array is indexed by
-	* (time frame, x cell, y cell, z cell).
+	* an impurity transport simulation. Each array is a ZonedVector without
+	* ghost cells, indexed by (zone, time frame, x cell, y cell, z cell),
+	* with the same zones as the background. With a single zone, the layout
+	* is the same as a Vector4D indexed by (time frame, x, y, z).
 	*/
 
 	/**
@@ -46,12 +50,8 @@ namespace Impurity
 	Statistics::Statistics() {};
 
 	/**
-	* Creates a Statistics object with zero-initialized arrays of size
-	* dim1 x dim2 x dim3 x dim4.
-	*
-	* All the arrays are allocated except the density, which is only
-	* allocated in calc_density so it doesn't take up memory for the whole
-	* simulation.
+	* Creates a single-zone Statistics object with zero-initialized arrays
+	* of size dim1 x dim2 x dim3 x dim4.
 	*
 	* @param dim1 Number of time frames.
 	* @param dim2 Number of grid cells in x.
@@ -60,70 +60,115 @@ namespace Impurity
 	*/
 	Statistics::Statistics(const int dim1, const int dim2, const int dim3, 
 		const int dim4)
+		: Statistics(dim1, std::vector<int> {dim2}, std::vector<int> {dim3},
+			std::vector<int> {dim4})
+	{}
+
+	/**
+	* Creates a Statistics object with zero-initialized arrays for dim1 time
+	* frames and the given number of cells in each zone.
+	*
+	* All the arrays are allocated except the density, which is only
+	* allocated in calc_density so it doesn't take up memory for the whole
+	* simulation.
+	*
+	* @param dim1 Number of time frames.
+	* @param nx Number of grid cells in x in each zone.
+	* @param ny Number of grid cells in y in each zone.
+	* @param nz Number of grid cells in z in each zone.
+	*/
+	Statistics::Statistics(const int dim1, const std::vector<int>& nx,
+		const std::vector<int>& ny, const std::vector<int>& nz)
 		: m_dim1 {dim1}
-		, m_dim2 {dim2}
-		, m_dim3 {dim3}
-		, m_dim4 {dim4}
-		, m_counts (Vectors::Vector4D<int> {dim1, dim2, dim3, dim4})
-		, m_weights (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
-		//, m_density (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
-		, m_charge (Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, dim4})
+		, m_nx {nx}
+		, m_ny {ny}
+		, m_nz {nz}
+		, m_counts (dim1, nx, ny, nz)
+		, m_weights (dim1, nx, ny, nz)
+		, m_charge (dim1, nx, ny, nz)
 	{
 		// These arrays can take up a lot of space. Could consider an option
 		// to only allocate and track these if requested.
 
 		// Cartesian velocity components
-		m_vX.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-			dim4});
-		m_vY.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-			dim4});
-		m_vZ.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-			dim4});
+		m_vX = Vectors::ZonedVector<BkgFPType>(dim1, nx, ny, nz);
+		m_vY = Vectors::ZonedVector<BkgFPType>(dim1, nx, ny, nz);
+		m_vZ = Vectors::ZonedVector<BkgFPType>(dim1, nx, ny, nz);
 
 		// Curvilinear velocity components
-		m_vx.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-			dim4});
-		m_vy.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-			dim4});
-		m_vz.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-			dim4});
+		m_vx = Vectors::ZonedVector<BkgFPType>(dim1, nx, ny, nz);
+		m_vy = Vectors::ZonedVector<BkgFPType>(dim1, nx, ny, nz);
+		m_vz = Vectors::ZonedVector<BkgFPType>(dim1, nx, ny, nz);
 
 		// Collisionality strength from Nanbu model
-		m_s.move_into_data(Vectors::Vector4D<BkgFPType> {dim1, dim2, dim3, 
-			dim4});
+		m_s = Vectors::ZonedVector<BkgFPType>(dim1, nx, ny, nz);
 	}
 
 	/**
-	* Returns the size of the first dimension of the arrays, which is the
-	* number of time frames.
+	* Creates a Statistics object with zero-initialized arrays shaped like a
+	* background: one entry per background time frame, and the same zones.
 	*
-	* @return Size of dimension 1.
+	* @param bkg Background the statistics are recorded on.
 	*/
+	Statistics::Statistics(const Background::Background& bkg)
+		: Statistics(bkg.get_dim1(), bkg.get_zones().get_nx_all(),
+			bkg.get_zones().get_ny_all(), bkg.get_zones().get_nz_all())
+	{}
+
+	/**
+	* Returns a new, zero-initialized Statistics object with the same shape
+	* as this one.
+	*
+	* @return The new object.
+	*/
+	Statistics Statistics::same_shape() const
+	{
+		return Statistics(m_dim1, m_nx, m_ny, m_nz);
+	}
+
+	/**
+	* @name Dimension accessors
+	*
+	* Return the number of time frames (dim1) or zones. dim2, dim3 and dim4
+	* are the number of cells in x, y and z, which are only defined for a
+	* single zone. With more than one zone they stop the run with
+	* Errors::fatal_error.
+	*/
+	///@{
 	const int Statistics::get_dim1() const {return m_dim1;}
 
-	/**
-	* Returns the size of the second dimension of the arrays, which is the
-	* number of grid cells in x.
-	*
-	* @return Size of dimension 2.
-	*/
-	const int Statistics::get_dim2() const {return m_dim2;}
+	int Statistics::get_nzones() const {return std::ssize(m_nx);}
 
-	/**
-	* Returns the size of the third dimension of the arrays, which is the
-	* number of grid cells in y.
-	*
-	* @return Size of dimension 3.
-	*/
-	const int Statistics::get_dim3() const {return m_dim3;}
+	const int Statistics::get_dim2() const
+	{
+		if (m_nx.size() != 1)
+		{
+			Errors::fatal_error("Statistics::get_dim2 only works with a "
+				"single zone.");
+		}
+		return m_nx[0];
+	}
 
-	/**
-	* Returns the size of the fourth dimension of the arrays, which is the
-	* number of grid cells in z.
-	*
-	* @return Size of dimension 4.
-	*/
-	const int Statistics::get_dim4() const {return m_dim4;}
+	const int Statistics::get_dim3() const
+	{
+		if (m_ny.size() != 1)
+		{
+			Errors::fatal_error("Statistics::get_dim3 only works with a "
+				"single zone.");
+		}
+		return m_ny[0];
+	}
+
+	const int Statistics::get_dim4() const
+	{
+		if (m_nz.size() != 1)
+		{
+			Errors::fatal_error("Statistics::get_dim4 only works with a "
+				"single zone.");
+		}
+		return m_nz[0];
+	}
+	///@}
 
 	/**
 	* Returns the time (s) along the recorded particle track.
@@ -197,7 +242,7 @@ namespace Impurity
 	*
 	* @return Reference to the counts array.
 	*/
-	Vectors::Vector4D<int>& Statistics::get_counts() {return m_counts;};
+	Vectors::ZonedVector<int>& Statistics::get_counts() {return m_counts;};
 
 	/**
 	* Returns the summed weight * dt in each cell and time frame, which is
@@ -205,7 +250,7 @@ namespace Impurity
 	*
 	* @return Reference to the weights array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_weights() {return m_weights;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_weights() {return m_weights;}
 
 	/**
 	* Returns the impurity density in each cell and time frame (m^-3).
@@ -214,7 +259,7 @@ namespace Impurity
 	*
 	* @return Reference to the density array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_density() {return m_density;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_density() {return m_density;}
 
 	/**
 	* Returns the Cartesian X velocity in each cell and time frame.
@@ -224,7 +269,7 @@ namespace Impurity
 	*
 	* @return Reference to the vX array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_vX() {return m_vX;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_vX() {return m_vX;}
 
 	/**
 	* Returns the Cartesian Y velocity in each cell and time frame.
@@ -234,7 +279,7 @@ namespace Impurity
 	*
 	* @return Reference to the vY array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_vY() {return m_vY;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_vY() {return m_vY;}
 
 	/**
 	* Returns the Cartesian Z velocity in each cell and time frame.
@@ -244,7 +289,7 @@ namespace Impurity
 	*
 	* @return Reference to the vZ array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_vZ() {return m_vZ;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_vZ() {return m_vZ;}
 
 	/**
 	* Returns the velocity along computational x in each cell and time frame.
@@ -254,7 +299,7 @@ namespace Impurity
 	*
 	* @return Reference to the vx array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_vx() {return m_vx;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_vx() {return m_vx;}
 
 	/**
 	* Returns the velocity along computational y in each cell and time frame.
@@ -264,7 +309,7 @@ namespace Impurity
 	*
 	* @return Reference to the vy array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_vy() {return m_vy;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_vy() {return m_vy;}
 
 	/**
 	* Returns the velocity along computational z in each cell and time frame.
@@ -274,7 +319,7 @@ namespace Impurity
 	*
 	* @return Reference to the vz array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_vz() {return m_vz;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_vz() {return m_vz;}
 
 	/**
 	* Returns the charge state in each cell and time frame.
@@ -284,7 +329,7 @@ namespace Impurity
 	*
 	* @return Reference to the charge array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_charge() {return m_charge;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_charge() {return m_charge;}
 
 	/**
 	* Returns the Nanbu collisionality s in each cell and time frame.
@@ -294,7 +339,7 @@ namespace Impurity
 	*
 	* @return Reference to the s array.
 	*/
-	Vectors::Vector4D<BkgFPType>& Statistics::get_s() {return m_s;}
+	Vectors::ZonedVector<BkgFPType>& Statistics::get_s() {return m_s;}
 
 	/**
 	* Adds two Statistics objects together.
@@ -304,22 +349,27 @@ namespace Impurity
 	* from other instead of combined.
 	*
 	* @param other Statistics object to add to this one. Must have the same
-	*        dimensions.
+	*        shape.
 	* @return New Statistics object holding the sums.
 	*/
 	Statistics Statistics::operator+ (const Statistics& other) const
 	{
-		Statistics ret_stats {m_dim1, m_dim2, m_dim3, m_dim4};
-		ret_stats.m_counts = m_counts + other.m_counts;
-		ret_stats.m_weights = m_weights + other.m_weights;
-		ret_stats.m_charge = m_charge + other.m_charge;
-		ret_stats.m_s = m_s + other.m_s;
-		ret_stats.m_vX = m_vX + other.m_vX;
-		ret_stats.m_vY = m_vY + other.m_vY;
-		ret_stats.m_vZ = m_vZ + other.m_vZ;
-		ret_stats.m_vx = m_vx + other.m_vx;
-		ret_stats.m_vy = m_vy + other.m_vy;
-		ret_stats.m_vz = m_vz + other.m_vz;
+		Statistics ret_stats {same_shape()};
+		auto sum = [](auto& out, const auto& a, const auto& b)
+		{
+			for (std::size_t n {}; n < out.get_data().size(); ++n)
+				out.get_data()[n] = a.get_data()[n] + b.get_data()[n];
+		};
+		sum(ret_stats.m_counts, m_counts, other.m_counts);
+		sum(ret_stats.m_weights, m_weights, other.m_weights);
+		sum(ret_stats.m_charge, m_charge, other.m_charge);
+		sum(ret_stats.m_s, m_s, other.m_s);
+		sum(ret_stats.m_vX, m_vX, other.m_vX);
+		sum(ret_stats.m_vY, m_vY, other.m_vY);
+		sum(ret_stats.m_vZ, m_vZ, other.m_vZ);
+		sum(ret_stats.m_vx, m_vx, other.m_vx);
+		sum(ret_stats.m_vy, m_vy, other.m_vy);
+		sum(ret_stats.m_vz, m_vz, other.m_vz);
 
 		// Right now we only track a single particle track, so we don't actually
 		// do anything here. This will mean the arrays are empty if there is
@@ -338,37 +388,40 @@ namespace Impurity
 	/**
 	* Adds to the counts in a cell and time frame.
 	*
+	* @param zone Zone of the grid cell.
 	* @param tidx Index of the time frame.
 	* @param xidx x index of the grid cell.
 	* @param yidx y index of the grid cell.
 	* @param zidx z index of the grid cell.
 	* @param value Number to add, usually just 1.
 	*/
-	void Statistics::add_counts(const int tidx, const int xidx, 
+	void Statistics::add_counts(const int zone, const int tidx, const int xidx, 
 		const int yidx, 
 		const int zidx, const int value)
 	{
-		m_counts(tidx, xidx, yidx, zidx) += value;
+		m_counts(zone, tidx, xidx, yidx, zidx) += value;
 	}
 	
 	/**
 	* Adds to the weights in a cell and time frame.
 	*
+	* @param zone Zone of the grid cell.
 	* @param tidx Index of the time frame.
 	* @param xidx x index of the grid cell.
 	* @param yidx y index of the grid cell.
 	* @param zidx z index of the grid cell.
 	* @param value Weight to add, usually the particle weight * dt.
 	*/
-	void Statistics::add_weights(const int tidx, const int xidx, 
+	void Statistics::add_weights(const int zone, const int tidx, const int xidx, 
 		const int yidx, const int zidx, const BkgFPType value)
 	{
-		m_weights(tidx, xidx, yidx, zidx) += value;
+		m_weights(zone, tidx, xidx, yidx, zidx) += value;
 	}
 
 	/**
 	* Adds velocities to the running sums in a cell and time frame.
 	*
+	* @param zone Zone of the grid cell.
 	* @param tidx Index of the time frame.
 	* @param xidx x index of the grid cell.
 	* @param yidx y index of the grid cell.
@@ -381,18 +434,18 @@ namespace Impurity
 	* @param vz Velocity along computational z to add.
 	* @param bkg Background plasma. Currently unused.
 	*/
-	void Statistics::add_vels(const int tidx, const int xidx, const int yidx,
-		const int zidx, const BkgFPType vX, const BkgFPType vY, 
+	void Statistics::add_vels(const int zone, const int tidx,
+		const int xidx, const int yidx, const int zidx, const BkgFPType vX, const BkgFPType vY, 
 		const BkgFPType vZ, const BkgFPType vx, const BkgFPType vy, 
 		const BkgFPType vz,const Background::Background& bkg)
 	{
 		// Add velocities to the running total at each cell location
-		m_vX(tidx, xidx, yidx, zidx) += vX;
-		m_vY(tidx, xidx, yidx, zidx) += vY;
-		m_vZ(tidx, xidx, yidx, zidx) += vZ;
-		m_vx(tidx, xidx, yidx, zidx) += vx;
-		m_vy(tidx, xidx, yidx, zidx) += vy;
-		m_vz(tidx, xidx, yidx, zidx) += vz;
+		m_vX(zone, tidx, xidx, yidx, zidx) += vX;
+		m_vY(zone, tidx, xidx, yidx, zidx) += vY;
+		m_vZ(zone, tidx, xidx, yidx, zidx) += vZ;
+		m_vx(zone, tidx, xidx, yidx, zidx) += vx;
+		m_vy(zone, tidx, xidx, yidx, zidx) += vy;
+		m_vz(zone, tidx, xidx, yidx, zidx) += vz;
 
 		// Note that one could add velocity distribution counting for a future
 		// update if the memory load isn't too demanding, but it may be.
@@ -401,31 +454,33 @@ namespace Impurity
 	/**
 	* Adds to the charge in a cell and time frame.
 	*
+	* @param zone Zone of the grid cell.
 	* @param tidx Index of the time frame.
 	* @param xidx x index of the grid cell.
 	* @param yidx y index of the grid cell.
 	* @param zidx z index of the grid cell.
 	* @param value Charge to add, usually the charge * weight * dt.
 	*/
-	void Statistics::add_charge(const int tidx, const int xidx, 
+	void Statistics::add_charge(const int zone, const int tidx, const int xidx, 
 		const int yidx, const int zidx, const BkgFPType value)
 	{
-		m_charge(tidx, xidx, yidx, zidx) += value;
+		m_charge(zone, tidx, xidx, yidx, zidx) += value;
 	}
 
 	/**
 	* Adds to the Nanbu collisionality s in a cell and time frame.
 	*
+	* @param zone Zone of the grid cell.
 	* @param tidx Index of the time frame.
 	* @param xidx x index of the grid cell.
 	* @param yidx y index of the grid cell.
 	* @param zidx z index of the grid cell.
 	* @param value s to add, usually s * weight * dt.
 	*/
-	void Statistics::add_s(const int tidx, const int xidx, 
+	void Statistics::add_s(const int zone, const int tidx, const int xidx, 
 		const int yidx, const int zidx, const BkgFPType value)
 	{
-		m_s(tidx, xidx, yidx, zidx) += value;
+		m_s(zone, tidx, xidx, yidx, zidx) += value;
 	}
 
 	/**
@@ -440,21 +495,17 @@ namespace Impurity
 	*/
 	void Statistics::pack(std::vector<double>& buf) const
 	{
-		// Clear buffer and reserve enough space for all the Vector4Ds
+		// Clear buffer and reserve enough space for all the arrays
 		buf.clear();
-		buf.reserve(m_dim1 * m_dim2 * m_dim3 * m_dim4 * 9); // 9 fields
+		buf.reserve(m_counts.get_data().size() * 10);
 
-		// Define a lambda function that breaks down a Vector4D and appends
-		// it to our buffer.
-		auto append = [&](auto& v4d) {
-			for (int i = 0; i < m_dim1; i++)
-			for (int j = 0; j < m_dim2; j++)
-			for (int k = 0; k < m_dim3; k++)
-			for (int l = 0; l < m_dim4; l++)
-				buf.push_back(v4d(i,j,k,l));
+		// Appends an array's flattened data to the buffer
+		auto append = [&](const auto& v)
+		{
+			for (const auto val : v.get_data()) buf.push_back(val);
 		};
 
-		// Append each Vector4D to buffer
+		// Append each array to buffer
 		append(m_counts);   // convert int → double automatically
 		append(m_weights);
 		append(m_charge);
@@ -481,17 +532,14 @@ namespace Impurity
 		// Index in the 1D buffer
 		size_t idx = 0;
 
-		// Define a lambda function to take element in the buffer and put them
-		// into a Vector4D.
-		auto extract = [&](auto& v4d) {
-			for (int i = 0; i < m_dim1; i++)
-			for (int j = 0; j < m_dim2; j++)
-			for (int k = 0; k < m_dim3; k++)
-			for (int l = 0; l < m_dim4; l++)
-				v4d(i,j,k,l) = buf[idx++];
+		// Takes the next values in the buffer and puts them into an array
+		auto extract = [&](auto& v)
+		{
+			using T = std::remove_reference_t<decltype(v.get_data()[0])>;
+			for (auto& val : v.get_data()) val = static_cast<T>(buf[idx++]);
 		};
 
-		// Extract Vector4D's from buffer. Order must match that in pack!!!
+		// Extract arrays from buffer. Order must match that in pack!!!
 		extract(m_counts);
 		extract(m_weights);
 		extract(m_charge);
@@ -504,7 +552,6 @@ namespace Impurity
 		extract(m_vz);
 	}
 
-
 	/**
 	* Calculates the impurity density in each cell and time frame from the
 	* weights.
@@ -513,8 +560,8 @@ namespace Impurity
 	* number of particles, and the particle weights were normalized by the
 	* number of particles when each particle was created. The density is
 	* then just the weight divided by the cell volume in physical space,
-	* J * dx * dy * dz. The density array is allocated here. The
-	* statistics are for a single zone (zone 0) for now.
+	* J * dx * dy * dz, using each zone's grid and Jacobian. The density
+	* array is allocated here.
 	*
 	* @param bkg Background plasma, used for the grid and Jacobian.
 	* @param tot_imp_num Total number of impurities followed. Currently
@@ -525,49 +572,47 @@ namespace Impurity
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)
 	{
-		// Allocate empty density Vector4D. Important we do this here,
-		// since if we do it when ImpurityStats gets constructed that means
-		// an unused allocated Vector4D is held for the enitre simulation.
-		m_density = Vectors::Vector4D<BkgFPType>(m_dim1, m_dim2, m_dim3, 
-			m_dim4);
+		// Allocate empty density array. Important we do this here, since if
+		// we do it when Statistics gets constructed that means an unused
+		// allocated array is held for the enitre simulation.
+		m_density = Vectors::ZonedVector<BkgFPType>(m_dim1, m_nx, m_ny, m_nz);
 
-		// Need to loop through the entire Vector4D. Unconventional 
+		// Need to loop through every zone and cell. Unconventional
 		// indentation here just to keep it clean.
+		for (int zone {}; zone < get_nzones(); ++zone)
+		{
+		const auto& grid_x {bkg.get_grid_x(zone)};
+		const auto& grid_y {bkg.get_grid_y(zone)};
+		const auto& grid_z {bkg.get_grid_z(zone)};
 		for (int i {}; i < m_dim1; ++i)
 		{
-		for (int j {}; j < m_dim2; ++j)
+		for (int j {}; j < m_nx[zone]; ++j)
 		{
-		for (int k {}; k < m_dim3; ++k)
+		for (int k {}; k < m_ny[zone]; ++k)
 		{
-		for (int l {}; l < m_dim4; ++l)
+		for (int l {}; l < m_nz[zone]; ++l)
 		{
 			// Cell width in each direction 
-			double dx {bkg.get_grid_x(0)[j+1] - bkg.get_grid_x(0)[j]};
-			double dy {bkg.get_grid_y(0)[k+1] - bkg.get_grid_y(0)[k]};
-			double dz {bkg.get_grid_z(0)[l+1] - bkg.get_grid_z(0)[l]};
+			double dx {grid_x[j+1] - grid_x[j]};
+			double dy {grid_y[k+1] - grid_y[k]};
+			double dz {grid_z[l+1] - grid_z[l]};
 
 			// Volume in physical space is jacob * dx * dy * dz
-			double cell_vol {bkg.get_J()(0, j, k, l) * dx * dy * dz};
-
-			// Normalize each weight value by the volume and total number of
-			// particles launched. This goes from units of (s) to (s/m3). 
-			// m_weights is in units of particles/s, so to get total number of
-			// particles (weight -> N) we multiply by dt. 
-			//m_density(i,j,k,l) = m_weights(i,j,k,l) / cell_vol 
-			//	/ tot_imp_num * imp_source_scale_fact;
+			double cell_vol {bkg.get_J()(zone, j, k, l) * dx * dy * dz};
 
 			// Weights ([particles] since it was accumulated as p_w * dt), so 
 			// density is just weight / volume. The weight was already 
 			// normalized by the number of particles when the particle was
 			// created.
-			m_density(i,j,k,l) = m_weights(i,j,k,l) / cell_vol;
+			m_density(zone, i, j, k, l) = m_weights(zone, i, j, k, l)
+				/ cell_vol;
 		}
 		}
 		}	
 		}
-
+		}
 	}
-	
+
 	/**
 	* Converts the summed velocities in each cell and time frame
 	* into weighted average velocities.
@@ -577,44 +622,21 @@ namespace Impurity
 	*/
 	void Statistics::calc_vels()
 	{
-		// Need to loop through the entire Vector4D. Unconventional 
-		// indentation here just to keep it clean.
-		for (int i {}; i < m_dim1; ++i)
-		{
-		for (int j {}; j < m_dim2; ++j)
-		{
-		for (int k {}; k < m_dim3; ++k)
-		{
-		for (int l {}; l < m_dim4; ++l)
+		// Loop over every zone, time frame and cell at once through the
+		// flattened data, since every array has the same shape
+		for (std::size_t n {}; n < m_counts.get_data().size(); ++n)
 		{
 			// Total weight (actually, occupancy since this is w * dt)
-			double tot_weight {m_weights(i,j,k,l)};
+			const double tot_weight {m_weights.get_data()[n]};
 
 			// Convert each velocity sum in each cell to an average velocity
 			// by dividing it by the weight
-			double counts {static_cast<double>(m_counts(i,j,k,l))};
-			if (counts > 0)
+			const bool counts {m_counts.get_data()[n] > 0};
+			for (auto* v : {&m_vX, &m_vY, &m_vZ, &m_vx, &m_vy, &m_vz})
 			{
-				m_vX(i,j,k,l) /= tot_weight;
-				m_vY(i,j,k,l) /= tot_weight;
-				m_vZ(i,j,k,l) /= tot_weight;
-				m_vx(i,j,k,l) /= tot_weight;
-				m_vy(i,j,k,l) /= tot_weight;
-				m_vz(i,j,k,l) /= tot_weight;
-				
+				double& val {v->get_data()[n]};
+				val = counts ? val / tot_weight : 0.0;
 			}
-			else
-			{
-				m_vX(i,j,k,l) = 0.0;
-				m_vY(i,j,k,l) = 0.0;
-				m_vZ(i,j,k,l) = 0.0;
-				m_vx(i,j,k,l) = 0.0;
-				m_vy(i,j,k,l) = 0.0;
-				m_vz(i,j,k,l) = 0.0;
-			}
-		}
-		}
-		}	
 		}
 	}
 
@@ -627,33 +649,13 @@ namespace Impurity
 	*/
 	void Statistics::calc_charge()
 	{
-
-		// Average charge is just the running sum divided by the number of
-		// counts in the cell.
-		for (int i {}; i < m_dim1; ++i)
+		// Average charge is the running sum divided by the weight.
+		for (std::size_t n {}; n < m_counts.get_data().size(); ++n)
 		{
-		for (int j {}; j < m_dim2; ++j)
-		{
-		for (int k {}; k < m_dim3; ++k)
-		{
-		for (int l {}; l < m_dim4; ++l)
-		{
-
 			// Total weight (actually, occupancy since this is w * dt)
-			double tot_weight {m_weights(i,j,k,l)};
-
-			int counts {m_counts(i,j,k,l)};
-			if (counts > 0)
-			{
-				m_charge(i,j,k,l) /= tot_weight;
-			}
-			else
-			{
-				m_charge(i,j,k,l) = 0.0;
-			}
-		}
-		}
-		}	
+			const double tot_weight {m_weights.get_data()[n]};
+			double& val {m_charge.get_data()[n]};
+			val = m_counts.get_data()[n] > 0 ? val / tot_weight : 0.0;
 		}
 	}
 
@@ -667,29 +669,12 @@ namespace Impurity
 	void Statistics::calc_s()
 	{
 		// Average s is a weighted average. m_s has accumulated s*w
-		for (int i {}; i < m_dim1; ++i)
+		for (std::size_t n {}; n < m_counts.get_data().size(); ++n)
 		{
-		for (int j {}; j < m_dim2; ++j)
-		{
-		for (int k {}; k < m_dim3; ++k)
-		{
-		for (int l {}; l < m_dim4; ++l)
-		{
-
 			// Total weight (actually, occupancy since this is w * dt)
-			double tot_weight {m_weights(i,j,k,l)};
-			int counts {m_counts(i,j,k,l)};
-			if (counts > 0)
-			{
-				m_s(i,j,k,l) /= tot_weight;
-			}
-			else
-			{
-				m_s(i,j,k,l) = 0.0;
-			}
-		}
-		}
-		}	
+			const double tot_weight {m_weights.get_data()[n]};
+			double& val {m_s.get_data()[n]};
+			val = m_counts.get_data()[n] > 0 ? val / tot_weight : 0.0;
 		}
 	}
 
@@ -714,12 +699,14 @@ namespace Impurity
 
 #ifdef USE_CUDA
 
+		// The GPU only handles a single zone so far, which has the same
+		// layout as a Vector4D
 		stats_d.device_id = device_id;
 		stats_d.Nt = m_dim1;
-		stats_d.Nx = m_dim2;
-		stats_d.Ny = m_dim3;
-		stats_d.Nz = m_dim4;
-		int N {m_dim1 * m_dim2 * m_dim3 * m_dim4};
+		stats_d.Nx = get_dim2();
+		stats_d.Ny = get_dim3();
+		stats_d.Nz = get_dim4();
+		int N {static_cast<int>(m_counts.get_data().size())};
 
 		// GPU allocation
 		cudaSetDevice(device_id);
@@ -779,8 +766,10 @@ namespace Impurity
 
 #ifdef USE_CUDA
 
-		// Allocate vectors to hold GPU data, these are the middleman
-		int N {m_dim1 * m_dim2 * m_dim3 * m_dim4};
+		// Allocate vectors to hold GPU data, these are the middleman. The GPU
+		// only handles a single zone so far.
+		get_dim2();
+		int N {static_cast<int>(m_counts.get_data().size())};
 		std::vector<int> counts_h (N);
 		std::vector<double> weights_h (N);
 		std::vector<double> vX_h (N);
@@ -832,36 +821,23 @@ namespace Impurity
 		cudaMemcpy(charge_h.data(), stats_d.q, N * sizeof(double), 
 			cudaMemcpyDeviceToHost);
 
-		// Loop through each dimension
+		// Add statistics into this object. The arrays have the same layout
+		// as the GPU's, so they're added element by element.
 		std::cout << "Adding to host object...\n";
 		#pragma omp parallel for
-		for (int i=0; i < m_dim1; ++i)
+		for (int idx = 0; idx < N; ++idx)
 		{
-		for (int j {}; j < m_dim2; ++j)
-		{
-		for (int k {}; k < m_dim3; ++k)
-		{
-		for (int l {}; l < m_dim4; ++l)
-		{
-			// 4D to 1D index
-			int idx {m_counts.calc_index(i,j,k,l)};
-
-			// Add statistics into this object
-			m_counts(i,j,k,l) += counts_h[idx];
-			m_weights(i,j,k,l) += weights_h[idx];
-			m_vX(i,j,k,l) += vX_h[idx];
-			m_vY(i,j,k,l) += vY_h[idx];
-			m_vZ(i,j,k,l) += vZ_h[idx];
-			m_vx(i,j,k,l) += vx_h[idx];
-			m_vy(i,j,k,l) += vy_h[idx];
-			m_vz(i,j,k,l) += vz_h[idx];
-			m_s(i,j,k,l)  += s_h[idx];
-			m_charge(i,j,k,l) += charge_h[idx];
+			m_counts.get_data()[idx] += counts_h[idx];
+			m_weights.get_data()[idx] += weights_h[idx];
+			m_vX.get_data()[idx] += vX_h[idx];
+			m_vY.get_data()[idx] += vY_h[idx];
+			m_vZ.get_data()[idx] += vZ_h[idx];
+			m_vx.get_data()[idx] += vx_h[idx];
+			m_vy.get_data()[idx] += vy_h[idx];
+			m_vz.get_data()[idx] += vz_h[idx];
+			m_s.get_data()[idx] += s_h[idx];
+			m_charge.get_data()[idx] += charge_h[idx];
 		}
-		}
-		}
-		}
-
 #endif
 
 	}
@@ -875,7 +851,7 @@ namespace Impurity
 	*
 	* @param local_stats Statistics recorded on this rank.
 	* @return On rank 0, the summed statistics. On other ranks, a
-	*         zero-initialized object with the same dimensions.
+	*         zero-initialized object with the same shape.
 	*/
 	Statistics reduce_stats(const Statistics& local_stats)
 	{
@@ -906,18 +882,13 @@ namespace Impurity
 		// Create object to store the summed results and unpack into it
 		// Only rank 0 returns a meaningful object
 		if (rank == 0) {
-			Statistics global_stats {local_stats.get_dim1(), 
-				local_stats.get_dim2(), local_stats.get_dim3(), 
-				local_stats.get_dim4()};
+			Statistics global_stats {local_stats.same_shape()};
 			global_stats.unpack(recvbuf);
 			return global_stats;
 		}
 
 		// Other ranks return a dummy object
-		return Statistics(local_stats.get_dim1(),
-						  local_stats.get_dim2(),
-						  local_stats.get_dim3(),
-						  local_stats.get_dim4());
+		return local_stats.same_shape();
 	}
 
 	/**
@@ -1053,8 +1024,9 @@ namespace Impurity
 			{
 				if (slots.state()[i]) continue;
 
-				int idx {imp_stats.get_counts().calc_index(slots.tidx()[i],
-					slots.xidx()[i], slots.yidx()[i], slots.zidx()[i])};
+				std::size_t idx {imp_stats.get_counts().calc_index(
+					slots.zone()[i], slots.tidx()[i], slots.xidx()[i],
+					slots.yidx()[i], slots.zidx()[i])};
 
 				double p_w {slots.weight()[i]};
 				counts_local[idx] += 1;
@@ -1163,8 +1135,9 @@ namespace Impurity
 		{
 			if (slots.state()[i]) continue;
 
-			int idx {imp_stats.get_counts().calc_index(slots.tidx()[i],
-				slots.xidx()[i], slots.yidx()[i], slots.zidx()[i])};
+			const std::size_t idx {imp_stats.get_counts().calc_index(
+				slots.zone()[i], slots.tidx()[i], slots.xidx()[i],
+				slots.yidx()[i], slots.zidx()[i])};
 
 			// With weights in [particles/s], this is then number of particles.
 			// We can call this the occupancy.

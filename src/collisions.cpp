@@ -567,7 +567,7 @@ namespace Collisions
 				int zidx {slots.zidx()[i]};
 
 				#pragma omp critical
-				imp_stats.add_s(tidx, xidx, yidx, zidx, s * p_w * dt);
+				imp_stats.add_s(zone, tidx, xidx, yidx, zidx, s * p_w * dt);
 			}
 			*/
 

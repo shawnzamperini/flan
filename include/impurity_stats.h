@@ -29,10 +29,9 @@ namespace Impurity
 	{
 	private:
 		int m_dim1 {};
-		int m_dim2 {};
-		int m_dim3 {};
-		int m_dim4 {};
-		int m_size {};
+		std::vector<int> m_nx {};
+		std::vector<int> m_ny {};
+		std::vector<int> m_nz {};
 		std::vector<float> m_track_t {};
 		std::vector<float> m_track_x {};
 		std::vector<float> m_track_y {};
@@ -40,17 +39,17 @@ namespace Impurity
 		std::vector<float> m_track_vx {};
 		std::vector<float> m_track_vy {};
 		std::vector<float> m_track_vz {};
-		Vectors::Vector4D<int> m_counts {};
-		Vectors::Vector4D<BkgFPType> m_weights {};
-		Vectors::Vector4D<BkgFPType> m_density {};
-		Vectors::Vector4D<BkgFPType> m_vX {};
-		Vectors::Vector4D<BkgFPType> m_vY {};
-		Vectors::Vector4D<BkgFPType> m_vZ {};
-		Vectors::Vector4D<BkgFPType> m_vx {};
-		Vectors::Vector4D<BkgFPType> m_vy {};
-		Vectors::Vector4D<BkgFPType> m_vz {};
-		Vectors::Vector4D<BkgFPType> m_charge {};
-		Vectors::Vector4D<BkgFPType> m_s {};
+		Vectors::ZonedVector<int> m_counts {};
+		Vectors::ZonedVector<BkgFPType> m_weights {};
+		Vectors::ZonedVector<BkgFPType> m_density {};
+		Vectors::ZonedVector<BkgFPType> m_vX {};
+		Vectors::ZonedVector<BkgFPType> m_vY {};
+		Vectors::ZonedVector<BkgFPType> m_vZ {};
+		Vectors::ZonedVector<BkgFPType> m_vx {};
+		Vectors::ZonedVector<BkgFPType> m_vy {};
+		Vectors::ZonedVector<BkgFPType> m_vz {};
+		Vectors::ZonedVector<BkgFPType> m_charge {};
+		Vectors::ZonedVector<BkgFPType> m_s {};
 
 	public:
 		
@@ -59,11 +58,18 @@ namespace Impurity
 		Statistics(const int dim1, const int dim2, const int dim3, 
 			const int dim4);
 
+		Statistics(const int dim1, const std::vector<int>& nx,
+			const std::vector<int>& ny, const std::vector<int>& nz);
+
+		explicit Statistics(const Background::Background& bkg);
+
 		// Accessors
 		const int get_dim1() const;
 		const int get_dim2() const;
 		const int get_dim3() const;
 		const int get_dim4() const;
+		int get_nzones() const;
+		Statistics same_shape() const;
 		std::vector<float>& get_track_t();
 		std::vector<float>& get_track_x();
 		std::vector<float>& get_track_y();
@@ -71,44 +77,45 @@ namespace Impurity
 		std::vector<float>& get_track_vx();
 		std::vector<float>& get_track_vy();
 		std::vector<float>& get_track_vz();
-		Vectors::Vector4D<int>& get_counts();
-		Vectors::Vector4D<BkgFPType>& get_weights();
-		Vectors::Vector4D<BkgFPType>& get_density();
-		Vectors::Vector4D<BkgFPType>& get_vX();
-		Vectors::Vector4D<BkgFPType>& get_vY();
-		Vectors::Vector4D<BkgFPType>& get_vZ();
-		Vectors::Vector4D<BkgFPType>& get_vx();
-		Vectors::Vector4D<BkgFPType>& get_vy();
-		Vectors::Vector4D<BkgFPType>& get_vz();
-		Vectors::Vector4D<BkgFPType>& get_charge();
-		Vectors::Vector4D<BkgFPType>& get_s();
+		Vectors::ZonedVector<int>& get_counts();
+		Vectors::ZonedVector<BkgFPType>& get_weights();
+		Vectors::ZonedVector<BkgFPType>& get_density();
+		Vectors::ZonedVector<BkgFPType>& get_vX();
+		Vectors::ZonedVector<BkgFPType>& get_vY();
+		Vectors::ZonedVector<BkgFPType>& get_vZ();
+		Vectors::ZonedVector<BkgFPType>& get_vx();
+		Vectors::ZonedVector<BkgFPType>& get_vy();
+		Vectors::ZonedVector<BkgFPType>& get_vz();
+		Vectors::ZonedVector<BkgFPType>& get_charge();
+		Vectors::ZonedVector<BkgFPType>& get_s();
 
 		// Overload of + to add counts and weights together, returned as a 
 		// new Statistics object.
 		Statistics operator+ (const Statistics& other) const;
 
 		// Functions to increase counts
-		void add_counts(const int tidx, const int xidx, const int yidx, 
-			const int zidx, const int value);
+		void add_counts(const int zone, const int tidx, const int xidx,
+			const int yidx, const int zidx, const int value);
 
 		// Function to increase weights
-		void add_weights(const int tidx, const int xidx, const int yidx, 
-			const int zidx, const BkgFPType value);
+		void add_weights(const int zone, const int tidx, const int xidx,
+			const int yidx, const int zidx, const BkgFPType value);
 
 		// Function add each velocity component to the corresponding array
 		// location
-		void add_vels(const int tidx, const int xidx, const int yidx,
-			const int zidx, const BkgFPType vX, const BkgFPType vY, 
-			const BkgFPType vZ, const BkgFPType vx, const BkgFPType vy,
-			const BkgFPType vz, const Background::Background& bkg);
+		void add_vels(const int zone, const int tidx, const int xidx,
+			const int yidx, const int zidx, const BkgFPType vX,
+			const BkgFPType vY, const BkgFPType vZ, const BkgFPType vx,
+			const BkgFPType vy, const BkgFPType vz,
+			const Background::Background& bkg);
 
 		// Function to increase charge
-		void add_charge(const int tidx, const int xidx, const int yidx, 
-			const int zidx, const BkgFPType value);
+		void add_charge(const int zone, const int tidx, const int xidx,
+			const int yidx, const int zidx, const BkgFPType value);
 
 		// Function to increase s
-		void add_s(const int tidx, const int xidx, const int yidx, 
-			const int zidx, const BkgFPType value);
+		void add_s(const int zone, const int tidx, const int xidx,
+			const int yidx, const int zidx, const BkgFPType value);
 
 		// Pack all the arrays into a single buffer that can be sent across
 		// MPI processes
