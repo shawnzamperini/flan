@@ -58,6 +58,34 @@ Last Update: 8/22/25 (commit XXX)
      - Moment type used
      - "bimaxwellian"
 
+   * - :ref:`bkg_source <bkg_source>`
+     - Source of the background plasma
+     - "gkeyll"
+
+   * - :ref:`s3x_dir <s3x_dir>`
+     - Full path to the directory containing the SOLEDGE3X files
+     - "undefined"
+
+   * - :ref:`s3x_mesh_file <s3x_mesh_file>`
+     - SOLEDGE3X mesh file within :ref:`s3x_dir <s3x_dir>`
+     - "mesh_S3X.h5"
+
+   * - :ref:`s3x_ref_file <s3x_ref_file>`
+     - SOLEDGE3X reference (normalization) file within :ref:`s3x_dir <s3x_dir>`
+     - "refParam_raptorX.h5"
+
+   * - :ref:`s3x_frame_start <s3x_frame_start>`
+     - First SOLEDGE3X plasma frame
+     - 0
+
+   * - :ref:`s3x_frame_end <s3x_frame_end>`
+     - Last SOLEDGE3X plasma frame
+     - 1
+
+   * - :ref:`s3x_chi_absorb <s3x_chi_absorb>`
+     - Absorb particles inside the SOLEDGE3X wall
+     - "on"
+
    * - :ref:`lcfs_x <lcfs_x>`
      - LCFS x-location in Gkeyll simulation (if applicable)
      - 0.0
@@ -149,6 +177,10 @@ Last Update: 8/22/25 (commit XXX)
    * - :ref:`imp_zrange_max <imp_zrange_max>`
      - z range maximum when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range"
      - 0.0
+
+   * - :ref:`imp_zone_start_val <imp_zone_start_val>`
+     - Zone particles start in (numbered from 1)
+     - 1
 
    * - :ref:`imp_collisions <imp_collisions>`
      - Impurity collisions with background toggle
@@ -276,6 +308,48 @@ gkyl_moment_type
 
 (Slated for removal)
 The type of moments output by Gkeyll. Right now, only "bimaxwellian" is really supported. You can run with "maxwellian", but the collision model will be incomplete.
+
+bkg_source
+----------
+
+Where the background plasma comes from.
+
+  - **"test"**: A built-in test background, chosen with test_opt. Used by the test cases.
+  - **"gkeyll"**: A Gkeyll simulation, see the gkyl_* options.
+  - **"soledge3x"**: A SOLEDGE3X simulation, see the s3x_* options and :doc:`soledge3x`.
+
+s3x_dir
+-------
+
+Full path to the directory containing the SOLEDGE3X files: the mesh (:ref:`s3x_mesh_file <s3x_mesh_file>`), the reference file (:ref:`s3x_ref_file <s3x_ref_file>`) and the plasma files ``plasma_00000.h5``, ``plasma_00001.h5``, etc. Must be set when :ref:`bkg_source <bkg_source>` = "soledge3x".
+
+s3x_mesh_file
+-------------
+
+Name of the SOLEDGE3X mesh file within :ref:`s3x_dir <s3x_dir>`. It must be the mesh the plasma was run on.
+
+s3x_ref_file
+------------
+
+Name of the SOLEDGE3X reference file within :ref:`s3x_dir <s3x_dir>`, which holds the values SOLEDGE3X's output is normalized by (n0, T0, c0, tau0, phi0, ...). Its R0, a0 and B0 must agree with the mesh file.
+
+s3x_frame_start
+---------------
+
+First SOLEDGE3X plasma frame to load, i.e., the number in ``plasma_%05d.h5``.
+
+s3x_frame_end
+-------------
+
+Last SOLEDGE3X plasma frame to load. The frames from :ref:`s3x_frame_start <s3x_frame_start>` to s3x_frame_end are loaded, which must be at least two, since the background is interpolated in time between frames.
+
+s3x_chi_absorb
+--------------
+
+SOLEDGE3X marks the cells inside the wall with chi = 1 (its penalization mask).
+
+  - **"on"**: A particle that ends a time step in a cell with chi = 1 is absorbed, as if it hit the wall.
+  - **"off"**: Particles move through the wall cells, which hold SOLEDGE3X's penalized plasma.
 
 lcfs_x
 ------
@@ -413,6 +487,11 @@ imp_zrange_max
 --------------
 
 Maximum z value when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range".
+
+imp_zone_start_val
+------------------
+
+Zone particles start in, numbered from 1 like the SOLEDGE3X zones. The starting x, y and z (:ref:`imp_xstart_opt <imp_xstart_opt>`, etc.) are in that zone's coordinates. Gkeyll and test backgrounds have a single zone, so this must be 1 for them.
 
 imp_collisions
 --------------

@@ -16,4 +16,5 @@ Contents
    installation.rst
    beginners_guide.rst
    input_options.rst
+   soledge3x.rst
    publications.rst
