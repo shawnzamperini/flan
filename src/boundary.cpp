@@ -17,6 +17,8 @@
 #include <omp.h>
 #include <vector>
 
+#include "mpi.h"
+
 #include "background.h"
 #include "boundary.h"
 #include "indices.h"
@@ -28,6 +30,55 @@
 
 namespace Boundary
 {
+	/**
+	* Adds another set of counts to this one.
+	*
+	* @param other Counts to add.
+	* @return This object.
+	*/
+	Fates& Fates::operator+=(const Fates& other)
+	{
+		crossings += other.crossings;
+		absorbed += other.absorbed;
+		wall += other.wall;
+		core += other.core;
+		time_end += other.time_end;
+		runaway += other.runaway;
+		return *this;
+	}
+
+	/**
+	* Sums the particle fates over every MPI rank and prints them on rank 0.
+	*
+	* Must be called by every rank.
+	*
+	* @param fates This rank's counts.
+	*/
+	void print_fates(const Fates& fates)
+	{
+		std::array<long long, 6> local {fates.crossings, fates.absorbed,
+			fates.wall, fates.core, fates.time_end, fates.runaway};
+		std::array<long long, 6> total {};
+		MPI_Reduce(local.data(), total.data(), 6, MPI_LONG_LONG, MPI_SUM, 0,
+			MPI_COMM_WORLD);
+
+		int rank {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		if (rank != 0) return;
+
+		std::cout << "Particle fates at the boundaries:\n"
+			<< "  " << total[0] << " crossings into another zone\n"
+			<< "  " << total[1] << " absorbed at an absorbing face\n"
+			<< "  " << total[2] << " absorbed inside the wall\n"
+			<< "  " << total[3] << " put back in at the core\n"
+			<< "  " << total[4] << " reached the end of the background "
+				"time\n";
+		if (total[5])
+		{
+			std::cout << "  " << total[5] << " absorbed after crossing too "
+				"many zone faces in one step\n";
+		}
+	}
 
 	/**
 	* Checks if a value is outside an absorbing boundary.
@@ -156,8 +207,9 @@ namespace Boundary
 	* @param zones The zones.
 	* @param buffers Boundary buffers in x, y and z.
 	* @param rng Random number generator for this thread.
+	* @return True if the particle hit the core face and was put back.
 	*/
-	void core_face(std::array<double, 3>& pos, int& zone,
+	bool core_face(std::array<double, 3>& pos, int& zone,
 		const Zones::Face face, const std::vector<int>& core_zones,
 		const Zones::Zones& zones, const std::array<double, 3>& buffers,
 		pcg32& rng)
@@ -168,15 +220,17 @@ namespace Boundary
 		const int c {(a + 2) % 3};
 		const bool max_bound {(face & 1) == 1};
 
+		// Same check core_bc makes
+		const bool hit {max_bound
+			? (pos[a] + buffers[a]) >= zones.get_max(zone, a)
+			: (pos[a] - buffers[a]) <= zones.get_min(zone, a)};
+
 		// Pick one of several core faces, but only if the particle hit
 		// this one. core_bc does the same check again below, but by then
 		// the particle is on the chosen face so it always passes.
 		if (core_zones.size() > 1)
 		{
-			const bool hit {max_bound
-				? (pos[a] + buffers[a]) >= zones.get_max(zone, a)
-				: (pos[a] - buffers[a]) <= zones.get_min(zone, a)};
-			if (!hit) return;
+			if (!hit) return false;
 
 			// Weighted by the number of cells on the face
 			std::vector<double> weights {};
@@ -201,6 +255,7 @@ namespace Boundary
 			zones.get_min(zone, b), zones.get_max(zone, b), buffers[b],
 			zones.get_min(zone, c), zones.get_max(zone, c), buffers[c],
 			max_bound, rng);
+		return hit;
 	}
 
 	/**
@@ -242,10 +297,12 @@ namespace Boundary
 	*        the spatial buffers.
 	* @param rngs Random number generators, one per OpenMP thread, used by
 	*        the core boundary.
+	* @param fates Counts of what happened to particles at the boundaries,
+	*        added to.
 	*/
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
-		std::vector<pcg32>& rngs)
+		std::vector<pcg32>& rngs, Fates& fates)
 	{
 		const Zones::Zones& zones {bkg.get_zones()};
 		const std::array<double, 3> buffers {opts.imp_xbound_buffer(),
@@ -274,6 +331,9 @@ namespace Boundary
 		const int tid {omp_get_thread_num()};
 		pcg32& rng = rngs[tid];
 
+		// This thread's counts, added to fates at the end
+		Fates local {};
+
 		// Loop through each slot
 		#pragma omp for
 		for (int i = 0; i < slots.N(); i++)
@@ -293,7 +353,11 @@ namespace Boundary
 				slots.set_state(i, state);
 
 				// If dead (>0) we can skip the rest of the checks.
-				if (state) continue;
+				if (state)
+				{
+					++local.time_end;
+					continue;
+				}
 			}
 
 			// Maximum t: Periodic boundary
@@ -335,13 +399,17 @@ namespace Boundary
 				{
 					state = absorbing_bc(pos[a], max_bound ? hi : lo, 
 						max_bound, buffers[a]);
-					if (state) break;
+					if (state)
+					{
+						++local.absorbed;
+						break;
+					}
 				}
 
 				else if (code == Zones::face_core)
 				{
-					core_face(pos, zone, face, core_zones[f], zones, buffers,
-						rng);
+					local.core += core_face(pos, zone, face, core_zones[f],
+						zones, buffers, rng);
 				}
 
 				// Periodic
@@ -363,9 +431,11 @@ namespace Boundary
 								"connections or use a smaller time step.\n";
 						}
 						state = 1;
+						++local.runaway;
 						break;
 					}
 
+					++local.crossings;
 					pos[a] = max_bound 
 						? pos[a] - hi + zones.get_min(code, a)
 						: pos[a] - lo + zones.get_max(code, a);
@@ -386,7 +456,11 @@ namespace Boundary
 					zones.get_grid_y(zone), pos[1])};
 				const int zidx {Indices::get_nearest_cell_index_cpu(
 					zones.get_grid_z(zone), pos[2])};
-				if (chi(zone, xidx, yidx, zidx) >= 0.5) state = 1;
+				if (chi(zone, xidx, yidx, zidx) >= 0.5)
+				{
+					state = 1;
+					++local.wall;
+				}
 			}
 
 			// Write back
@@ -397,7 +471,28 @@ namespace Boundary
 			slots.set_zone(i, zone);
 
 		} // slot loop
+
+		#pragma omp critical
+		fates += local;
+
 		} // omp parallel
 	}  // check_bounds_cpu
+
+	/**
+	* check_bounds_cpu without keeping the counts of what happened to the
+	* particles.
+	*
+	* @param slots Particle slots.
+	* @param bkg Background plasma.
+	* @param opts Simulation options.
+	* @param rngs Random number generators, one per OpenMP thread.
+	*/
+	void check_bounds_cpu(Slots::Slots& slots, 
+		const Background::Background& bkg, const Options::Options& opts,
+		std::vector<pcg32>& rngs)
+	{
+		Fates fates {};
+		check_bounds_cpu(slots, bkg, opts, rngs, fates);
+	}
 
 }  // namespace Boundary

@@ -173,8 +173,11 @@ TEST_F(S3XBkg, WallAbsorbs)
 	auto rngs {make_rngs()};
 
 	auto in_wall {one_particle(bkg, 2, 7.5, 10.5, 1.0)};
-	Boundary::check_bounds_cpu(in_wall, bkg, opts, rngs);
+	Boundary::Fates fates {};
+	Boundary::check_bounds_cpu(in_wall, bkg, opts, rngs, fates);
 	EXPECT_EQ(in_wall.state()[0], 1);
+	EXPECT_EQ(fates.wall, 1);
+	EXPECT_EQ(fates.absorbed, 0);
 
 	auto next_to_wall {one_particle(bkg, 2, 6.5, 10.5, 1.0)};
 	Boundary::check_bounds_cpu(next_to_wall, bkg, opts, rngs);

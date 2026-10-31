@@ -473,11 +473,14 @@ namespace ImpurityTransport
 	*             buffers.
 	* @param rngs_d Device-side random number generators (used on the GPU
 	*               path).
+	* @param fates Counts of what happened to particles at the boundaries,
+	*              added to on the CPU path only.
 	*/
 	void check_bounds_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
-		const Options::Options& opts, std::vector<pcg32>& rngs, pcg32* rngs_d)
+		const Options::Options& opts, std::vector<pcg32>& rngs, pcg32* rngs_d,
+		Boundary::Fates& fates)
 	{
 
 #ifdef USE_CUDA
@@ -496,7 +499,7 @@ namespace ImpurityTransport
 #endif
 
 		// Defined in boundary.cpp
-		Boundary::check_bounds_cpu(slots, bkg, opts, rngs);
+		Boundary::check_bounds_cpu(slots, bkg, opts, rngs, fates);
 	}
 
 	
@@ -755,8 +758,10 @@ namespace ImpurityTransport
 	* @param rngs_d Device-side random number generators (GPU only).
 	* @param max_time_ctr Counter of particles that exceeded the maximum
 	*                     allowed time.
+	* @return Counts of what happened to particles at the boundaries (CPU
+	*         path only, all zeros on the GPU path).
 	*/
-	void main_loop(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
+	Boundary::Fates main_loop(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
 		Impurity::Statistics& imp_stats, 
@@ -776,6 +781,9 @@ namespace ImpurityTransport
 		int nprocs {};
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 		MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+		// Counts of what happens to particles at the boundaries
+		Boundary::Fates fates {};
 
 		// Tracker for number of remaining particles to follow. We divide them
 		// evenly between the number of MPI tasks/GPUs
@@ -825,7 +833,8 @@ namespace ImpurityTransport
 
 		// If for whatever reason the particle is started outside the grid,
 		// check bounds to make sure it doesn't cause any chaos.
-		check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, rngs_d);
+		check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, rngs_d,
+			fates);
 
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
@@ -910,7 +919,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Bounds));
 				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, 
-				rngs_d);
+					rngs_d, fates);
 			}
 
 #ifdef DEBUG
@@ -969,6 +978,8 @@ namespace ImpurityTransport
 			// To-do
 
 		}  // while (!all_dead)
+
+		return fates;
 	}  // main_loop
 
 #ifdef USE_CUDA
@@ -1328,13 +1339,14 @@ namespace ImpurityTransport
 			std::cout << "Starting main loop (CPU)...\n";
 #endif
 
-		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
-			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, opts_d, timer, 
-			ioniz_warnings, recomb_warnings, warnings_d, rngs, rngs_d, 
-			max_time_ctr);
+		const Boundary::Fates fates {main_loop(slots, slots_d, bkg, bkg_d,
+			imp_stats, imp_stats_d, oa_ioniz, oa_ioniz_d, oa_recomb,
+			oa_recomb_d, opts, opts_d, timer, ioniz_warnings, recomb_warnings,
+			warnings_d, rngs, rngs_d, max_time_ctr)};
 
 		print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
 			recomb_warnings);
+		Boundary::print_fates(fates);
 
 		return imp_stats;
 	}  // follow_impurities

@@ -573,3 +573,45 @@ TEST(CrossZonesCPU, SingleZoneMatchesOldBounds)
 
 	omp_set_num_threads(threads);
 }
+
+// What happens to particles at the boundaries is counted: crossings into
+// other zones (two for the corner), absorption at faces, the core and the
+// end of the background time, and runaways
+TEST(CrossZonesCPU, FatesCounted)
+{
+	const auto bkg {make_background(make_three_zones())};
+	Slots::Slots slots(6);
+	const std::vector<std::array<double, 4>> particles {
+		{0, 4.3, 2.5, 0.5},		// Crosses into zone 1
+		{1, -0.5, 6.2, 0.5},	// Corner, crosses twice into zone 2
+		{1, 3.2, 2.5, 0.5},		// Absorbed at zone 1's xmax
+		{0, -0.05, 2.5, 0.5},	// Put back in at the core
+		{0, 1.5, 2.5, 1.2},		// Past the end of the background time
+		{0, 1.5, 2.5, 0.5}};	// Nothing happens
+	for (int i {}; i < 6; ++i)
+	{
+		slots.set_zone(i, static_cast<int>(particles[i][0]));
+		slots.set_x(i, particles[i][1]);
+		slots.set_y(i, particles[i][2]);
+		slots.set_t(i, particles[i][3]);
+		slots.set_z(i, 1.0);
+	}
+
+	Options::Options opts {};
+	auto rngs {make_rngs()};
+	Boundary::Fates fates {};
+	Boundary::check_bounds_cpu(slots, bkg, opts, rngs, fates);
+	EXPECT_EQ(fates.crossings, 3);
+	EXPECT_EQ(fates.absorbed, 1);
+	EXPECT_EQ(fates.core, 1);
+	EXPECT_EQ(fates.time_end, 1);
+	EXPECT_EQ(fates.wall, 0);
+	EXPECT_EQ(fates.runaway, 0);
+
+	// Counts add up over calls
+	const auto ring {make_background(make_ring())};
+	auto runaway {one_particle(0, 1.5, 1000.0)};
+	Boundary::check_bounds_cpu(runaway, ring, opts, rngs, fates);
+	EXPECT_EQ(fates.runaway, 1);
+	EXPECT_EQ(fates.crossings, 3 + 8);
+}
