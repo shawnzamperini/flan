@@ -18,8 +18,10 @@
 
 #pragma once
 
+#include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -333,5 +335,27 @@ namespace S3XTest
 				std::vector<int64_t> {zone == 2 ? zone3_nphi : m.nphi});
 		}
 		H5Fclose(file);
+	}
+
+	// Writes a whole test case to dir, with the names read_s3xe expects:
+	// mesh_S3X.h5, refParam_raptorX.h5, and plasma_00000.h5 and
+	// plasma_00001.h5 at tsimu 1e7 and 1e7 + 1000. zones must be the test
+	// mesh's zones (from S3X::read_mesh), which the plasma ghost cells come
+	// from, so it is passed in instead of read here.
+	template <typename ReadMesh>
+	void write_case(const std::string& dir, const TestMesh& m,
+		ReadMesh read_mesh)
+	{
+		write_mesh(dir + "/mesh_S3X.h5", m);
+		write_reference(dir + "/refParam_raptorX.h5", m);
+		const auto zones {read_mesh(dir + "/mesh_S3X.h5")};
+		for (int t {}; t < 2; ++t)
+		{
+			TestFrame frame {};
+			frame.tsimu = 1.0e7 + 1000.0 * t;
+			char name[32];
+			std::snprintf(name, sizeof(name), "/plasma_%05d.h5", t);
+			write_plasma(dir + name, m, zones, t, frame);
+		}
 	}
 }

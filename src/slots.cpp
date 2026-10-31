@@ -803,8 +803,9 @@ namespace Slots
 	/**
 	* Creates a new particle at its starting time, location and velocity.
 	*
-	* The starting t, x, y and z come from get_birth_val using the
-	* imp_*start_opt options. The time index and grid cell indices are then
+	* The particle starts in zone imp_zone_start_val (numbered from 1), and
+	* its starting t, x, y and z come from get_birth_val using the
+	* imp_*start_opt options, in that zone's coordinates. The time index and grid cell indices are then
 	* found, the same as in impurity_transport.cpp, and the Cartesian
 	* velocity comes from get_birth_vXYZ. The computational velocity is set
 	* to zero, since it gets set on the first call to Boris::update_velocity.
@@ -820,9 +821,9 @@ namespace Slots
 	{
 		ParticleInit p;
 
-		// Particles are born in the first zone. Starting positions in other
-		// zones come with the SOLEDGE3X start options.
-		p.zone = 0;
+		// Zone the particle is born in, numbered from 1 in the input. The
+		// starting position is in that zone's coordinates.
+		p.zone = opts.imp_zone_start_val() - 1;
 
 		// Variables for each grid to avoid repeatedly calling in the loop
 		const auto& times = bkg.get_times();

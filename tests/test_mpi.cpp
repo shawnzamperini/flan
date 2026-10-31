@@ -14,7 +14,9 @@
 
 #include <gtest/gtest.h>
 #include <cstdio>
+#include <filesystem>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 #include "background.h"
@@ -22,7 +24,9 @@
 #include "mpi.h"
 #include "options.h"
 #include "read_bkg.h"
+#include "read_s3xe.h"
 #include "read_test.h"
+#include "s3x_test_files.h"
 #include "utilities.h"
 #include "vectors.h"
 #include "zones.h"
@@ -408,6 +412,104 @@ TEST_F(MPITest, BroadcastBackgroundPolarization)
 	{ check_background_broadcast("polarization"); }
 TEST_F(MPITest, BroadcastBackgroundCurvature)
 	{ check_background_broadcast("curvature"); }
+
+// A multi-zone SOLEDGE3X background is broadcast completely: the zones with
+// their grids and faces, every field with its ghost cells, chi, the times
+// and the masses. Rank 0 writes a small SOLEDGE3X case, reads it and
+// broadcasts it, and every rank reads it too to compare against.
+TEST_F(MPITest, BroadcastS3XBackground)
+{
+	const int rank {mpi_rank()};
+	int pid {rank == 0 ? static_cast<int>(getpid()) : 0};
+	MPI_Bcast(&pid, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	const std::filesystem::path dir {std::filesystem::temp_directory_path()
+		/ ("flan_test_mpi_s3x_" + std::to_string(pid))};
+
+	const S3XTest::TestMesh mesh {};
+	if (rank == 0)
+	{
+		std::filesystem::create_directories(dir);
+		S3XTest::write_case(dir.string(), mesh,
+			[&](const std::string& path)
+			{return S3X::read_mesh(path, mesh.nphi).zones;});
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	Options::Options opts {};
+	opts.set_bkg_source("soledge3x");
+	opts.set_s3x_dir(dir.string());
+	opts.set_s3x_frame_start(0);
+	opts.set_s3x_frame_end(1);
+
+	Background::Background bkg {};
+	if (rank == 0) bkg = Background::read_bkg(opts);
+	bkg.broadcast(MPI_COMM_WORLD);
+	const Background::Background want {Background::read_bkg(opts)};
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	if (rank == 0) std::filesystem::remove_all(dir);
+
+	// Zones
+	const auto& zones {bkg.get_zones()};
+	const auto& want_zones {want.get_zones()};
+	ASSERT_EQ(zones.get_nzones(), 3);
+	EXPECT_EQ(zones.get_ghost(), want_zones.get_ghost());
+	for (int z {}; z < 3; ++z)
+	{
+		EXPECT_EQ(zones.get_grid_x(z), want_zones.get_grid_x(z));
+		EXPECT_EQ(zones.get_grid_y(z), want_zones.get_grid_y(z));
+		EXPECT_EQ(zones.get_grid_z(z), want_zones.get_grid_z(z));
+		EXPECT_EQ(zones.get_x(z), want_zones.get_x(z));
+		for (int f {}; f < Zones::num_faces; ++f)
+		{
+			const auto face {static_cast<Zones::Face>(f)};
+			EXPECT_EQ(zones.get_face(z, face), want_zones.get_face(z, face));
+		}
+	}
+
+	// Times and masses
+	EXPECT_EQ(bkg.get_times(), want.get_times());
+	EXPECT_EQ(bkg.get_dim1(), 2);
+	EXPECT_EQ(bkg.get_elec_mass_amu(), want.get_elec_mass_amu());
+	EXPECT_EQ(bkg.get_ion_mass_amu(), want.get_ion_mass_amu());
+
+	// Plasma, fields and geometry
+	expect_same(bkg.get_ne(), want.get_ne(), "ne");
+	expect_same(bkg.get_te(), want.get_te(), "te");
+	expect_same(bkg.get_ti(), want.get_ti(), "ti");
+	expect_same(bkg.get_vp(), want.get_vp(), "vp");
+	expect_same(bkg.get_bX(), want.get_bX(), "bX");
+	expect_same(bkg.get_bY(), want.get_bY(), "bY");
+	expect_same(bkg.get_bZ(), want.get_bZ(), "bZ");
+	expect_same(bkg.get_bmag(), want.get_bmag(), "bmag");
+	expect_same(bkg.get_gradbX(), want.get_gradbX(), "gradbX");
+	expect_same(bkg.get_gradbY(), want.get_gradbY(), "gradbY");
+	expect_same(bkg.get_gradbZ(), want.get_gradbZ(), "gradbZ");
+	expect_same(bkg.get_eX(), want.get_eX(), "eX");
+	expect_same(bkg.get_eY(), want.get_eY(), "eY");
+	expect_same(bkg.get_eZ(), want.get_eZ(), "eZ");
+	expect_same(bkg.get_emag(), want.get_emag(), "emag");
+	expect_same(bkg.get_uX(), want.get_uX(), "uX");
+	expect_same(bkg.get_uY(), want.get_uY(), "uY");
+	expect_same(bkg.get_uZ(), want.get_uZ(), "uZ");
+	expect_same(bkg.get_X(), want.get_X(), "X");
+	expect_same(bkg.get_Y(), want.get_Y(), "Y");
+	expect_same(bkg.get_Z(), want.get_Z(), "Z");
+	expect_same(bkg.get_J(), want.get_J(), "J");
+	expect_same(bkg.get_grid_X(), want.get_grid_X(), "grid_X");
+	expect_same(bkg.get_grid_Y(), want.get_grid_Y(), "grid_Y");
+	expect_same(bkg.get_grid_Z(), want.get_grid_Z(), "grid_Z");
+	expect_same(bkg.get_dxdX(), want.get_dxdX(), "dxdX");
+	expect_same(bkg.get_dxdY(), want.get_dxdY(), "dxdY");
+	expect_same(bkg.get_dxdZ(), want.get_dxdZ(), "dxdZ");
+	expect_same(bkg.get_dydX(), want.get_dydX(), "dydX");
+	expect_same(bkg.get_dydY(), want.get_dydY(), "dydY");
+	expect_same(bkg.get_dydZ(), want.get_dydZ(), "dydZ");
+	expect_same(bkg.get_dzdX(), want.get_dzdX(), "dzdX");
+	expect_same(bkg.get_dzdY(), want.get_dzdY(), "dzdY");
+	expect_same(bkg.get_dzdZ(), want.get_dzdZ(), "dzdZ");
+	expect_same(bkg.get_chi(), want.get_chi(), "chi");
+}
 
 
 // -------------------------------------------------------------------------

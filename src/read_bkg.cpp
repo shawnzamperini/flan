@@ -13,6 +13,7 @@
 #include "errors.h"
 #include "options.h"
 #include "read_gkyl.h"
+#include "read_s3xe.h"
 #include "read_test.h"
 #include "zones.h"
 
@@ -22,12 +23,15 @@ namespace Background
 	* Reads in the plasma background from the source chosen by the
 	* bkg_source option.
 	*
-	* "test" loads a hardcoded test background with Test::read_test, and
-	* "gkeyll" loads a Gkeyll simulation with Gkyl::read_gkyl. SOLEDGE3X
-	* backgrounds (control integer 2) are not implemented yet. If the source
-	* is not implemented or not recognized, the run is stopped with
-	* Errors::fatal_error. Options::set_bkg_source already rejects any other
-	* value, so this is only a safeguard.
+	* "test" loads a hardcoded test background with Test::read_test,
+	* "gkeyll" loads a Gkeyll simulation with Gkyl::read_gkyl and
+	* "soledge3x" loads a SOLEDGE3X simulation with S3X::read_s3xe. If the
+	* source is not recognized, the run is stopped with Errors::fatal_error.
+	* Options::set_bkg_source already rejects any other value, so this is
+	* only a safeguard.
+	*
+	* The zone particles start in (imp_zone_start_val, numbered from 1) must
+	* be one of the background's zones, otherwise the run is stopped.
 	*
 	* @param opts Simulation options.
 	* @return Background object holding the plasma background.
@@ -52,8 +56,7 @@ namespace Background
 		// Load in a SOLEDGE3X background
 		else if (opts.bkg_source_int() == 2)
 		{
-			Errors::fatal_error("SOLEDGE3X backgrounds are not implemented "
-				"yet.");
+			bkg = S3X::read_s3xe(opts);
 		}
 
 		// Unrecognized option
@@ -61,6 +64,16 @@ namespace Background
 		{
 			Errors::fatal_error("bkg_source = " + opts.bkg_source() 
 				+ " not recognized.");
+		}
+
+		// Particles start in a zone that exists
+		const int start_zone {opts.imp_zone_start_val()};
+		if (start_zone < 1 || start_zone > bkg.get_nzones())
+		{
+			Errors::fatal_error("imp_zone_start_val = "
+				+ std::to_string(start_zone) + ", but the background's "
+				"zones are numbered 1 to " + std::to_string(bkg.get_nzones())
+				+ ".");
 		}
 
 		return bkg;

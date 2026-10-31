@@ -55,12 +55,17 @@ add_executable(test_read_s3xe_cpu test_read_s3xe_cpu.cpp)
 target_link_libraries(test_read_s3xe_cpu PRIVATE flan gtest_main hdf5)
 add_test(NAME ReadS3XECPUTest COMMAND test_read_s3xe_cpu)
 
+add_executable(test_s3x_bkg_cpu test_s3x_bkg_cpu.cpp)
+target_link_libraries(test_s3x_bkg_cpu PRIVATE flan gtest_main hdf5
+	OpenMP::OpenMP_CXX)
+add_test(NAME S3XBkgCPUTest COMMAND test_s3x_bkg_cpu)
+
 # MPI test. It has its own main to initialize MPI, so it links gtest instead
 # of gtest_main, and it's run on 3 ranks with the same mpiexec that CMake
 # found for the library. The timeout stops ctest from waiting forever if a
 # broken broadcast or reduction leaves the ranks hanging.
 add_executable(test_mpi test_mpi.cpp)
-target_link_libraries(test_mpi PRIVATE flan gtest)
+target_link_libraries(test_mpi PRIVATE flan gtest hdf5)
 add_test(NAME MPITest COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 3
 	${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_mpi> ${MPIEXEC_POSTFLAGS})
 set_tests_properties(MPITest PROPERTIES TIMEOUT 120)

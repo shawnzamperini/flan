@@ -964,7 +964,7 @@ namespace S3X
 	* The files are in s3x_dir: the mesh (s3x_mesh_file), the reference
 	* values (s3x_ref_file) and the plasma frames plasma_%05d.h5 from
 	* s3x_frame_start to s3x_frame_end, of which there must be at least
-	* two. The reference values are printed.
+	* two. s3x_dir must be set. The reference values are printed.
 	*
 	* @param opts Simulation options.
 	* @return The background.
@@ -972,6 +972,11 @@ namespace S3X
 	Background::Background read_s3xe(const Options::Options& opts)
 	{
 		const std::string dir {opts.s3x_dir()};
+		if (dir == "undefined")
+		{
+			Errors::fatal_error("s3x_dir must be set to the directory with "
+				"the SOLEDGE3X files.");
+		}
 		const int start {opts.s3x_frame_start()};
 		const int end {opts.s3x_frame_end()};
 		if (end - start + 1 < 2)

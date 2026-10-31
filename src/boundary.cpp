@@ -19,6 +19,7 @@
 
 #include "background.h"
 #include "boundary.h"
+#include "indices.h"
 #include "options.h"
 #include "pcg32.h"
 #include "slots.h"
@@ -223,6 +224,10 @@ namespace Boundary
 	*   the new zone are then checked from the start, so a particle can
 	*   cross more than one face in a step (e.g., near an X-point).
 	*
+	* A SOLEDGE3X background has a wall mask chi. If s3x_chi_absorb is on,
+	* a particle that ends up in a cell with chi >= 0.5 (inside the wall) is
+	* absorbed.
+	*
 	* For a single-zone background whose faces come from the *bound_type
 	* options, this does exactly what checking each bound_type in turn did
 	* before zones. A particle that crosses more than max_crossings faces in
@@ -255,6 +260,11 @@ namespace Boundary
 
 		// Far more crossings in one step than should ever happen
 		constexpr int max_crossings {8};
+
+		// SOLEDGE3X wall mask, if particles are absorbed by the wall
+		const auto& chi {bkg.get_chi()};
+		const bool wall {!chi.get_data().empty()
+			&& opts.s3x_chi_absorb_int() == 1};
 
 		#pragma omp parallel
 		{
@@ -365,6 +375,18 @@ namespace Boundary
 				}
 
 				++f;
+			}
+
+			// Absorb particles that ended up in a cell inside the wall
+			if (wall && !state)
+			{
+				const int xidx {Indices::get_nearest_cell_index_cpu(
+					zones.get_grid_x(zone), pos[0])};
+				const int yidx {Indices::get_nearest_cell_index_cpu(
+					zones.get_grid_y(zone), pos[1])};
+				const int zidx {Indices::get_nearest_cell_index_cpu(
+					zones.get_grid_z(zone), pos[2])};
+				if (chi(zone, xidx, yidx, zidx) >= 0.5) state = 1;
 			}
 
 			// Write back
