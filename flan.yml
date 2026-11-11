@@ -7,3 +7,5 @@ dependencies:
   - ipython
   - tqdm
   - scipy
+  - conda-forge::h5py
+  - conda-forge::rust>=1.85

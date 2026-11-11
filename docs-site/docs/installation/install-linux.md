@@ -43,7 +43,7 @@ machines/mkdeps.linux.sh
 ```
 
 This downloads and builds zlib, HDF5 and NetCDF in `$HOME/flansoft`, creates
-the `flan` conda environment with postgkyl, and writes the file that tells
+the `flan` conda environment with postgkyl and RustBCA, and writes the file that tells
 CMake where everything is. It takes a while. To put the dependencies
 somewhere else, change this line in `machines/mkdeps.linux.sh` before running
 it:

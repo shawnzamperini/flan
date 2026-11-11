@@ -26,8 +26,8 @@ machines/mkdeps.perlmutter.sh
 ```
 
 This builds zlib, HDF5 and NetCDF with the Cray wrappers in `$HOME/flansoft`,
-creates the `flan` conda environment with postgkyl, and writes the file that
-tells CMake where everything is. To put the dependencies somewhere else,
+creates the `flan` conda environment with postgkyl and RustBCA, and writes
+the file that tells CMake where everything is. To put the dependencies somewhere else,
 change this line in `machines/mkdeps.perlmutter.sh` before running it:
 
 ```bash

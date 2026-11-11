@@ -52,7 +52,8 @@ Your machine needs to provide:
   tested)
 
 zlib, HDF5 and NetCDF (C and C++) are downloaded and built by the dependency
-script, along with postgkyl, which Flan uses to read Gkeyll data.
+script, along with postgkyl, which Flan uses to read Gkeyll data, and
+RustBCA, which makes the sputtering yield tables.
 
 ## Clone the repository
 
@@ -72,7 +73,8 @@ machines/mkdeps.linux.sh
 
 This builds zlib, HDF5 and NetCDF in `$HOME/flansoft` (change `FLANSOFT` in
 the script to put them elsewhere). It also creates the `flan` conda
-environment, which has postgkyl and the Python packages Flan needs, and sets
+environment, which has postgkyl, RustBCA and the Python packages Flan needs,
+and sets
 the environment variables Flan uses to find its Python scripts. Finally, it
 writes `install-deps/build-opts.cmake`, which tells CMake where the
 dependencies are. CMake won't configure without it, so the dependencies
@@ -88,6 +90,31 @@ conda activate flan
     The `flan` environment includes its own MPI. Activate it before running
     CMake, so Flan is built with the same MPI it'll run with. Building with
     one MPI and running with another usually crashes at the first MPI call.
+
+### RustBCA
+
+RustBCA computes the sputtering yields Flan uses
+(`python/rustbca_yields.py`). The dependency script installs it into the
+`flan` environment, along with a Rust compiler, and building it adds a few
+minutes. It's only needed to make new yield tables, and the tables Flan
+ships with are in `data/sputtering/`, so a failed RustBCA build only prints
+a warning.
+
+To add RustBCA to an existing `flan` environment without rerunning the
+dependency script:
+
+```bash
+conda activate flan
+conda install -y "conda-forge::rust>=1.85" conda-forge::h5py
+git clone https://github.com/lcpp-org/RustBCA.git $HOME/flansoft/RustBCA
+cd $HOME/flansoft/RustBCA
+git checkout 51bee889956147e3287491d0c68957967235a33c
+PATH=$CONDA_PREFIX/bin:$PATH pip install .
+python -c "import libRustBCA"
+```
+
+The `rust>=1.85` is needed: without it, conda can pick a Rust from 2018 that
+can't build RustBCA.
 
 ## Build Flan
 
