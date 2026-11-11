@@ -9,7 +9,7 @@
 * divertor legs), and a particle moving between them crosses a zone face.
 * Each zone has its own computational grid, and each of its six faces is
 * either shared with another zone (or itself, for a periodic face) or is a
-* boundary (absorbing or core).
+* boundary (absorbing, core or wall).
 */
 
 #include <algorithm>
@@ -85,7 +85,7 @@ namespace Zones
 	* @param zone Zone index.
 	* @param face Face to set.
 	* @param code Zone across the face (>= 0, the zone itself for
-	*        periodic), face_absorbing or face_core.
+	*        periodic), face_absorbing, face_core or face_wall.
 	*/
 	void Zones::set_face(const int zone, const Face face, const int code)
 	{
@@ -99,7 +99,7 @@ namespace Zones
 	* @param zone Zone index.
 	* @param face Face to get.
 	* @return Zone across the face (>= 0, the zone itself for periodic),
-	*         face_absorbing or face_core.
+	*         face_absorbing, face_core or face_wall.
 	*/
 	int Zones::get_face(const int zone, const Face face) const
 	{
@@ -276,8 +276,8 @@ namespace Zones
 	* shifted into this zone's frame, e.g., past the max face it's
 	* max(this zone) + (center - min(other zone)). This works for any cell
 	* widths, and steps through neighbors thinner than the ghost width the
-	* same way resolve_cell does. A ghost cell past an absorbing or core
-	* face has no center, which stops the run with Errors::fatal_error.
+	* same way resolve_cell does. A ghost cell past a boundary (absorbing,
+	* core or wall) face has no center, which stops the run with Errors::fatal_error.
 	*
 	* @param zone Zone index.
 	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
@@ -301,7 +301,7 @@ namespace Zones
 			{
 				Errors::fatal_error("Zone " + std::to_string(zone) + " has "
 					"no cell center at ghost index " + std::to_string(i)
-					+ ", since it's past an absorbing or core face.");
+					+ ", since it's past a boundary face.");
 			}
 
 			if (past_max)
@@ -468,7 +468,8 @@ namespace Zones
 			{
 				const int code {m_faces[face][zone]};
 				const std::string fname {zname + " " + face_names[face]};
-				if (code == face_absorbing || code == face_core) continue;
+				if (code == face_absorbing || code == face_core
+					|| code == face_wall) continue;
 				if (code < 0 || code >= get_nzones())
 				{
 					Errors::fatal_error(fname + " has invalid code "
@@ -552,8 +553,8 @@ namespace Zones
 	* @param[in,out] cell Cell to move. Only valid if true is returned.
 	* @param order Dimensions to move in, in order (0 = x, 1 = y, 2 = z).
 	* @param ndims Number of entries of order to use.
-	* @return False if an absorbing or core face was hit, which has nothing
-	*         across it.
+	* @return False if a boundary (absorbing, core or wall) face was hit,
+	*         which has nothing across it.
 	*/
 	bool Zones::step_across(Cell& cell, const std::array<int, 3>& order,
 		const int ndims) const
@@ -600,8 +601,8 @@ namespace Zones
 	* and its sources are the different cells reached:
 	*
 	* - Normally every order reaches the same cell, which is the source.
-	* - If some orders hit an absorbing or core face, the cells the others
-	*   reach are used.
+	* - If some orders hit a boundary (absorbing, core or wall) face, the
+	*   cells the others reach are used.
 	* - If orders reach different cells, as at an X-point where the cells
 	*   meeting there aren't a regular 2x2 block, the value is the average
 	*   of them.

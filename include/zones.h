@@ -40,6 +40,14 @@ namespace Zones
 	/// Face code for a face where particles are put back in at the core
 	inline constexpr int face_core {-2};
 
+	/**
+	* Face code for a material surface, such as a divertor target. Particles
+	* are absorbed there the same as at an absorbing face, but are counted
+	* separately. -4 rather than -3, since -3 is SOLEDGE3X's code for its
+	* outer psi boundary, which is an absorbing face in Flan.
+	*/
+	inline constexpr int face_wall {-4};
+
 	/// A cell of a zone. i, j and k may be ghost cell indices.
 	struct Cell
 	{

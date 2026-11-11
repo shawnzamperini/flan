@@ -106,8 +106,8 @@ TEST_F(SaveResultsTest, MultiZoneLayout)
 		bkg.get_times());
 	EXPECT_FALSE(file.getGroup("input").getVar("s3x_dir").isNull());
 
-	// Zone table: sizes, and faces numbered from 1 with -1 absorbing and
-	// -2 core, rows xmin, xmax, ymin, ymax, zmin, zmax
+	// Zone table: sizes, and faces numbered from 1 with -1 absorbing, -2
+	// core and -4 wall, rows xmin, xmax, ymin, ymax, zmin, zmax
 	const netCDF::NcGroup zones_group {file.getGroup("zones")};
 	ASSERT_FALSE(zones_group.isNull());
 	EXPECT_EQ(read_var<int>(zones_group, "nx"),
@@ -117,8 +117,8 @@ TEST_F(SaveResultsTest, MultiZoneLayout)
 	EXPECT_EQ(read_var<int>(zones_group, "faces"), (std::vector<int> {
 		-2, -2, 1,
 		3, -1, -1,
-		2, 1, -1,
-		2, 1, -1,
+		2, 1, -4,
+		2, 1, -4,
 		1, 2, 3,
 		1, 2, 3}));
 

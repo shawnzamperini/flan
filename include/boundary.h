@@ -24,7 +24,8 @@ namespace Boundary
 	{
 		long long crossings {};	///< Crossings into another zone
 		long long absorbed {};	///< Absorbed at an absorbing face
-		long long wall {};		///< Absorbed inside the wall (chi)
+		long long wall {};		///< Absorbed at a wall face
+		long long chi {};		///< Absorbed inside the wall mask (chi)
 		long long core {};		///< Put back in at a core face
 		long long time_end {};	///< Reached the end of the background time
 		long long runaway {};	///< Absorbed after too many crossings

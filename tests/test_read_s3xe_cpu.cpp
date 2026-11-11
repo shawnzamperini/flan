@@ -100,14 +100,16 @@ TEST_F(ReadS3XE, Zones)
 	EXPECT_DOUBLE_EQ(zones.get_z_max(0), 2.0 * pi);
 	EXPECT_DOUBLE_EQ(zones.get_z(0)[0], 2.0 * pi / 12.0);
 
-	using Zones::face_absorbing, Zones::face_core;
+	using Zones::face_absorbing, Zones::face_core, Zones::face_wall;
 	EXPECT_EQ(zones.get_face(0, Zones::xmin), face_core);
 	EXPECT_EQ(zones.get_face(0, Zones::xmax), 2);
 	EXPECT_EQ(zones.get_face(2, Zones::xmin), 0);
 	EXPECT_EQ(zones.get_face(1, Zones::xmax), face_absorbing);
 	EXPECT_EQ(zones.get_face(0, Zones::ymin), 1);
 	EXPECT_EQ(zones.get_face(0, Zones::ymax), 1);
-	EXPECT_EQ(zones.get_face(2, Zones::ymin), face_absorbing);
+	EXPECT_EQ(zones.get_face(2, Zones::ymin), face_wall);
+	EXPECT_EQ(zones.get_face(2, Zones::ymax), face_wall);
+	EXPECT_EQ(zones.get_face(2, Zones::xmax), face_absorbing);
 	EXPECT_EQ(zones.get_face(1, Zones::zmin), 1);
 	EXPECT_EQ(zones.get_core_zones(), (std::vector<int> {0, 1}));
 

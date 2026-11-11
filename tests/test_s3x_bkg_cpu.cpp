@@ -176,8 +176,9 @@ TEST_F(S3XBkg, WallAbsorbs)
 	Boundary::Fates fates {};
 	Boundary::check_bounds_cpu(in_wall, bkg, opts, rngs, fates);
 	EXPECT_EQ(in_wall.state()[0], 1);
-	EXPECT_EQ(fates.wall, 1);
+	EXPECT_EQ(fates.chi, 1);
 	EXPECT_EQ(fates.absorbed, 0);
+	EXPECT_EQ(fates.wall, 0);
 
 	auto next_to_wall {one_particle(bkg, 2, 6.5, 10.5, 1.0)};
 	Boundary::check_bounds_cpu(next_to_wall, bkg, opts, rngs);
@@ -193,4 +194,32 @@ TEST_F(S3XBkg, WallAbsorbs)
 	auto off {one_particle(bkg, 2, 7.5, 10.5, 1.0)};
 	Boundary::check_bounds_cpu(off, bkg, opts, rngs);
 	EXPECT_EQ(off.state()[0], 0);
+}
+
+// Zone 3's theta ends are targets (wall faces) and its psi+ face is the
+// outer boundary (an absorbing face). Both absorb, but are counted
+// separately.
+TEST_F(S3XBkg, WallFaceAbsorbs)
+{
+	auto opts {options()};
+	opts.set_s3x_chi_absorb("off");
+	const auto bkg {Background::read_bkg(opts)};
+	auto rngs {make_rngs()};
+
+	Boundary::Fates fates {};
+	auto past_ymin {one_particle(bkg, 2, 2.5, -0.1, 1.0)};
+	Boundary::check_bounds_cpu(past_ymin, bkg, opts, rngs, fates);
+	EXPECT_EQ(past_ymin.state()[0], 1);
+
+	auto past_ymax {one_particle(bkg, 2, 2.5, 40.1, 1.0)};
+	Boundary::check_bounds_cpu(past_ymax, bkg, opts, rngs, fates);
+	EXPECT_EQ(past_ymax.state()[0], 1);
+
+	auto past_xmax {one_particle(bkg, 2, 8.1, 10.5, 1.0)};
+	Boundary::check_bounds_cpu(past_xmax, bkg, opts, rngs, fates);
+	EXPECT_EQ(past_xmax.state()[0], 1);
+
+	EXPECT_EQ(fates.wall, 2);
+	EXPECT_EQ(fates.absorbed, 1);
+	EXPECT_EQ(fates.chi, 0);
 }

@@ -33,9 +33,9 @@ So x = 5.5, for instance, is the middle of the sixth psi cell of the zone. The s
 Boundaries
 ----------
 
-What happens at each face of each zone comes from SOLEDGE3X's mesh, not from the bound_type options (:ref:`min_xbound_type <min_xbound_type>`, etc.), which are only for Gkeyll backgrounds. A particle that crosses a face shared with another zone continues in that zone. Faces at a divertor target or the outer boundary absorb the particle. A particle that crosses into the core is put back at a random place on the core boundary, picked between the core zones in proportion to their number of cells. With :ref:`s3x_chi_absorb <s3x_chi_absorb>` = "on", a particle that ends a time step in a cell inside the wall is absorbed.
+What happens at each face of each zone comes from SOLEDGE3X's mesh, not from the bound_type options (:ref:`min_xbound_type <min_xbound_type>`, etc.), which are only for Gkeyll backgrounds. A particle that crosses a face shared with another zone continues in that zone. Faces at a divertor target are wall faces, and faces at the outer psi boundary are absorbing faces. Both absorb the particle, but they are counted separately in the particle fates printed at the end of a run, and wall faces are material surfaces (e.g., for sputtering). SOLEDGE3X's neighbor codes map to Flan's face codes as -1 (target) to -4 (wall), -2 (core) to -2 (core) and -3 (outer psi boundary) to -1 (absorbing). Flan uses -4 rather than -3 for wall faces so that -3 never means different things in the mesh file and in Flan's output. A particle that crosses into the core is put back at a random place on the core boundary, picked between the core zones in proportion to their number of cells. With :ref:`s3x_chi_absorb <s3x_chi_absorb>` = "on", a particle that ends a time step in a cell inside the wall is absorbed.
 
-The buffers (:ref:`imp_xbound_buffer <imp_xbound_buffer>`, etc.) still apply at absorbing and core faces, but in cell-index units for x and y (e.g., 0.5 is half a cell).
+The buffers (:ref:`imp_xbound_buffer <imp_xbound_buffer>`, etc.) still apply at absorbing, wall and core faces, but in cell-index units for x and y (e.g., 0.5 is half a cell).
 
 Ghost Cells
 -----------
@@ -48,7 +48,7 @@ Output
 With more than one zone, the netCDF file is laid out differently from a Gkeyll one, since each zone has its own grid:
 
   - ``input`` and ``geometry/time`` are the same as usual.
-  - ``zones`` has the number of cells in each zone (nx, ny, nz) and faces, what is across each face of each zone: a zone number (from 1), -1 for an absorbing face or -2 for a core face. The rows are the xmin, xmax, ymin, ymax, zmin and zmax faces.
+  - ``zones`` has the number of cells in each zone (nx, ny, nz) and faces, what is across each face of each zone: a zone number (from 1), -1 for an absorbing face, -2 for a core face or -4 for a wall face. The rows are the xmin, xmax, ymin, ymax, zmin and zmax faces.
   - ``zone1``, ``zone2``, ... each have their own x, y, z and grid dimensions, and geometry, background and output groups with the usual variables for that zone's cells. The geometry also has the wall mask chi and R_corners and Z_corners, the (R, Z) cell corners in meters, for plotting.
 
 The output is large for a full SOLEDGE3X mesh, about 1.7 GB for two frames of the DIII-D example.

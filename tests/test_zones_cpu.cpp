@@ -58,6 +58,7 @@ static Zones::Zones make_diiid_zones()
 			int face_code {Zones::face_absorbing};
 			if (code > 0) face_code = code - 1;
 			else if (code == -2) face_code = Zones::face_core;
+			else if (code == -1) face_code = Zones::face_wall;
 			zones.set_face(z, static_cast<Zones::Face>(f), face_code);
 		}
 
@@ -84,7 +85,11 @@ TEST(ZonesCPU, DIIIDMeshValidates)
 	EXPECT_EQ(zones.get_face(0, Zones::ymax), 1);
 	EXPECT_EQ(zones.get_face(0, Zones::xmax), 6);
 	EXPECT_EQ(zones.get_face(6, Zones::xmin), 0);
-	EXPECT_EQ(zones.get_face(2, Zones::ymin), Zones::face_absorbing);
+	// Targets are wall faces and the outer boundary is absorbing, and
+	// validate accepts both
+	EXPECT_EQ(zones.get_face(2, Zones::ymin), Zones::face_wall);
+	EXPECT_EQ(zones.get_face(3, Zones::ymax), Zones::face_wall);
+	EXPECT_EQ(zones.get_face(8, Zones::xmax), Zones::face_absorbing);
 }
 
 TEST(ZonesCPU, Accessors)

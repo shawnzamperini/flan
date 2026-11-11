@@ -5,9 +5,10 @@
 * Each time step, every particle is checked against the time boundary and
 * the faces of its zone. The time boundary can be absorbing (the particle
 * is killed) or periodic (the particle is wrapped to the other side). A
-* zone face can be absorbing, core (the particle is put back on a core face
-* at a random location along it), periodic, or shared with another zone
-* (the particle moves into that zone). The time bounds are the first and
+* zone face can be absorbing, wall (a material surface, which absorbs like
+* an absorbing face but is counted separately), core (the particle is put
+* back on a core face at a random location along it), periodic, or shared
+* with another zone (the particle moves into that zone). The time bounds are the first and
 * last background times, and the zone faces are the zone's outer cell
 * edges. The GPU version is in cuda/boundary.cu, and only handles a single
 * zone.
@@ -41,6 +42,7 @@ namespace Boundary
 		crossings += other.crossings;
 		absorbed += other.absorbed;
 		wall += other.wall;
+		chi += other.chi;
 		core += other.core;
 		time_end += other.time_end;
 		runaway += other.runaway;
@@ -56,10 +58,12 @@ namespace Boundary
 	*/
 	void print_fates(const Fates& fates)
 	{
-		std::array<long long, 6> local {fates.crossings, fates.absorbed,
-			fates.wall, fates.core, fates.time_end, fates.runaway};
-		std::array<long long, 6> total {};
-		MPI_Reduce(local.data(), total.data(), 6, MPI_LONG_LONG, MPI_SUM, 0,
+		std::array<long long, 7> local {fates.crossings, fates.absorbed,
+			fates.wall, fates.chi, fates.core, fates.time_end,
+			fates.runaway};
+		std::array<long long, 7> total {};
+		MPI_Reduce(local.data(), total.data(),
+			static_cast<int>(local.size()), MPI_LONG_LONG, MPI_SUM, 0,
 			MPI_COMM_WORLD);
 
 		int rank {};
@@ -69,13 +73,14 @@ namespace Boundary
 		std::cout << "Particle fates at the boundaries:\n"
 			<< "  " << total[0] << " crossings into another zone\n"
 			<< "  " << total[1] << " absorbed at an absorbing face\n"
-			<< "  " << total[2] << " absorbed inside the wall\n"
-			<< "  " << total[3] << " put back in at the core\n"
-			<< "  " << total[4] << " reached the end of the background "
+			<< "  " << total[2] << " absorbed at a wall face\n"
+			<< "  " << total[3] << " absorbed inside the wall mask (chi)\n"
+			<< "  " << total[4] << " put back in at the core\n"
+			<< "  " << total[5] << " reached the end of the background "
 				"time\n";
-		if (total[5])
+		if (total[6])
 		{
-			std::cout << "  " << total[5] << " absorbed after crossing too "
+			std::cout << "  " << total[6] << " absorbed after crossing too "
 				"many zone faces in one step\n";
 		}
 	}
@@ -268,8 +273,9 @@ namespace Boundary
 	* checked in the order xmin, xmax, ymin, ymax, zmin, zmax. What happens
 	* at a face depends on its code (see Zones::Zones):
 	*
-	* - face_absorbing: absorbing_bc with the imp_*bound_buffer of that
-	*   dimension. A dead particle skips the remaining checks.
+	* - face_absorbing or face_wall: absorbing_bc with the
+	*   imp_*bound_buffer of that dimension. A dead particle skips the
+	*   remaining checks. The two are counted separately in fates.
 	* - face_core: the particle is put back on a core face with core_face.
 	* - The zone itself (periodic): periodic_bc.
 	* - Another zone: if the particle is past the face, it moves into that
@@ -320,7 +326,7 @@ namespace Boundary
 
 		// SOLEDGE3X wall mask, if particles are absorbed by the wall
 		const auto& chi {bkg.get_chi()};
-		const bool wall {!chi.get_data().empty()
+		const bool chi_absorb {!chi.get_data().empty()
 			&& opts.s3x_chi_absorb_int() == 1};
 
 		#pragma omp parallel
@@ -395,13 +401,14 @@ namespace Boundary
 				const double lo {zones.get_min(zone, a)};
 				const double hi {zones.get_max(zone, a)};
 
-				if (code == Zones::face_absorbing)
+				if (code == Zones::face_absorbing || code == Zones::face_wall)
 				{
 					state = absorbing_bc(pos[a], max_bound ? hi : lo, 
 						max_bound, buffers[a]);
 					if (state)
 					{
-						++local.absorbed;
+						++(code == Zones::face_wall ? local.wall
+							: local.absorbed);
 						break;
 					}
 				}
@@ -448,7 +455,7 @@ namespace Boundary
 			}
 
 			// Absorb particles that ended up in a cell inside the wall
-			if (wall && !state)
+			if (chi_absorb && !state)
 			{
 				const int xidx {Indices::get_nearest_cell_index_cpu(
 					zones.get_grid_x(zone), pos[0])};
@@ -459,7 +466,7 @@ namespace Boundary
 				if (chi(zone, xidx, yidx, zidx) >= 0.5)
 				{
 					state = 1;
-					++local.wall;
+					++local.chi;
 				}
 			}
 

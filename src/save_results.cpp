@@ -976,8 +976,8 @@ namespace SaveResults
 	* A zones group holds nx, ny and nz (the number of cells in each zone)
 	* and faces, what is across each face of each zone (rows xmin, xmax,
 	* ymin, ymax, zmin, zmax): a zone number from 1, matching the zone
-	* groups (the zone itself means periodic), -1 for an absorbing face or
-	* -2 for a core face.
+	* groups (the zone itself means periodic), -1 for an absorbing face, -2
+	* for a core face or -4 for a wall face.
 	*
 	* Then each zone gets a group zone1, zone2, ... with its own x, y, z and
 	* grid x, grid y and grid z dimensions, and geometry, background and
@@ -1026,7 +1026,8 @@ namespace SaveResults
 		faces_var.putVar(faces.data());
 		faces_var.putAtt("description", "what is across each face (rows "
 			"xmin, xmax, ymin, ymax, zmin, zmax) of each zone: a zone number "
-			"from 1 (the zone itself is periodic), -1 absorbing or -2 core");
+			"from 1 (the zone itself is periodic), -1 absorbing, -2 core or -4 "
+			"wall");
 
 		// Geometry arrays at the cell centers
 		const std::vector<ZoneVar> geometry {

@@ -236,8 +236,8 @@ namespace S3X
 	* phicorners, and ghost cells of width ghost. Its faces come from the
 	* neighbors table, whose rows are psi-, psi+, theta-, theta+, phi- and
 	* phi+: a zone number (from 1) connects to that zone, -2 is the core,
-	* and -1 (target) and -3 (outer boundary) absorb particles. The zones
-	* are checked with Zones::Zones::validate.
+	* -1 (target) is a wall face and -3 (outer boundary) is an absorbing
+	* face. The zones are checked with Zones::Zones::validate.
 	*
 	* Only axisymmetric meshes (Nphi = 1 in the mesh file) are handled. Any
 	* missing dataset, wrong shape or unknown neighbor code stops the run.
@@ -312,7 +312,10 @@ namespace S3X
 			mesh.zones.add_zone(x, y, z, gx, gy, gz);
 		}
 
-		// Faces from the neighbors table, stored as (6, NZones)
+		// Faces from the neighbors table, stored as (6, NZones). SOLEDGE3X
+		// codes: > 0 a zone (from 1), -1 a divertor target (a wall face in
+		// Flan), -2 the core and -3 the outer psi boundary (an absorbing
+		// face in Flan).
 		for (int zone {}; zone < nzones; ++zone)
 		{
 			for (int face {}; face < Zones::num_faces; ++face)
@@ -321,8 +324,8 @@ namespace S3X
 				int face_code {};
 				if (code > 0 && code <= nzones) face_code = code - 1;
 				else if (code == -2) face_code = Zones::face_core;
-				else if (code == -1 || code == -3)
-					face_code = Zones::face_absorbing;
+				else if (code == -1) face_code = Zones::face_wall;
+				else if (code == -3) face_code = Zones::face_absorbing;
 				else
 				{
 					Errors::fatal_error("In " + mesh_path + ", zone "
@@ -347,7 +350,7 @@ namespace S3X
 	* A central difference is used where the cells on both sides exist,
 	* including ghost cells across faces shared with another zone (or
 	* periodic), so ghost cells must be filled. At a face with nothing
-	* across it (absorbing or core), the difference is one-sided. Cell
+	* across it (absorbing, core or wall), the difference is one-sided. Cell
 	* spacings come from Zones::Zones::center, so they're right across
 	* zones too.
 	*
@@ -676,7 +679,7 @@ namespace S3X
 	* The ghost cells are split into those past a single face shared with
 	* another zone or periodic (edges), those past two or three such faces
 	* (corners), corners averaged from more than one cell (e.g., at the
-	* X-point) and those past an absorbing or core face (boundaries). In
+	* X-point) and those past an absorbing, core or wall face (boundaries). In
 	* each group, the largest difference is printed relative to the largest
 	* |value| of the field. SOLEDGE3X fills boundary ghost cells with its
 	* boundary conditions, so those are expected to differ.
