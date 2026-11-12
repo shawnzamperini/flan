@@ -7,11 +7,11 @@ the sputtering yield $Y$, which depends on the projectile, the wall
 material, and the ion's energy and angle of incidence.
 
 !!! note "Work in progress"
-    Flan can read and interpolate sputtering yield tables, which is what
-    this page describes. Launching impurities from the walls of a SOLEDGE3X
-    background using these yields is being added next, and this page will
-    be extended to cover it. Until then, the yield tables aren't used in a
-    run.
+    Flan can read and interpolate sputtering yield tables and find the
+    wall surfaces of a SOLEDGE3X background, which is what this page
+    describes. Launching impurities from those surfaces using the yields is
+    being added next, and this page will be extended to cover it. Until
+    then, none of this is used in a run.
 
 ## Where the yields come from
 
@@ -176,6 +176,48 @@ than $\log Y$, because $Y = 0$ below threshold. Outside the table:
 - Above the highest energy, the yield at the highest energy is used.
 - Angles are clamped to the table's range, so 90° uses the largest angle
   in the table (89° for the default angles).
+
+## Wall surfaces
+
+The surfaces the plasma sputters are found by `Sputtering::Surface`
+(`src/sputtering.cpp`), for SOLEDGE3X backgrounds.
+
+SOLEDGE3X doesn't fit its mesh to the wall. The mesh runs past the wall,
+and a mask, chi, marks the cells inside the wall (chi = 1) and in the
+plasma (chi = 0). So the divertor targets at the ends of the mesh
+(SOLEDGE3X's -1 faces, Flan's wall faces) are inside the material, and the
+surface the plasma actually touches is wherever a plasma cell sits next to
+a wall cell. In the poloidal plane, that's a staircase of cell faces. The
+mesh file also has the real wall as an outline (`/walls`), which runs
+smoothly through the staircase.
+
+Neither is good enough alone. The staircase faces are where a sputtered
+atom can start (an atom in a chi = 1 cell is absorbed) and say which
+cell's plasma to use, but they point along the grid rather than
+perpendicular to the wall, and there's more of them than there is wall:
+a staircase is up to $\sqrt{2}$ times longer than the slope it follows.
+The outline has the right direction and length, but cuts through cells.
+
+So each staircase face becomes a surface element that keeps the face's
+position and plasma cell, but takes its direction from the outline:
+
+- **Normal.** The element's normal $\hat{n}_\text{wall}$ is that of the
+  outline segment nearest to the middle of the face, pointed into the
+  plasma. It's the normal for the ion flux onto the wall and for the
+  direction sputtered atoms leave in.
+- **Area.** The face's own area is projected onto the wall,
+  $A = A_\text{face}\,|\hat{n}_\text{face}\cdot\hat{n}_\text{wall}|$. A
+  stretch of wall of length $L$ at angle $a$ to the grid is covered by
+  steps of total length $L|\cos a|$ and $L|\sin a|$ in the two grid
+  directions, whose projections add up to $L\cos^2 a + L\sin^2 a = L$, so
+  the elements' areas add up to the wall's, not the staircase's.
+
+Where the nearest outline segment is more than 2 cell widths from a face,
+the outline doesn't describe that part of the wall (chi marks something it
+doesn't include), and the element falls back to the face's own normal and
+area. The same happens everywhere if the mesh file has no outline. How
+many elements fall back depends on how closely a mesh's chi follows its
+outline.
 
 ## Making a new table
 

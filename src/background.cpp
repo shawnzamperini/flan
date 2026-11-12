@@ -284,6 +284,22 @@ namespace Background
 		{return m_chi;}
 
 	/**
+	* Returns the wall outlines in the poloidal plane. Only SOLEDGE3X
+	* backgrounds whose mesh file has a /walls group have them, otherwise
+	* it is empty.
+	*/
+	const std::vector<WallPolygon>& Background::get_walls() const
+		{return m_walls;}
+
+	/**
+	* Sets the wall outlines in the poloidal plane.
+	*
+	* @param walls Wall outlines, each a polyline of (R, Z) points (m).
+	*/
+	void Background::set_walls(const std::vector<WallPolygon>& walls)
+		{m_walls = walls;}
+
+	/**
 	* @name Species masses
 	*
 	* Get or set the masses of the background electrons and main ions
@@ -1403,6 +1419,16 @@ namespace Background
 		m_dYdz.broadcast(comm);
 		m_dZdz.broadcast(comm);
 		m_chi.broadcast(comm);
+
+		// Wall outlines: how many, then each one's points
+		int nwalls {static_cast<int>(m_walls.size())};
+		MPI_Bcast(&nwalls, 1, MPI_INT, 0, comm);
+		m_walls.resize(nwalls);
+		for (auto& wall : m_walls)
+		{
+			Utilities::mpi_broadcast_vector(wall.R, 0, comm);
+			Utilities::mpi_broadcast_vector(wall.Z, 0, comm);
+		}
 
 		// Broadcast plasma and fields
 		m_ne.broadcast(comm);

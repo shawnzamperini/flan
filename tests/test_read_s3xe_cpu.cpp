@@ -270,6 +270,28 @@ TEST_F(ReadS3XE, Chi)
 	}
 }
 
+// The wall outline is read in meters, as written, and a mesh file without
+// one has no outlines
+TEST_F(ReadS3XE, Walls)
+{
+	S3XTest::write_mesh(m_path, m_mesh);
+	const auto mesh {S3X::read_mesh(m_path, m_mesh.nphi)};
+	ASSERT_EQ(mesh.walls.size(), 1u);
+	const auto& wall {mesh.walls[0]};
+	ASSERT_EQ(wall.R.size(), static_cast<std::size_t>(m_mesh.wall_points + 1));
+	ASSERT_EQ(wall.Z.size(), wall.R.size());
+	const double r {m_mesh.a0 * S3XTest::wall_r(m_mesh)};
+	EXPECT_DOUBLE_EQ(wall.R.front(), m_mesh.R0 + r);
+	EXPECT_DOUBLE_EQ(wall.Z.front(), 0.0);
+	EXPECT_NEAR(wall.R.back(), wall.R.front(), 1e-12);
+	EXPECT_NEAR(wall.Z.back(), wall.Z.front(), 1e-12);
+
+	S3XTest::TestMesh no_walls {m_mesh};
+	no_walls.write_walls = false;
+	S3XTest::write_mesh(m_path, no_walls);
+	EXPECT_TRUE(S3X::read_mesh(m_path, m_mesh.nphi).walls.empty());
+}
+
 // The number of toroidal planes comes from the plasma file, and every zone
 // must have the same
 TEST_F(ReadS3XE, Nphi)

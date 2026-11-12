@@ -67,6 +67,10 @@ namespace S3X
 		std::vector<std::vector<double>> Bz {};
 		std::vector<std::vector<double>> Bphi {};
 		std::vector<std::vector<double>> chi {};
+
+		/// Wall outlines (R, Z) in meters, from /walls (empty if the file
+		/// has none). Unlike the corners, these aren't normalized.
+		std::vector<Background::WallPolygon> walls {};
 	};
 
 	Reference read_reference(const std::string& ref_path);

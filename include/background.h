@@ -20,6 +20,19 @@
 namespace Background
 {
 	/**
+	* The outline of a wall in the poloidal plane, as a polyline of (R, Z)
+	* points in meters. A closed outline repeats its first point at the
+	* end. Only SOLEDGE3X backgrounds have walls (from the mesh file's
+	* /walls group), used to get the normals of the sputtering surfaces
+	* (see Sputtering::Surface).
+	*/
+	struct WallPolygon
+	{
+		std::vector<double> R {};	///< R of each point (m)
+		std::vector<double> Z {};	///< Z of each point (m)
+	};
+
+	/**
 	* @brief Contains time-dependent background plasma for simulation
 	*
 	* The simulation volume is split into one or more zones (see
@@ -84,6 +97,9 @@ namespace Background
 
 		// Wall mask: 1 inside the wall, 0 in the plasma (SOLEDGE3X only)
 		Vectors::ZonedVector<BkgFPType> m_chi {};
+
+		// Wall outlines in the poloidal plane (SOLEDGE3X only)
+		std::vector<WallPolygon> m_walls {};
 
 		// The following are just for debugging and post analysis
 		Vectors::ZonedVector<BkgFPType> m_bR {};
@@ -199,6 +215,8 @@ namespace Background
 		const Vectors::ZonedVector<BkgFPType>& get_b_y() const;
 		const Vectors::ZonedVector<BkgFPType>& get_b_z() const;
 		const Vectors::ZonedVector<BkgFPType>& get_chi() const;
+		const std::vector<WallPolygon>& get_walls() const;
+		void set_walls(const std::vector<WallPolygon>& walls);
 		double get_elec_mass_amu() const;
 		double get_ion_mass_amu() const;
 		void set_elec_mass_amu(const double elec_mass_amu);

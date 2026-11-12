@@ -239,6 +239,11 @@ namespace S3X
 	* -1 (target) is a wall face and -3 (outer boundary) is an absorbing
 	* face. The zones are checked with Zones::Zones::validate.
 	*
+	* The wall outlines in the /walls group are read too, if the file has
+	* one: Nwalls outlines wall1, wall2, ..., each with R and Z in meters
+	* (not normalized like the corners). Their type isn't used. A file
+	* without /walls has no outlines.
+	*
 	* Only axisymmetric meshes (Nphi = 1 in the mesh file) are handled. Any
 	* missing dataset, wrong shape or unknown neighbor code stops the run.
 	*
@@ -339,6 +344,28 @@ namespace S3X
 			}
 		}
 		mesh.zones.validate();
+
+		// Wall outlines, if there are any. They're already in meters.
+		if (file.exists("/walls/Nwalls"))
+		{
+			const int nwalls {static_cast<int>(Hdf5::read_scalar<double>(
+				file, "/walls/Nwalls"))};
+			for (int w {1}; w <= nwalls; ++w)
+			{
+				const std::string g {"/walls/wall" + std::to_string(w)};
+				Background::WallPolygon wall {};
+				wall.R = Hdf5::read_dataset<double>(file, g + "/R").data;
+				wall.Z = Hdf5::read_dataset<double>(file, g + "/Z").data;
+				if (wall.R.size() != wall.Z.size() || wall.R.size() < 2)
+				{
+					Errors::fatal_error("In " + mesh_path + ", " + g
+						+ " has " + std::to_string(wall.R.size()) + " R and "
+						+ std::to_string(wall.Z.size()) + " Z values. They "
+						"need to be the same, and at least 2.");
+				}
+				mesh.walls.push_back(std::move(wall));
+			}
+		}
 
 		return mesh;
 	}
@@ -1009,6 +1036,7 @@ namespace S3X
 		calc_geometry(mesh, bkg);
 		calc_bfield(mesh, static_cast<int>(frame_paths.size()), bkg);
 		load_chi(mesh, bkg);
+		bkg.set_walls(mesh.walls);
 
 		// The ion temperature is needed for the grad B drift, so the
 		// plasma (which includes calculating the flows) comes last

@@ -13,7 +13,9 @@
 *   (-3) at psi+. Zone 2's psi+ is also the outer boundary.
 *
 * Br = Bz = 0 and Bphi = R0 / R, a vacuum toroidal field. chi is 1 in the
-* last psi row of zone 3 and 0 elsewhere.
+* last psi row of zone 3 and 0 elsewhere. The wall outline (/walls) is a
+* circle along the inner edge of that row, so it runs along the faces
+* between zone 3's plasma and wall cells.
 */
 
 #pragma once
@@ -53,7 +55,20 @@ namespace S3XTest
 		int mesh_nphi {1};			// Nphi written in the mesh file
 		bool skip_zone3 {false};	// Leave out zone 3's group
 		int corner_extra {0};		// Extra rows in zone 1's Rcorners
+
+		// Wall options
+		bool write_walls {true};	// Write the /walls outline
+		int wall_points {400};		// Points around the wall circle
+		bool chi_zone3_first_row {false};	// Also chi = 1 in zone 3's
+											// first psi row
 	};
+
+	// Normalized r of the wall outline: the inner edge of zone 3's last psi
+	// row, where chi = 1
+	inline double wall_r(const TestMesh& m)
+	{
+		return m.r_mid + (m.r_out - m.r_mid) * (m.npsi_sol - 1) / m.npsi_sol;
+	}
 
 	// Inner and outer r and the theta range of a zone (0-based)
 	inline void zone_extent(const TestMesh& m, int zone, double& r0,
@@ -224,12 +239,32 @@ namespace S3XTest
 			for (int j {}; j < nt; ++j)
 			{
 				bphi.push_back(m.R0 / cell_R(m, zone, i, j));
-				chi.push_back(zone == 2 && i == npsi - 1 ? 1.0 : 0.0);
+				const bool wall {zone == 2 && (i == npsi - 1
+					|| (m.chi_zone3_first_row && i == 0))};
+				chi.push_back(wall ? 1.0 : 0.0);
 			}
 			write(file, g + "/Br", {np, nth, 1}, zero);
 			write(file, g + "/Bz", {np, nth, 1}, zero);
 			write(file, g + "/Bphi", {np, nth, 1}, bphi);
 			write(file, g + "/chi", {np, nth, 1}, chi);
+		}
+
+		// Wall outline in meters (not normalized), clockwise in (R, Z) and
+		// closed by repeating the first point, like SOLEDGE3X's
+		if (m.write_walls)
+		{
+			std::vector<double> wR {}, wZ {};
+			for (int p {}; p <= m.wall_points; ++p)
+			{
+				const double th {-2.0 * pi * p / m.wall_points};
+				wR.push_back(m.R0 + m.a0 * wall_r(m) * std::cos(th));
+				wZ.push_back(m.a0 * wall_r(m) * std::sin(th));
+			}
+			const hsize_t n {static_cast<hsize_t>(wR.size())};
+			write(file, "/walls/Nwalls", {1}, std::vector<double> {1.0});
+			write(file, "/walls/wall1/R", {n}, wR);
+			write(file, "/walls/wall1/Z", {n}, wZ);
+			write(file, "/walls/wall1/type", {1}, std::vector<double> {1.0});
 		}
 		H5Fclose(file);
 	}

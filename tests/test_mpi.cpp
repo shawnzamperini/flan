@@ -414,8 +414,8 @@ TEST_F(MPITest, BroadcastBackgroundCurvature)
 	{ check_background_broadcast("curvature"); }
 
 // A multi-zone SOLEDGE3X background is broadcast completely: the zones with
-// their grids and faces, every field with its ghost cells, chi, the times
-// and the masses. Rank 0 writes a small SOLEDGE3X case, reads it and
+// their grids and faces, every field with its ghost cells, chi, the wall
+// outlines, the times and the masses. Rank 0 writes a small SOLEDGE3X case, reads it and
 // broadcasts it, and every rank reads it too to compare against.
 TEST_F(MPITest, BroadcastS3XBackground)
 {
@@ -509,6 +509,13 @@ TEST_F(MPITest, BroadcastS3XBackground)
 	expect_same(bkg.get_dzdY(), want.get_dzdY(), "dzdY");
 	expect_same(bkg.get_dzdZ(), want.get_dzdZ(), "dzdZ");
 	expect_same(bkg.get_chi(), want.get_chi(), "chi");
+
+	// Wall outlines
+	ASSERT_EQ(want.get_walls().size(), 1u);
+	ASSERT_EQ(bkg.get_walls().size(), want.get_walls().size());
+	EXPECT_EQ(bkg.get_walls()[0].R, want.get_walls()[0].R);
+	EXPECT_EQ(bkg.get_walls()[0].Z, want.get_walls()[0].Z);
+	EXPECT_FALSE(want.get_walls()[0].R.empty());
 }
 
 
