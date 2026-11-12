@@ -48,6 +48,7 @@ namespace Options
 		opts_h.imp_mass_amu   = m_imp_mass_amu;
 
 		opts_h.imp_num        = m_imp_num;
+		opts_h.imp_source_scale_fact = m_imp_source_scale_fact;
 
 		opts_h.tstart_opt_int = m_imp_tstart_opt_int;
 		opts_h.tstart_val     = m_imp_tstart_val;

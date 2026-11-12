@@ -13,6 +13,10 @@
 #include "slots_device.h"
 
 
+// Declared in sputtering.h, which isn't included here to keep this header
+// light
+namespace Sputtering {class Source;}
+
 namespace Slots
 {
 
@@ -132,6 +136,7 @@ namespace Slots
 	// Replace dead particles with alive ones
 	void fill_slots_cpu(Slots& slots, int& rem_parts, int& alive_slots,
 		const Background::Background& bkg, const Options::Options& opts,
-		std::vector<pcg32>& rngs);
+		std::vector<pcg32>& rngs,
+		const Sputtering::Source* source = nullptr);
 }
 

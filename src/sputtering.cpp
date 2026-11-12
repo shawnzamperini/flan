@@ -116,6 +116,43 @@
 *   steeply: Y at the mean energy can be far from the mean of Y.
 *
 * - A is the element's area (see Surface).
+*
+* Starting the sputtered atoms (Source::sample_birth)
+* ----------------------------------------------------
+* With imp_source_opt = "sputter", every particle is a W atom sputtered off
+* the wall:
+*
+* 1. Which element and when. Over the run, frame t stands for the times
+*    nearest to it, a window of length dt_t, so element e sputters
+*    S_e(t) dt_t atoms in it. A (frame, element) pair is picked with that
+*    weight, and the time uniformly in the frame's window.
+* 2. Where. Uniformly along the element's face and its range of phi, just
+*    inside the plasma cell (a thousandth of a cell from the face).
+* 3. Which ion did it. Only the fast ions sputter near threshold, so the
+*    energy of the ion is picked from the ions that sputter, whose
+*    energies go as Y(E) p(eps), the same integrand as Y_eff
+*    (sample_impact_energy).
+* 4. How fast. The sputtered atom's energy is from the Thompson
+*    distribution, f(E) ~ E / (E + E_b)^3, with E_b the target's surface
+*    binding energy from the yield table. It's cut off at the most energy
+*    the ion can give a target atom in one collision,
+*    Lambda E_ion, Lambda = 4 m1 m2 / (m1 + m2)^2 (0.043 for D on W)
+*    (sample_thompson).
+* 5. Which way. A cosine distribution about the element's normal, which
+*    is the most common angular distribution of sputtered atoms
+*    (cosine_direction).
+*
+* The atom starts neutral. Its weight, the atoms/s it stands for, is
+* source_rate() / imp_num, where source_rate() is the total rate averaged
+* over the frames' windows. Atoms are picked in proportion to where they're
+* sputtered, so they all have the same weight.
+*
+* One artifact: the atom starts at a staircase face, but its direction is
+* about the wall outline's normal, which can be tilted from the face's. A
+* direction that points back through the face goes into the wall cell and
+* is absorbed on its first step (with s3x_chi_absorb = "on"). For a cosine
+* distribution, that's 0.8% of atoms where the two normals are 10 degrees
+* apart, 7% at 30 degrees and 15% at 45 degrees.
 */
 
 #include <algorithm>
@@ -839,10 +876,18 @@ namespace Sputtering
 		const std::size_t n_elem {m_surface.size()};
 		const std::size_t n_all {n_elem * m_nframes};
 		for (auto* v : {&m_flux, &m_flux_par, &m_flux_exb, &m_energy,
-			&m_yield, &m_rate})
+			&m_yield, &m_rate, &m_e_sheath, &m_ti})
 		{
 			v->assign(n_all, 0.0);
 		}
+
+		// Kept for starting particles
+		m_table = table;
+		m_angle = angle;
+		const double m1 {table.projectile_mass_amu()};
+		const double m2 {table.target_mass_amu()};
+		m_lambda = 4.0 * m1 * m2 / ((m1 + m2) * (m1 + m2));
+		m_imp_mass_kg = opts.imp_mass_amu() * Constants::amu_to_kg;
 		m_total_rate.assign(m_nframes, 0.0);
 
 		using Vec3 = std::array<double, 3>;
@@ -924,8 +969,62 @@ namespace Sputtering
 			m_energy[idx] = e_sheath + 2.0 * ti_c;
 			m_yield[idx] = y.yield;
 			m_rate[idx] = flux * y.yield * el.area;
+			m_e_sheath[idx] = e_sheath;
+			m_ti[idx] = ti_c;
 			m_total_rate[t] += m_rate[idx];
 		}
+
+		// Computational x and y edges of each element's plasma cell, for
+		// placing atoms on its face
+		const Zones::Zones& zones {bkg.get_zones()};
+		m_cell_bounds.reserve(n_elem);
+		for (const SurfaceElement& el : m_surface.elements())
+		{
+			const auto& gx {zones.get_grid_x(el.zone)};
+			const auto& gy {zones.get_grid_y(el.zone)};
+			m_cell_bounds.push_back({gx[el.i], gx[el.i + 1], gy[el.j],
+				gy[el.j + 1]});
+		}
+
+		// Each frame stands for the times nearer to it than to the other
+		// frames (the frame a particle uses is the nearest one), from half
+		// way to the frame before to half way to the frame after, and to
+		// the ends of the background's time range at the first and last.
+		const auto& times {bkg.get_times()};
+		m_frame_lo.resize(m_nframes);
+		m_frame_hi.resize(m_nframes);
+		for (int t {}; t < m_nframes; ++t)
+		{
+			m_frame_lo[t] = t == 0 ? times[0]
+				: 0.5 * (times[t - 1] + times[t]);
+			m_frame_hi[t] = t == m_nframes - 1 ? times[t]
+				: 0.5 * (times[t] + times[t + 1]);
+		}
+
+		// With one frame its window has no length, so give it a length of
+		// 1 to weight it
+		auto window = [&](int t)
+		{
+			return m_nframes == 1 ? 1.0 : m_frame_hi[t] - m_frame_lo[t];
+		};
+
+		// Atoms sputtered off each element in each frame's window, added
+		// up in the order the per-element values are stored, for picking
+		// births. The time-averaged rate is the total over the windows
+		// divided by their total length.
+		m_cdf.resize(n_all);
+		double cumulative {};
+		double total_time {};
+		for (int t {}; t < m_nframes; ++t)
+		{
+			for (std::size_t e {}; e < n_elem; ++e)
+			{
+				cumulative += m_rate[t * n_elem + e] * window(t);
+				m_cdf[t * n_elem + e] = cumulative;
+			}
+			total_time += window(t);
+		}
+		m_source_rate = total_time > 0.0 ? cumulative / total_time : 0.0;
 	}
 
 	/**
@@ -937,6 +1036,8 @@ namespace Sputtering
 	* effective yield and the sputtered rate (atoms/s). Also the total rate
 	* in each frame, its mean over the frames, and how many element-frames
 	* had more than 1% of their ions above the end of the yield table.
+	* source_rate is the total rate averaged over the frames' windows
+	* (see sample_birth), and frame_lo and frame_hi are the windows.
 	*/
 	///@{
 	const Surface& Source::surface() const {return m_surface;}
@@ -951,6 +1052,9 @@ namespace Sputtering
 	const std::vector<double>& Source::total_rate() const
 		{return m_total_rate;}
 	int Source::num_above_table() const {return m_num_above_table;}
+	double Source::source_rate() const {return m_source_rate;}
+	const std::vector<double>& Source::frame_lo() const {return m_frame_lo;}
+	const std::vector<double>& Source::frame_hi() const {return m_frame_hi;}
 
 	double Source::mean_total_rate() const
 	{
@@ -1013,5 +1117,196 @@ namespace Sputtering
 				"the yield table, where the yield at that energy was used.\n";
 		}
 		for (const auto& w : m_warnings) os << "  Warning! " << w << "\n";
+	}
+
+	/**
+	* Picks the energy of an ion that sputtered an atom.
+	*
+	* The ions hitting the wall have energies E_sheath + eps, with eps from
+	* Gamma(2, ti). The ones that sputter an atom are weighted by the
+	* yield, so their energies go as Y(E) p(eps). Near threshold that's
+	* only the fast tail. The energy is picked from the same points as
+	* effective_yield, weighted by w_i Y(E_i), so it's one of those points.
+	*
+	* @param table Sputtering yield table.
+	* @param e_sheath Energy gained in the sheath and presheath (eV).
+	* @param ti Ion temperature (eV), > 0.
+	* @param angle Angle of incidence from the surface normal (degrees).
+	* @param u Uniform random number in [0, 1).
+	* @return Energy of the ion (eV), or the mean energy e_sheath + 2 ti if
+	*         no energy sputters anything.
+	*/
+	double sample_impact_energy(const YieldTable& table, const double e_sheath,
+		const double ti, const double angle, const double u)
+	{
+		const auto& nodes {thermal_quadrature()};
+		std::vector<double> cdf(nodes.size());
+		double total {};
+		for (std::size_t n {}; n < nodes.size(); ++n)
+		{
+			const auto& [x, w] {nodes[n]};
+			total += w * table.get_yield(e_sheath + x * ti, angle);
+			cdf[n] = total;
+		}
+		if (!(total > 0.0)) return e_sheath + 2.0 * ti;
+
+		const std::size_t n {static_cast<std::size_t>(std::upper_bound(
+			cdf.begin(), cdf.end(), u * total) - cdf.begin())};
+		const std::size_t pick {std::min(n, nodes.size() - 1)};
+		return e_sheath + nodes[pick][0] * ti;
+	}
+
+	/**
+	* Picks the energy of a sputtered atom from the Thompson distribution,
+	* cut off at e_max.
+	*
+	* The Thompson distribution is f(E) ~ E / (E + e_b)^3, with e_b the
+	* surface binding energy. Its cumulative distribution is
+	* F(E) = E^2 / (E + e_b)^2, so with u' = u F(e_max), solving F(E) = u'
+	* gives E = e_b sqrt(u') / (1 - sqrt(u')), which is exactly distributed
+	* as f(E) between 0 and e_max.
+	*
+	* @param e_b Surface binding energy (eV), > 0.
+	* @param e_max Largest energy (eV). If it isn't > 0, e_b is returned.
+	* @param u Uniform random number in [0, 1).
+	* @return Energy of the sputtered atom (eV).
+	*/
+	double sample_thompson(const double e_b, const double e_max,
+		const double u)
+	{
+		if (!(e_max > 0.0)) return e_b;
+		const double f_max {e_max * e_max / ((e_max + e_b) * (e_max + e_b))};
+		const double s {std::sqrt(u * f_max)};
+		return e_b * s / (1.0 - s);
+	}
+
+	/**
+	* Picks a direction from a cosine distribution about a unit normal.
+	*
+	* The number of atoms leaving at angle theta from the normal goes as
+	* cos(theta) sin(theta), so cos^2(theta) is uniform: cos(theta) =
+	* sqrt(u1). The azimuth is 2 pi u2. The direction is put together from
+	* the normal and two unit vectors perpendicular to it.
+	*
+	* @param n Unit normal, which the direction is on the same side of.
+	* @param u1 Uniform random number in [0, 1), for the polar angle.
+	* @param u2 Uniform random number in [0, 1), for the azimuth.
+	* @return Unit direction.
+	*/
+	std::array<double, 3> cosine_direction(const std::array<double, 3>& n,
+		const double u1, const double u2)
+	{
+		using Vec3 = std::array<double, 3>;
+		auto cross = [](const Vec3& a, const Vec3& b) -> Vec3
+		{
+			return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+				a[0] * b[1] - a[1] * b[0]};
+		};
+
+		// A perpendicular to n: cross it with the axis it's least along
+		Vec3 axis {0.0, 0.0, 0.0};
+		const int least {std::abs(n[0]) <= std::abs(n[1])
+			? (std::abs(n[0]) <= std::abs(n[2]) ? 0 : 2)
+			: (std::abs(n[1]) <= std::abs(n[2]) ? 1 : 2)};
+		axis[least] = 1.0;
+		Vec3 t1 {cross(n, axis)};
+		const double len {std::sqrt(t1[0] * t1[0] + t1[1] * t1[1]
+			+ t1[2] * t1[2])};
+		for (double& c : t1) c /= len;
+		const Vec3 t2 {cross(n, t1)};
+
+		const double cos_th {std::sqrt(u1)};
+		const double sin_th {std::sqrt(1.0 - u1)};
+		const double az {2.0 * Constants::pi * u2};
+		Vec3 d {};
+		for (int c {}; c < 3; ++c)
+		{
+			d[c] = cos_th * n[c] + sin_th * (std::cos(az) * t1[c]
+				+ std::sin(az) * t2[c]);
+		}
+		return d;
+	}
+
+	/**
+	* Picks where, when and how fast a new sputtered atom starts.
+	*
+	* See the top of this file for the steps. The atom starts on its
+	* element's face, moved a thousandth of a cell into the plasma cell so
+	* it isn't on the edge of the wall cell, at a uniformly random place
+	* along the face and in the element's range of phi. Its direction is
+	* from the element's normal at its own phi.
+	*
+	* @param rng Random number generator of the calling thread.
+	* @return The new atom. Its charge (0) and weight are set by the caller.
+	*/
+	Birth Source::sample_birth(pcg32& rng) const
+	{
+		if (m_cdf.empty() || !(m_cdf.back() > 0.0))
+		{
+			Errors::fatal_error("Can't start sputtered atoms, since nothing "
+				"is sputtered (the source is 0 everywhere).");
+		}
+
+		// 1. Frame and element, in proportion to the atoms they sputter
+		const double r {rng.next_double() * m_cdf.back()};
+		const std::size_t idx {std::min(static_cast<std::size_t>(
+			std::upper_bound(m_cdf.begin(), m_cdf.end(), r) - m_cdf.begin()),
+			m_cdf.size() - 1)};
+		const std::size_t n_elem {size()};
+		Birth b {};
+		b.frame = static_cast<int>(idx / n_elem);
+		b.element = idx % n_elem;
+		const SurfaceElement& el {m_surface.elements()[b.element]};
+		b.zone = el.zone;
+
+		// Time, uniform in the frame's window
+		b.t = m_frame_lo[b.frame] + rng.next_double()
+			* (m_frame_hi[b.frame] - m_frame_lo[b.frame]);
+
+		// 2. Place: uniform along the face, just inside the plasma cell
+		constexpr double inset {1e-3};
+		const auto& [x_lo, x_hi, y_lo, y_hi] {m_cell_bounds[b.element]};
+		const double ux {rng.next_double()};
+		switch (el.face)
+		{
+			case Zones::xmin:
+				b.x = x_lo + inset * (x_hi - x_lo);
+				b.y = y_lo + ux * (y_hi - y_lo);
+				break;
+			case Zones::xmax:
+				b.x = x_hi - inset * (x_hi - x_lo);
+				b.y = y_lo + ux * (y_hi - y_lo);
+				break;
+			case Zones::ymin:
+				b.x = x_lo + ux * (x_hi - x_lo);
+				b.y = y_lo + inset * (y_hi - y_lo);
+				break;
+			default:	// ymax
+				b.x = x_lo + ux * (x_hi - x_lo);
+				b.y = y_hi - inset * (y_hi - y_lo);
+				break;
+		}
+		b.z = el.phi_min + rng.next_double() * (el.phi_max - el.phi_min);
+
+		// 3. Energy of the ion that sputtered it
+		b.e_impact = sample_impact_energy(m_table, m_e_sheath[idx],
+			m_ti[idx], m_angle, rng.next_double());
+
+		// 4. Energy of the atom, Thompson cut off at Lambda E_ion
+		b.e_atom = sample_thompson(m_table.target_Es(),
+			m_lambda * b.e_impact, rng.next_double());
+		const double speed {std::sqrt(2.0 * b.e_atom * Constants::ev_to_j
+			/ m_imp_mass_kg)};
+
+		// 5. Direction: cosine about the normal at the atom's phi
+		const std::array<double, 3> n {el.n_R * std::cos(b.z),
+			el.n_R * S3X::phi_sign * std::sin(b.z), el.n_Z};
+		const double u1 {rng.next_double()};
+		const double u2 {rng.next_double()};
+		const auto d {cosine_direction(n, u1, u2)};
+		b.vX = speed * d[0];
+		b.vY = speed * d[1];
+		b.vZ = speed * d[2];
+		return b;
 	}
 }

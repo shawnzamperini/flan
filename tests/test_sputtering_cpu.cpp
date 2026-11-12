@@ -11,10 +11,14 @@
 * - The sputtered source on those surfaces (Sputtering::Source): the sheath
 *   energy, the effective yield and the ion flux, on the 45 degree wall
 *   with a uniform plasma, where they're known exactly.
+* - Starting sputtered atoms from the source: the Thompson energies, the
+*   cosine directions, the energy of the sputtering ion, and where, when
+*   and how fast sample_birth starts them.
 */
 
 #include <cmath>
 #include <array>
+#include <omp.h>
 #include <cstdlib>
 #include <sstream>
 #include <filesystem>
@@ -28,8 +32,10 @@
 #include "hdf5.h"
 #include "hdf5_utils.h"
 #include "options.h"
+#include "pcg32.h"
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
+#include "slots.h"
 #include "sputtering.h"
 #include "vectors.h"
 #include "zones.h"
@@ -845,4 +851,224 @@ TEST_F(SputteringTable, SourceChecks)
 		Sputtering::YieldTable {m_path}, source_options());
 	EXPECT_EQ(above.num_above_table(),
 		static_cast<int>(2 * surface.size()));
+}
+
+// Thompson energies come out exactly as the inverse of the cut-off
+// cumulative distribution: never above e_max, the median where F(E) is half
+// of F(e_max), and the mean that of f(E) ~ E / (E + e_b)^3 on [0, e_max]
+TEST(SputteringBirth, Thompson)
+{
+	const double e_b {8.79};
+	const double e_max {20.0};
+	auto F = [&](double e) {return e * e / ((e + e_b) * (e + e_b));};
+
+	const int n {200000};
+	double mean {};
+	for (int k {}; k < n; ++k)
+	{
+		const double e {Sputtering::sample_thompson(e_b, e_max,
+			(k + 0.5) / n)};
+		EXPECT_LE(e, e_max);
+		EXPECT_GE(e, 0.0);
+		mean += e / n;
+	}
+	EXPECT_NEAR(F(Sputtering::sample_thompson(e_b, e_max, 0.5)),
+		0.5 * F(e_max), 1e-12);
+
+	// Mean of f on [0, e_max], numerically
+	double num {}, den {};
+	const int m {200000};
+	for (int k {}; k < m; ++k)
+	{
+		const double e {(k + 0.5) * e_max / m};
+		const double f {e / std::pow(e + e_b, 3)};
+		num += e * f;
+		den += f;
+	}
+	EXPECT_NEAR(mean, num / den, 1e-3 * num / den);
+
+	// No room for any energy: the binding energy
+	EXPECT_EQ(Sputtering::sample_thompson(e_b, 0.0, 0.3), e_b);
+}
+
+// Cosine directions are unit vectors on the normal's side, with cos(theta)
+// = sqrt(u1), so cos^2(theta) averages 1/2, and no bias sideways
+TEST(SputteringBirth, CosineDirection)
+{
+	std::array<double, 3> n {1.0, 2.0, -0.5};
+	const double len {std::sqrt(1.0 + 4.0 + 0.25)};
+	for (double& c : n) c /= len;
+
+	const int m {200};
+	double cos2 {};
+	std::array<double, 3> sum {};
+	for (int a {}; a < m; ++a)
+	for (int b {}; b < m; ++b)
+	{
+		const double u1 {(a + 0.5) / m};
+		const auto d {Sputtering::cosine_direction(n, u1, (b + 0.5) / m)};
+		const double dn {d[0] * n[0] + d[1] * n[1] + d[2] * n[2]};
+		EXPECT_NEAR(d[0] * d[0] + d[1] * d[1] + d[2] * d[2], 1.0, 1e-12);
+		EXPECT_NEAR(dn, std::sqrt(u1), 1e-12);
+		cos2 += dn * dn / (m * m);
+		for (int c {}; c < 3; ++c) sum[c] += (d[c] - dn * n[c]) / (m * m);
+	}
+	EXPECT_NEAR(cos2, 0.5, 1e-4);
+	for (int c {}; c < 3; ++c) EXPECT_NEAR(sum[c], 0.0, 1e-12);
+}
+
+// The sputtering ions' energies follow Y(E) p(eps). With a step table (0
+// below E0, c above), none is below E0, and x = eps / Ti has the mean of
+// x e^-x above x0, (x0^2 + 2 x0 + 2) / (x0 + 1). With no yield anywhere,
+// the mean impact energy comes back.
+TEST_F(SputteringTable, ImpactEnergy)
+{
+	const double e_sheath {60.0};
+	const double ti {20.0};
+	const double x0 {1.0};
+	write(step_table(e_sheath + x0 * ti, 0.05));
+	const Sputtering::YieldTable table(m_path);
+
+	const int n {20000};
+	double mean_x {};
+	for (int k {}; k < n; ++k)
+	{
+		const double e {Sputtering::sample_impact_energy(table, e_sheath, ti,
+			30.0, (k + 0.5) / n)};
+		EXPECT_GT(e, e_sheath + x0 * ti);
+		mean_x += (e - e_sheath) / ti / n;
+	}
+	EXPECT_NEAR(mean_x, (x0 * x0 + 2.0 * x0 + 2.0) / (x0 + 1.0), 5e-3);
+
+	write(step_table(1e4, 0.05));
+	EXPECT_DOUBLE_EQ(Sputtering::sample_impact_energy(
+		Sputtering::YieldTable {m_path}, e_sheath, ti, 30.0, 0.7),
+		e_sheath + 2.0 * ti);
+}
+
+// On the 45 degree wall: births pick frames and elements in proportion to
+// the atoms they sputter, and start on the right face, at the right time,
+// moving into the plasma with an energy below the cut-off
+TEST_F(SputteringTable, SampleBirth)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	const auto bkg {diagonal_with_plasma(Plasma {})};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg, table, source_options());
+
+	// Two frames at t = 0 and 1, each standing for half the time
+	EXPECT_EQ(source.frame_lo(), (std::vector<double> {0.0, 0.5}));
+	EXPECT_EQ(source.frame_hi(), (std::vector<double> {0.5, 1.0}));
+	EXPECT_NEAR(source.source_rate(), source.mean_total_rate(),
+		1e-12 * source.source_rate());
+
+	const std::size_t n_elem {source.size()};
+	const double total {0.5 * (source.total_rate()[0]
+		+ source.total_rate()[1])};
+	const double lambda {4.0 * 2.014 * 183.84 / std::pow(2.014 + 183.84, 2)};
+	const double m_w {183.84 * 1.661e-27};
+
+	pcg32 rng(42, 7);
+	const int n {50000};
+	std::vector<int> counts(2 * n_elem, 0);
+	for (int k {}; k < n; ++k)
+	{
+		const auto b {source.sample_birth(rng)};
+		++counts[b.frame * n_elem + b.element];
+		const auto& el {surface.elements()[b.element]};
+
+		// Time in the frame's window, phi in the element's range
+		EXPECT_GE(b.t, source.frame_lo()[b.frame]);
+		EXPECT_LE(b.t, source.frame_hi()[b.frame]);
+		EXPECT_GE(b.z, el.phi_min);
+		EXPECT_LT(b.z, el.phi_max);
+
+		// In the plasma cell, a thousandth of a cell from the face (x and
+		// y are cell indices here)
+		EXPECT_EQ(b.zone, 0);
+		EXPECT_GE(b.x, el.i);
+		EXPECT_LE(b.x, el.i + 1);
+		EXPECT_GE(b.y, el.j);
+		EXPECT_LE(b.y, el.j + 1);
+		if (el.face == Zones::xmax) EXPECT_NEAR(b.x, el.i + 0.999, 1e-12);
+		if (el.face == Zones::ymax) EXPECT_NEAR(b.y, el.j + 0.999, 1e-12);
+		if (el.face == Zones::xmin) EXPECT_NEAR(b.x, el.i + 0.001, 1e-12);
+		if (el.face == Zones::ymin) EXPECT_NEAR(b.y, el.j + 0.001, 1e-12);
+
+		// Speed from the atom's energy, below the cut-off, moving into the
+		// plasma side of the element's normal at its phi
+		EXPECT_LE(b.e_atom, lambda * b.e_impact * (1.0 + 1e-12));
+		const double v2 {b.vX * b.vX + b.vY * b.vY + b.vZ * b.vZ};
+		EXPECT_NEAR(0.5 * m_w * v2 / 1.602e-19, b.e_atom,
+			1e-9 * b.e_atom + 1e-12);
+		const double n_x {el.n_R * std::cos(b.z)};
+		const double n_y {el.n_R * S3X::phi_sign * std::sin(b.z)};
+		EXPECT_GE(b.vX * n_x + b.vY * n_y + b.vZ * el.n_Z, 0.0);
+	}
+
+	// Chi-square of the counts against rate x window / total
+	double chi2 {};
+	int bins {};
+	for (int t {}; t < 2; ++t)
+	for (std::size_t e {}; e < n_elem; ++e)
+	{
+		const double expected {n * source.rate()[t * n_elem + e] * 0.5
+			/ total};
+		if (expected <= 0.0)
+		{
+			EXPECT_EQ(counts[t * n_elem + e], 0);
+			continue;
+		}
+		const double d {counts[t * n_elem + e] - expected};
+		chi2 += d * d / expected;
+		++bins;
+	}
+	EXPECT_LT(chi2 / (bins - 1), 1.5) << "chi2 = " << chi2 << " for "
+		<< bins << " bins";
+}
+
+// Filling the slots from a source gives neutral particles where the source
+// put them, each standing for source_rate / imp_num atoms/s
+TEST_F(SputteringTable, FillSlots)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	const auto bkg {diagonal_with_plasma(Plasma {})};
+	auto opts {source_options()};
+	opts.set_imp_num(50);
+	opts.set_imp_init_charge(3);
+	const Sputtering::Source source(Sputtering::Surface {bkg}, bkg, table,
+		opts);
+
+	Slots::Slots slots(50);
+	for (int i {}; i < slots.N(); ++i) slots.set_state(i, 1);
+	std::vector<pcg32> rngs {};
+	for (int i {}; i < omp_get_max_threads(); ++i) rngs.emplace_back(3, i);
+	int rem {50};
+	int alive {};
+	Slots::fill_slots_cpu(slots, rem, alive, bkg, opts, rngs, &source);
+
+	EXPECT_EQ(alive, 50);
+	EXPECT_EQ(rem, 0);
+	for (int i {}; i < slots.N(); ++i)
+	{
+		EXPECT_EQ(slots.q()[i], 0);
+		EXPECT_DOUBLE_EQ(slots.weight()[i], source.source_rate() / 50);
+		EXPECT_EQ(slots.zone()[i], 0);
+		EXPECT_EQ(slots.xidx()[i], static_cast<int>(slots.x()[i]));
+		EXPECT_EQ(slots.yidx()[i], static_cast<int>(slots.y()[i]));
+	}
+}
+
+// With nothing sputtered, there's nothing to start
+TEST_F(SputteringTable, SampleBirthNoSource)
+{
+	write(constant_table(0.0));
+	const auto bkg {diagonal_with_plasma(Plasma {})};
+	const Sputtering::Source source(Sputtering::Surface {bkg}, bkg,
+		Sputtering::YieldTable {m_path}, source_options());
+	pcg32 rng(1, 1);
+	EXPECT_EXIT(source.sample_birth(rng),
+		testing::ExitedWithCode(EXIT_FAILURE), "nothing is sputtered");
 }

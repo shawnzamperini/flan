@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <ostream>
 #include <string>
@@ -13,6 +14,7 @@
 
 #include "background.h"
 #include "options.h"
+#include "pcg32.h"
 #include "zones.h"
 
 
@@ -131,6 +133,35 @@ namespace Sputtering
 	EffectiveYield effective_yield(const YieldTable& table, double e_sheath,
 		double ti, double angle);
 
+	double sample_impact_energy(const YieldTable& table, double e_sheath,
+		double ti, double angle, double u);
+
+	double sample_thompson(double e_b, double e_max, double u);
+
+	std::array<double, 3> cosine_direction(const std::array<double, 3>& n,
+		double u1, double u2);
+
+	/**
+	* Where, when and how fast a sputtered atom starts (see
+	* Source::sample_birth), plus which frame and element it came from and
+	* the energy of the ion that sputtered it, for checking.
+	*/
+	struct Birth
+	{
+		int zone {};			///< Zone it starts in
+		double t {};			///< Time (s)
+		double x {};			///< Computational x
+		double y {};			///< Computational y
+		double z {};			///< Computational z (phi for SOLEDGE3X)
+		double vX {};			///< Cartesian velocity (m/s)
+		double vY {};
+		double vZ {};
+		int frame {};			///< Time frame it was picked from
+		std::size_t element {};	///< Surface element it was picked from
+		double e_impact {};		///< Energy of the sputtering ion (eV)
+		double e_atom {};		///< Energy of the sputtered atom (eV)
+	};
+
 	/**
 	* The rate atoms are sputtered off each surface element by the
 	* background plasma, in each background time frame. See sputtering.cpp
@@ -155,6 +186,21 @@ namespace Sputtering
 		int m_num_above_table {};	///< Element-frames past the table
 		std::vector<std::string> m_warnings {};	///< For print_summary
 
+		// For starting particles (see sample_birth)
+		YieldTable m_table {};				///< The yield table
+		double m_angle {};					///< Ion angle of incidence (deg)
+		double m_lambda {};				///< Largest energy fraction an ion
+										///< can give a target atom
+		double m_imp_mass_kg {};		///< Mass of the sputtered atoms
+		std::vector<double> m_e_sheath {};	///< Sheath energy (eV), per idx
+		std::vector<double> m_ti {};		///< Ion temperature (eV), per idx
+		std::vector<std::array<double, 4>> m_cell_bounds {};	///< x and y
+										///< edges of each element's cell
+		std::vector<double> m_frame_lo {};	///< Start of each frame's window
+		std::vector<double> m_frame_hi {};	///< End of each frame's window
+		std::vector<double> m_cdf {};		///< Cumulative atoms per idx
+		double m_source_rate {};			///< Time-averaged total rate
+
 	public:
 
 		Source() = default;
@@ -173,7 +219,12 @@ namespace Sputtering
 		const std::vector<double>& rate() const;
 		const std::vector<double>& total_rate() const;
 		double mean_total_rate() const;
+		double source_rate() const;
 		int num_above_table() const;
+		const std::vector<double>& frame_lo() const;
+		const std::vector<double>& frame_hi() const;
+
+		Birth sample_birth(pcg32& rng) const;
 
 		void print_summary(std::ostream& os) const;
 	};

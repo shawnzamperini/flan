@@ -51,6 +51,19 @@ Inputs create_inputs()
 	inpts["imp_ystart_val"] = 473.5;
 	inpts["imp_zstart_opt"] = "full_range";
 
+	// Sputtering of the wall by the background plasma. With "sputter", the
+	// particles are the W atoms D+ sputters off the wall instead: they start
+	// neutral where the sputtered source puts them, the start options above
+	// aren't used, and the density is scaled by the source's total rate.
+	// The source is also saved in the sputtering group of the output file.
+	inpts["imp_source_opt"] = "manual";  // "sputter" to start from the wall
+	inpts["sput_table_file"] = "/path/to/flan/data/sputtering/"
+		"D_on_W.h5";  // Change to your directory
+	inpts["sput_flux_opt"] = "parallel_exb";  // Parallel flow + E x B drift
+	inpts["sput_bohm_floor"] = "off";  // "on": parallel flow >= sound speed
+	inpts["sput_angle_val"] = 60.0;  // Ion angle of incidence (deg)
+	inpts["sput_max_wall_dist"] = 2.0;  // Cell widths to the wall outline
+
 	// Atomic physics
 	inpts["imp_iz_recomb"] = "on";
 	inpts["openadas_root"] = "/path/to/openadas";  // Change to your directory

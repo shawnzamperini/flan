@@ -201,8 +201,8 @@ namespace Slots
 	* of the nearest time frame and the containing grid cell are found, and
 	* the starting Cartesian velocity comes from get_birth_vXYZ. The
 	* computational velocities are left at zero, since they are set on the
-	* first Boris update. The weight is 1 / imp_num and the charge is
-	* init_charge.
+	* first Boris update. The weight is imp_source_scale_fact / imp_num,
+	* the atoms/s the particle stands for, and the charge is init_charge.
 	*
 	* @param rng_d Random number generator of the slot the particle goes
 	*        into.
@@ -250,10 +250,9 @@ namespace Slots
 		p.vy = 0.0;
 		p.vz = 0.0;
 
-		// Particle weights are in units of particles/s, meant to represent a
-		// given source of particles at this location. We need to normalize
-		// by number of particle launched as well.
-		p.weight = 1.0 / opts_d->imp_num;
+		// The weight is the atoms/s this particle stands for: the source,
+		// imp_source_scale_fact, shared between the imp_num particles
+		p.weight = opts_d->imp_source_scale_fact / opts_d->imp_num;
 		p.q = opts_d->init_charge;
 
 		return p;

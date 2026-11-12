@@ -21,6 +21,7 @@
 #include "indices.h"
 #include "pcg32.h"
 #include "slots.h"
+#include "sputtering.h"
 #include "slots_device.h"
 
 #ifdef USE_CUDA
@@ -809,17 +810,56 @@ namespace Slots
 	* found, the same as in impurity_transport.cpp, and the Cartesian
 	* velocity comes from get_birth_vXYZ. The computational velocity is set
 	* to zero, since it gets set on the first call to Boris::update_velocity.
-	* The weight is 1 / imp_num and the charge is imp_init_charge.
+	* The weight is the atoms/s the particle stands for, the source shared
+	* between the imp_num particles: imp_source_scale_fact / imp_num. The
+	* charge is imp_init_charge.
+	*
+	* With a sputtered source (imp_source_opt = "sputter"), the zone, time,
+	* position and velocity come from Sputtering::Source::sample_birth
+	* instead, the particle starts neutral, and the source is the total
+	* sputtered rate, so the weight is Source::source_rate() / imp_num.
+	* Particles are picked in proportion to where atoms are sputtered, so
+	* they all stand for the same number of atoms/s.
 	*
 	* @param bkg Background plasma.
 	* @param opts Simulation options.
 	* @param rng Random number generator for this thread.
+	* @param source Sputtered source to start the particle from, or
+	*        nullptr to start it from the imp_*start_opt options.
 	* @return The new particle.
 	*/
 	ParticleInit make_new_particle(const Background::Background& bkg,
-		const Options::Options& opts, pcg32& rng) 
+		const Options::Options& opts, pcg32& rng,
+		const Sputtering::Source* source) 
 	{
 		ParticleInit p;
+
+		// A sputtered atom: where, when and how fast come from the source
+		if (source != nullptr)
+		{
+			const Sputtering::Birth b {source->sample_birth(rng)};
+			p.zone = b.zone;
+			p.t = b.t;
+			p.x = b.x;
+			p.y = b.y;
+			p.z = b.z;
+			p.tidx = Indices::get_nearest_index_cpu(bkg.get_times(), p.t);
+			p.xidx = Indices::get_nearest_cell_index_cpu(
+				bkg.get_grid_x(p.zone), p.x);
+			p.yidx = Indices::get_nearest_cell_index_cpu(
+				bkg.get_grid_y(p.zone), p.y);
+			p.zidx = Indices::get_nearest_cell_index_cpu(
+				bkg.get_grid_z(p.zone), p.z);
+			p.vX = b.vX;
+			p.vY = b.vY;
+			p.vZ = b.vZ;
+			p.vx = 0.0;
+			p.vy = 0.0;
+			p.vz = 0.0;
+			p.weight = source->source_rate() / opts.imp_num();
+			p.q = 0;
+			return p;
+		}
 
 		// Zone the particle is born in, numbered from 1 in the input. The
 		// starting position is in that zone's coordinates.
@@ -866,10 +906,9 @@ namespace Slots
 		p.vy = 0.0;
 		p.vz = 0.0;
 		
-		// Particle weights are in units of particles/s, meant to represent a
-		// given source of particles at this location. We need to normalize
-		// by number of particle launched as well.
-		p.weight = 1.0 / opts.imp_num();
+		// The weight is the atoms/s this particle stands for: the source,
+		// imp_source_scale_fact, shared between the imp_num particles
+		p.weight = opts.imp_source_scale_fact() / opts.imp_num();
 		p.q = opts.imp_init_charge(); 
 
 		return p;
@@ -892,10 +931,12 @@ namespace Slots
 	* @param bkg Background plasma.
 	* @param opts Simulation options.
 	* @param rngs Random number generators, one per OpenMP thread.
+	* @param source Sputtered source to start particles from, or nullptr
+	*        (the default) to start them from the imp_*start_opt options.
 	*/
 	void fill_slots_cpu(Slots& slots, int& rem_parts, int& alive_slots,
 		const Background::Background& bkg, const Options::Options& opts,
-		std::vector<pcg32>& rngs)
+		std::vector<pcg32>& rngs, const Sputtering::Source* source)
 	{
 		int N = slots.N();
 		int dead_count = 0;
@@ -937,7 +978,8 @@ namespace Slots
 					if (claim >= revive)
 						continue;
 
-					ParticleInit p = make_new_particle(bkg, opts, rng);
+					ParticleInit p = make_new_particle(bkg, opts, rng,
+						source);
 					slots.set_pt(i, 0.0);  // particle time
 					slots.set_t(i, p.t);
 					slots.set_x(i, p.x);

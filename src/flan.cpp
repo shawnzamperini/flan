@@ -42,7 +42,8 @@
 *    broadcast it to every rank.
 * 3. With imp_source_opt = "sputter", find the wall surfaces and the
 *    rate the background sputters atoms off them (Sputtering::Source),
-*    on every rank.
+*    on every rank. The particles then start from it, each standing for
+*    its total rate / imp_num atoms/s.
 * 4. Follow the impurities on every rank
 *    (ImpurityTransport::follow_impurities).
 * 5. Combine the statistics from every rank onto rank 0
@@ -130,7 +131,9 @@ R"(
 	bkg.broadcast(MPI_COMM_WORLD);
 
 	// The sputtered source. Every rank calculates its own from the
-	// broadcast background, since every rank will start particles from it.
+	// broadcast background, since every rank starts particles from it.
+	// Each particle then stands for source_rate / imp_num atoms/s (its
+	// weight), in place of imp_source_scale_fact / imp_num.
 	std::optional<Sputtering::Source> source {};
 	if (opts.imp_source_opt_int() == 1)
 	{
@@ -138,6 +141,11 @@ R"(
 		{
 			Errors::fatal_error("imp_source_opt = \"sputter\" needs a "
 				"sputtering yield table, set with sput_table_file.");
+		}
+		if (opts.use_gpu_int() > 0)
+		{
+			Errors::fatal_error("imp_source_opt = \"sputter\" only runs on "
+				"the CPU for now. Set use_gpu = \"off\".");
 		}
 		if (rank == 0) std::cout << "Calculating the sputtered source...\n";
 		const Sputtering::Surface surface(bkg, opts.sput_max_wall_dist());
@@ -147,16 +155,25 @@ R"(
 		{
 			surface.print_summary(std::cout);
 			source->print_summary(std::cout);
-			std::cout << "Warning! Starting particles from the sputtered "
-				"source isn't done yet. They\nstart where the imp_*start_opt "
-				"options say.\n";
+		}
+		if (!(source->source_rate() > 0.0))
+		{
+			Errors::fatal_error("Nothing is sputtered off the wall (the "
+				"source is 0 everywhere), so there are no particles to "
+				"follow.");
+		}
+		if (rank == 0 && opts.imp_source_scale_fact() != 1.0)
+		{
+			std::cout << "Warning! imp_source_scale_fact isn't used with "
+				"imp_source_opt = \"sputter\".\nThe sputtered source ("
+				<< source->source_rate() << " atoms/s) is used instead.\n";
 		}
 	}
 
 	// Begin main particle following loop.
 	timer.start(Timer::Section::Imp);
 	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
-		timer)};
+		timer, source ? &*source : nullptr)};
 	timer.stop(Timer::Section::Imp);
 
 	// Reduce imp_stats from each rank, defined in impurity_stats.cpp. Only

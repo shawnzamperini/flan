@@ -381,7 +381,7 @@ imp_source_opt
 Where impurities come from.
 
   - **"manual"**: They start where :ref:`imp_xstart_opt <imp_xstart_opt>` and the other start options say.
-  - **"sputter"**: The rate the background plasma sputters atoms off each part of the wall of a SOLEDGE3X background is calculated and saved to the output file. Starting the particles from that source isn't done yet, so for now they still start where the start options say.
+  - **"sputter"**: The particles are the atoms the background plasma sputters off the wall of a SOLEDGE3X background (CPU only). The rate off each part of the wall is calculated and saved to the output file, the particles start from it neutral, and its total rate replaces :ref:`imp_source_scale_fact <imp_source_scale_fact>`. The start options, imp_zone_start_val, imp_temp_start_opt and imp_init_charge aren't used then.
 
 sput_table_file
 ---------------
@@ -582,7 +582,7 @@ imp_time_step_min
 imp_source_scale_fact
 ---------------------
 
-The meaning of this variable depends on what type of situation the simulation represents, but it is used to convert the Monte Carlo weight density in each cell to actual density in (:math:`m^{-3}`). Internally, every density value is just multiplied by this value. One could equally run a simulation with this set to 1.0 and multiply the impurity density by this value in post-processing if they wanted to.
+The meaning of this variable depends on what type of situation the simulation represents, but it is used to convert the Monte Carlo weight density in each cell to actual density in (:math:`m^{-3}`). Internally, each particle's weight is this value divided by :ref:`imp_num <imp_num>`, so every density value is multiplied by it. One could equally run a simulation with this set to 1.0 and multiply the impurity density by this value in post-processing if they wanted to. It isn't used with :ref:`imp_source_opt <imp_source_opt>` = "sputter", which uses the sputtered rate instead.
 
   - Steady-state simulations: This value represents a particle source rate in units of particles/s. Generally used when :ref:`imp_tstart_opt <imp_tstart_opt>` = "full_range".
   - Time-dependent: This value represents the total number of particles in the real world. For example, if the source represents the instantaneous source from a pellet, one would calculate the number of atoms in the pellet and set this option equal to that. Generally used when :ref:`imp_tstart_opt <imp_tstart_opt>` = "single_value" or "range".

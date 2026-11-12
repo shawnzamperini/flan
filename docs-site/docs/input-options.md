@@ -122,7 +122,7 @@ are grouped by what they control.
 | `imp_time_step_opt` | string | `"constant"` | Whether the impurity time step is constant or variable. Valid values: `"constant"`, `"variable"`. |
 | `imp_time_step` | float | `1e-8` | Impurity time step (s). |
 | `imp_time_step_min` | float | `1e-12` | Minimum impurity time step when the time step is variable (s). |
-| `imp_source_scale_fact` | float | `1.0` | Impurity source scaling factor (particles/s), i.e., how many real particles a single simulated particle represents. Used to convert the Monte Carlo counts into a density. |
+| `imp_source_scale_fact` | float | `1.0` | Rate the impurities are released at (atoms/s), shared between the `imp_num` particles, so each particle stands for `imp_source_scale_fact / imp_num` atoms/s (its weight) and the density comes out in m^-3. With the default of 1, the density is per atom/s of source. Not used with `imp_source_opt = "sputter"`, which uses the sputtered rate instead. |
 | `imp_iz_recomb` | string | `"on"` | Whether impurity ionization and recombination are on. Valid values: `"off"`, `"on"`. |
 | `imp_max_time` | float | `1e10` | Maximum time a particle is followed for (s). A particle that exceeds it is killed and counted in a warning at the end of the run. |
 
@@ -133,7 +133,7 @@ background plasma. See [Sputtering](physics/sputtering.md).
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `imp_source_opt` | string | `"manual"` | Where impurities come from. `"manual"` starts them where the `imp_*start_opt` options say. `"sputter"` calculates the rate the background plasma sputters atoms off each part of the wall and saves it to the output file. Starting the particles from that source isn't done yet, so for now they still start where the `imp_*start_opt` options say. Valid values: `"manual"`, `"sputter"`. |
+| `imp_source_opt` | string | `"manual"` | Where impurities come from. `"manual"` starts them where the `imp_*start_opt` options say. `"sputter"` makes them the atoms the background plasma sputters off the wall of a SOLEDGE3X background (CPU only): the rate off each part of the wall is calculated and saved to the output file, particles start from it neutral, and its total rate replaces `imp_source_scale_fact` (each particle stands for that rate / `imp_num` atoms/s). The `imp_*start_opt`, `imp_zone_start_val`, `imp_temp_start_opt` and `imp_init_charge` options aren't used then. Valid values: `"manual"`, `"sputter"`. |
 | `sput_table_file` | string | `"undefined"` | Path to the sputtering yield table, e.g., `data/sputtering/D_on_W.h5`. Needed with `imp_source_opt = "sputter"`. |
 | `sput_flux_opt` | string | `"parallel_exb"` | Which part of the background ion flow carries ions onto the wall. `"parallel_exb"` is the parallel flow plus the E x B drift, `"parallel"` the parallel flow only. Valid values: `"parallel_exb"`, `"parallel"`. |
 | `sput_bohm_floor` | string | `"off"` | Whether the parallel flow onto the wall is at least the ion sound speed (the Bohm criterion), for backgrounds whose flow next to the wall is too slow. Valid values: `"off"`, `"on"`. |

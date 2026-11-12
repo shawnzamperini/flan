@@ -41,3 +41,30 @@ TEST(FillSlotsCPU, RevivesDeadParticles)
     EXPECT_EQ(alive, 8);
     EXPECT_EQ(rem, 0);
 }
+
+// Each particle stands for imp_source_scale_fact / imp_num atoms/s, its
+// weight, so the default of 1 gives 1 / imp_num
+TEST(FillSlotsCPU, Weights)
+{
+	Options::Options opts {};
+	opts.set_bkg_source("test");
+	opts.set_test_opt("gyrate");
+	opts.set_imp_num(4);
+	const Background::Background bkg {Background::read_bkg(opts)};
+	std::vector<pcg32> rngs {};
+	for (int tid {}; tid < omp_get_max_threads(); ++tid)
+		rngs.push_back(pcg32(4, tid));
+
+	for (const double scale : {1.0, 3e18})
+	{
+		opts.set_imp_source_scale_fact(scale);
+		Slots::Slots slots(4);
+		for (int i {}; i < 4; ++i) slots.set_state(i, 1);
+		int rem {4};
+		int alive {};
+		Slots::fill_slots_cpu(slots, rem, alive, bkg, opts, rngs);
+		ASSERT_EQ(alive, 4);
+		for (int i {}; i < 4; ++i)
+			EXPECT_DOUBLE_EQ(slots.weight()[i], scale / 4);
+	}
+}

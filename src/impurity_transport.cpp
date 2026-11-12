@@ -355,12 +355,16 @@ namespace ImpurityTransport
 	*               path).
 	* @param opts_d Device-side simulation options (used on the GPU path).
 	* @param bkg_d Device-side background plasma (used on the GPU path).
+	* @param source Sputtered source to start particles from, or nullptr
+	*               to start them from the imp_*start_opt options (CPU
+	*               path only).
 	*/
 	void fill_slots_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		int& rem_parts, const Background::Background& bkg, 
 		Options::Options& opts, int& alive_slots, std::vector<pcg32>& rngs,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d, 
-		const Background::BackgroundDevice& bkg_d)
+		const Background::BackgroundDevice& bkg_d,
+		const Sputtering::Source* source = nullptr)
 	{
 
 #ifdef USE_CUDA
@@ -374,7 +378,8 @@ namespace ImpurityTransport
 #endif
 
 		// Defined in slots.cpp
-		Slots::fill_slots_cpu(slots, rem_parts, alive_slots, bkg, opts, rngs);
+		Slots::fill_slots_cpu(slots, rem_parts, alive_slots, bkg, opts, rngs,
+			source);
 	}
 
 
@@ -758,6 +763,9 @@ namespace ImpurityTransport
 	* @param rngs_d Device-side random number generators (GPU only).
 	* @param max_time_ctr Counter of particles that exceeded the maximum
 	*                     allowed time.
+	* @param source Sputtered source to start particles from, or nullptr
+	*               to start them from the imp_*start_opt options (CPU
+	*               only).
 	* @return Counts of what happened to particles at the boundaries (CPU
 	*         path only, all zeros on the GPU path).
 	*/
@@ -773,7 +781,8 @@ namespace ImpurityTransport
 		Options::Options& opts, Options::OptionsDevice* opts_d, 
 		Timer::Timer& timer, int& ioniz_warnings, int& recomb_warnings, 
 		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
-		std::vector<pcg32>& rngs, pcg32* rngs_d, int& max_time_ctr)
+		std::vector<pcg32>& rngs, pcg32* rngs_d, int& max_time_ctr,
+		const Sputtering::Source* source = nullptr)
 	{
 
 		// Rank and number of processes
@@ -829,7 +838,7 @@ namespace ImpurityTransport
 		// the progress print out in the loop
 		int alive_slots {};
 		fill_slots_wrapper(slots, slots_d, rem_parts, bkg, opts, alive_slots, 
-			rngs, rngs_d, opts_d, bkg_d);
+			rngs, rngs_d, opts_d, bkg_d, source);
 
 		// If for whatever reason the particle is started outside the grid,
 		// check bounds to make sure it doesn't cause any chaos.
@@ -930,7 +939,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::FillSlots));
 				fill_slots_wrapper(slots, slots_d, rem_parts, bkg, opts, 
-					alive_slots, rngs, rngs_d, opts_d, bkg_d);
+					alive_slots, rngs, rngs_d, opts_d, bkg_d, source);
 			}
 
 #ifdef DEBUG
@@ -1072,11 +1081,15 @@ namespace ImpurityTransport
 	* @param opts Simulation options. use_gpu may be turned off if Flan was
 	*             built without GPU support.
 	* @param timer Timer that accumulates the time spent in each step.
+	* @param source Sputtered source to start particles from, or nullptr
+	*        (the default) to start them from the imp_*start_opt options.
+	*        Only used on CPUs.
 	* @return Impurity statistics accumulated from every particle followed
 	*         on this rank.
 	*/
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
-		Options::Options& opts, Timer::Timer& timer)
+		Options::Options& opts, Timer::Timer& timer,
+		const Sputtering::Source* source)
 	{
 		
 #ifdef DEBUG
@@ -1342,7 +1355,7 @@ namespace ImpurityTransport
 		const Boundary::Fates fates {main_loop(slots, slots_d, bkg, bkg_d,
 			imp_stats, imp_stats_d, oa_ioniz, oa_ioniz_d, oa_recomb,
 			oa_recomb_d, opts, opts_d, timer, ioniz_warnings, recomb_warnings,
-			warnings_d, rngs, rngs_d, max_time_ctr)};
+			warnings_d, rngs, rngs_d, max_time_ctr, source)};
 
 		print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
 			recomb_warnings);

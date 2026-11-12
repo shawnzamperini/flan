@@ -556,18 +556,18 @@ namespace Impurity
 	* Calculates the impurity density in each cell and time frame from the
 	* weights.
 	*
-	* The weights were accumulated as weight * dt, so they are already in
-	* number of particles, and the particle weights were normalized by the
-	* number of particles when each particle was created. The density is
-	* then just the weight divided by the cell volume in physical space,
-	* J * dx * dy * dz, using each zone's grid and Jacobian. The density
-	* array is allocated here.
+	* Each particle's weight is the atoms/s it stands for, set when it was
+	* created (the source, imp_source_scale_fact or the sputtered rate,
+	* divided by imp_num). The weights were accumulated as weight * dt, so
+	* they're already numbers of atoms, and the density is just the weight
+	* divided by the cell volume in physical space, J * dx * dy * dz, using
+	* each zone's grid and Jacobian. The density array is allocated here.
 	*
 	* @param bkg Background plasma, used for the grid and Jacobian.
-	* @param tot_imp_num Total number of impurities followed. Currently
-	*        unused.
-	* @param imp_source_scale_fact Number of particles/s a single particle
-	*        represents. Currently unused.
+	* @param tot_imp_num Total number of impurities followed. Unused, since
+	*        the weights already include it.
+	* @param imp_source_scale_fact Atoms/s all the particles stand for.
+	*        Unused, since the weights already include it.
 	*/
 	void Statistics::calc_density(const Background::Background& bkg, 
 		const int tot_imp_num, const double imp_source_scale_fact)

@@ -7,12 +7,10 @@ the sputtering yield $Y$, which depends on the projectile, the wall
 material, and the ion's energy and angle of incidence.
 
 !!! note "Work in progress"
-    Flan can calculate the rate the background plasma sputters atoms off
-    each part of the wall of a SOLEDGE3X background
-    (`imp_source_opt = "sputter"`), and saves it to the output file, which
-    is what this page describes. Starting the impurities from that source
-    is being added next. Until then, they still start where the
-    `imp_*start_opt` options say.
+    With `imp_source_opt = "sputter"`, Flan follows the atoms the
+    background plasma sputters off the wall of a SOLEDGE3X background, as
+    this page describes. Sputtering by the impurities themselves, and the
+    sheath's effect on where they redeposit, are planned next.
 
 ## Where the yields come from
 
@@ -319,7 +317,44 @@ The source is saved in the netCDF file's `sputtering` group, which has an
 
 A summary is also printed at the start of the run: the total rate, the ion
 flux onto the wall and how much came from each part, and the flux-weighted
-mean impact energy and yield.
+mean impact energy and yield. The `source_rate` attribute of the group is
+the total rate averaged over the run (see below).
+
+## Starting the sputtered atoms
+
+With `imp_source_opt = "sputter"`, every particle is a W atom sputtered off
+the wall (`Sputtering::Source::sample_birth`), and the `imp_*start_opt`,
+`imp_zone_start_val`, `imp_temp_start_opt` and `imp_init_charge` options
+aren't used:
+
+1. **Which element and when.** Each time frame stands for the times
+   nearer to it than to any other frame, a window of length $\Delta t$, so
+   an element sputters $S\,\Delta t$ atoms in it. A frame and element are
+   picked with that weight, and the time uniformly in the frame's window.
+2. **Where.** Uniformly along the element's face and its range of
+   toroidal angle, a thousandth of a cell inside the plasma cell, so the
+   atom doesn't start in the wall cell.
+3. **Which ion sputtered it.** Near threshold only the fast ions sputter,
+   so the energy $E_i$ of the ion is picked from the ions that sputter,
+   whose energies go as $Y(E)\,p(\varepsilon)$, the same integrand as
+   $Y_\text{eff}$.
+4. **How fast.** The atom's energy is from the Thompson distribution,
+   $f(E) \propto E/(E + E_b)^3$, with the target's surface binding energy
+   $E_b$ from the yield table (8.79 eV for W). The distribution is cut off
+   at the most energy the ion can give a target atom in one collision,
+   $\Lambda E_i$ with $\Lambda = 4m_1m_2/(m_1 + m_2)^2$ (0.043 for D on W),
+   and sampled exactly by inverting its cumulative distribution. So near
+   threshold, where most D on W sputtering is, the atoms are slow: a
+   300 eV ion can give a W atom at most 13 eV.
+5. **Which way.** A cosine distribution about the element's normal.
+
+The atoms start neutral. Each one's weight, the number of real atoms/s it
+stands for, is $\bar{S}/N$, where $\bar{S}$ is the total rate averaged over
+the frames' windows and $N$ = `imp_num`, so the densities come out in
+m$^{-3}$. (A "manual" run does the same with `imp_source_scale_fact` in
+place of $\bar{S}$.) The atoms are picked in proportion to where they're
+sputtered, so they all have the same weight. If nothing is sputtered, the
+run stops.
 
 ## Making a new table
 
@@ -433,6 +468,16 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
   other impurities in the plasma yet.
 - **Fixed angle of incidence.** Every ion hits at `sput_angle_val`. In
   reality the angle depends on the field angle and the sheath.
+- **Atoms start on the staircase.** An atom starts at a staircase face,
+  but its direction is about the outline's normal, which can be tilted
+  from the face's. A direction that points back through the face goes
+  into the wall cell, and the atom is absorbed on its first step (with
+  `s3x_chi_absorb = "on"`). For a cosine distribution, that's 0.8% of
+  atoms where the two normals are 10° apart, 7% at 30° and 15% at 45°.
+  Starting positions are also off the real wall by up to about a cell.
+- **Sputtered atoms' distributions.** The Thompson energy and cosine
+  angle distributions are the usual approximations. RustBCA could give the
+  real distributions for each impact energy and angle instead.
 
 ## References
 

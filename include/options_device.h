@@ -25,6 +25,8 @@ namespace Options
 
 		double imp_mass_amu;	///< Impurity mass (amu)
 		int imp_num;			///< Number of impurities to follow
+		double imp_source_scale_fact;	///< Atoms/s all the particles
+										///< together stand for
 
 		double min_ne;			///< Minimum electron density (m^-3)
 		double min_te;			///< Minimum electron temperature (eV)

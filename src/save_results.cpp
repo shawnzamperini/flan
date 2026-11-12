@@ -1265,6 +1265,10 @@ namespace SaveResults
 		group.putAtt("sput_bohm_floor", opts.sput_bohm_floor());
 		group.putAtt("sput_angle_val", netCDF::ncDouble,
 			opts.sput_angle_val());
+		group.putAtt("source_rate", netCDF::ncDouble, source.source_rate());
+		group.putAtt("source_rate_description", "total rate atoms are "
+			"sputtered off the wall, averaged over the frames' time windows "
+			"(atoms/s). Each particle stands for source_rate / imp_num.");
 
 		// Per element
 		auto ints = [&](auto get)
