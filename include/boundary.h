@@ -14,6 +14,10 @@
 #include "zones.h"
 
 
+// Declared in sputtering.h, which isn't included here to keep this header
+// light
+namespace Sputtering {class Deposition;}
+
 namespace Boundary
 {
 	/**
@@ -52,7 +56,8 @@ namespace Boundary
 
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
-		std::vector<pcg32>& rngs, Fates& fates);
+		std::vector<pcg32>& rngs, Fates& fates,
+		Sputtering::Deposition* deposition = nullptr);
 
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,

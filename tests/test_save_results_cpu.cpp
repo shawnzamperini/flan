@@ -196,9 +196,15 @@ TEST_F(SaveResultsTest, Sputtering)
 	const Sputtering::Surface surface(bkg);
 	const Sputtering::YieldTable table(opts.sput_table_file());
 	const Sputtering::Source source(surface, bkg, table, opts);
+	Sputtering::Deposition dep(source.surface(), 74);
+	dep.add_into_wall_cell(source.surface().elements()[3].wall_zone,
+		source.surface().elements()[3].wall_i,
+		source.surface().elements()[3].wall_j,
+		source.surface().elements()[3].k, 2, source.surface().elements()[3].i,
+		source.surface().elements()[3].j, 1e-5, 2, 7.0);
 	Impurity::Statistics stats {bkg};
 	stats.calc_density(bkg, 1);
-	SaveResults::save_results(bkg, stats, opts, &source);
+	SaveResults::save_results(bkg, stats, opts, &source, &dep);
 
 	const netCDF::NcFile file {nc_path(), netCDF::NcFile::read};
 	const netCDF::NcGroup group {file.getGroup("sputtering")};
@@ -223,6 +229,19 @@ TEST_F(SaveResultsTest, Sputtering)
 	std::string table_file {};
 	group.getAtt("sput_table_file").getValues(table_file);
 	EXPECT_EQ(table_file, opts.sput_table_file());
+
+	// Where the atoms landed: the source averaged over the frames, what
+	// landed on each element, and the difference
+	const auto mean {read_var<double>(group, "source_mean")};
+	const auto redep {read_var<double>(group, "redeposited")};
+	const auto net {read_var<double>(group, "net_erosion")};
+	EXPECT_EQ(mean, source.mean_rate());
+	EXPECT_DOUBLE_EQ(redep[3], 7.0);
+	EXPECT_DOUBLE_EQ(net[3], mean[3] - 7.0);
+	EXPECT_EQ(read_var<double>(group, "redeposited_charge")[2], 7.0);
+	double total {};
+	group.getAtt("redeposited_total").getValues(&total);
+	EXPECT_DOUBLE_EQ(total, 7.0);
 
 	// No sputtering group without a source
 	SaveResults::save_results(bkg, stats, opts);

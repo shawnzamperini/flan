@@ -405,9 +405,13 @@ TEST(SputteringSurface, DiagonalWall)
 		total += e.area;
 		if (e.fallback) continue;
 
-		// On the staircase, a face of plasma cell (i, 9 - i)
+		// On the staircase, a face of plasma cell (i, 9 - i), with the wall
+		// cell across it to the right or above
 		EXPECT_EQ(e.i + e.j, diag_n - 1);
 		EXPECT_TRUE(e.face == Zones::xmax || e.face == Zones::ymax);
+		EXPECT_EQ(e.wall_zone, 0);
+		EXPECT_EQ(e.wall_i, e.i + (e.face == Zones::xmax ? 1 : 0));
+		EXPECT_EQ(e.wall_j, e.j + (e.face == Zones::ymax ? 1 : 0));
 
 		// Its own area is 1 cm x R at its middle x 0.1 rad
 		const double R_mid {e.face == Zones::xmax ? diag_R(e.i + 1)
@@ -537,6 +541,11 @@ TEST(SputteringSurface, S3XAcrossZones)
 		EXPECT_EQ(e.i, m.npsi_core - 1);
 		EXPECT_EQ(e.face, Zones::xmax);
 		EXPECT_TRUE(e.fallback);
+
+		// The wall cell is across the zone face, in zone 3's first row
+		EXPECT_EQ(e.wall_zone, 2);
+		EXPECT_EQ(e.wall_i, 0);
+		EXPECT_EQ(e.wall_j, e.j);
 
 		// Pointing back into zone 1, toward the circle's center
 		const double dR {e.R_mid - m.R0};
@@ -1071,4 +1080,64 @@ TEST_F(SputteringTable, SampleBirthNoSource)
 	pcg32 rng(1, 1);
 	EXPECT_EXIT(source.sample_birth(rng),
 		testing::ExitedWithCode(EXIT_FAILURE), "nothing is sputtered");
+}
+
+// An atom absorbed in a wall cell goes on the element between that wall
+// cell and the cell it came from. A wall cell on the 45 degree staircase
+// borders two plasma cells, so which element depends on where it came
+// from. A wall cell with no element is unassigned. The time since birth
+// and charge are binned, and wall faces counted on their own.
+TEST(SputteringDeposition, Tallies)
+{
+	const auto bkg {diagonal_background()};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+
+	// Wall cell (5, 5) borders plasma cells (4, 5) (its xmin side) and
+	// (5, 4) (its ymin side), in toroidal cell 1
+	auto find = [&](int i, int j, Zones::Face face)
+	{
+		for (std::size_t e {}; e < surface.size(); ++e)
+		{
+			const auto& el {surface.elements()[e]};
+			if (el.i == i && el.j == j && el.k == 1 && el.face == face)
+				return e;
+		}
+		return surface.size();
+	};
+	const std::size_t from_left {find(4, 5, Zones::xmax)};
+	const std::size_t from_below {find(5, 4, Zones::ymax)};
+	ASSERT_LT(from_left, surface.size());
+	ASSERT_LT(from_below, surface.size());
+
+	dep.add_into_wall_cell(0, 5, 5, 1, 0, 4, 5, 2e-6, 3, 10.0);
+	dep.add_into_wall_cell(0, 5, 5, 1, 0, 5, 4, 2e-6, 3, 20.0);
+	dep.add_into_wall_cell(0, 9, 9, 1, 0, 8, 9, 5e-4, 0, 40.0);
+	dep.add_at_wall_face(3e-12, 74, 80.0);
+
+	EXPECT_DOUBLE_EQ(dep.redeposited()[from_left], 10.0);
+	EXPECT_DOUBLE_EQ(dep.redeposited()[from_below], 20.0);
+	EXPECT_DOUBLE_EQ(dep.unassigned(), 40.0);
+	EXPECT_DOUBLE_EQ(dep.wall_face(), 80.0);
+	EXPECT_DOUBLE_EQ(dep.total(), 150.0);
+
+	// 2e-6 s is in the bin starting at 10^-5.7, 5e-4 s at 10^-3.4, and
+	// shorter than 1e-10 s in the first bin
+	const auto& edges {dep.lifetime_edges()};
+	auto bin_of = [&](double t)
+	{
+		for (std::size_t b {}; b + 1 < edges.size(); ++b)
+			if (edges[b] <= t && t < edges[b + 1]) return b;
+		return edges.size();
+	};
+	EXPECT_DOUBLE_EQ(dep.lifetime()[bin_of(2e-6)], 30.0);
+	EXPECT_DOUBLE_EQ(dep.lifetime()[bin_of(5e-4)], 40.0);
+	EXPECT_DOUBLE_EQ(dep.lifetime()[0], 80.0);
+	EXPECT_DOUBLE_EQ(dep.charge()[3], 30.0);
+	EXPECT_DOUBLE_EQ(dep.charge()[0], 40.0);
+	EXPECT_DOUBLE_EQ(dep.charge()[74], 80.0);
+
+	std::ostringstream out {};
+	dep.print_summary(out, 300.0);
+	EXPECT_NE(out.str().find("50% of the source"), std::string::npos);
 }

@@ -43,7 +43,8 @@
 * 3. With imp_source_opt = "sputter", find the wall surfaces and the
 *    rate the background sputters atoms off them (Sputtering::Source),
 *    on every rank. The particles then start from it, each standing for
-*    its total rate / imp_num atoms/s.
+*    its total rate / imp_num atoms/s, and where they land back on the
+*    wall is tallied (Sputtering::Deposition).
 * 4. Follow the impurities on every rank
 *    (ImpurityTransport::follow_impurities).
 * 5. Combine the statistics from every rank onto rank 0
@@ -135,6 +136,7 @@ R"(
 	// Each particle then stands for source_rate / imp_num atoms/s (its
 	// weight), in place of imp_source_scale_fact / imp_num.
 	std::optional<Sputtering::Source> source {};
+	std::optional<Sputtering::Deposition> deposition {};
 	if (opts.imp_source_opt_int() == 1)
 	{
 		if (opts.sput_table_file() == "undefined")
@@ -162,6 +164,8 @@ R"(
 				"source is 0 everywhere), so there are no particles to "
 				"follow.");
 		}
+		// Where the sputtered atoms land back on the wall
+		deposition.emplace(source->surface(), opts.imp_atom_num());
 		if (rank == 0 && opts.imp_source_scale_fact() != 1.0)
 		{
 			std::cout << "Warning! imp_source_scale_fact isn't used with "
@@ -173,8 +177,17 @@ R"(
 	// Begin main particle following loop.
 	timer.start(Timer::Section::Imp);
 	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
-		timer, source ? &*source : nullptr)};
+		timer, source ? &*source : nullptr,
+		deposition ? &*deposition : nullptr)};
 	timer.stop(Timer::Section::Imp);
+
+	// Add up where the sputtered atoms landed over every rank
+	if (deposition)
+	{
+		deposition->reduce(0);
+		if (rank == 0)
+			deposition->print_summary(std::cout, source->source_rate());
+	}
 
 	// Reduce imp_stats from each rank, defined in impurity_stats.cpp. Only
 	// rank 0 returns a meaningful result here.
@@ -201,7 +214,8 @@ R"(
 		// Save simulation results.
 		timer.start(Timer::Section::Save);
 		SaveResults::save_results(bkg, global_stats, opts,
-			source ? &*source : nullptr);
+			source ? &*source : nullptr,
+			deposition ? &*deposition : nullptr);
 		timer.stop(Timer::Section::Save);
 	}
 

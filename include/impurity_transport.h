@@ -11,12 +11,13 @@
 
 // Declared in sputtering.h, which isn't included here to keep this header
 // light
-namespace Sputtering {class Source;}
+namespace Sputtering {class Source; class Deposition;}
 
 namespace ImpurityTransport
 {
 	// To-do: Rename Statistics namespace to just Statistics or something
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer,
-		const Sputtering::Source* source = nullptr);
+		const Sputtering::Source* source = nullptr,
+		Sputtering::Deposition* deposition = nullptr);
 }

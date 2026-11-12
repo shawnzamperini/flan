@@ -26,6 +26,7 @@
 #include "options.h"
 #include "pcg32.h"
 #include "slots.h"
+#include "sputtering.h"
 #include "zones.h"
 
 
@@ -305,10 +306,17 @@ namespace Boundary
 	*        the core boundary.
 	* @param fates Counts of what happened to particles at the boundaries,
 	*        added to.
+	* @param deposition If given, particles absorbed in a wall cell or at a
+	*        wall face are added to it (where on the wall, how long after
+	*        they were born, and their charge). The cell a particle was in
+	*        before this step, which it came into the wall from, is still in
+	*        its slot's cell indices, since they're only updated after the
+	*        boundary check.
 	*/
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
-		std::vector<pcg32>& rngs, Fates& fates)
+		std::vector<pcg32>& rngs, Fates& fates,
+		Sputtering::Deposition* deposition)
 	{
 		const Zones::Zones& zones {bkg.get_zones()};
 		const std::array<double, 3> buffers {opts.imp_xbound_buffer(),
@@ -409,6 +417,11 @@ namespace Boundary
 					{
 						++(code == Zones::face_wall ? local.wall
 							: local.absorbed);
+						if (deposition != nullptr && code == Zones::face_wall)
+						{
+							deposition->add_at_wall_face(slots.pt()[i],
+								slots.q()[i], slots.weight()[i]);
+						}
 						break;
 					}
 				}
@@ -467,6 +480,13 @@ namespace Boundary
 				{
 					state = 1;
 					++local.chi;
+					if (deposition != nullptr)
+					{
+						deposition->add_into_wall_cell(zone, xidx, yidx,
+							zidx, slots.zone()[i], slots.xidx()[i],
+							slots.yidx()[i], slots.pt()[i], slots.q()[i],
+							slots.weight()[i]);
+					}
 				}
 			}
 

@@ -19,6 +19,7 @@
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
 #include "slots.h"
+#include "sputtering.h"
 
 
 namespace
@@ -222,4 +223,46 @@ TEST_F(S3XBkg, WallFaceAbsorbs)
 	EXPECT_EQ(fates.wall, 2);
 	EXPECT_EQ(fates.absorbed, 1);
 	EXPECT_EQ(fates.chi, 0);
+}
+
+// An atom that steps into the wall row is put on the surface element
+// between the wall cell and the plasma cell it came from, with its weight,
+// time since birth and charge
+TEST_F(S3XBkg, Deposition)
+{
+	const auto opts {options()};
+	const auto bkg {Background::read_bkg(opts)};
+	auto rngs {make_rngs()};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+
+	// In zone 3's wall row (x index 7) now, and in plasma cell (6, 10, 0)
+	// before this step
+	auto slots {one_particle(bkg, 2, 7.5, 10.5, 1.0)};
+	slots.set_xidx(0, 6);
+	slots.set_yidx(0, 10);
+	slots.set_zidx(0, 0);
+	slots.set_weight(0, 2.5e12);
+	slots.set_pt(0, 3e-6);
+	slots.set_q(0, 4);
+	Boundary::Fates fates {};
+	Boundary::check_bounds_cpu(slots, bkg, opts, rngs, fates, &dep);
+	ASSERT_EQ(slots.state()[0], 1);
+	EXPECT_EQ(fates.chi, 1);
+
+	double on_element {};
+	for (std::size_t e {}; e < surface.size(); ++e)
+	{
+		const auto& el {surface.elements()[e]};
+		if (dep.redeposited()[e] == 0.0) continue;
+		EXPECT_EQ(el.zone, 2);
+		EXPECT_EQ(el.i, 6);
+		EXPECT_EQ(el.j, 10);
+		EXPECT_EQ(el.k, 0);
+		EXPECT_EQ(el.face, Zones::xmax);
+		on_element += dep.redeposited()[e];
+	}
+	EXPECT_DOUBLE_EQ(on_element, 2.5e12);
+	EXPECT_DOUBLE_EQ(dep.charge()[4], 2.5e12);
+	EXPECT_DOUBLE_EQ(dep.total(), 2.5e12);
 }

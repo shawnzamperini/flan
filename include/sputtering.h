@@ -9,7 +9,9 @@
 #include <array>
 #include <cstddef>
 #include <ostream>
+#include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "background.h"
@@ -90,6 +92,11 @@ namespace Sputtering
 		double area {};			///< Area of the wall it stands for (m^2)
 		double wall_dist {};	///< Distance to the wall outline (m)
 		bool fallback {};		///< No wall segment close enough was found
+
+		int wall_zone {};		///< Zone of the wall cell across the face
+		int wall_i {};			///< x index of the wall cell
+		int wall_j {};			///< y index of the wall cell (its z index
+								///< is k, the same as the plasma cell's)
 	};
 
 	/**
@@ -200,6 +207,7 @@ namespace Sputtering
 		std::vector<double> m_frame_hi {};	///< End of each frame's window
 		std::vector<double> m_cdf {};		///< Cumulative atoms per idx
 		double m_source_rate {};			///< Time-averaged total rate
+		std::vector<double> m_mean_rate {};	///< Time-averaged rate per element
 
 	public:
 
@@ -220,6 +228,7 @@ namespace Sputtering
 		const std::vector<double>& total_rate() const;
 		double mean_total_rate() const;
 		double source_rate() const;
+		const std::vector<double>& mean_rate() const;
 		int num_above_table() const;
 		const std::vector<double>& frame_lo() const;
 		const std::vector<double>& frame_hi() const;
@@ -227,5 +236,54 @@ namespace Sputtering
 		Birth sample_birth(pcg32& rng) const;
 
 		void print_summary(std::ostream& os) const;
+	};
+
+	/**
+	* Where the sputtered atoms end up back on the wall, and how long and
+	* in what charge state they took to get there. See sputtering.cpp for
+	* the member function docs.
+	*
+	* Everything is a rate, in atoms/s, since every particle's weight is
+	* the atoms/s it stands for: adding up the weights of the particles
+	* that land on an element gives the rate atoms are redeposited on it.
+	*/
+	class Deposition
+	{
+	private:
+		const Surface* m_surface {nullptr};	///< The surface elements
+		std::unordered_map<std::uint64_t, std::vector<std::size_t>>
+			m_wall_cells {};		///< Elements bordering each wall cell
+		std::vector<double> m_redeposited {};	///< Rate onto each element
+		double m_unassigned {};		///< Into wall cells with no element
+		double m_wall_face {};		///< At wall faces
+		std::vector<double> m_lifetime_edges {};	///< Time since birth
+													///< bin edges (s)
+		std::vector<double> m_lifetime {};	///< Rate in each time bin
+		std::vector<double> m_charge {};	///< Rate at each charge state
+
+		void add_lifetime_and_charge(double pt, int q, double weight);
+
+	public:
+
+		Deposition() = default;
+
+		Deposition(const Surface& surface, int atomic_number);
+
+		void add_into_wall_cell(int zone, int i, int j, int k,
+			int prev_zone, int prev_i, int prev_j, double pt, int q,
+			double weight);
+		void add_at_wall_face(double pt, int q, double weight);
+
+		void reduce(int root);
+
+		const std::vector<double>& redeposited() const;
+		double unassigned() const;
+		double wall_face() const;
+		double total() const;
+		const std::vector<double>& lifetime_edges() const;
+		const std::vector<double>& lifetime() const;
+		const std::vector<double>& charge() const;
+
+		void print_summary(std::ostream& os, double source_rate) const;
 	};
 }

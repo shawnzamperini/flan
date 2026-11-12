@@ -356,6 +356,42 @@ place of $\bar{S}$.) The atoms are picked in proportion to where they're
 sputtered, so they all have the same weight. If nothing is sputtered, the
 run stops.
 
+## Redeposition
+
+With `imp_source_opt = "sputter"`, Flan also tallies where the sputtered
+atoms land back on the wall (`Sputtering::Deposition`). An atom that moves
+into a wall cell (chi = 1) is absorbed and put on the surface element
+between that wall cell and the plasma cell it came from. Since every
+atom's weight is the atoms/s it stands for, adding up the weights landing
+on an element gives the rate atoms are redeposited there, and subtracting
+that from the element's source (averaged over the run) gives its net
+erosion. How long after being sputtered each atom landed, and its charge
+then, are tallied too.
+
+A summary is printed at the end of the run: the redeposited rate and its
+share of the source, the share back within 1 µs, 10 µs, 100 µs and 1 ms,
+and the mean charge when they land. The tallies are saved in the
+`sputtering` group:
+
+| Variable | Shape | Units | Contents |
+|---|---|---|---|
+| `source_mean` | (element) | atoms/s | Sputtered rate averaged over the frames' windows |
+| `redeposited` | (element) | atoms/s | Rate atoms land back on the element |
+| `net_erosion` | (element) | atoms/s | `source_mean - redeposited`, negative where more land than leave |
+| `lifetime_edges` | (lifetime_edge) | s | Edges of the time since birth bins, 10 per decade from 10$^{-10}$ to 10$^{-1}$ s |
+| `redeposited_lifetime` | (lifetime_bin) | atoms/s | Redeposited rate by time since birth |
+| `redeposited_charge` | (charge) | atoms/s | Redeposited rate by charge when they landed (0 to Z) |
+
+and the attributes `redeposited_total`, `redeposited_wall_face` (atoms
+absorbed at the end of a zone, not on an element) and
+`redeposited_unassigned` (atoms that went more than a cell into the wall
+in one step, so their element isn't known).
+
+There's no sheath in the background, so atoms close to the wall don't feel
+its strong electric field. Prompt redeposition, of atoms that come back
+within their first gyration after ionizing, is underestimated until the
+sheath is resolved.
+
 ## Making a new table
 
 Activate the `flan` environment, which has RustBCA, and run the script

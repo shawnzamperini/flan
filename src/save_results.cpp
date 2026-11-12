@@ -57,14 +57,17 @@ namespace SaveResults
 	* @param opts Simulation options, saved in the input group.
 	* @param source Sputtered source, saved in the sputtering group if
 	*        given (imp_source_opt = "sputter").
+	* @param deposition Where the sputtered atoms landed back on the wall,
+	*        saved in the sputtering group if given along with source.
 	*/
 	void save_results(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts,
-		const Sputtering::Source* source)
+		const Sputtering::Source* source,
+		const Sputtering::Deposition* deposition)
 	{
 		// Right now this is just a redirect to the netcdf option. I built 
 		// it this way to allow other save options in the future if desired.
-		save_netcdf(bkg, imp_stats, opts, source);
+		save_netcdf(bkg, imp_stats, opts, source, deposition);
 	
 	}
 
@@ -1243,16 +1246,24 @@ namespace SaveResults
 	* it is from the wall outline, and whether it fell back to its face's
 	* own normal. Per time frame and element: the ion flux onto the wall and
 	* its parallel and E x B parts, the mean impact energy, the effective
-	* yield and the sputtered rate. Per time frame: the total rate.
+	* yield and the sputtered rate. Per time frame: the total rate. Per
+	* element, the sputtered rate averaged over the run (source_mean).
+	*
+	* With a deposition, also where the atoms landed back on the wall: the
+	* rate onto each element (redeposited) and the net erosion
+	* (source_mean - redeposited), and the time since birth and charge of
+	* the redeposited atoms, as histograms of atoms/s.
 	*
 	* @param nc_file File to save into. The time dimension must already
 	*        exist.
 	* @param source The sputtered source.
 	* @param opts Simulation options, for the table file and settings saved
 	*        as attributes.
+	* @param deposition Where the atoms landed, or nullptr.
 	*/
 	void save_sputtering(const netCDF::NcFile& nc_file,
-		const Sputtering::Source& source, const Options::Options& opts)
+		const Sputtering::Source& source, const Options::Options& opts,
+		const Sputtering::Deposition* deposition)
 	{
 		netCDF::NcGroup group {nc_file.addGroup("sputtering")};
 		const netCDF::NcDim dim_time {nc_file.getDim("time")};
@@ -1354,6 +1365,44 @@ namespace SaveResults
 		// Per time frame
 		save_vector_1d(group, source.total_rate(), "total_rate", dim_time,
 			"rate atoms are sputtered off the whole wall", "(atoms/s)");
+
+		// Averaged over the run
+		save_vector_1d(group, source.mean_rate(), "source_mean", dim_elem,
+			"rate atoms are sputtered off the element, averaged over the "
+			"frames' time windows", "(atoms/s)");
+
+		// Where the atoms landed
+		if (deposition == nullptr) return;
+		const auto& redep {deposition->redeposited()};
+		std::vector<double> net(n);
+		for (std::size_t e {}; e < n; ++e)
+			net[e] = source.mean_rate()[e] - redep[e];
+		save_vector_1d(group, redep, "redeposited", dim_elem, "rate "
+			"sputtered atoms land back on the element", "(atoms/s)");
+		save_vector_1d(group, net, "net_erosion", dim_elem, "source_mean - "
+			"redeposited, the rate atoms leave the element for good "
+			"(negative where more land than leave)", "(atoms/s)");
+
+		const netCDF::NcDim dim_edge {group.addDim("lifetime_edge",
+			deposition->lifetime_edges().size())};
+		const netCDF::NcDim dim_bin {group.addDim("lifetime_bin",
+			deposition->lifetime().size())};
+		const netCDF::NcDim dim_q {group.addDim("charge",
+			deposition->charge().size())};
+		save_vector_1d(group, deposition->lifetime_edges(), "lifetime_edges",
+			dim_edge, "edges of the time since birth bins", "(s)");
+		save_vector_1d(group, deposition->lifetime(), "redeposited_lifetime",
+			dim_bin, "rate of redeposited atoms by how long after being "
+			"sputtered they landed", "(atoms/s)");
+		save_vector_1d(group, deposition->charge(), "redeposited_charge",
+			dim_q, "rate of redeposited atoms by their charge when they "
+			"landed (0 to Z)", "(atoms/s)");
+		group.putAtt("redeposited_total", netCDF::ncDouble,
+			deposition->total());
+		group.putAtt("redeposited_wall_face", netCDF::ncDouble,
+			deposition->wall_face());
+		group.putAtt("redeposited_unassigned", netCDF::ncDouble,
+			deposition->unassigned());
 	}
 
 	/**
@@ -1370,10 +1419,13 @@ namespace SaveResults
 	* @param opts Simulation options.
 	* @param source Sputtered source, saved in the sputtering group if
 	*        given.
+	* @param deposition Where the sputtered atoms landed back on the wall,
+	*        saved in the sputtering group if given along with source.
 	*/
 	void save_netcdf(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts,
-		const Sputtering::Source* source)
+		const Sputtering::Source* source,
+		const Sputtering::Deposition* deposition)
 	{
 		std::cout << "Saving netCDF file...\n";
 
@@ -1455,7 +1507,8 @@ namespace SaveResults
 			save_zones(nc_file, opts, bkg, imp_stats);
 		}
 
-		if (source != nullptr) save_sputtering(nc_file, *source, opts);
+		if (source != nullptr)
+			save_sputtering(nc_file, *source, opts, deposition);
 
 		std::cout << "Saved as " << nc_filename << '\n';
 	}

@@ -480,12 +480,15 @@ namespace ImpurityTransport
 	*               path).
 	* @param fates Counts of what happened to particles at the boundaries,
 	*              added to on the CPU path only.
+	* @param deposition Where absorbed particles land on the wall, added to
+	*                   if given (CPU path only).
 	*/
 	void check_bounds_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
 		const Options::Options& opts, std::vector<pcg32>& rngs, pcg32* rngs_d,
-		Boundary::Fates& fates)
+		Boundary::Fates& fates,
+		Sputtering::Deposition* deposition = nullptr)
 	{
 
 #ifdef USE_CUDA
@@ -504,7 +507,7 @@ namespace ImpurityTransport
 #endif
 
 		// Defined in boundary.cpp
-		Boundary::check_bounds_cpu(slots, bkg, opts, rngs, fates);
+		Boundary::check_bounds_cpu(slots, bkg, opts, rngs, fates, deposition);
 	}
 
 	
@@ -766,6 +769,8 @@ namespace ImpurityTransport
 	* @param source Sputtered source to start particles from, or nullptr
 	*               to start them from the imp_*start_opt options (CPU
 	*               only).
+	* @param deposition Where absorbed particles land on the wall, added to
+	*                   if given (CPU only).
 	* @return Counts of what happened to particles at the boundaries (CPU
 	*         path only, all zeros on the GPU path).
 	*/
@@ -782,7 +787,8 @@ namespace ImpurityTransport
 		Timer::Timer& timer, int& ioniz_warnings, int& recomb_warnings, 
 		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
 		std::vector<pcg32>& rngs, pcg32* rngs_d, int& max_time_ctr,
-		const Sputtering::Source* source = nullptr)
+		const Sputtering::Source* source = nullptr,
+		Sputtering::Deposition* deposition = nullptr)
 	{
 
 		// Rank and number of processes
@@ -843,7 +849,7 @@ namespace ImpurityTransport
 		// If for whatever reason the particle is started outside the grid,
 		// check bounds to make sure it doesn't cause any chaos.
 		check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, rngs_d,
-			fates);
+			fates, deposition);
 
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
@@ -928,7 +934,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Bounds));
 				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, 
-					rngs_d, fates);
+					rngs_d, fates, deposition);
 			}
 
 #ifdef DEBUG
@@ -1084,12 +1090,14 @@ namespace ImpurityTransport
 	* @param source Sputtered source to start particles from, or nullptr
 	*        (the default) to start them from the imp_*start_opt options.
 	*        Only used on CPUs.
+	* @param deposition If given, where absorbed particles land on the wall
+	*        is added to it. Only used on CPUs.
 	* @return Impurity statistics accumulated from every particle followed
 	*         on this rank.
 	*/
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer,
-		const Sputtering::Source* source)
+		const Sputtering::Source* source, Sputtering::Deposition* deposition)
 	{
 		
 #ifdef DEBUG
@@ -1355,7 +1363,7 @@ namespace ImpurityTransport
 		const Boundary::Fates fates {main_loop(slots, slots_d, bkg, bkg_d,
 			imp_stats, imp_stats_d, oa_ioniz, oa_ioniz_d, oa_recomb,
 			oa_recomb_d, opts, opts_d, timer, ioniz_warnings, recomb_warnings,
-			warnings_d, rngs, rngs_d, max_time_ctr, source)};
+			warnings_d, rngs, rngs_d, max_time_ctr, source, deposition)};
 
 		print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
 			recomb_warnings);

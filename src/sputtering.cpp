@@ -153,6 +153,18 @@
 * is absorbed on its first step (with s3x_chi_absorb = "on"). For a cosine
 * distribution, that's 0.8% of atoms where the two normals are 10 degrees
 * apart, 7% at 30 degrees and 15% at 45 degrees.
+*
+* Redeposition (Deposition)
+* -------------------------
+* An atom that moves into a wall cell (chi = 1) is absorbed by the boundary
+* check, which then puts it on the surface element between that wall cell
+* and the plasma cell it came from (each element knows its wall cell). An
+* atom's weight is the atoms/s it stands for, so adding up the weights
+* landing on an element gives the rate atoms are redeposited there, and
+* subtracting it from the element's source gives its net erosion. How
+* long after being sputtered each atom landed, and its charge then, are
+* tallied too. Atoms absorbed at a wall face (the end of a zone) are only
+* counted in total, since they aren't on a surface element.
 */
 
 #include <algorithm>
@@ -166,6 +178,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include "mpi.h"
 
 #include "background.h"
 #include "constants.h"
@@ -550,6 +564,21 @@ namespace Sputtering
 					e.j = j;
 					e.k = k;
 					e.face = s.face;
+
+					// The wall cell, in its own zone if it's across a
+					// zone face (resolve_cell finds the cell a ghost index
+					// is a copy of)
+					e.wall_zone = zone;
+					e.wall_i = ni;
+					e.wall_j = nj;
+					if (past_edge)
+					{
+						const Zones::Cell wall {zones.resolve_cell(
+							Zones::Cell {zone, ni, nj, k}).front()};
+						e.wall_zone = wall.zone;
+						e.wall_i = wall.i;
+						e.wall_j = wall.j;
+					}
 					e.phi_min = grid_z[k];
 					e.phi_max = grid_z[k + 1];
 
@@ -1025,6 +1054,16 @@ namespace Sputtering
 			total_time += window(t);
 		}
 		m_source_rate = total_time > 0.0 ? cumulative / total_time : 0.0;
+
+		// Each element's rate averaged the same way, to compare with how
+		// much is redeposited on it (see Deposition)
+		m_mean_rate.assign(n_elem, 0.0);
+		for (int t {}; t < m_nframes; ++t)
+		for (std::size_t e {}; e < n_elem; ++e)
+		{
+			m_mean_rate[e] += m_rate[t * n_elem + e] * window(t)
+				/ total_time;
+		}
 	}
 
 	/**
@@ -1037,7 +1076,8 @@ namespace Sputtering
 	* in each frame, its mean over the frames, and how many element-frames
 	* had more than 1% of their ions above the end of the yield table.
 	* source_rate is the total rate averaged over the frames' windows
-	* (see sample_birth), and frame_lo and frame_hi are the windows.
+	* (see sample_birth), mean_rate is each element's rate averaged the
+	* same way, and frame_lo and frame_hi are the windows.
 	*/
 	///@{
 	const Surface& Source::surface() const {return m_surface;}
@@ -1053,6 +1093,7 @@ namespace Sputtering
 		{return m_total_rate;}
 	int Source::num_above_table() const {return m_num_above_table;}
 	double Source::source_rate() const {return m_source_rate;}
+	const std::vector<double>& Source::mean_rate() const {return m_mean_rate;}
 	const std::vector<double>& Source::frame_lo() const {return m_frame_lo;}
 	const std::vector<double>& Source::frame_hi() const {return m_frame_hi;}
 
@@ -1308,5 +1349,239 @@ namespace Sputtering
 		b.vY = speed * d[1];
 		b.vZ = speed * d[2];
 		return b;
+	}
+
+	namespace
+	{
+		/// Packs a cell's zone and indices into one key (each is far less
+		/// than 2^16)
+		std::uint64_t cell_key(const int zone, const int i, const int j,
+			const int k)
+		{
+			auto u = [](int v) {return static_cast<std::uint64_t>(v) & 0xffff;};
+			return (u(zone) << 48) | (u(i) << 32) | (u(j) << 16) | u(k);
+		}
+	}
+
+	/**
+	* Sets up empty tallies for a surface.
+	*
+	* Each wall cell that borders the plasma gets a list of the surface
+	* elements on it (usually one, or two at a corner of the staircase), so
+	* an atom absorbed in that wall cell can be put on one of them. The time
+	* since birth is binned in 10 bins per decade from 1e-10 s to 1e-1 s
+	* (shorter and longer times go in the first and last bins), and the
+	* charge from 0 to the atomic number.
+	*
+	* @param surface The surface elements. It has to outlive this object.
+	* @param atomic_number Atomic number of the impurity.
+	*/
+	Deposition::Deposition(const Surface& surface, const int atomic_number)
+		: m_surface {&surface},
+		m_redeposited(surface.size(), 0.0),
+		m_charge(atomic_number + 1, 0.0)
+	{
+		for (std::size_t e {}; e < surface.size(); ++e)
+		{
+			const SurfaceElement& el {surface.elements()[e]};
+			m_wall_cells[cell_key(el.wall_zone, el.wall_i, el.wall_j, el.k)]
+				.push_back(e);
+		}
+
+		constexpr int per_decade {10};
+		constexpr int decades {9};
+		for (int b {}; b <= per_decade * decades; ++b)
+		{
+			m_lifetime_edges.push_back(std::pow(10.0,
+				-10.0 + static_cast<double>(b) / per_decade));
+		}
+		m_lifetime.assign(m_lifetime_edges.size() - 1, 0.0);
+	}
+
+	/**
+	* Adds an absorbed atom to the time since birth and charge tallies.
+	* Called from inside OpenMP loops, so the adds are atomic.
+	*
+	* @param pt Time since the atom was born (s).
+	* @param q Its charge when it was absorbed.
+	* @param weight Its weight (atoms/s).
+	*/
+	void Deposition::add_lifetime_and_charge(const double pt, const int q,
+		const double weight)
+	{
+		const std::size_t nbins {m_lifetime.size()};
+		std::size_t bin {static_cast<std::size_t>(std::upper_bound(
+			m_lifetime_edges.begin(), m_lifetime_edges.end(), pt)
+			- m_lifetime_edges.begin())};
+		bin = bin == 0 ? 0 : std::min(bin - 1, nbins - 1);
+		#pragma omp atomic
+		m_lifetime[bin] += weight;
+
+		const int charge {std::clamp(q, 0,
+			static_cast<int>(m_charge.size()) - 1)};
+		#pragma omp atomic
+		m_charge[charge] += weight;
+	}
+
+	/**
+	* Adds an atom absorbed after moving into a wall cell (chi = 1).
+	*
+	* The atom is put on a surface element bordering that wall cell: the one
+	* whose plasma cell it just came from if there is one, otherwise the
+	* first. If no element borders the wall cell (the atom went more than a
+	* cell into the wall in one step), it's counted as unassigned. Called
+	* from inside OpenMP loops, so the adds are atomic.
+	*
+	* @param zone Zone of the wall cell.
+	* @param i x index of the wall cell.
+	* @param j y index of the wall cell.
+	* @param k z index of the wall cell.
+	* @param prev_zone Zone of the cell the atom was in before.
+	* @param prev_i x index of the cell it was in before.
+	* @param prev_j y index of the cell it was in before.
+	* @param pt Time since the atom was born (s).
+	* @param q Its charge.
+	* @param weight Its weight (atoms/s).
+	*/
+	void Deposition::add_into_wall_cell(const int zone, const int i,
+		const int j, const int k, const int prev_zone, const int prev_i,
+		const int prev_j, const double pt, const int q, const double weight)
+	{
+		add_lifetime_and_charge(pt, q, weight);
+
+		const auto it {m_wall_cells.find(cell_key(zone, i, j, k))};
+		if (it == m_wall_cells.end())
+		{
+			#pragma omp atomic
+			m_unassigned += weight;
+			return;
+		}
+
+		std::size_t pick {it->second.front()};
+		for (const std::size_t e : it->second)
+		{
+			const SurfaceElement& el {m_surface->elements()[e]};
+			if (el.zone == prev_zone && el.i == prev_i && el.j == prev_j)
+			{
+				pick = e;
+				break;
+			}
+		}
+		#pragma omp atomic
+		m_redeposited[pick] += weight;
+	}
+
+	/**
+	* Adds an atom absorbed at a wall face (e.g., a divertor target at the
+	* end of a zone). Called from inside OpenMP loops, so the adds are
+	* atomic.
+	*
+	* @param pt Time since the atom was born (s).
+	* @param q Its charge.
+	* @param weight Its weight (atoms/s).
+	*/
+	void Deposition::add_at_wall_face(const double pt, const int q,
+		const double weight)
+	{
+		add_lifetime_and_charge(pt, q, weight);
+		#pragma omp atomic
+		m_wall_face += weight;
+	}
+
+	/**
+	* Adds up the tallies of every MPI rank onto one of them. Must be
+	* called by every rank. The other ranks' tallies are left as they were.
+	*
+	* @param root Rank to add them up on.
+	*/
+	void Deposition::reduce(const int root)
+	{
+		int rank {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		auto sum = [&](std::vector<double>& v)
+		{
+			std::vector<double> total(v.size(), 0.0);
+			MPI_Reduce(v.data(), total.data(), static_cast<int>(v.size()),
+				MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
+			if (rank == root) v = total;
+		};
+		std::vector<double> scalars {m_unassigned, m_wall_face};
+		sum(scalars);
+		m_unassigned = scalars[0];
+		m_wall_face = scalars[1];
+		sum(m_redeposited);
+		sum(m_lifetime);
+		sum(m_charge);
+	}
+
+	/**
+	* @name Accessors
+	* The rate atoms are redeposited on each surface element, into wall
+	* cells with no element (unassigned) and at wall faces, and their total
+	* (atoms/s). Also the edges of the time since birth bins (s), the rate
+	* in each bin, and the rate at each charge state, for every redeposited
+	* atom.
+	*/
+	///@{
+	const std::vector<double>& Deposition::redeposited() const
+		{return m_redeposited;}
+	double Deposition::unassigned() const {return m_unassigned;}
+	double Deposition::wall_face() const {return m_wall_face;}
+	double Deposition::total() const
+	{
+		double sum {m_unassigned + m_wall_face};
+		for (const double r : m_redeposited) sum += r;
+		return sum;
+	}
+	const std::vector<double>& Deposition::lifetime_edges() const
+		{return m_lifetime_edges;}
+	const std::vector<double>& Deposition::lifetime() const
+		{return m_lifetime;}
+	const std::vector<double>& Deposition::charge() const {return m_charge;}
+	///@}
+
+	/**
+	* Prints how much of the sputtered source comes back to the wall, how
+	* quickly, and in what charge state.
+	*
+	* @param os Stream to print to.
+	* @param source_rate The sputtered source (atoms/s), to compare with.
+	*/
+	void Deposition::print_summary(std::ostream& os,
+		const double source_rate) const
+	{
+		const double tot {total()};
+		os << "Redeposition: " << tot << " atoms/s back on the wall";
+		if (source_rate > 0.0)
+			os << ", " << 100.0 * tot / source_rate << "% of the source";
+		os << "\n";
+		if (!(tot > 0.0)) return;
+
+		// Fraction back within 1 us, 10 us, 100 us and 1 ms of being born.
+		// The bin edges are powers of 10^0.1, so these are bin edges.
+		os << "  Back within";
+		const std::vector<double> times {1e-6, 1e-5, 1e-4, 1e-3};
+		for (std::size_t n {}; n < times.size(); ++n)
+		{
+			double within {};
+			for (std::size_t b {}; b < m_lifetime.size(); ++b)
+			{
+				if (m_lifetime_edges[b + 1] <= times[n] * (1.0 + 1e-9))
+					within += m_lifetime[b];
+			}
+			os << " " << times[n] * 1e6 << " us: " << 100.0 * within / tot
+				<< "%" << (n + 1 < times.size() ? "," : "\n");
+		}
+		double mean_q {};
+		for (std::size_t q {}; q < m_charge.size(); ++q)
+			mean_q += q * m_charge[q] / tot;
+		os << "  Mean charge when they land " << mean_q << ", "
+			<< 100.0 * m_charge[0] / tot << "% as neutrals\n";
+		if (m_wall_face > 0.0 || m_unassigned > 0.0)
+		{
+			os << "  " << 100.0 * m_wall_face / tot << "% at wall faces and "
+				<< 100.0 * m_unassigned / tot << "% into wall cells with no "
+				"surface element\n";
+		}
 	}
 }
