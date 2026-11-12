@@ -18,6 +18,17 @@ angle sputters nothing, the lower energies at that angle are below
 threshold too, so they're set to 0 without running them (num_samples = 0).
 The error is the counting error sqrt(counts) / N.
 
+The yield rises steeply near threshold, too steeply to interpolate
+accurately on a coarse grid, so after the main grid is run, energies about
+5% apart are added from the highest energy that sputtered nothing up to 3
+times the lowest energy that sputtered something (--fine-step,
+--fine-factor, or --no-refine to turn this off).
+
+Every point is independent and RustBCA is seeded the same way each time,
+so a point comes out the same in every table made with the same settings.
+--reuse copies the points of an existing table made with the same
+settings instead of running them again, e.g., to add energies to a table.
+
 The file holds:
 
  - /energy [nE] : Incident energy (eV).
@@ -128,10 +139,177 @@ def yield_point(sputtering_yield, ion, target, energy, angle,
 	return y, err, n
 
 
+def point_key(energy, angle):
+	"""
+	Returns a key for a point of a table, the same for an energy and angle
+	that are equal to 9 significant figures, so points from a saved table
+	can be matched to the ones being computed.
+	"""
+	return ("{:.9g}".format(energy), "{:.9g}".format(angle))
+
+
+def run_energies(sputtering_yield, projectile, target, energies, angles,
+	target_counts, n_min, n_max, reuse, start):
+	"""
+	Computes the yield at each of some energies, for every angle.
+
+	Energies are run from highest to lowest. Once an angle sputters nothing
+	with n_max ions, it's below threshold, and so are the lower energies,
+	which are left at 0 without running them (num_samples = 0).
+
+	Inputs
+	 - sputtering_yield (function) : libRustBCA.sputtering_yield.
+	 - projectile (dict)   : Projectile parameters (Z, m, Es, Ec).
+	 - target (dict)       : Target parameters (Z, m, Es, Ec, Eb, n).
+	 - energies (array)    : Incident energies (eV), in any order.
+	 - angles (array)      : Incident angles from the normal (degrees).
+	 - target_counts (int) : Number of sputtered atoms to aim for per point.
+	 - n_min (int)         : Ions in each pilot run.
+	 - n_max (int)         : Most ions per point.
+	 - reuse (dict)        : Points already computed with the same
+	                         settings, from point_key to (yield, error,
+	                         ions), used instead of running them again.
+	 - start (float)       : Time the table was started, for progress.
+
+	Returns a dictionary from each energy to its yields, errors and ions
+	run, each an array over the angles.
+	"""
+	rows = {}
+	below = np.zeros(len(angles), dtype=bool)
+	for energy in sorted(energies, reverse=True):
+		y = np.zeros(len(angles))
+		err = np.zeros(len(angles))
+		num = np.zeros(len(angles), dtype=np.int64)
+		reused = 0
+		for j, angle in enumerate(angles):
+			if below[j]:
+				continue
+			key = point_key(energy, angle)
+			if key in reuse:
+				y[j], err[j], num[j] = reuse[key]
+				reused += 1
+			else:
+				y[j], err[j], num[j] = yield_point(sputtering_yield,
+					projectile, target, float(energy), float(angle),
+					target_counts, n_min, n_max)
+			below[j] = y[j] == 0.0
+		rows[energy] = (y, err, num)
+
+		print("E = {:9.2f} eV: max Y = {:.3e}, {:6.0f} s elapsed{}".format(
+			energy, y.max(), time.time() - start,
+			", {} points reused".format(reused) if reused else ""),
+			flush=True)
+		if below.all():
+			print("Every angle is below threshold, skipping lower energies")
+			break
+	return rows
+
+
+def threshold_energies(rows, emax, fine_step, fine_factor):
+	"""
+	Picks extra energies near threshold, where the yield changes fastest.
+
+	The threshold region runs from the highest energy where every angle
+	sputtered nothing (or the lowest energy, if none did) up to fine_factor
+	times the lowest energy where any angle sputtered something, but no
+	higher than emax. Energies about fine_step apart (as a fraction) are
+	put across it, leaving out those within fine_step / 4 of an energy
+	that's already in rows.
+
+	Inputs
+	 - rows (dict)         : Energies computed so far, from run_energies.
+	                         Energies missing from it were below threshold.
+	 - emax (float)        : Highest energy of the table (eV).
+	 - fine_step (float)   : Fractional spacing of the extra energies.
+	 - fine_factor (float) : How far above the lowest energy that
+	                         sputtered something the region goes.
+
+	Returns the extra energies (eV), which may be empty.
+	"""
+	energies = np.array(sorted(rows))
+	nonzero = [e for e in energies if rows[e][0].max() > 0.0]
+	if not nonzero:
+		return np.array([])
+	first = min(nonzero)
+	zeros = [e for e in energies if e < first]
+	e_lo = max(zeros) if zeros else first
+	e_hi = min(fine_factor * first, emax)
+	if e_hi <= e_lo:
+		return np.array([])
+
+	n = int(np.ceil(np.log(e_hi / e_lo) / np.log(1.0 + fine_step)))
+	fine = np.geomspace(e_lo, e_hi, n + 1)
+	keep = [e for e in fine
+		if np.min(np.abs(energies / e - 1.0)) > fine_step / 4.0]
+	return np.array(keep)
+
+
+def load_reuse(path, projectile, target, seed, target_counts, n_min,
+	n_max):
+	"""
+	Loads the points of an existing table so they aren't run again.
+
+	The table must have been made with the same projectile and target
+	parameters, seed, target_counts, n_min and n_max, or its points would
+	be different from the ones being computed, so the script stops if any
+	differ. Points that weren't run (num_samples = 0) aren't loaded.
+
+	Inputs
+	 - path (str)          : Existing table.
+	 - projectile (dict)   : Projectile parameters being used.
+	 - target (dict)       : Target parameters being used.
+	 - seed (int)          : RustBCA seed being used.
+	 - target_counts (int) : Sputtered atoms aimed for per point.
+	 - n_min (int)         : Ions in each pilot run.
+	 - n_max (int)         : Most ions per point.
+
+	Returns a dictionary from point_key to (yield, error, ions).
+	"""
+	with h5py.File(path, "r") as f:
+		wanted = {"projectile/Z": projectile["Z"],
+			"projectile/mass_amu": projectile["m"],
+			"projectile/Es": projectile["Es"],
+			"projectile/Ec": projectile["Ec"],
+			"target/Z": target["Z"], "target/mass_amu": target["m"],
+			"target/n": target["n"], "target/Es": target["Es"],
+			"target/Eb": target["Eb"], "target/Ec": target["Ec"]}
+		for name, val in wanted.items():
+			if f[name][()] != val:
+				sys.exit("Can't reuse {}: {} is {}, not {}.".format(path,
+					name, f[name][()], val))
+		settings = {"seed": seed, "target_counts": target_counts,
+			"n_min": n_min, "n_max": n_max}
+		for name, val in settings.items():
+			if name not in f.attrs or f.attrs[name] != val:
+				sys.exit("Can't reuse {}: its {} is {}, not {}.".format(
+					path, name, f.attrs.get(name, "not recorded"), val))
+
+		energies = f["energy"][:]
+		angles = f["angle"][:]
+		yields = f["yield"][:]
+		errs = f["yield_err"][:]
+		nums = f["num_samples"][:]
+
+	reuse = {}
+	for i, energy in enumerate(energies):
+		for j, angle in enumerate(angles):
+			if nums[i, j] > 0:
+				reuse[point_key(energy, angle)] = (yields[i, j], errs[i, j],
+					nums[i, j])
+	print("Reusing {} points from {}".format(len(reuse), path))
+	return reuse
+
+
 def make_table(projectile, target, energies, angles, target_counts,
-	n_min, n_max, seed):
+	n_min, n_max, seed, refine=True, fine_step=0.05, fine_factor=3.0,
+	reuse=None):
 	"""
 	Computes the yield table.
+
+	The energies given are run first. Then, if refine is on, extra
+	energies are added near threshold (see threshold_energies) and run
+	too, since the yield rises steeply there and a coarse grid can't be
+	interpolated accurately.
 
 	Inputs
 	 - projectile (dict)   : Projectile parameters (Z, m, Es, Ec).
@@ -142,44 +320,51 @@ def make_table(projectile, target, energies, angles, target_counts,
 	 - n_min (int)         : Ions in each pilot run.
 	 - n_max (int)         : Most ions per point.
 	 - seed (int)          : RustBCA seed (LIBRUSTBCA_SEED).
+	 - refine (bool)       : Add energies near threshold.
+	 - fine_step (float)   : Fractional spacing of the added energies.
+	 - fine_factor (float) : How far above the threshold to add energies,
+	                         as a multiple of the lowest energy that
+	                         sputtered something.
+	 - reuse (dict)        : Points already computed, from load_reuse, or
+	                         None.
 
-	Returns the yield, its error and the number of ions run, each with
-	shape (len(energies), len(angles)).
+	Returns the energies (sorted), and the yield, its error and the number
+	of ions run, each with shape (number of energies, len(angles)).
 	"""
 	# RustBCA reads the seed from the environment on every call
 	os.environ["LIBRUSTBCA_SEED"] = str(seed)
 	from libRustBCA import sputtering_yield
 
-	shape = (len(energies), len(angles))
+	reuse = reuse or {}
+	start = time.time()
+	rows = run_energies(sputtering_yield, projectile, target, energies,
+		angles, target_counts, n_min, n_max, reuse, start)
+
+	all_energies = list(energies)
+	if refine:
+		fine = threshold_energies(rows, max(energies), fine_step,
+			fine_factor)
+		if len(fine):
+			print("Adding {} energies near threshold, {:.1f} to {:.1f} "
+				"eV".format(len(fine), fine.min(), fine.max()), flush=True)
+			rows.update(run_energies(sputtering_yield, projectile, target,
+				fine, angles, target_counts, n_min, n_max, reuse, start))
+			all_energies += list(fine)
+
+	all_energies = np.array(sorted(all_energies))
+	shape = (len(all_energies), len(angles))
 	yields = np.zeros(shape)
 	errs = np.zeros(shape)
 	nums = np.zeros(shape, dtype=np.int64)
+	for i, energy in enumerate(all_energies):
+		if energy in rows:
+			yields[i], errs[i], nums[i] = rows[energy]
 
-	# Energies are run from highest to lowest. Once an angle sputters
-	# nothing with n_max ions, it's below threshold, and so are the lower
-	# energies, which are left at 0 without running them.
-	below = np.zeros(len(angles), dtype=bool)
-	start = time.time()
-	for i in np.argsort(energies)[::-1]:
-		for j, angle in enumerate(angles):
-			if below[j]:
-				continue
-			yields[i, j], errs[i, j], nums[i, j] = yield_point(
-				sputtering_yield, projectile, target, float(energies[i]),
-				float(angle), target_counts, n_min, n_max)
-			below[j] = yields[i, j] == 0.0
-
-		print("E = {:9.2f} eV: max Y = {:.3e}, {:6.0f} s elapsed".format(
-			energies[i], yields[i].max(), time.time() - start), flush=True)
-		if below.all():
-			print("Every angle is below threshold, skipping lower energies")
-			break
-
-	return yields, errs, nums
+	return all_energies, yields, errs, nums
 
 
 def save_table(path, energies, angles, yields, errs, nums, projectile,
-	target, projectile_name, target_name, seed):
+	target, projectile_name, target_name, settings):
 	"""
 	Saves the yield table and its provenance to an HDF5 file.
 
@@ -194,7 +379,11 @@ def save_table(path, energies, angles, yields, errs, nums, projectile,
 	 - target (dict)         : Target parameters.
 	 - projectile_name (str) : Projectile name, e.g. "D".
 	 - target_name (str)     : Target name, e.g. "W".
-	 - seed (int)            : RustBCA seed used.
+	 - settings (dict)       : How the table was made (seed,
+	                           target_counts, n_min, n_max, refine,
+	                           fine_step, fine_factor), saved as root
+	                           attributes. load_reuse checks the first
+	                           four.
 	"""
 	pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
 	with h5py.File(path, "w") as f:
@@ -227,7 +416,8 @@ def save_table(path, energies, angles, yields, errs, nums, projectile,
 		f.attrs["target"] = target_name
 		f.attrs["rustbca_version"] = importlib.metadata.version("RustBCA")
 		f.attrs["rustbca_commit"] = rustbca_commit()
-		f.attrs["seed"] = seed
+		for key, val in settings.items():
+			f.attrs[key] = val
 		f.attrs["created"] = datetime.datetime.now().isoformat(
 			timespec="seconds")
 		f.attrs["command"] = " ".join(sys.argv)
@@ -329,6 +519,18 @@ def main():
 		help="Most ions per point (default 2e6)")
 	parser.add_argument("--seed", type=int, default=0,
 		help="RustBCA seed (default 0)")
+	parser.add_argument("--no-refine", action="store_true",
+		help="Don't add energies near threshold")
+	parser.add_argument("--fine-step", type=float, default=0.05,
+		help="Fractional spacing of the energies added near threshold "
+		"(default 0.05)")
+	parser.add_argument("--fine-factor", type=float, default=3.0,
+		help="Energies are added near threshold up to this times the "
+		"lowest energy that sputters anything (default 3)")
+	parser.add_argument("--reuse", metavar="FILE",
+		help="Copy points from an existing table made with the same "
+		"materials, seed, --target-counts, --n-min and --n-max, instead "
+		"of running them again")
 	parser.add_argument("--target-Es", type=float,
 		help="Override the target's surface binding energy, eV")
 	parser.add_argument("--quick", action="store_true",
@@ -367,12 +569,22 @@ def main():
 			/ "sputtering" / "{}_on_{}.h5".format(args.projectile,
 			args.target))
 
+	reuse = None
+	if args.reuse:
+		reuse = load_reuse(args.reuse, projectile, target, args.seed,
+			target_counts, n_min, n_max)
+
 	print("{} on {}: {} energies x {} angles, saving to {}".format(
 		args.projectile, args.target, len(energies), len(angles), out))
-	yields, errs, nums = make_table(projectile, target, energies, angles,
-		target_counts, n_min, n_max, args.seed)
+	energies, yields, errs, nums = make_table(projectile, target, energies,
+		angles, target_counts, n_min, n_max, args.seed,
+		refine=not args.no_refine, fine_step=args.fine_step,
+		fine_factor=args.fine_factor, reuse=reuse)
+	settings = {"seed": args.seed, "target_counts": target_counts,
+		"n_min": n_min, "n_max": n_max, "refine": int(not args.no_refine),
+		"fine_step": args.fine_step, "fine_factor": args.fine_factor}
 	save_table(out, energies, angles, yields, errs, nums, projectile,
-		target, args.projectile, args.target, args.seed)
+		target, args.projectile, args.target, settings)
 	print("Saved {}".format(out))
 
 	if args.plot:
