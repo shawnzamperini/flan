@@ -7,11 +7,12 @@ the sputtering yield $Y$, which depends on the projectile, the wall
 material, and the ion's energy and angle of incidence.
 
 !!! note "Work in progress"
-    Flan can read and interpolate sputtering yield tables and find the
-    wall surfaces of a SOLEDGE3X background, which is what this page
-    describes. Launching impurities from those surfaces using the yields is
-    being added next, and this page will be extended to cover it. Until
-    then, none of this is used in a run.
+    Flan can calculate the rate the background plasma sputters atoms off
+    each part of the wall of a SOLEDGE3X background
+    (`imp_source_opt = "sputter"`), and saves it to the output file, which
+    is what this page describes. Starting the impurities from that source
+    is being added next. Until then, they still start where the
+    `imp_*start_opt` options say.
 
 ## Where the yields come from
 
@@ -219,6 +220,107 @@ area. The same happens everywhere if the mesh file has no outline. How
 many elements fall back depends on how closely a mesh's chi follows its
 outline.
 
+## Sputtered source
+
+With `imp_source_opt = "sputter"`, Flan finds the wall surfaces and
+calculates the rate atoms are sputtered off each surface element in each
+background time frame (`Sputtering::Source`),
+
+$$
+S = \Gamma\, Y_\text{eff}\, A,
+$$
+
+using the plasma in the element's plasma cell. The yield table is set with
+`sput_table_file`, and its target must be the impurity being followed
+(`imp_atom_num`).
+
+### Ion flux onto the wall
+
+Ions move along the field with the parallel flow $u_\parallel$ and across it
+with the $\mathbf{E}\times\mathbf{B}$ drift, so their velocity into the wall
+is $-(u_\parallel\hat{\mathbf{b}} + \mathbf{v}_E)\cdot\hat{\mathbf{n}}$, where
+$\hat{\mathbf{n}}$ is the element's normal (pointing into the plasma) and
+$\mathbf{v}_E = \mathbf{E}\times\mathbf{B}/B^2$. The flux is
+
+$$
+\Gamma = n_i \max\left(0,\ -(u_\parallel\hat{\mathbf{b}} + \mathbf{v}_E)\cdot\hat{\mathbf{n}}\right),
+$$
+
+with $n_i = n_e$. The parallel flow and the drift are perpendicular,
+separate parts of the motion: the parallel flow is the part along
+$\hat{\mathbf{b}}$, and $\mathbf{v}_E$ has no part along it. Near a
+divertor target, where the field hits the wall at a grazing angle and
+$\hat{\mathbf{b}}\cdot\hat{\mathbf{n}}$ is small, the drift can carry as
+many ions onto the wall as the parallel flow. In a turbulent background it
+also carries the turbulent fluctuations, so the source changes from frame
+to frame. The grad-B drift in the background's flow isn't used, since it's
+mostly a magnetization flow that doesn't carry ions onto the wall.
+
+`sput_flux_opt = "parallel"` leaves out the $\mathbf{E}\times\mathbf{B}$ part,
+and `sput_bohm_floor = "on"` makes the parallel flow onto the wall at least
+the sound speed $c_s = \sqrt{e(T_e + T_i)/m_i}$ (the Bohm criterion), for
+backgrounds whose flow next to the wall is too slow.
+
+### Impact energy and effective yield
+
+Only the background ions sputter. Electrons are far too light: one can give
+a W atom at most $4m_e M/(m_e + M)^2 \approx 10^{-5}$ of its energy, far
+below the binding energy. $T_e$ comes in only because the electrons set
+the sheath potential the ions are accelerated by. An ion gains energy
+falling through the sheath and presheath in front of the wall,
+
+$$
+E_\text{sheath} = Z\left[-\tfrac{1}{2}T_e\ln\!\left(2\pi\frac{m_e}{m_i}\left(1 + \frac{T_i}{T_e}\right)\right) + \tfrac{1}{2}T_e\right],
+$$
+
+the floating sheath drop plus $\tfrac{1}{2}T_e$ for the presheath, about
+$3.3\,T_e$ for deuterium at $T_i = T_e$. On top of that is its thermal
+energy. The ions hitting a wall are weighted toward the fast ones (by
+their speed into it), so their thermal energy has the distribution
+$p(\varepsilon) = (\varepsilon/T_i^2)\,e^{-\varepsilon/T_i}$, with mean
+$2T_i$. The mean impact energy is $E_\text{sheath} + 2T_i$.
+
+The yield is averaged over these energies at the fixed angle
+`sput_angle_val` (60° by default),
+
+$$
+Y_\text{eff} = \int_0^\infty Y(E_\text{sheath} + \varepsilon)\, p(\varepsilon)\, d\varepsilon.
+$$
+
+This matters near threshold, where the yield rises steeply, so the yield
+at the mean energy can be far from the mean yield. The integral is done
+with the midpoint rule on 300 points up to $30\,T_i$, since the yield's
+kink at threshold would spoil a Gauss-Laguerre rule.
+
+The sheath formula assumes no secondary electron emission from the wall,
+which would make the drop smaller.
+
+### Output
+
+The source is saved in the netCDF file's `sputtering` group, which has an
+`element` dimension and uses the file's `time` dimension:
+
+| Variable | Shape | Units | Contents |
+|---|---|---|---|
+| `zone`, `i`, `j`, `k` | (element) | | Plasma cell of the element (zones numbered from 1) |
+| `face` | (element) | | Face of the plasma cell on the wall (0 to 5: xmin, xmax, ymin, ymax, zmin, zmax) |
+| `R0`, `Z0`, `R1`, `Z1`, `R_mid`, `Z_mid` | (element) | m | The face's corners and middle |
+| `phi_min`, `phi_max` | (element) | rad | The element's range of toroidal angle |
+| `n_R`, `n_Z` | (element) | | Unit normal into the plasma |
+| `area`, `area_face` | (element) | m$^2$ | The element's area, and its cell face's |
+| `wall_dist` | (element) | m | Distance from the face to the wall outline |
+| `fallback` | (element) | | 1 if the face's own normal and area are used |
+| `flux` | (time, element) | m$^{-2}$s$^{-1}$ | Ion flux onto the wall |
+| `flux_par`, `flux_exb` | (time, element) | m$^{-2}$s$^{-1}$ | Its parallel and E x B parts, positive into the wall |
+| `energy` | (time, element) | eV | Mean impact energy |
+| `yield` | (time, element) | atoms/ion | Effective yield |
+| `rate` | (time, element) | atoms/s | Sputtered atoms |
+| `total_rate` | (time) | atoms/s | Sum over the elements |
+
+A summary is also printed at the start of the run: the total rate, the ion
+flux onto the wall and how much came from each part, and the flux-weighted
+mean impact energy and yield.
+
 ## Making a new table
 
 Activate the `flan` environment, which has RustBCA, and run the script
@@ -329,6 +431,8 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
   it counts.
 - **No sputtering by the impurities themselves** (self-sputtering) or by
   other impurities in the plasma yet.
+- **Fixed angle of incidence.** Every ion hits at `sput_angle_val`. In
+  reality the angle depends on the field angle and the sheath.
 
 ## References
 

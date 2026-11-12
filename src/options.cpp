@@ -79,6 +79,9 @@ namespace Options
 		set_max_zbound_type(m_max_zbound_type);
 		set_calc_grad_elec(m_calc_grad_elec);
 		set_s3x_chi_absorb(m_s3x_chi_absorb);
+		set_imp_source_opt(m_imp_source_opt);
+		set_sput_flux_opt(m_sput_flux_opt);
+		set_sput_bohm_floor(m_sput_bohm_floor);
 	}
 
 	// Setter definitions. They're all the same, so just throwing together
@@ -512,6 +515,121 @@ namespace Options
 		if (s3x_chi_absorb == "off") m_s3x_chi_absorb_int = 0;
 		else if (s3x_chi_absorb == "on") m_s3x_chi_absorb_int = 1;
 	}
+
+	/**
+	* Sets the imp_source_opt option.
+	*
+	* Where impurities come from: "manual" starts them where the
+	* imp_*start_opt options say, and "sputter" makes them the atoms the
+	* background plasma sputters off the walls of a SOLEDGE3X background
+	* (see Sputtering::Source).
+	*
+	* Valid values are "manual" and "sputter". An invalid value prints an
+	* error and leaves the option unchanged. Also sets the control integer
+	* returned by imp_source_opt_int() to 0 for "manual", 1 for "sputter".
+	* An invalid value leaves the control integer unchanged.
+	*
+	* @param imp_source_opt New value of the imp_source_opt option.
+	*/
+	void Options::set_imp_source_opt(std::string imp_source_opt)
+	{
+		if (check_input<std::string>("imp_source_opt", imp_source_opt,
+			{"manual", "sputter"}))
+		{
+			m_imp_source_opt = imp_source_opt;
+		}
+
+		if (imp_source_opt == "manual") m_imp_source_opt_int = 0;
+		else if (imp_source_opt == "sputter") m_imp_source_opt_int = 1;
+	}
+
+	/**
+	* Sets the sput_table_file option.
+	*
+	* Path to the sputtering yield table, made by python/rustbca_yields.py
+	* (e.g., data/sputtering/D_on_W.h5). Needed when imp_source_opt is
+	* "sputter".
+	*
+	* @param sput_table_file New value of the sput_table_file option.
+	*/
+	void Options::set_sput_table_file(std::string sput_table_file)
+		{m_sput_table_file = sput_table_file;}
+
+	/**
+	* Sets the sput_flux_opt option.
+	*
+	* Which part of the background ion flow carries ions onto the wall:
+	* "parallel_exb" is the parallel flow plus the E x B drift, "parallel"
+	* is the parallel flow only.
+	*
+	* Valid values are "parallel_exb" and "parallel". An invalid value
+	* prints an error and leaves the option unchanged. Also sets the
+	* control integer returned by sput_flux_opt_int() to 0 for
+	* "parallel_exb", 1 for "parallel". An invalid value leaves the control
+	* integer unchanged.
+	*
+	* @param sput_flux_opt New value of the sput_flux_opt option.
+	*/
+	void Options::set_sput_flux_opt(std::string sput_flux_opt)
+	{
+		if (check_input<std::string>("sput_flux_opt", sput_flux_opt,
+			{"parallel_exb", "parallel"}))
+		{
+			m_sput_flux_opt = sput_flux_opt;
+		}
+
+		if (sput_flux_opt == "parallel_exb") m_sput_flux_opt_int = 0;
+		else if (sput_flux_opt == "parallel") m_sput_flux_opt_int = 1;
+	}
+
+	/**
+	* Sets the sput_bohm_floor option.
+	*
+	* Whether the parallel flow onto the wall is at least the ion sound
+	* speed (the Bohm criterion), for backgrounds whose flow next to the
+	* wall is too slow.
+	*
+	* Valid values are "off" and "on". An invalid value prints an error and
+	* leaves the option unchanged. Also sets the control integer returned
+	* by sput_bohm_floor_int() to 0 for "off", 1 for "on". An invalid value
+	* leaves the control integer unchanged.
+	*
+	* @param sput_bohm_floor New value of the sput_bohm_floor option.
+	*/
+	void Options::set_sput_bohm_floor(std::string sput_bohm_floor)
+	{
+		if (check_input<std::string>("sput_bohm_floor", sput_bohm_floor,
+			{"off", "on"}))
+		{
+			m_sput_bohm_floor = sput_bohm_floor;
+		}
+
+		if (sput_bohm_floor == "off") m_sput_bohm_floor_int = 0;
+		else if (sput_bohm_floor == "on") m_sput_bohm_floor_int = 1;
+	}
+
+	/**
+	* Sets the sput_angle_val option.
+	*
+	* Angle (degrees from the surface normal) at which background ions hit
+	* the wall, used to look up the sputtering yield.
+	*
+	* @param sput_angle_val New value of the sput_angle_val option.
+	*/
+	void Options::set_sput_angle_val(double sput_angle_val)
+		{m_sput_angle_val = sput_angle_val;}
+
+	/**
+	* Sets the sput_max_wall_dist option.
+	*
+	* How far, in cell widths, the nearest segment of the wall outline can
+	* be from a wall face before that face falls back to its own normal and
+	* area (see Sputtering::Surface).
+	*
+	* @param sput_max_wall_dist New value of the sput_max_wall_dist option.
+	*/
+	void Options::set_sput_max_wall_dist(double sput_max_wall_dist)
+		{m_sput_max_wall_dist = sput_max_wall_dist;}
 
 
 	/**
@@ -1641,6 +1759,24 @@ namespace Options
 		{return m_s3x_chi_absorb;}
 
 	/**
+	* @name Sputtering option getters
+	* See the setters for what each option means.
+	*/
+	///@{
+	const std::string& Options::imp_source_opt() const
+		{return m_imp_source_opt;}
+	const std::string& Options::sput_table_file() const
+		{return m_sput_table_file;}
+	const std::string& Options::sput_flux_opt() const
+		{return m_sput_flux_opt;}
+	const std::string& Options::sput_bohm_floor() const
+		{return m_sput_bohm_floor;}
+	double Options::sput_angle_val() const {return m_sput_angle_val;}
+	double Options::sput_max_wall_dist() const
+		{return m_sput_max_wall_dist;}
+	///@}
+
+	/**
 	* Returns the min_ne option.
 	*
 	* Lower limit on the electron density (m^-3).
@@ -2581,6 +2717,15 @@ namespace Options
 
 	int Options::s3x_chi_absorb_int() const
 		{return get_control_int("s3x_chi_absorb", m_s3x_chi_absorb_int);}
+
+	int Options::imp_source_opt_int() const
+		{return get_control_int("imp_source_opt", m_imp_source_opt_int);}
+
+	int Options::sput_flux_opt_int() const
+		{return get_control_int("sput_flux_opt", m_sput_flux_opt_int);}
+
+	int Options::sput_bohm_floor_int() const
+		{return get_control_int("sput_bohm_floor", m_sput_bohm_floor_int);}
 
 	// Setter declarations for internal control variables
 

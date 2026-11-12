@@ -10,10 +10,12 @@
 #include <fstream>
 #include <iostream>
 #include <omp.h>
+#include <optional>
 #include <string>
 
 #include "background.h"
 #include "config.h"
+#include "errors.h"
 #include "flan.h"
 #include "flan_types.h"
 #include "impurity_stats.h"
@@ -25,6 +27,7 @@
 #include "read_gkyl.h"
 #include "read_test.h"
 #include "save_results.h"
+#include "sputtering.h"
 #include "timer.h"
 #include "vectors.h"
 
@@ -37,12 +40,15 @@
 *    (Options::load_options).
 * 2. Read the background plasma on rank 0 (Background::read_bkg) and
 *    broadcast it to every rank.
-* 3. Follow the impurities on every rank
+* 3. With imp_source_opt = "sputter", find the wall surfaces and the
+*    rate the background sputters atoms off them (Sputtering::Source),
+*    on every rank.
+* 4. Follow the impurities on every rank
 *    (ImpurityTransport::follow_impurities).
-* 4. Combine the statistics from every rank onto rank 0
+* 5. Combine the statistics from every rank onto rank 0
 *    (Impurity::reduce_stats), and calculate the density, velocities,
 *    charge and Nanbu s from them.
-* 5. Save the results on rank 0 (SaveResults::save_results) and print the
+* 6. Save the results on rank 0 (SaveResults::save_results) and print the
 *    timing summary.
 *
 * MPI must already be initialized when flan is called, and the caller
@@ -123,6 +129,30 @@ R"(
 	// Broadcast the background to all the processes.
 	bkg.broadcast(MPI_COMM_WORLD);
 
+	// The sputtered source. Every rank calculates its own from the
+	// broadcast background, since every rank will start particles from it.
+	std::optional<Sputtering::Source> source {};
+	if (opts.imp_source_opt_int() == 1)
+	{
+		if (opts.sput_table_file() == "undefined")
+		{
+			Errors::fatal_error("imp_source_opt = \"sputter\" needs a "
+				"sputtering yield table, set with sput_table_file.");
+		}
+		if (rank == 0) std::cout << "Calculating the sputtered source...\n";
+		const Sputtering::Surface surface(bkg, opts.sput_max_wall_dist());
+		const Sputtering::YieldTable table(opts.sput_table_file());
+		source.emplace(surface, bkg, table, opts);
+		if (rank == 0)
+		{
+			surface.print_summary(std::cout);
+			source->print_summary(std::cout);
+			std::cout << "Warning! Starting particles from the sputtered "
+				"source isn't done yet. They\nstart where the imp_*start_opt "
+				"options say.\n";
+		}
+	}
+
 	// Begin main particle following loop.
 	timer.start(Timer::Section::Imp);
 	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
@@ -153,7 +183,8 @@ R"(
 	{
 		// Save simulation results.
 		timer.start(Timer::Section::Save);
-		SaveResults::save_results(bkg, global_stats, opts);
+		SaveResults::save_results(bkg, global_stats, opts,
+			source ? &*source : nullptr);
 		timer.stop(Timer::Section::Save);
 	}
 

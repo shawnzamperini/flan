@@ -61,6 +61,14 @@ namespace Options
 		int m_s3x_frame_end                            {1};
 		std::string m_s3x_ref_file {"refParam_raptorX.h5"};
 		std::string m_s3x_chi_absorb                {"on"};
+
+		// Options for sputtering of the walls by the background plasma
+		std::string m_imp_source_opt            {"manual"};
+		std::string m_sput_table_file        {"undefined"};
+		std::string m_sput_flux_opt       {"parallel_exb"};
+		std::string m_sput_bohm_floor              {"off"};
+		double m_sput_angle_val                     {60.0};
+		double m_sput_max_wall_dist                  {2.0};
 		
 		// General background options
 		double m_min_ne                             {1e15};
@@ -161,6 +169,9 @@ namespace Options
 		int m_max_zbound_type_int		{-1};
 		int m_calc_grad_elec_int		{-1};
 		int m_s3x_chi_absorb_int                      {-1};
+		int m_imp_source_opt_int                      {-1};
+		int m_sput_flux_opt_int                       {-1};
+		int m_sput_bohm_floor_int                     {-1};
 
 		template <typename T>
 		bool check_input(const std::string& var, const T& value, 
@@ -199,6 +210,12 @@ namespace Options
 		void set_s3x_frame_end(int s3x_frame_end);
 		void set_s3x_ref_file(std::string s3x_ref_file);
 		void set_s3x_chi_absorb(std::string s3x_chi_absorb);
+		void set_imp_source_opt(std::string imp_source_opt);
+		void set_sput_table_file(std::string sput_table_file);
+		void set_sput_flux_opt(std::string sput_flux_opt);
+		void set_sput_bohm_floor(std::string sput_bohm_floor);
+		void set_sput_angle_val(double sput_angle_val);
+		void set_sput_max_wall_dist(double sput_max_wall_dist);
 		void set_min_ne(double min_ne);
 		void set_min_te(double min_te);
 		void set_min_ti(double min_ti);
@@ -283,6 +300,12 @@ namespace Options
 		int s3x_frame_end() const;
 		const std::string& s3x_ref_file() const;
 		const std::string& s3x_chi_absorb() const;
+		const std::string& imp_source_opt() const;
+		const std::string& sput_table_file() const;
+		const std::string& sput_flux_opt() const;
+		const std::string& sput_bohm_floor() const;
+		double sput_angle_val() const;
+		double sput_max_wall_dist() const;
 		double min_ne() const;
 		double min_te() const;
 		double min_ti() const;
@@ -372,6 +395,9 @@ namespace Options
 		int max_zbound_type_int() const;
 		int calc_grad_elec_int() const;
 		int s3x_chi_absorb_int() const;
+		int imp_source_opt_int() const;
+		int sput_flux_opt_int() const;
+		int sput_bohm_floor_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);

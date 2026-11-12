@@ -50,5 +50,6 @@ With more than one zone, the netCDF file is laid out differently from a Gkeyll o
   - ``input`` and ``geometry/time`` are the same as usual.
   - ``zones`` has the number of cells in each zone (nx, ny, nz) and faces, what is across each face of each zone: a zone number (from 1), -1 for an absorbing face, -2 for a core face or -4 for a wall face. The rows are the xmin, xmax, ymin, ymax, zmin and zmax faces.
   - ``zone1``, ``zone2``, ... each have their own x, y, z and grid dimensions, and geometry, background and output groups with the usual variables for that zone's cells. The geometry also has the wall mask chi and R_corners and Z_corners, the (R, Z) cell corners in meters, for plotting.
+  - ``sputtering``, with :ref:`imp_source_opt <imp_source_opt>` = "sputter", has the wall surfaces and the rate the background sputters atoms off them. See the Sputtering page of the documentation website.
 
 The output is large for a full SOLEDGE3X mesh, about 1.7 GB for two frames of the DIII-D example.

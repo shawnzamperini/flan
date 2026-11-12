@@ -126,6 +126,20 @@ are grouped by what they control.
 | `imp_iz_recomb` | string | `"on"` | Whether impurity ionization and recombination are on. Valid values: `"off"`, `"on"`. |
 | `imp_max_time` | float | `1e10` | Maximum time a particle is followed for (s). A particle that exceeds it is killed and counted in a warning at the end of the run. |
 
+## Sputtering
+
+Impurities sputtered off the walls of a SOLEDGE3X background by the
+background plasma. See [Sputtering](physics/sputtering.md).
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `imp_source_opt` | string | `"manual"` | Where impurities come from. `"manual"` starts them where the `imp_*start_opt` options say. `"sputter"` calculates the rate the background plasma sputters atoms off each part of the wall and saves it to the output file. Starting the particles from that source isn't done yet, so for now they still start where the `imp_*start_opt` options say. Valid values: `"manual"`, `"sputter"`. |
+| `sput_table_file` | string | `"undefined"` | Path to the sputtering yield table, e.g., `data/sputtering/D_on_W.h5`. Needed with `imp_source_opt = "sputter"`. |
+| `sput_flux_opt` | string | `"parallel_exb"` | Which part of the background ion flow carries ions onto the wall. `"parallel_exb"` is the parallel flow plus the E x B drift, `"parallel"` the parallel flow only. Valid values: `"parallel_exb"`, `"parallel"`. |
+| `sput_bohm_floor` | string | `"off"` | Whether the parallel flow onto the wall is at least the ion sound speed (the Bohm criterion), for backgrounds whose flow next to the wall is too slow. Valid values: `"off"`, `"on"`. |
+| `sput_angle_val` | float | `60` | Angle at which the background ions hit the wall, in degrees from the surface normal. Used to look up the sputtering yield. |
+| `sput_max_wall_dist` | float | `2` | How far, in cell widths, the wall outline can be from a wall face before the face uses its own normal and area instead of the outline's. |
+
 ## Variance reduction (temporarily removed)
 
 | Option | Type | Default | Description |

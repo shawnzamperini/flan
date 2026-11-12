@@ -80,6 +80,42 @@
 *
 * Everything is done per toroidal cell, so each face appears once in
 * every toroidal cell of its zone, with that cell's range of phi.
+*
+* Sputtered source (Source)
+* -------------------------
+* For every surface element and background time frame, the rate atoms are
+* sputtered off it (atoms/s) is
+*
+*     S = Gamma x Y_eff x A
+*
+* using the plasma in the element's plasma cell (no interpolation):
+*
+* - Gamma is the flux of background ions onto the wall (m^-2 s^-1). Ions
+*   move along the field with the parallel flow u_par and across it with
+*   the E x B drift v_E, so the velocity into the wall is
+*   -(u_par b_hat + v_E) . n_wall (n_wall points into the plasma), and
+*   Gamma = n_i max(0, that). The two parts are perpendicular, separate
+*   pieces of the motion, so they're kept separately too (flux_par,
+*   flux_exb). The background's flow also has the grad-B drift, which
+*   isn't used: it's mostly a magnetization flow that doesn't carry
+*   particles onto the wall. sput_flux_opt = "parallel" leaves out the
+*   E x B part, and sput_bohm_floor = "on" makes the parallel flow onto
+*   the wall at least the sound speed.
+*
+* - Y_eff is the sputtering yield averaged over the energies the ions hit
+*   the wall with, at the fixed angle sput_angle_val. Only the ions
+*   sputter: electrons are far too light to knock a W atom loose. Te only
+*   comes in through the sheath potential, which the electrons set and
+*   the ions are accelerated by. An ion falls through
+*   the sheath and presheath potential, gaining E_sheath (sheath_energy),
+*   on top of its thermal energy. The thermal energy of the ions hitting
+*   a wall is that of a Maxwellian weighted by their speed into it, which
+*   is a Gamma(2, Ti) distribution, p(eps) = eps / Ti^2 exp(-eps / Ti)
+*   (mean 2 Ti). Y_eff = int Y(E_sheath + eps) p(eps) d eps
+*   (effective_yield). Averaging matters near threshold, where Y rises
+*   steeply: Y at the mean energy can be far from the mean of Y.
+*
+* - A is the element's area (see Surface).
 */
 
 #include <algorithm>
@@ -90,12 +126,16 @@
 #include <limits>
 #include <map>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "background.h"
+#include "constants.h"
 #include "errors.h"
 #include "hdf5_utils.h"
+#include "options.h"
+#include "read_s3xe.h"
 #include "sputtering.h"
 #include "zones.h"
 
@@ -599,5 +639,379 @@ namespace Sputtering
 				<< " m^2, " << t.fallback << " without a nearby wall "
 				"outline\n";
 		}
+	}
+
+	/**
+	* Returns the energy an ion gains falling through the sheath and
+	* presheath in front of a floating wall (eV).
+	*
+	* The sheath potential drop for a floating wall with no secondary
+	* electron emission is
+	* e dphi_sh = -0.5 Te ln[2 pi (m_e / m_i) (1 + Ti / Te)], which is about
+	* 2.84 Te for deuterium at Ti = Te. The presheath adds 0.5 Te. An ion of
+	* charge Z gains Z times the total drop. For deuterium at Ti = Te,
+	* that's about 3.34 Te, a little more than the 3 Te rule of thumb.
+	*
+	* @param te Electron temperature (eV), > 0.
+	* @param ti Ion temperature (eV), >= 0.
+	* @param elec_mass_amu Mass of the electrons (amu).
+	* @param ion_mass_amu Mass of the ions (amu).
+	* @param charge Charge of the ions (Z).
+	* @return Energy gained (eV).
+	*/
+	double sheath_energy(const double te, const double ti,
+		const double elec_mass_amu, const double ion_mass_amu,
+		const int charge)
+	{
+		const double me_mi {elec_mass_amu / ion_mass_amu};
+		const double sheath {-0.5 * te * std::log(2.0 * Constants::pi
+			* me_mi * (1.0 + ti / te))};
+		const double presheath {0.5 * te};
+		return charge * (sheath + presheath);
+	}
+
+	namespace
+	{
+		/**
+		* Nodes and weights for averaging over the thermal energy
+		* distribution of the ions hitting a wall, Gamma(2, Ti).
+		*
+		* In x = eps / Ti the distribution is x e^-x. The midpoint rule is
+		* used on [0, 30] with 300 points, with the weights x e^-x dx
+		* normalized to add up to 1. The part beyond x = 30 is about
+		* 1e-11. A Gauss-Laguerre rule would need far fewer points for a
+		* smooth integrand, but the yield has a kink at threshold (it's 0
+		* below), where it converges badly. The midpoint rule doesn't care.
+		*
+		* @return Pairs of (x, weight), made the first time it's called.
+		*/
+		const std::vector<std::array<double, 2>>& thermal_quadrature()
+		{
+			static const std::vector<std::array<double, 2>> nodes {[]
+			{
+				constexpr int n {300};
+				constexpr double x_max {30.0};
+				const double dx {x_max / n};
+				std::vector<std::array<double, 2>> q(n);
+				double total {};
+				for (int i {}; i < n; ++i)
+				{
+					const double x {(i + 0.5) * dx};
+					q[i] = {x, x * std::exp(-x) * dx};
+					total += q[i][1];
+				}
+				for (auto& node : q) node[1] /= total;
+				return q;
+			}()};
+			return nodes;
+		}
+	}
+
+	/**
+	* Averages the sputtering yield over the energies ions hit the wall
+	* with.
+	*
+	* The energy is e_sheath plus a thermal energy from Gamma(2, ti), and
+	* the average is done with thermal_quadrature.
+	*
+	* @param table Sputtering yield table.
+	* @param e_sheath Energy gained in the sheath and presheath (eV).
+	* @param ti Ion temperature (eV), > 0.
+	* @param angle Angle of incidence from the surface normal (degrees).
+	* @return The averaged yield, and the fraction of the ions whose energy
+	*         was above the end of the table (where the yield at the
+	*         table's highest energy was used).
+	*/
+	EffectiveYield effective_yield(const YieldTable& table,
+		const double e_sheath, const double ti, const double angle)
+	{
+		EffectiveYield out {};
+		for (const auto& [x, w] : thermal_quadrature())
+		{
+			const double energy {e_sheath + x * ti};
+			out.yield += w * table.get_yield(energy, angle);
+			if (energy > table.energy_max()) out.frac_above += w;
+		}
+		return out;
+	}
+
+	/**
+	* Calculates the sputtered source on every surface element in every
+	* background time frame.
+	*
+	* See the top of this file for the physics. For element e in frame t,
+	* with n_i = ne (a D+ background), b_hat = B / |B| and n_wall the
+	* element's normal in Cartesian coordinates at the middle of its phi
+	* range, all from the element's plasma cell:
+	*
+	* 1. u_par = u . b_hat, where u is the background flow. The drifts in u
+	*    are perpendicular to B, so this is exactly the parallel flow.
+	* 2. The parallel velocity into the wall is -u_par (b_hat . n_wall). With
+	*    sput_bohm_floor = "on", it's c_s |b_hat . n_wall| if that's more,
+	*    where c_s = sqrt(e (Te + Ti) / m_i).
+	* 3. v_E = E x B / B^2, and its velocity into the wall is -v_E . n_wall.
+	* 4. flux_par and flux_exb are n_i times those, and are positive into
+	*    the wall. The flux is n_i max(0, sum of the two), or
+	*    max(0, flux_par) with sput_flux_opt = "parallel".
+	* 5. The yield is effective_yield with E_sheath from sheath_energy (with
+	*    the background's electron and ion masses) and the angle
+	*    sput_angle_val. Te and Ti are held at or above min_te and
+	*    min_ti. The mean impact energy saved is E_sheath + 2 Ti.
+	* 6. The rate is flux x yield x area.
+	*
+	* The run stops if the table's sputtered atoms aren't the impurity
+	* being followed (imp_atom_num), its projectile isn't singly charged
+	* (the background ions are D+), or sput_angle_val isn't between 0 and
+	* 90. A projectile whose mass is more than 5% off the background ion
+	* mass, and element-frames where more than 1% of the ions hit with more
+	* energy than the table covers, are reported by print_summary.
+	*
+	* @param surface The surface elements.
+	* @param bkg The background plasma, with the time frames, plasma and
+	*        fields.
+	* @param table The sputtering yield table.
+	* @param opts Simulation options: imp_atom_num, sput_flux_opt,
+	*        sput_bohm_floor, sput_angle_val, min_te and min_ti.
+	*/
+	Source::Source(const Surface& surface,
+		const Background::Background& bkg, const YieldTable& table,
+		const Options::Options& opts)
+		: m_surface {surface},
+		m_nframes {static_cast<int>(bkg.get_times().size())}
+	{
+		// The table has to be for the impurity being followed, sputtered by
+		// the background's singly charged ions
+		if (static_cast<int>(std::lround(table.target_Z()))
+			!= opts.imp_atom_num())
+		{
+			Errors::fatal_error("The sputtering yield table " + table.path()
+				+ " is for a target with Z = "
+				+ std::to_string(table.target_Z()) + ", but the impurity "
+				"(imp_atom_num) is " + std::to_string(opts.imp_atom_num())
+				+ ".");
+		}
+		if (std::lround(table.projectile_Z()) != 1)
+		{
+			Errors::fatal_error("The sputtering yield table " + table.path()
+				+ " is for a projectile with Z = "
+				+ std::to_string(table.projectile_Z()) + ", but the "
+				"background ions are singly charged (D+).");
+		}
+		const double angle {opts.sput_angle_val()};
+		if (!(angle >= 0.0 && angle <= 90.0))
+		{
+			Errors::fatal_error("sput_angle_val = " + std::to_string(angle)
+				+ ", but it must be between 0 and 90 degrees.");
+		}
+		const double mi_amu {bkg.get_ion_mass_amu()};
+		const double me_amu {bkg.get_elec_mass_amu()};
+		if (!(mi_amu > 0.0 && me_amu > 0.0))
+		{
+			Errors::fatal_error("The sputtered source needs the background's "
+				"electron and ion masses, but they aren't set.");
+		}
+		if (std::abs(table.projectile_mass_amu() / mi_amu - 1.0) > 0.05)
+		{
+			std::ostringstream msg {};
+			msg << "The sputtering yield table's projectile mass ("
+				<< table.projectile_mass_amu() << " amu) is more than 5% off "
+				"the background ion mass (" << mi_amu << " amu).";
+			m_warnings.push_back(msg.str());
+		}
+
+		const bool use_exb {opts.sput_flux_opt_int() == 0};
+		const bool bohm_floor {opts.sput_bohm_floor_int() == 1};
+		const double mi_kg {mi_amu * Constants::amu_to_kg};
+
+		const auto& ne {bkg.get_ne()};
+		const auto& te {bkg.get_te()};
+		const auto& ti {bkg.get_ti()};
+		const auto& uX {bkg.get_uX()};
+		const auto& uY {bkg.get_uY()};
+		const auto& uZ {bkg.get_uZ()};
+		const auto& bX {bkg.get_bX()};
+		const auto& bY {bkg.get_bY()};
+		const auto& bZ {bkg.get_bZ()};
+		const auto& eX {bkg.get_eX()};
+		const auto& eY {bkg.get_eY()};
+		const auto& eZ {bkg.get_eZ()};
+
+		const std::size_t n_elem {m_surface.size()};
+		const std::size_t n_all {n_elem * m_nframes};
+		for (auto* v : {&m_flux, &m_flux_par, &m_flux_exb, &m_energy,
+			&m_yield, &m_rate})
+		{
+			v->assign(n_all, 0.0);
+		}
+		m_total_rate.assign(m_nframes, 0.0);
+
+		using Vec3 = std::array<double, 3>;
+		auto dot3 = [](const Vec3& a, const Vec3& b)
+			{return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];};
+
+		for (int t {}; t < m_nframes; ++t)
+		for (std::size_t e {}; e < n_elem; ++e)
+		{
+			const SurfaceElement& el {m_surface.elements()[e]};
+			const int z {el.zone};
+			const int i {el.i};
+			const int j {el.j};
+			const int k {el.k};
+			const std::size_t idx {t * n_elem + e};
+
+			// The element's normal in Cartesian coordinates, in the middle
+			// of its phi range. Positions are (R cos phi,
+			// phi_sign R sin phi, Z), so R_hat is (cos phi,
+			// phi_sign sin phi, 0).
+			const double phi {0.5 * (el.phi_min + el.phi_max)};
+			const Vec3 n_wall {el.n_R * std::cos(phi),
+				el.n_R * S3X::phi_sign * std::sin(phi), el.n_Z};
+
+			// Plasma in the element's plasma cell
+			const double n_i {std::max(static_cast<double>(
+				ne(z, t, i, j, k)), 0.0)};
+			const double te_c {std::max(static_cast<double>(
+				te(z, t, i, j, k)), opts.min_te())};
+			const double ti_c {std::max(static_cast<double>(
+				ti(z, t, i, j, k)), opts.min_ti())};
+			const Vec3 B {bX(z, t, i, j, k), bY(z, t, i, j, k),
+				bZ(z, t, i, j, k)};
+			const double B2 {dot3(B, B)};
+
+			// 1-4. Flux onto the wall. Without a field there's no
+			// direction for the parallel flow or the drift.
+			double flux_par {};
+			double flux_exb {};
+			if (B2 > 0.0)
+			{
+				const double Bmag {std::sqrt(B2)};
+				const Vec3 b_hat {B[0] / Bmag, B[1] / Bmag, B[2] / Bmag};
+				const double b_n {dot3(b_hat, n_wall)};
+				const Vec3 u {uX(z, t, i, j, k), uY(z, t, i, j, k),
+					uZ(z, t, i, j, k)};
+
+				double v_par_in {-dot3(u, b_hat) * b_n};
+				if (bohm_floor)
+				{
+					const double c_s {std::sqrt(Constants::ev_to_j
+						* (te_c + ti_c) / mi_kg)};
+					v_par_in = std::max(v_par_in, c_s * std::abs(b_n));
+				}
+
+				const Vec3 E {eX(z, t, i, j, k), eY(z, t, i, j, k),
+					eZ(z, t, i, j, k)};
+				const Vec3 v_E {(E[1] * B[2] - E[2] * B[1]) / B2,
+					(E[2] * B[0] - E[0] * B[2]) / B2,
+					(E[0] * B[1] - E[1] * B[0]) / B2};
+
+				flux_par = n_i * v_par_in;
+				flux_exb = -n_i * dot3(v_E, n_wall);
+			}
+			const double flux {std::max(0.0,
+				use_exb ? flux_par + flux_exb : flux_par)};
+
+			// 5. Effective yield at the fixed angle
+			const double e_sheath {sheath_energy(te_c, ti_c, me_amu, mi_amu,
+				1)};
+			const EffectiveYield y {effective_yield(table, e_sheath, ti_c,
+				angle)};
+			if (y.frac_above > 0.01) ++m_num_above_table;
+
+			// 6. Rate
+			m_flux[idx] = flux;
+			m_flux_par[idx] = flux_par;
+			m_flux_exb[idx] = flux_exb;
+			m_energy[idx] = e_sheath + 2.0 * ti_c;
+			m_yield[idx] = y.yield;
+			m_rate[idx] = flux * y.yield * el.area;
+			m_total_rate[t] += m_rate[idx];
+		}
+	}
+
+	/**
+	* @name Accessors
+	* The surface elements, how many there are, the number of time frames,
+	* and the per-element values in every frame (index t * size() + e):
+	* the ion flux onto the wall and its parallel and E x B parts (m^-2
+	* s^-1, positive into the wall), the mean impact energy (eV), the
+	* effective yield and the sputtered rate (atoms/s). Also the total rate
+	* in each frame, its mean over the frames, and how many element-frames
+	* had more than 1% of their ions above the end of the yield table.
+	*/
+	///@{
+	const Surface& Source::surface() const {return m_surface;}
+	std::size_t Source::size() const {return m_surface.size();}
+	int Source::nframes() const {return m_nframes;}
+	const std::vector<double>& Source::flux() const {return m_flux;}
+	const std::vector<double>& Source::flux_par() const {return m_flux_par;}
+	const std::vector<double>& Source::flux_exb() const {return m_flux_exb;}
+	const std::vector<double>& Source::energy() const {return m_energy;}
+	const std::vector<double>& Source::yield() const {return m_yield;}
+	const std::vector<double>& Source::rate() const {return m_rate;}
+	const std::vector<double>& Source::total_rate() const
+		{return m_total_rate;}
+	int Source::num_above_table() const {return m_num_above_table;}
+
+	double Source::mean_total_rate() const
+	{
+		if (m_total_rate.empty()) return 0.0;
+		double sum {};
+		for (const double r : m_total_rate) sum += r;
+		return sum / m_total_rate.size();
+	}
+	///@}
+
+	/**
+	* Prints the sputtered source: the total rate (mean, and the range over
+	* the frames), how much of the ion flux onto the wall came from the
+	* parallel flow and from the E x B drift, the flux-weighted mean impact
+	* energy and yield, and any warnings.
+	*
+	* @param os Stream to print to.
+	*/
+	void Source::print_summary(std::ostream& os) const
+	{
+		double sum_flux_area {};
+		double sum_par {};
+		double sum_exb {};
+		double sum_energy {};
+		double sum_yield {};
+		const std::size_t n {size()};
+		for (int t {}; t < m_nframes; ++t)
+		for (std::size_t e {}; e < n; ++e)
+		{
+			const std::size_t idx {t * n + e};
+			const double a {m_surface.elements()[e].area};
+			sum_flux_area += m_flux[idx] * a;
+			sum_par += m_flux_par[idx] * a;
+			sum_exb += m_flux_exb[idx] * a;
+			sum_energy += m_energy[idx] * m_flux[idx] * a;
+			sum_yield += m_yield[idx] * m_flux[idx] * a;
+		}
+		const auto [min_it, max_it] {std::minmax_element(m_total_rate.begin(),
+			m_total_rate.end())};
+
+		os << "Sputtered source: " << mean_total_rate() << " atoms/s ";
+		if (!m_total_rate.empty())
+		{
+			os << "(" << *min_it << " to " << *max_it << " over "
+				<< m_nframes << " frames)\n";
+		}
+		if (sum_flux_area > 0.0)
+		{
+			os << "  Ions onto the wall: " << sum_flux_area / m_nframes
+				<< " ions/s, net parallel " << sum_par / m_nframes
+				<< " and net E x B " << sum_exb / m_nframes << "\n"
+				<< "  Mean impact energy " << sum_energy / sum_flux_area
+				<< " eV and yield " << sum_yield / sum_flux_area
+				<< " (weighted by the ion flux)\n";
+		}
+		if (m_num_above_table > 0)
+		{
+			os << "  Warning! " << m_num_above_table << " element-frames "
+				"had more than 1% of their ions above the highest energy in "
+				"the yield table, where the yield at that energy was used.\n";
+		}
+		for (const auto& w : m_warnings) os << "  Warning! " << w << "\n";
 	}
 }

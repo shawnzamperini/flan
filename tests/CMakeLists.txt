@@ -74,6 +74,8 @@ add_test(NAME StatsCPUTest COMMAND test_stats_cpu)
 add_executable(test_save_results_cpu test_save_results_cpu.cpp)
 target_link_libraries(test_save_results_cpu PRIVATE flan gtest_main hdf5
 	netcdf-cxx4 netcdf OpenMP::OpenMP_CXX)
+target_compile_definitions(test_save_results_cpu PRIVATE
+	FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 add_test(NAME SaveResultsCPUTest COMMAND test_save_results_cpu)
 
 # MPI test. It has its own main to initialize MPI, so it links gtest instead

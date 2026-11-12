@@ -86,6 +86,30 @@ Last Update: 8/22/25 (commit XXX)
      - Absorb particles inside the SOLEDGE3X wall
      - "on"
 
+   * - :ref:`imp_source_opt <imp_source_opt>`
+     - Where impurities come from
+     - "manual"
+
+   * - :ref:`sput_table_file <sput_table_file>`
+     - Sputtering yield table
+     - "undefined"
+
+   * - :ref:`sput_flux_opt <sput_flux_opt>`
+     - Flow that carries ions onto the wall
+     - "parallel_exb"
+
+   * - :ref:`sput_bohm_floor <sput_bohm_floor>`
+     - Parallel flow onto the wall at least the sound speed
+     - "off"
+
+   * - :ref:`sput_angle_val <sput_angle_val>`
+     - Angle of the ions hitting the wall (degrees from the normal)
+     - 60
+
+   * - :ref:`sput_max_wall_dist <sput_max_wall_dist>`
+     - How far the wall outline can be from a wall face (cell widths)
+     - 2
+
    * - :ref:`lcfs_x <lcfs_x>`
      - LCFS x-location in Gkeyll simulation (if applicable)
      - 0.0
@@ -350,6 +374,43 @@ SOLEDGE3X marks the cells inside the wall with chi = 1 (its penalization mask).
 
   - **"on"**: A particle that ends a time step in a cell with chi = 1 is absorbed, as if it hit the wall.
   - **"off"**: Particles move through the wall cells, which hold SOLEDGE3X's penalized plasma.
+
+imp_source_opt
+--------------
+
+Where impurities come from.
+
+  - **"manual"**: They start where :ref:`imp_xstart_opt <imp_xstart_opt>` and the other start options say.
+  - **"sputter"**: The rate the background plasma sputters atoms off each part of the wall of a SOLEDGE3X background is calculated and saved to the output file. Starting the particles from that source isn't done yet, so for now they still start where the start options say.
+
+sput_table_file
+---------------
+
+Path to the sputtering yield table, made by ``python/rustbca_yields.py``, e.g., ``data/sputtering/D_on_W.h5``. Needed with :ref:`imp_source_opt <imp_source_opt>` = "sputter".
+
+sput_flux_opt
+-------------
+
+Which part of the background ion flow carries ions onto the wall.
+
+  - **"parallel_exb"**: The parallel flow plus the E x B drift.
+  - **"parallel"**: The parallel flow only.
+
+sput_bohm_floor
+---------------
+
+  - **"off"**: The parallel flow onto the wall is the background's.
+  - **"on"**: The parallel flow onto the wall is at least the ion sound speed (the Bohm criterion), for backgrounds whose flow next to the wall is too slow.
+
+sput_angle_val
+--------------
+
+Angle at which the background ions hit the wall, in degrees from the surface normal. Used to look up the sputtering yield.
+
+sput_max_wall_dist
+------------------
+
+How far, in cell widths, the wall outline can be from a wall face before the face uses its own normal and area instead of the outline's.
 
 lcfs_x
 ------

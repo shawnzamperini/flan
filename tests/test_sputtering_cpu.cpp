@@ -8,10 +8,15 @@
 *   built by hand with a wall at 45 degrees to the grid, where every answer
 *   is known exactly, and on the SOLEDGE3X test mesh of s3x_test_files.h,
 *   whose wall is a circle.
+* - The sputtered source on those surfaces (Sputtering::Source): the sheath
+*   energy, the effective yield and the ion flux, on the 45 degree wall
+*   with a uniform plasma, where they're known exactly.
 */
 
 #include <cmath>
+#include <array>
 #include <cstdlib>
+#include <sstream>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <string>
@@ -22,6 +27,7 @@
 #include "flan_types.h"
 #include "hdf5.h"
 #include "hdf5_utils.h"
+#include "options.h"
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
 #include "sputtering.h"
@@ -67,6 +73,7 @@ namespace
 		std::vector<double> yield {};
 		std::vector<hsize_t> yield_shape {};	// Default (nE, nA)
 		bool target_Es {true};					// Write /target/Es
+		double projectile_Z {1.0};
 
 		Table()
 		{
@@ -97,7 +104,7 @@ namespace
 			write_doubles(file, "/yield", t.yield_shape.empty()
 				? std::vector<hsize_t> {t.energy.size(), t.angle.size()}
 				: t.yield_shape, t.yield);
-			write_doubles(file, "/projectile/Z", {}, {1.0});
+			write_doubles(file, "/projectile/Z", {}, {t.projectile_Z});
 			write_doubles(file, "/projectile/mass_amu", {}, {2.014});
 			write_doubles(file, "/target/Z", {}, {74.0});
 			write_doubles(file, "/target/mass_amu", {}, {183.84});
@@ -530,4 +537,312 @@ TEST(SputteringSurface, S3XAcrossZones)
 		EXPECT_LT(e.n_R * dR + e.n_Z * e.Z_mid, 0.0);
 	}
 	EXPECT_EQ(zone1, per_row);
+}
+
+
+namespace
+{
+	// Electron and ion (D) masses for the source tests (amu)
+	constexpr double me_amu {5.4858e-4};
+	constexpr double mi_amu {2.014};
+
+	// The uniform plasma put on the 45 degree wall background for the
+	// source tests, the same in both time frames, in Cartesian components
+	struct Plasma
+	{
+		double n {1e19};		// Density (m^-3)
+		double te {20.0};		// Electron temperature (eV)
+		double ti {20.0};		// Ion temperature (eV)
+		std::array<double, 3> B {0.0, 0.0, 2.0};	// Field (T)
+		std::array<double, 3> u {0.0, 0.0, 1e4};	// Flow (m/s)
+		std::array<double, 3> E {0.0, 0.0, 0.0};	// Electric field (V/m)
+	};
+
+	// The 45 degree wall background with a uniform plasma. B is along Z by
+	// default and the flow is up, toward the wall (which is up and to the
+	// right of the plasma), with no electric field.
+	Background::Background diagonal_with_plasma(const Plasma& p)
+	{
+		Background::Background bkg {diagonal_background()};
+		bkg.set_elec_mass_amu(me_amu);
+		bkg.set_ion_mass_amu(mi_amu);
+		auto field = [&](double value)
+		{
+			Vectors::ZonedVector<BkgFPType> v(2, {diag_n}, {diag_n},
+				{diag_nz}, 2);
+			for (auto& x : v.get_data()) x = value;
+			return v;
+		};
+		auto ne {field(p.n)}, te {field(p.te)}, ti {field(p.ti)};
+		auto bX {field(p.B[0])}, bY {field(p.B[1])}, bZ {field(p.B[2])};
+		auto uX {field(p.u[0])}, uY {field(p.u[1])}, uZ {field(p.u[2])};
+		auto eX {field(p.E[0])}, eY {field(p.E[1])}, eZ {field(p.E[2])};
+		bkg.move_into_ne(ne);
+		bkg.move_into_te(te);
+		bkg.move_into_ti(ti);
+		bkg.move_into_bX(bX);
+		bkg.move_into_bY(bY);
+		bkg.move_into_bZ(bZ);
+		bkg.move_into_uX(uX);
+		bkg.move_into_uY(uY);
+		bkg.move_into_uZ(uZ);
+		bkg.move_into_eX(eX);
+		bkg.move_into_eY(eY);
+		bkg.move_into_eZ(eZ);
+		return bkg;
+	}
+
+	// The element's normal in Cartesian coordinates at the middle of its
+	// phi range, the same way Source does it
+	std::array<double, 3> cartesian_normal(
+		const Sputtering::SurfaceElement& e)
+	{
+		const double phi {0.5 * (e.phi_min + e.phi_max)};
+		return {e.n_R * std::cos(phi), e.n_R * S3X::phi_sign * std::sin(phi),
+			e.n_Z};
+	}
+
+	// A table with yield c at every energy and angle
+	Table constant_table(double c)
+	{
+		Table t {};
+		t.energy = {1.0, 10.0, 100.0, 1e5};
+		t.yield.assign(t.energy.size() * t.angle.size(), c);
+		return t;
+	}
+
+	// A table with yield 0 up to e0 and c from just above it (a step)
+	Table step_table(double e0, double c)
+	{
+		Table t {};
+		t.energy = {1.0, e0, e0 * (1.0 + 1e-12), 1e5};
+		t.yield.clear();
+		for (const double e : t.energy)
+		{
+			for (std::size_t a {}; a < t.angle.size(); ++a)
+				t.yield.push_back(e > e0 ? c : 0.0);
+		}
+		return t;
+	}
+
+	Options::Options source_options()
+	{
+		Options::Options opts {};
+		opts.set_imp_atom_num(74);
+		return opts;
+	}
+}
+
+// The sheath and presheath energy, by hand: for D at Ti = Te it's
+// about 3.34 Te
+TEST(SputteringSource, SheathEnergy)
+{
+	const double drop {-0.5 * std::log(2.0 * S3XTest::pi * me_amu / mi_amu
+		* 2.0) + 0.5};
+	EXPECT_NEAR(drop, 3.3386, 1e-4);
+	EXPECT_NEAR(Sputtering::sheath_energy(20.0, 20.0, me_amu, mi_amu, 1),
+		20.0 * drop, 1e-12);
+	EXPECT_NEAR(Sputtering::sheath_energy(20.0, 20.0, me_amu, mi_amu, 2),
+		40.0 * drop, 1e-12);
+
+	// With cold ions, the drop is a little bigger
+	const double cold {-0.5 * std::log(2.0 * S3XTest::pi * me_amu / mi_amu)
+		+ 0.5};
+	EXPECT_NEAR(Sputtering::sheath_energy(10.0, 0.0, me_amu, mi_amu, 1),
+		10.0 * cold, 1e-12);
+}
+
+// A constant yield averages to itself. A step from 0 to c at e0 averages
+// to c times the fraction of a Gamma(2, Ti) distribution above
+// x0 = (e0 - E_sheath) / Ti, which is (1 + x0) e^-x0. The step is put on a
+// boundary between the quadrature's points, x0 = 1 or 2, so the midpoint
+// rule is good to about dx^2.
+TEST_F(SputteringTable, EffectiveYield)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable constant(m_path);
+	EXPECT_NEAR(Sputtering::effective_yield(constant, 60.0, 20.0, 45.0)
+		.yield, 0.02, 1e-14);
+
+	for (const double x0 : {1.0, 2.0})
+	{
+		const double e_sheath {60.0};
+		const double ti {20.0};
+		write(step_table(e_sheath + x0 * ti, 0.05));
+		const Sputtering::YieldTable step(m_path);
+		const auto y {Sputtering::effective_yield(step, e_sheath, ti,
+			30.0)};
+		EXPECT_NEAR(y.yield, 0.05 * (1.0 + x0) * std::exp(-x0), 2e-3 * 0.05)
+			<< "x0 = " << x0;
+		EXPECT_EQ(y.frac_above, 0.0);
+	}
+
+	// Everything below the threshold: no yield
+	write(step_table(1e4, 0.05));
+	EXPECT_NEAR(Sputtering::effective_yield(Sputtering::YieldTable {m_path},
+		60.0, 20.0, 30.0).yield, 0.0, 1e-12);
+}
+
+// Parallel flux onto the 45 degree wall, with B along Z and the flow up:
+// n u |b . n| = n u / sqrt(2), and the rest of the source follows from it
+TEST_F(SputteringTable, SourceParallel)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	const Plasma p {};
+	const auto bkg {diagonal_with_plasma(p)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg, table, source_options());
+
+	ASSERT_EQ(source.size(), surface.size());
+	ASSERT_EQ(source.nframes(), 2);
+	const double e_sheath {Sputtering::sheath_energy(p.te, p.ti, me_amu,
+		mi_amu, 1)};
+	for (int t {}; t < 2; ++t)
+	{
+		double total {};
+		for (std::size_t e {}; e < source.size(); ++e)
+		{
+			const auto& el {surface.elements()[e]};
+			const std::size_t idx {t * source.size() + e};
+			const auto n {cartesian_normal(el)};
+
+			// u_par = u_z, b_hat = Z_hat, so the parallel velocity into
+			// the wall is -u_z n_z
+			const double expected {p.n * std::max(0.0, -p.u[2] * n[2])};
+			EXPECT_NEAR(source.flux_par()[idx], -p.n * p.u[2] * n[2],
+				1e-6 * p.n * p.u[2]);
+			EXPECT_NEAR(source.flux()[idx], expected, 1e-6 * p.n * p.u[2]);
+			EXPECT_NEAR(source.flux_exb()[idx], 0.0, 1e-6);
+			EXPECT_NEAR(source.energy()[idx], e_sheath + 2.0 * p.ti, 1e-10);
+			EXPECT_NEAR(source.yield()[idx], 0.02, 1e-14);
+			EXPECT_NEAR(source.rate()[idx], expected * 0.02 * el.area,
+				1e-6 * p.n * p.u[2] * 0.02 * el.area);
+			total += source.rate()[idx];
+
+			// On the outline, n_Z = -1 / sqrt(2), so it's n u / sqrt(2)
+			if (!el.fallback)
+			{
+				EXPECT_NEAR(source.flux()[idx], p.n * p.u[2]
+					/ std::sqrt(2.0), 1e-6 * p.n * p.u[2]);
+			}
+		}
+		EXPECT_NEAR(source.total_rate()[t], total, 1e-9 * total);
+	}
+	EXPECT_NEAR(source.mean_total_rate(), source.total_rate()[0],
+		1e-9 * source.total_rate()[0]);
+	EXPECT_EQ(source.num_above_table(), 0);
+}
+
+// The E x B drift adds to the flux onto the wall. With B along Z and E
+// along Y, v_E = E / B along X. "parallel" leaves it out. Flow away from
+// the wall gives no flux.
+TEST_F(SputteringTable, SourceExB)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	Plasma p {};
+	p.E = {0.0, 5e3, 0.0};
+	const double v_E {p.E[1] / p.B[2]};
+	const auto bkg {diagonal_with_plasma(p)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg, table, source_options());
+
+	auto opts_par {source_options()};
+	opts_par.set_sput_flux_opt("parallel");
+	const Sputtering::Source par(surface, bkg, table, opts_par);
+
+	for (std::size_t e {}; e < source.size(); ++e)
+	{
+		const auto n {cartesian_normal(surface.elements()[e])};
+		const double f_par {-p.n * p.u[2] * n[2]};
+		const double f_exb {-p.n * v_E * n[0]};
+		const double scale {p.n * p.u[2]};
+		EXPECT_NEAR(source.flux_exb()[e], f_exb, 1e-6 * scale);
+		EXPECT_NEAR(source.flux()[e], std::max(0.0, f_par + f_exb),
+			1e-6 * scale);
+		EXPECT_NEAR(par.flux()[e], std::max(0.0, f_par), 1e-6 * scale);
+		EXPECT_NEAR(par.flux_exb()[e], f_exb, 1e-6 * scale);
+	}
+
+	// Flow down, away from the wall: no parallel flux into it
+	Plasma away {};
+	away.u = {0.0, 0.0, -1e4};
+	const auto bkg_away {diagonal_with_plasma(away)};
+	const Sputtering::Source none(Sputtering::Surface {bkg_away}, bkg_away,
+		table, source_options());
+	for (std::size_t e {}; e < none.size(); ++e)
+	{
+		const auto n {cartesian_normal(none.surface().elements()[e])};
+		if (n[2] < 0.0) EXPECT_EQ(none.flux()[e], 0.0);
+	}
+}
+
+// With the Bohm floor, a slow parallel flow onto the wall is replaced by
+// the sound speed, sqrt(e (Te + Ti) / m_i)
+TEST_F(SputteringTable, SourceBohmFloor)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	Plasma p {};
+	p.u = {0.0, 0.0, 10.0};
+	const auto bkg {diagonal_with_plasma(p)};
+	const Sputtering::Surface surface(bkg);
+	auto opts {source_options()};
+	opts.set_sput_bohm_floor("on");
+	const Sputtering::Source source(surface, bkg, table, opts);
+
+	const double c_s {std::sqrt(1.602e-19 * (p.te + p.ti)
+		/ (mi_amu * 1.661e-27))};
+	for (std::size_t e {}; e < source.size(); ++e)
+	{
+		const auto n {cartesian_normal(surface.elements()[e])};
+		EXPECT_NEAR(source.flux_par()[e], p.n * std::max(-p.u[2] * n[2],
+			c_s * std::abs(n[2])), 1e-6 * p.n * c_s);
+	}
+}
+
+// A table for the wrong impurity or projectile, or a bad angle, stops the
+// run. A projectile mass far from the background's, or energies past the
+// end of the table, are reported.
+TEST_F(SputteringTable, SourceChecks)
+{
+	const auto bkg {diagonal_with_plasma(Plasma {})};
+	const Sputtering::Surface surface(bkg);
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+
+	auto carbon {source_options()};
+	carbon.set_imp_atom_num(6);
+	EXPECT_EXIT(Sputtering::Source(surface, bkg, table, carbon),
+		testing::ExitedWithCode(EXIT_FAILURE), "imp_atom_num");
+
+	auto angle {source_options()};
+	angle.set_sput_angle_val(95.0);
+	EXPECT_EXIT(Sputtering::Source(surface, bkg, table, angle),
+		testing::ExitedWithCode(EXIT_FAILURE), "sput_angle_val");
+
+	Table helium {constant_table(0.02)};
+	helium.projectile_Z = 2.0;
+	write(helium);
+	EXPECT_EXIT(Sputtering::Source(surface, bkg,
+		Sputtering::YieldTable {m_path}, source_options()),
+		testing::ExitedWithCode(EXIT_FAILURE), "Z = 2");
+
+	// Heavier background ions than the table's projectile
+	auto heavy {diagonal_with_plasma(Plasma {})};
+	heavy.set_ion_mass_amu(4.0);
+	const Sputtering::Source mass(surface, heavy, table, source_options());
+	std::ostringstream out {};
+	mass.print_summary(out);
+	EXPECT_NE(out.str().find("more than 5% off"), std::string::npos);
+
+	// A table that ends at 50 eV, below every impact energy
+	Table low {constant_table(0.02)};
+	low.energy = {1.0, 10.0, 20.0, 50.0};
+	write(low);
+	const Sputtering::Source above(surface, bkg,
+		Sputtering::YieldTable {m_path}, source_options());
+	EXPECT_EQ(above.num_above_table(),
+		static_cast<int>(2 * surface.size()));
 }

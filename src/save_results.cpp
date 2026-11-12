@@ -40,6 +40,7 @@
 #include "netcdf"
 #include "options.h"
 #include "save_results.h"
+#include "sputtering.h"
 #include "vectors.h"
 #include "zones.h"
 
@@ -54,13 +55,16 @@ namespace SaveResults
 	* @param bkg Background plasma, saved along with the grids and geometry.
 	* @param imp_stats Impurity statistics to save.
 	* @param opts Simulation options, saved in the input group.
+	* @param source Sputtered source, saved in the sputtering group if
+	*        given (imp_source_opt = "sputter").
 	*/
 	void save_results(const Background::Background& bkg, 
-		Impurity::Statistics& imp_stats, const Options::Options& opts)
+		Impurity::Statistics& imp_stats, const Options::Options& opts,
+		const Sputtering::Source* source)
 	{
 		// Right now this is just a redirect to the netcdf option. I built 
 		// it this way to allow other save options in the future if desired.
-		save_netcdf(bkg, imp_stats, opts);
+		save_netcdf(bkg, imp_stats, opts, source);
 	
 	}
 
@@ -447,6 +451,24 @@ namespace SaveResults
 			"name of SOLEDGE3X reference (normalization) file");
 		save_string(input_group, opts.s3x_chi_absorb(), "s3x_chi_absorb", dim_str,
 			"absorb particles inside the SOLEDGE3X wall option");
+
+		// Sputtering
+		save_string(input_group, opts.imp_source_opt(), "imp_source_opt",
+			dim_str, "where impurities come from option");
+		save_string(input_group, opts.sput_table_file(), "sput_table_file",
+			dim_str, "sputtering yield table file");
+		save_string(input_group, opts.sput_flux_opt(), "sput_flux_opt",
+			dim_str, "flow carrying ions onto the wall option");
+		save_string(input_group, opts.sput_bohm_floor(), "sput_bohm_floor",
+			dim_str, "parallel flow onto the wall at least the sound speed "
+			"option");
+		save_scalar(input_group, opts.sput_angle_val(), "sput_angle_val",
+			dim_scalar, "angle of incidence of ions on the wall from the "
+			"normal", "(degrees)");
+		save_scalar(input_group, opts.sput_max_wall_dist(),
+			"sput_max_wall_dist", dim_scalar, "distance from the wall outline "
+			"a wall face can be before falling back to its own normal",
+			"(cell widths)");
 
 		// Geometry and boundaries
 		save_string(input_group, opts.tbound_type(), "tbound_type", 
@@ -1210,6 +1232,127 @@ namespace SaveResults
 	}
 
 	/**
+	* Saves the sputtered source in a sputtering group.
+	*
+	* The group has an element dimension, one per surface element (see
+	* Sputtering::Surface), and uses the file's time dimension. Per element:
+	* where it is (zone, numbered from 1, the plasma cell's i, j and k, and
+	* which face of it is on the wall, 0 to 5 for xmin, xmax, ymin, ymax,
+	* zmin, zmax), its face's corners and middle in (R, Z), its range of
+	* phi, its normal into the plasma, its area and its face's area, how far
+	* it is from the wall outline, and whether it fell back to its face's
+	* own normal. Per time frame and element: the ion flux onto the wall and
+	* its parallel and E x B parts, the mean impact energy, the effective
+	* yield and the sputtered rate. Per time frame: the total rate.
+	*
+	* @param nc_file File to save into. The time dimension must already
+	*        exist.
+	* @param source The sputtered source.
+	* @param opts Simulation options, for the table file and settings saved
+	*        as attributes.
+	*/
+	void save_sputtering(const netCDF::NcFile& nc_file,
+		const Sputtering::Source& source, const Options::Options& opts)
+	{
+		netCDF::NcGroup group {nc_file.addGroup("sputtering")};
+		const netCDF::NcDim dim_time {nc_file.getDim("time")};
+		const std::size_t n {source.size()};
+		const netCDF::NcDim dim_elem {group.addDim("element", n)};
+		const auto& elements {source.surface().elements()};
+
+		group.putAtt("sput_table_file", opts.sput_table_file());
+		group.putAtt("sput_flux_opt", opts.sput_flux_opt());
+		group.putAtt("sput_bohm_floor", opts.sput_bohm_floor());
+		group.putAtt("sput_angle_val", netCDF::ncDouble,
+			opts.sput_angle_val());
+
+		// Per element
+		auto ints = [&](auto get)
+		{
+			std::vector<int> v(n);
+			for (std::size_t e {}; e < n; ++e) v[e] = get(elements[e]);
+			return v;
+		};
+		auto doubles = [&](auto get)
+		{
+			std::vector<double> v(n);
+			for (std::size_t e {}; e < n; ++e) v[e] = get(elements[e]);
+			return v;
+		};
+		using E = Sputtering::SurfaceElement;
+		save_vector_1d(group, ints([](const E& e) {return e.zone + 1;}),
+			"zone", dim_elem, "zone of the plasma cell (from 1)", "");
+		save_vector_1d(group, ints([](const E& e) {return e.i;}), "i",
+			dim_elem, "x index of the plasma cell", "");
+		save_vector_1d(group, ints([](const E& e) {return e.j;}), "j",
+			dim_elem, "y index of the plasma cell", "");
+		save_vector_1d(group, ints([](const E& e) {return e.k;}), "k",
+			dim_elem, "z index of the plasma cell", "");
+		save_vector_1d(group, ints([](const E& e)
+			{return static_cast<int>(e.face);}), "face", dim_elem,
+			"face of the plasma cell on the wall (0 to 5: xmin, xmax, ymin, "
+			"ymax, zmin, zmax)", "");
+		save_vector_1d(group, doubles([](const E& e) {return e.R0;}), "R0",
+			dim_elem, "R of the face's first corner", "(m)");
+		save_vector_1d(group, doubles([](const E& e) {return e.Z0;}), "Z0",
+			dim_elem, "Z of the face's first corner", "(m)");
+		save_vector_1d(group, doubles([](const E& e) {return e.R1;}), "R1",
+			dim_elem, "R of the face's second corner", "(m)");
+		save_vector_1d(group, doubles([](const E& e) {return e.Z1;}), "Z1",
+			dim_elem, "Z of the face's second corner", "(m)");
+		save_vector_1d(group, doubles([](const E& e) {return e.R_mid;}),
+			"R_mid", dim_elem, "R of the middle of the face", "(m)");
+		save_vector_1d(group, doubles([](const E& e) {return e.Z_mid;}),
+			"Z_mid", dim_elem, "Z of the middle of the face", "(m)");
+		save_vector_1d(group, doubles([](const E& e) {return e.phi_min;}),
+			"phi_min", dim_elem, "toroidal angle at one side", "(rad)");
+		save_vector_1d(group, doubles([](const E& e) {return e.phi_max;}),
+			"phi_max", dim_elem, "toroidal angle at the other side", "(rad)");
+		save_vector_1d(group, doubles([](const E& e) {return e.n_R;}), "n_R",
+			dim_elem, "R part of the unit normal into the plasma", "");
+		save_vector_1d(group, doubles([](const E& e) {return e.n_Z;}), "n_Z",
+			dim_elem, "Z part of the unit normal into the plasma", "");
+		save_vector_1d(group, doubles([](const E& e) {return e.area;}),
+			"area", dim_elem, "area of wall the element stands for", "(m2)");
+		save_vector_1d(group, doubles([](const E& e) {return e.area_face;}),
+			"area_face", dim_elem, "area of the cell face itself", "(m2)");
+		save_vector_1d(group, doubles([](const E& e) {return e.wall_dist;}),
+			"wall_dist", dim_elem, "distance from the middle of the face to "
+			"the wall outline", "(m)");
+		save_vector_1d(group, ints([](const E& e)
+			{return static_cast<int>(e.fallback);}), "fallback", dim_elem,
+			"1 if no wall outline segment was close, so the face's own "
+			"normal and area are used", "");
+
+		// Per time frame and element
+		auto save_2d = [&](const std::vector<double>& v,
+			const std::string& name, const std::string& description,
+			const std::string& units)
+		{
+			netCDF::NcVar var {group.addVar(name, netCDF::ncDouble,
+				{dim_time, dim_elem})};
+			var.putVar(v.data());
+			var.putAtt("description", description);
+			var.putAtt("units", units);
+		};
+		save_2d(source.flux(), "flux", "ion flux onto the wall", "(m-2 s-1)");
+		save_2d(source.flux_par(), "flux_par", "parallel part of the ion "
+			"flux onto the wall (positive into the wall)", "(m-2 s-1)");
+		save_2d(source.flux_exb(), "flux_exb", "E x B part of the ion flux "
+			"onto the wall (positive into the wall)", "(m-2 s-1)");
+		save_2d(source.energy(), "energy", "mean energy of the ions hitting "
+			"the wall", "(eV)");
+		save_2d(source.yield(), "yield", "sputtering yield averaged over the "
+			"energies of the ions hitting the wall", "(atoms/ion)");
+		save_2d(source.rate(), "rate", "rate atoms are sputtered off the "
+			"element", "(atoms/s)");
+
+		// Per time frame
+		save_vector_1d(group, source.total_rate(), "total_rate", dim_time,
+			"rate atoms are sputtered off the whole wall", "(atoms/s)");
+	}
+
+	/**
 	* Saves everything into a netCDF file named <case_name>.nc.
 	*
 	* An existing file with that name is deleted first. The dimensions are
@@ -1221,9 +1364,12 @@ namespace SaveResults
 	*        the geometry and background groups.
 	* @param imp_stats Impurity statistics to save.
 	* @param opts Simulation options.
+	* @param source Sputtered source, saved in the sputtering group if
+	*        given.
 	*/
 	void save_netcdf(const Background::Background& bkg, 
-		Impurity::Statistics& imp_stats, const Options::Options& opts)
+		Impurity::Statistics& imp_stats, const Options::Options& opts,
+		const Sputtering::Source* source)
 	{
 		std::cout << "Saving netCDF file...\n";
 
@@ -1304,6 +1450,8 @@ namespace SaveResults
 				"time for each frame", "(s)");
 			save_zones(nc_file, opts, bkg, imp_stats);
 		}
+
+		if (source != nullptr) save_sputtering(nc_file, *source, opts);
 
 		std::cout << "Saved as " << nc_filename << '\n';
 	}

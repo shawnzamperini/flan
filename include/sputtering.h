@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "background.h"
+#include "options.h"
 #include "zones.h"
 
 
@@ -112,6 +113,67 @@ namespace Sputtering
 		std::size_t size() const;
 		int num_fallback() const;
 		double total_area() const;
+
+		void print_summary(std::ostream& os) const;
+	};
+
+	double sheath_energy(double te, double ti, double elec_mass_amu,
+		double ion_mass_amu, int charge);
+
+	/// An effective yield and how much of the energy distribution was past
+	/// the end of the yield table
+	struct EffectiveYield
+	{
+		double yield {};		///< Yield averaged over the energies
+		double frac_above {};	///< Fraction of ions above the table
+	};
+
+	EffectiveYield effective_yield(const YieldTable& table, double e_sheath,
+		double ti, double angle);
+
+	/**
+	* The rate atoms are sputtered off each surface element by the
+	* background plasma, in each background time frame. See sputtering.cpp
+	* for how it's calculated and the member function docs.
+	*
+	* Per-element values are stored for every frame, frame by frame: the
+	* value for frame t and element e is at index t * size() + e of the
+	* vectors.
+	*/
+	class Source
+	{
+	private:
+		Surface m_surface {};				///< The surface elements
+		int m_nframes {};					///< Number of time frames
+		std::vector<double> m_flux {};		///< Ion flux onto the wall
+		std::vector<double> m_flux_par {};	///< Parallel part of the flux
+		std::vector<double> m_flux_exb {};	///< E x B part of the flux
+		std::vector<double> m_energy {};	///< Mean impact energy (eV)
+		std::vector<double> m_yield {};		///< Effective yield
+		std::vector<double> m_rate {};		///< Sputtered atoms/s
+		std::vector<double> m_total_rate {};	///< Sum over elements, per frame
+		int m_num_above_table {};	///< Element-frames past the table
+		std::vector<std::string> m_warnings {};	///< For print_summary
+
+	public:
+
+		Source() = default;
+
+		Source(const Surface& surface, const Background::Background& bkg,
+			const YieldTable& table, const Options::Options& opts);
+
+		const Surface& surface() const;
+		std::size_t size() const;
+		int nframes() const;
+		const std::vector<double>& flux() const;
+		const std::vector<double>& flux_par() const;
+		const std::vector<double>& flux_exb() const;
+		const std::vector<double>& energy() const;
+		const std::vector<double>& yield() const;
+		const std::vector<double>& rate() const;
+		const std::vector<double>& total_rate() const;
+		double mean_total_rate() const;
+		int num_above_table() const;
 
 		void print_summary(std::ostream& os) const;
 	};

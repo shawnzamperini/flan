@@ -251,6 +251,48 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "imp_source_opt")
+			{
+				auto set_func = std::bind(&Options::set_imp_source_opt, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_table_file")
+			{
+				auto set_func = std::bind(&Options::set_sput_table_file, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_flux_opt")
+			{
+				auto set_func = std::bind(&Options::set_sput_flux_opt, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_bohm_floor")
+			{
+				auto set_func = std::bind(&Options::set_sput_bohm_floor, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_angle_val")
+			{
+				auto set_func = std::bind(&Options::set_sput_angle_val, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "sput_max_wall_dist")
+			{
+				auto set_func = std::bind(&Options::set_sput_max_wall_dist, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "min_ne")
 			{
 				auto set_func = std::bind(&Options::set_min_ne, &opts,

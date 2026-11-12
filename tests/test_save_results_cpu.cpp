@@ -2,7 +2,7 @@
 * Tests for saving results to netCDF (save_results.cpp): a single-zone
 * background keeps the original layout, and a multi-zone (SOLEDGE3X)
 * background gets a zones group and one group per zone, with interior
-* cells only.
+* cells only. A sputtered source is saved in a sputtering group.
 */
 
 #include <cmath>
@@ -19,6 +19,7 @@
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
 #include "save_results.h"
+#include "sputtering.h"
 
 
 namespace
@@ -170,4 +171,61 @@ TEST_F(SaveResultsTest, MultiZoneLayout)
 	ASSERT_EQ(R.size(), 9u * 41u);
 	EXPECT_NEAR(R[0], mesh.R0 + mesh.a0 * mesh.r_mid, 1e-12);
 	EXPECT_NEAR(Z[0], 0.0, 1e-12);
+}
+
+// The sputtered source of a SOLEDGE3X background is saved in a sputtering
+// group, with an element dimension, per-element values and per frame and
+// element values
+TEST_F(SaveResultsTest, Sputtering)
+{
+	const S3XTest::TestMesh mesh {};
+	S3XTest::write_case(m_dir.string(), mesh,
+		[&](const std::string& path)
+		{return S3X::read_mesh(path, mesh.nphi).zones;});
+	Options::Options opts {};
+	opts.set_bkg_source("soledge3x");
+	opts.set_s3x_dir(m_dir.string());
+	opts.set_s3x_frame_start(0);
+	opts.set_s3x_frame_end(1);
+	opts.set_case_name(case_name());
+	opts.set_imp_source_opt("sputter");
+	opts.set_sput_table_file(std::string {FLAN_SOURCE_DIR}
+		+ "/data/sputtering/D_on_W.h5");
+	const auto bkg {Background::read_bkg(opts)};
+
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::YieldTable table(opts.sput_table_file());
+	const Sputtering::Source source(surface, bkg, table, opts);
+	Impurity::Statistics stats {bkg};
+	stats.calc_density(bkg, 1);
+	SaveResults::save_results(bkg, stats, opts, &source);
+
+	const netCDF::NcFile file {nc_path(), netCDF::NcFile::read};
+	const netCDF::NcGroup group {file.getGroup("sputtering")};
+	ASSERT_FALSE(group.isNull());
+	const std::size_t n {source.size()};
+	ASSERT_EQ(group.getDim("element").getSize(), n);
+
+	// Zone 3's last psi row is the wall, seen from the row below it
+	for (const int zone : read_var<int>(group, "zone")) EXPECT_EQ(zone, 3);
+	EXPECT_EQ(read_var<int>(group, "i")[0], mesh.npsi_sol - 2);
+	EXPECT_EQ(read_var<double>(group, "area")[5],
+		surface.elements()[5].area);
+
+	// Per frame and element, frame by frame
+	const auto rate {read_var<double>(group, "rate")};
+	ASSERT_EQ(rate.size(), 2 * n);
+	EXPECT_EQ(rate, source.rate());
+	EXPECT_EQ(read_var<double>(group, "flux_exb"), source.flux_exb());
+	EXPECT_EQ(read_var<double>(group, "total_rate"), source.total_rate());
+	EXPECT_GT(source.mean_total_rate(), 0.0);
+
+	std::string table_file {};
+	group.getAtt("sput_table_file").getValues(table_file);
+	EXPECT_EQ(table_file, opts.sput_table_file());
+
+	// No sputtering group without a source
+	SaveResults::save_results(bkg, stats, opts);
+	const netCDF::NcFile again {nc_path(), netCDF::NcFile::read};
+	EXPECT_TRUE(again.getGroup("sputtering").isNull());
 }
