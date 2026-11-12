@@ -51,6 +51,12 @@ add_executable(test_hdf5_utils_cpu test_hdf5_utils_cpu.cpp)
 target_link_libraries(test_hdf5_utils_cpu PRIVATE flan gtest_main hdf5)
 add_test(NAME Hdf5UtilsCPUTest COMMAND test_hdf5_utils_cpu)
 
+add_executable(test_sputtering_cpu test_sputtering_cpu.cpp)
+target_link_libraries(test_sputtering_cpu PRIVATE flan gtest_main hdf5)
+target_compile_definitions(test_sputtering_cpu PRIVATE
+	FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+add_test(NAME SputteringCPUTest COMMAND test_sputtering_cpu)
+
 add_executable(test_read_s3xe_cpu test_read_s3xe_cpu.cpp)
 target_link_libraries(test_read_s3xe_cpu PRIVATE flan gtest_main hdf5)
 add_test(NAME ReadS3XECPUTest COMMAND test_read_s3xe_cpu)

@@ -35,6 +35,7 @@ nav:
       - Impurity Transport: physics/impurity-transport.md
       - Collisions: physics/collisions.md
       - Ionization/Recombination: physics/ionization-recombination.md
+      - Sputtering: physics/sputtering.md
   - Developer:
       - Code Structure: developer/code-structure.md
       - MPI Parallelism: developer/mpi-parallelism.md
