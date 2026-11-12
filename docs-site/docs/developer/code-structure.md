@@ -18,7 +18,7 @@ source code.
 | `include/cuda/` | Headers for `src/cuda/`, and the small inline helpers used inside kernels (interpolation, indexing, ...). |
 | `tests/` | Unit tests (GoogleTest), run with `ctest`. |
 | `regression/` | Input files for the test cases (drifts, friction force) and a blank input file to start from. |
-| `python/` | Helper scripts: reading Gkeyll data with postgkyl (`read_gkyl.py`), generating the Nanbu table (`calc_nanbu_A.py`), making sputtering yield tables with RustBCA (`rustbca_yields.py`) and plotting (`flan_plots.py`). |
+| `python/` | Helper scripts: reading Gkeyll data with postgkyl (`read_gkyl.py`), generating the Nanbu table (`calc_nanbu_A.py`), making sputtering yield tables with RustBCA (`rustbca_yields.py`) and plotting (`flan_plots.py`, `plot_s3x_nz.py` for multi-zone runs, `plot_sputtering.py` for sputtering runs). |
 | `data/sputtering/` | Sputtering yield tables made by `python/rustbca_yields.py`, e.g., `D_on_W.h5`. |
 | `scripts/` | Case setup (`flan_setup.sh`) and job submission scripts. |
 | `docs-site/` | This website. |

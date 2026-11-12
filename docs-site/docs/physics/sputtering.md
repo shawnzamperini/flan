@@ -392,6 +392,70 @@ its strong electric field. Prompt redeposition, of atoms that come back
 within their first gyration after ionizing, is underestimated until the
 sheath is resolved.
 
+## Running a case and what to expect
+
+### Setting up a run
+
+- **Particles.** Each wall element only gets a few particles unless
+  `imp_num` is well above the number of elements (thousands per toroidal
+  plane times the toroidal cells), so per-element maps like the net
+  erosion are noisy at 10$^4$ particles and need 10$^5$ or more. Totals
+  (the share redeposited, the inventory) settle much sooner.
+- **Time step.** The time step has to resolve the gyration of the ions:
+  the gyroperiod of a W ion is $2\pi m/(ZeB)$, about 5 µs for W$^{+}$ and
+  0.6 µs for W$^{8+}$ at 2.4 T. 10$^{-8}$ s still gives tens of steps per
+  orbit for the charge states seen near the wall.
+- **Maximum time.** Most sputtered atoms come back within microseconds,
+  but the few that get away set how much impurity leaves the divertor.
+  `imp_max_time` should be long enough for them to finish (milliseconds),
+  or the impurity away from the targets is underestimated. The number that
+  hit it is saved as the `fates_max_time` attribute.
+
+### Looking at the results
+
+`python/plot_sputtering.py` summarizes and plots a run:
+
+```bash
+python python/plot_sputtering.py case.nc --mesh /path/to/mesh_S3X.h5 --save case
+```
+
+It prints the source, the share redeposited, what happened to the
+particles, the mean time a particle was followed and the impurity
+inventory per zone and above the X-point, checked against the source
+times the mean time followed. It plots the gross and net erosion along
+the wall, when the redeposited atoms landed (with the gyroperiod of a
+singly charged ion at the strongest source marked) and their charge.
+`python/plot_s3x_nz.py` shows the impurity density.
+
+### What to expect
+
+For deuterium sputtering tungsten near threshold:
+
+- **Most atoms come straight back.** The sputtered atoms are slow (a few
+  eV), so they ionize a fraction of a millimeter from the wall, much
+  closer than their gyroradius (millimeters). Most land back on the wall
+  within their first gyration, in a microsecond or so, after one or two
+  more ionizations. The ratio of the ionization length to the gyroradius,
+  $p = \lambda_\text{iz}/\rho$, sets this: the share that comes back
+  promptly is about $1/(1 + p^2)$ (Fussmann et al., 1995).
+- **The ones that get away set the leakage.** The few percent that
+  escape prompt redeposition carry the impurity along the field lines,
+  and where they go is decided by the parallel forces on them.
+- **Two missing pieces push in opposite directions.**
+    - Without the sheath's electric field, fewer ions are pulled back to
+      the wall right away, so prompt redeposition is underestimated and
+      more atoms escape than should.
+    - Without the thermal force in the collision model (see the warning at
+      the start of a run), the ions that escape aren't pushed away from
+      the target by the ion temperature gradient. For a high-Z impurity
+      near the target that force can be much stronger than the friction
+      with the main ion flow, so leakage away from the target is
+      underestimated.
+
+  Both are planned. Until then, the redeposited share and the prompt
+  landing times are the most trustworthy results, and the impurity away
+  from the targets is the least.
+
 ## Making a new table
 
 Activate the `flan` environment, which has RustBCA, and run the script
@@ -514,6 +578,8 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
 - **Sputtered atoms' distributions.** The Thompson energy and cosine
   angle distributions are the usual approximations. RustBCA could give the
   real distributions for each impact energy and angle instead.
+- **No sheath and no thermal force yet.** See
+  [What to expect](#what-to-expect).
 
 ## References
 
@@ -526,3 +592,6 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
   IPP Report 9/132 (2002).
 - M. W. Thompson, "The energy spectrum of ejected atoms during the high
   energy sputtering of gold", *Philos. Mag.* **18**, 377 (1968).
+- G. Fussmann et al., "High-Z elements as target materials in fusion
+  devices", in *Plasma Physics and Controlled Nuclear Fusion Research
+  1994*, IAEA, Vol. 2, p. 143 (1995).
