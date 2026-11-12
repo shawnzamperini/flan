@@ -1092,12 +1092,15 @@ namespace ImpurityTransport
 	*        Only used on CPUs.
 	* @param deposition If given, where absorbed particles land on the wall
 	*        is added to it. Only used on CPUs.
+	* @param fates_out If given, set to what happened to the particles,
+	*        summed over every rank, on rank 0 (CPU only).
 	* @return Impurity statistics accumulated from every particle followed
 	*         on this rank.
 	*/
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer,
-		const Sputtering::Source* source, Sputtering::Deposition* deposition)
+		const Sputtering::Source* source, Sputtering::Deposition* deposition,
+		Boundary::Fates* fates_out)
 	{
 		
 #ifdef DEBUG
@@ -1367,7 +1370,13 @@ namespace ImpurityTransport
 
 		print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
 			recomb_warnings);
-		Boundary::print_fates(fates);
+
+		// Sum the fates over the ranks, with the particles that ran out of
+		// time (counted separately while following them)
+		Boundary::Fates with_time {fates};
+		with_time.max_time = max_time_ctr;
+		const Boundary::Fates total {Boundary::print_fates(with_time)};
+		if (fates_out != nullptr) *fates_out = total;
 
 		return imp_stats;
 	}  // follow_impurities

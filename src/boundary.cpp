@@ -47,6 +47,7 @@ namespace Boundary
 		core += other.core;
 		time_end += other.time_end;
 		runaway += other.runaway;
+		max_time += other.max_time;
 		return *this;
 	}
 
@@ -56,20 +57,22 @@ namespace Boundary
 	* Must be called by every rank.
 	*
 	* @param fates This rank's counts.
+	* @return The sums over every rank on rank 0. Other ranks get their own
+	*         counts back.
 	*/
-	void print_fates(const Fates& fates)
+	Fates print_fates(const Fates& fates)
 	{
-		std::array<long long, 7> local {fates.crossings, fates.absorbed,
+		std::array<long long, 8> local {fates.crossings, fates.absorbed,
 			fates.wall, fates.chi, fates.core, fates.time_end,
-			fates.runaway};
-		std::array<long long, 7> total {};
+			fates.runaway, fates.max_time};
+		std::array<long long, 8> total {};
 		MPI_Reduce(local.data(), total.data(),
 			static_cast<int>(local.size()), MPI_LONG_LONG, MPI_SUM, 0,
 			MPI_COMM_WORLD);
 
 		int rank {};
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		if (rank != 0) return;
+		if (rank != 0) return fates;
 
 		std::cout << "Particle fates at the boundaries:\n"
 			<< "  " << total[0] << " crossings into another zone\n"
@@ -84,6 +87,17 @@ namespace Boundary
 			std::cout << "  " << total[6] << " absorbed after crossing too "
 				"many zone faces in one step\n";
 		}
+
+		Fates sum {};
+		sum.crossings = total[0];
+		sum.absorbed = total[1];
+		sum.wall = total[2];
+		sum.chi = total[3];
+		sum.core = total[4];
+		sum.time_end = total[5];
+		sum.runaway = total[6];
+		sum.max_time = total[7];
+		return sum;
 	}
 
 	/**

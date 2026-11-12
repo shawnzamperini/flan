@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "background.h"
+#include "boundary.h"
 #include "impurity_stats.h"
 #include "netcdf"
 #include "options.h"
@@ -204,7 +205,10 @@ TEST_F(SaveResultsTest, Sputtering)
 		source.surface().elements()[3].j, 1e-5, 2, 7.0);
 	Impurity::Statistics stats {bkg};
 	stats.calc_density(bkg, 1);
-	SaveResults::save_results(bkg, stats, opts, &source, &dep);
+	Boundary::Fates fates {};
+	fates.chi = 151;
+	fates.max_time = 47;
+	SaveResults::save_results(bkg, stats, opts, &source, &dep, &fates);
 
 	const netCDF::NcFile file {nc_path(), netCDF::NcFile::read};
 	const netCDF::NcGroup group {file.getGroup("sputtering")};
@@ -242,6 +246,15 @@ TEST_F(SaveResultsTest, Sputtering)
 	double total {};
 	group.getAtt("redeposited_total").getValues(&total);
 	EXPECT_DOUBLE_EQ(total, 7.0);
+
+	// What happened to the particles, as counts
+	long long chi {}, max_time {}, core {-1};
+	group.getAtt("fates_chi").getValues(&chi);
+	group.getAtt("fates_max_time").getValues(&max_time);
+	group.getAtt("fates_core").getValues(&core);
+	EXPECT_EQ(chi, 151);
+	EXPECT_EQ(max_time, 47);
+	EXPECT_EQ(core, 0);
 
 	// No sputtering group without a source
 	SaveResults::save_results(bkg, stats, opts);

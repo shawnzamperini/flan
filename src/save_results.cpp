@@ -59,15 +59,18 @@ namespace SaveResults
 	*        given (imp_source_opt = "sputter").
 	* @param deposition Where the sputtered atoms landed back on the wall,
 	*        saved in the sputtering group if given along with source.
+	* @param fates What happened to the particles, saved as attributes of
+	*        the sputtering group if given along with source.
 	*/
 	void save_results(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts,
 		const Sputtering::Source* source,
-		const Sputtering::Deposition* deposition)
+		const Sputtering::Deposition* deposition,
+		const Boundary::Fates* fates)
 	{
 		// Right now this is just a redirect to the netcdf option. I built 
 		// it this way to allow other save options in the future if desired.
-		save_netcdf(bkg, imp_stats, opts, source, deposition);
+		save_netcdf(bkg, imp_stats, opts, source, deposition, fates);
 	
 	}
 
@@ -1260,10 +1263,13 @@ namespace SaveResults
 	* @param opts Simulation options, for the table file and settings saved
 	*        as attributes.
 	* @param deposition Where the atoms landed, or nullptr.
+	* @param fates What happened to the particles (counts of particles,
+	*        not weighted), saved as fates_* attributes, or nullptr.
 	*/
 	void save_sputtering(const netCDF::NcFile& nc_file,
 		const Sputtering::Source& source, const Options::Options& opts,
-		const Sputtering::Deposition* deposition)
+		const Sputtering::Deposition* deposition,
+		const Boundary::Fates* fates)
 	{
 		netCDF::NcGroup group {nc_file.addGroup("sputtering")};
 		const netCDF::NcDim dim_time {nc_file.getDim("time")};
@@ -1280,6 +1286,22 @@ namespace SaveResults
 		group.putAtt("source_rate_description", "total rate atoms are "
 			"sputtered off the wall, averaged over the frames' time windows "
 			"(atoms/s). Each particle stands for source_rate / imp_num.");
+
+		// What happened to the particles, as counts of particles
+		if (fates != nullptr)
+		{
+			const std::vector<std::pair<std::string, long long>> counts {
+				{"fates_crossings", fates->crossings},
+				{"fates_absorbed", fates->absorbed},
+				{"fates_wall_face", fates->wall},
+				{"fates_chi", fates->chi},
+				{"fates_core", fates->core},
+				{"fates_time_end", fates->time_end},
+				{"fates_runaway", fates->runaway},
+				{"fates_max_time", fates->max_time}};
+			for (const auto& [name, count] : counts)
+				group.putAtt(name, netCDF::ncInt64, count);
+		}
 
 		// Per element
 		auto ints = [&](auto get)
@@ -1421,11 +1443,14 @@ namespace SaveResults
 	*        given.
 	* @param deposition Where the sputtered atoms landed back on the wall,
 	*        saved in the sputtering group if given along with source.
+	* @param fates What happened to the particles, saved as attributes of
+	*        the sputtering group if given along with source.
 	*/
 	void save_netcdf(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts,
 		const Sputtering::Source* source,
-		const Sputtering::Deposition* deposition)
+		const Sputtering::Deposition* deposition,
+		const Boundary::Fates* fates)
 	{
 		std::cout << "Saving netCDF file...\n";
 
@@ -1508,7 +1533,7 @@ namespace SaveResults
 		}
 
 		if (source != nullptr)
-			save_sputtering(nc_file, *source, opts, deposition);
+			save_sputtering(nc_file, *source, opts, deposition, fates);
 
 		std::cout << "Saved as " << nc_filename << '\n';
 	}

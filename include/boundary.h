@@ -33,11 +33,13 @@ namespace Boundary
 		long long core {};		///< Put back in at a core face
 		long long time_end {};	///< Reached the end of the background time
 		long long runaway {};	///< Absorbed after too many crossings
+		long long max_time {};	///< Followed longer than imp_max_time (set
+								///< by follow_impurities, not here)
 
 		Fates& operator+=(const Fates& other);
 	};
 
-	void print_fates(const Fates& fates);
+	Fates print_fates(const Fates& fates);
 
 	int absorbing_bc(double a, double bound, bool max_bound,
 		double buffer = 0.0);

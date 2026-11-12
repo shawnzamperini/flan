@@ -5,6 +5,7 @@
 #pragma once
 
 #include "background.h"
+#include "boundary.h"
 #include "options.h"
 #include "impurity_stats.h"
 #include "timer.h"
@@ -19,5 +20,6 @@ namespace ImpurityTransport
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer,
 		const Sputtering::Source* source = nullptr,
-		Sputtering::Deposition* deposition = nullptr);
+		Sputtering::Deposition* deposition = nullptr,
+		Boundary::Fates* fates_out = nullptr);
 }

@@ -14,6 +14,7 @@
 #include <string>
 
 #include "background.h"
+#include "boundary.h"
 #include "config.h"
 #include "errors.h"
 #include "flan.h"
@@ -176,9 +177,10 @@ R"(
 
 	// Begin main particle following loop.
 	timer.start(Timer::Section::Imp);
+	Boundary::Fates fates {};
 	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
 		timer, source ? &*source : nullptr,
-		deposition ? &*deposition : nullptr)};
+		deposition ? &*deposition : nullptr, &fates)};
 	timer.stop(Timer::Section::Imp);
 
 	// Add up where the sputtered atoms landed over every rank
@@ -215,7 +217,7 @@ R"(
 		timer.start(Timer::Section::Save);
 		SaveResults::save_results(bkg, global_stats, opts,
 			source ? &*source : nullptr,
-			deposition ? &*deposition : nullptr);
+			deposition ? &*deposition : nullptr, &fates);
 		timer.stop(Timer::Section::Save);
 	}
 
