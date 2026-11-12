@@ -59,14 +59,13 @@ def load_run(nc_path):
 
 	Returns a dictionary with the sputtering group's variables and
 	attributes, the run's time step, number of particles and impurity
-	mass, and per zone the impurity density summed over the frames (see
-	below), the cell volumes, the cell-center Z, the number of time steps
-	recorded and |B| in the first frame.
+	mass, and per zone the impurity density averaged over the run, the
+	cell volumes, the cell-center Z, the number of time steps recorded and
+	|B| in the first frame.
 
-	Each frame's nz only holds the time particles spent nearest that
-	frame, divided by the cell volume, not divided by the length of time
-	the frame stands for. So the frames' nz add up to the time-averaged
-	density over the whole run, and that sum is what's kept here.
+	Each frame's nz is the density near that frame's time, the average
+	over the times nearer to it than to any other frame. The run average
+	weights each frame by the length of that window.
 	"""
 	run = {}
 	with netCDF4.Dataset(nc_path) as nc:
@@ -89,6 +88,17 @@ def load_run(nc_path):
 		run["core_zones"] = [z + 1 for z in range(nzones)
 			if (faces[:, z] == -2).any()]
 
+		# Each frame's window: half way to its neighbors, and to the ends
+		times = np.asarray(nc["geometry"]["time"][:], dtype=float)
+		if len(times) > 1:
+			mids = 0.5 * (times[1:] + times[:-1])
+			lo = np.concatenate([[times[0]], mids])
+			hi = np.concatenate([mids, [times[-1]]])
+			window = hi - lo
+		else:
+			window = np.ones(1)
+		w = window / window.sum()
+
 		run["zones"] = {}
 		for z in range(1, nzones + 1):
 			zg = nc["zone{}".format(z)]
@@ -108,7 +118,7 @@ def load_run(nc_path):
 
 			out = zg["output"]
 			run["zones"][z] = {
-				"nz": out["nz"][:].sum(axis=0),
+				"nz": np.tensordot(w, out["nz"][:], axes=1),
 				"counts": int(out["Nz"][:].sum()),
 				"vol": vol,
 				"Z_cen": Z_cen,

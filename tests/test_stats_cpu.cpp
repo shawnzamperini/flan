@@ -112,20 +112,68 @@ TEST(StatsCPU, RecordInZone)
 	EXPECT_EQ(total, 1);
 }
 
-// The density is the weight over each zone's cell volume J dx dy dz
+// The density is the weight over each zone's cell volume J dx dy dz, times
+// the frame factor. The background has frames at t = 0 and 1, so each
+// stands for 0.5 s, and a steady source over the whole background
+// (full_range) gives a factor of 1 / 0.5 = 2.
 TEST(StatsCPU, DensityPerZone)
 {
 	const auto bkg {make_background()};
 	Impurity::Statistics stats {bkg};
 	stats.get_weights()(0, 1, 2, 3, 1) = 6.0;
 	stats.get_weights()(1, 0, 1, 0, 0) = 6.0;
-	stats.calc_density(bkg, 1);
+	Options::Options opts {};
+	opts.set_imp_tstart_opt("full_range");
+	stats.calc_density(bkg, opts);
 
 	EXPECT_DOUBLE_EQ(stats.get_density()(0, 1, 2, 3, 1),
-		6.0 / (2.0 * 1.0 * 0.5 * 0.25));
+		2.0 * 6.0 / (2.0 * 1.0 * 0.5 * 0.25));
 	EXPECT_DOUBLE_EQ(stats.get_density()(1, 0, 1, 0, 0),
-		6.0 / (2.0 * 2.0 * 0.5 * 0.25));
+		2.0 * 6.0 / (2.0 * 2.0 * 0.5 * 0.25));
 	EXPECT_DOUBLE_EQ(stats.get_density()(1, 1, 1, 0, 0), 0.0);
+}
+
+// Each frame's factor is how long the source lasts over how long the frame
+// stands for (half way to its neighbors, and to the ends at the first and
+// last frames), or 1 / that for a pulse
+TEST(StatsCPU, FrameFactors)
+{
+	// Frames at 0, 1, 3 and 4 s: windows of 0.5, 1.5, 1.5 and 0.5 s
+	const std::vector<double> times {0.0, 1.0, 3.0, 4.0};
+	const std::vector<double> window {0.5, 1.5, 1.5, 0.5};
+	auto check = [&](const Options::Options& opts, double duration)
+	{
+		const auto f {Impurity::frame_factors(times, opts)};
+		ASSERT_EQ(f.size(), times.size());
+		for (std::size_t t {}; t < times.size(); ++t)
+			EXPECT_DOUBLE_EQ(f[t], duration / window[t]) << "frame " << t;
+	};
+
+	// Steady source over the whole background: 4 s
+	Options::Options full {};
+	full.set_imp_tstart_opt("full_range");
+	check(full, 4.0);
+
+	// Over part of it
+	Options::Options range {};
+	range.set_imp_tstart_opt("range");
+	range.set_imp_trange_min(1.0);
+	range.set_imp_trange_max(2.5);
+	check(range, 1.5);
+
+	// Sputtered, over the whole background whatever the start options say
+	Options::Options sputter {};
+	sputter.set_imp_source_opt("sputter");
+	check(sputter, 4.0);
+
+	// A pulse, where imp_source_scale_fact is a number of atoms
+	Options::Options pulse {};
+	pulse.set_imp_tstart_opt("single_value");
+	check(pulse, 1.0);
+
+	// A single frame has no window
+	EXPECT_EQ(Impurity::frame_factors({2.0}, full),
+		(std::vector<double> {1.0}));
 }
 
 // The averages divide the running sums by the weight in cells with counts

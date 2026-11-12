@@ -127,7 +127,7 @@ namespace Impurity
 		// Calculate the impurity density using the data stored in counts and 
 		// weights.
 		void calc_density(const Background::Background& bkg, 
-			const int tot_imp_num, const double imp_source_scale_fact = 1.0);
+			const Options::Options& opts);
 
 		// Calculate the average velocity in each cell. 
 		void calc_vels();
@@ -148,6 +148,9 @@ namespace Impurity
 
 	// Helper function to reduce a Statistic object across MPI ranks
 	Statistics reduce_stats(const Statistics& local_stats);
+
+	std::vector<double> frame_factors(const std::vector<BkgFPType>& times,
+		const Options::Options& opts);
 
 	// Free GPU memory
 	void free_stats(ImpurityStats::StatisticsDevice& stats_d, int device_id);

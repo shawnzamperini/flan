@@ -122,7 +122,7 @@ are grouped by what they control.
 | `imp_time_step_opt` | string | `"constant"` | Whether the impurity time step is constant or variable. Valid values: `"constant"`, `"variable"`. |
 | `imp_time_step` | float | `1e-8` | Impurity time step (s). |
 | `imp_time_step_min` | float | `1e-12` | Minimum impurity time step when the time step is variable (s). |
-| `imp_source_scale_fact` | float | `1.0` | Rate the impurities are released at (atoms/s), shared between the `imp_num` particles, so each particle stands for `imp_source_scale_fact / imp_num` atoms/s (its weight) and the density comes out in m^-3. With the default of 1, the density is per atom/s of source. Not used with `imp_source_opt = "sputter"`, which uses the sputtered rate instead. |
+| `imp_source_scale_fact` | float | `1.0` | How many impurities the source releases, shared between the `imp_num` particles, so the density comes out in m^-3. For a source spread over time (`imp_tstart_opt = "full_range"` or `"range"`) it's a rate (atoms/s); for a pulse (`"single_value"`) it's a number of atoms. With the default of 1, the density is per atom/s (or per atom) of source. Each time frame's density is the density near that frame's time. Not used with `imp_source_opt = "sputter"`, which uses the sputtered rate instead. |
 | `imp_iz_recomb` | string | `"on"` | Whether impurity ionization and recombination are on. Valid values: `"off"`, `"on"`. |
 | `imp_max_time` | float | `1e10` | Maximum time a particle is followed for (s). A particle that exceeds it is killed and counted in a warning at the end of the run. |
 

@@ -200,8 +200,7 @@ R"(
 	{	
 		std::cout << "Calculating derived quantities...\n";
 		std::cout << "  Density...\n";
-		global_stats.calc_density(bkg, opts.imp_num(), 
-			opts.imp_source_scale_fact());
+		global_stats.calc_density(bkg, opts);
 		std::cout << "  Velocity...\n";
 		global_stats.calc_vels();
 		std::cout << "  Charge...\n";

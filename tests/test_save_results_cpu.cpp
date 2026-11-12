@@ -64,7 +64,7 @@ TEST_F(SaveResultsTest, SingleZoneLayout)
 	opts.set_case_name(case_name());
 	const auto bkg {Background::read_bkg(opts)};
 	Impurity::Statistics stats {bkg};
-	stats.calc_density(bkg, 1);
+	stats.calc_density(bkg, opts);
 	SaveResults::save_results(bkg, stats, opts);
 
 	const netCDF::NcFile file {nc_path(), netCDF::NcFile::read};
@@ -98,7 +98,7 @@ TEST_F(SaveResultsTest, MultiZoneLayout)
 	Impurity::Statistics stats {bkg};
 	stats.get_counts()(1, 1, 4, 7, 2) = 5;
 	stats.get_weights()(1, 1, 4, 7, 2) = 3.0;
-	stats.calc_density(bkg, 1);
+	stats.calc_density(bkg, opts);
 	SaveResults::save_results(bkg, stats, opts);
 
 	const netCDF::NcFile file {nc_path(), netCDF::NcFile::read};
@@ -204,7 +204,7 @@ TEST_F(SaveResultsTest, Sputtering)
 		source.surface().elements()[3].k, 2, source.surface().elements()[3].i,
 		source.surface().elements()[3].j, 1e-5, 2, 7.0);
 	Impurity::Statistics stats {bkg};
-	stats.calc_density(bkg, 1);
+	stats.calc_density(bkg, opts);
 	Boundary::Fates fates {};
 	fates.chi = 151;
 	fates.max_time = 47;

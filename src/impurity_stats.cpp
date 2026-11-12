@@ -553,29 +553,122 @@ namespace Impurity
 	}
 
 	/**
+	* Returns the factor that turns each time frame's accumulated weight
+	* into the density near that frame's time, apart from the cell volume.
+	*
+	* Why this is needed
+	* ------------------
+	* A particle adds weight * dt to the frame nearest its own time at
+	* every step. So frame t only collects the particle-time spent in its
+	* window, the times nearer to it than to any other frame (from half way
+	* to the frame before to half way to the frame after, and to the ends
+	* of the background at the first and last frames), of length dt_t.
+	* Divided by volume, that's the time integral of the density over the
+	* window, not the density.
+	*
+	* For example, take a steady source of 100 atoms/s that each live 1 s,
+	* so 100 atoms are always present, and 2 frames. The atoms spend half
+	* their time nearest each frame, so each frame collects 50 atoms' worth
+	* of weight. Without this factor each frame would say 50 atoms are
+	* present, and with N frames each would say about 100 / N.
+	*
+	* The density averaged over frame t's window is
+	*     (1 / dt_t) x (time integral of the atoms present) / volume.
+	* Each of the imp_num particles stands for N_tot / imp_num real atoms,
+	* N_tot being how many the source releases over the run, while its
+	* weight is imp_source_scale_fact / imp_num. So the time integral of
+	* the atoms present is the frame's weight times
+	* N_tot / imp_source_scale_fact, and the factor is
+	*     N_tot / (imp_source_scale_fact x dt_t).
+	* It doesn't depend on how the source changes in time, as long as the
+	* particles start at times picked in proportion to it, since then more
+	* particles collect weight near the frames where the source is strong.
+	*
+	* N_tot depends on what imp_source_scale_fact means:
+	*
+	* - A rate (atoms/s), for a source spread over time: imp_tstart_opt =
+	*   "full_range" (over the whole background, of length T), "range"
+	*   (from imp_trange_min to imp_trange_max), or imp_source_opt =
+	*   "sputter" (over the whole background, with the sputtered rate in
+	*   place of imp_source_scale_fact). N_tot = rate x duration, so the
+	*   factor is duration / dt_t.
+	* - A number of atoms, for a pulse: imp_tstart_opt = "single_value".
+	*   N_tot = imp_source_scale_fact, so the factor is 1 / dt_t.
+	*
+	* With one frame there's no window, and every particle is always
+	* nearest it, so the factor is 1 (the weight is already the time
+	* integral over the run, which then is the only "frame").
+	*
+	* @param times Times of the background frames (s), increasing.
+	* @param opts Simulation options: imp_source_opt, imp_tstart_opt,
+	*        imp_trange_min and imp_trange_max.
+	* @return The factor for each frame (1/s for a pulse, unitless
+	*         otherwise).
+	*/
+	std::vector<double> frame_factors(const std::vector<BkgFPType>& times,
+		const Options::Options& opts)
+	{
+		const std::size_t n {times.size()};
+		if (n < 2) return std::vector<double>(n, 1.0);
+
+		// Each frame's window
+		std::vector<double> window(n);
+		for (std::size_t t {}; t < n; ++t)
+		{
+			const double lo {t == 0 ? times[0]
+				: 0.5 * (times[t - 1] + times[t])};
+			const double hi {t == n - 1 ? times[t]
+				: 0.5 * (times[t] + times[t + 1])};
+			window[t] = hi - lo;
+		}
+
+		// How long the source releases atoms for, or 0 for a pulse
+		double duration {};
+		const bool sputter {opts.imp_source_opt_int() == 1};
+		if (sputter || opts.imp_tstart_opt_int() == 2)
+			duration = times.back() - times.front();
+		else if (opts.imp_tstart_opt_int() == 1)
+			duration = opts.imp_trange_max() - opts.imp_trange_min();
+
+		std::vector<double> factor(n);
+		for (std::size_t t {}; t < n; ++t)
+		{
+			factor[t] = (duration > 0.0 ? duration : 1.0) / window[t];
+		}
+		return factor;
+	}
+
+	/**
 	* Calculates the impurity density in each cell and time frame from the
 	* weights.
 	*
 	* Each particle's weight is the atoms/s it stands for, set when it was
 	* created (the source, imp_source_scale_fact or the sputtered rate,
-	* divided by imp_num). The weights were accumulated as weight * dt, so
-	* they're already numbers of atoms, and the density is just the weight
-	* divided by the cell volume in physical space, J * dx * dy * dz, using
-	* each zone's grid and Jacobian. The density array is allocated here.
+	* divided by imp_num). The weights were accumulated as weight * dt in
+	* the frame nearest each particle's time, so each frame holds the time
+	* integral, over the times nearest that frame, of the number of atoms
+	* in each cell. That's divided by the cell volume in physical space,
+	* J * dx * dy * dz, using each zone's grid and Jacobian, and multiplied
+	* by frame_factors to make it the density near that frame's time. The
+	* frame factor is subtle: see frame_factors for why it's needed and
+	* what it is. The density array is allocated here.
 	*
-	* @param bkg Background plasma, used for the grid and Jacobian.
-	* @param tot_imp_num Total number of impurities followed. Unused, since
-	*        the weights already include it.
-	* @param imp_source_scale_fact Atoms/s all the particles stand for.
-	*        Unused, since the weights already include it.
+	* @param bkg Background plasma, used for the grid, Jacobian and frame
+	*        times.
+	* @param opts Simulation options, for how the source is spread in time
+	*        (see frame_factors).
 	*/
 	void Statistics::calc_density(const Background::Background& bkg, 
-		const int tot_imp_num, const double imp_source_scale_fact)
+		const Options::Options& opts)
 	{
 		// Allocate empty density array. Important we do this here, since if
 		// we do it when Statistics gets constructed that means an unused
 		// allocated array is held for the enitre simulation.
 		m_density = Vectors::ZonedVector<BkgFPType>(m_dim1, m_nx, m_ny, m_nz);
+
+		// Turns each frame's time integral into the density near its time
+		const std::vector<double> factor {frame_factors(bkg.get_times(),
+			opts)};
 
 		// Need to loop through every zone and cell. Unconventional
 		// indentation here just to keep it clean.
@@ -600,12 +693,9 @@ namespace Impurity
 			// Volume in physical space is jacob * dx * dy * dz
 			double cell_vol {bkg.get_J()(zone, j, k, l) * dx * dy * dz};
 
-			// Weights ([particles] since it was accumulated as p_w * dt), so 
-			// density is just weight / volume. The weight was already 
-			// normalized by the number of particles when the particle was
-			// created.
+			// The weight (atoms x s) per volume, times the frame's factor
 			m_density(zone, i, j, k, l) = m_weights(zone, i, j, k, l)
-				/ cell_vol;
+				/ cell_vol * factor[i];
 		}
 		}
 		}	
