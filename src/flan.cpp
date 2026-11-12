@@ -96,6 +96,19 @@ R"(
 	if (rank == 0) std::cout << "Loading input...\n";
 	Options::Options opts {Options::load_options(inpts)};
 
+	// Temporary warning until the collision model includes the thermal
+	// forces. Planned for after the sputtering and redeposition work.
+	if (rank == 0 && opts.imp_collisions_int() == 1)
+	{
+		std::cout << "\nWarning! The Nanbu collision model collides "
+			"impurities with a\nMaxwellian of the local background plasma, "
+			"so it may not include\nthe thermal forces (from the "
+			"temperature gradients). Upgrading it\nis planned, either by "
+			"tracking the temperature gradient for\nSOLEDGE3X backgrounds, "
+			"or by sampling from a modified distribution\nfunction "
+			"calculated from Gkeyll.\n\n";
+	}
+
 	// Load plasma background on rank 0. The other ranks get it from the
 	// broadcast below.
 	timer.start(Timer::Section::Read);
