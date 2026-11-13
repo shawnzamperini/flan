@@ -647,3 +647,151 @@ TEST(ThermalForce, SmallStepLimit)
 			<< (elec ? "electrons" : "ions");
 	}
 }
+
+namespace
+{
+	// Average of g(w) over the speed distribution of the unit Maxwellian,
+	// sqrt(2 / pi) w^2 exp(-w^2 / 2)
+	template <typename G>
+	double speed_average(G g)
+	{
+		constexpr int nw {200000};
+		constexpr double wmax {14.0};
+		constexpr double dw {wmax / nw};
+		double sum {};
+		for (int i {}; i < nw; ++i)
+		{
+			const double w {(i + 0.5) * dw};
+			sum += g(w) * std::sqrt(2.0 / Constants::pi) * w * w
+				* std::exp(-0.5 * w * w) * dw;
+		}
+		return sum;
+	}
+}
+
+// Force balance: left to collide with ions that carry a heat flux and
+// don't flow, tungsten doesn't come to rest. It drifts against the heat
+// flux (toward where the plasma is hotter) at the speed where the friction
+// with the ions cancels the thermal force.
+//
+// For an impurity moving slowly at V along B, the mean kick of one Nanbu
+// step (see NanbuKick) becomes
+//
+//   <dv_par> = frac [v_th eps I - V K],
+//   I = <w_par^2 (a + b w^2 + c w^4) k(w)>,   k(w) = 1 - exp(-s0 / w^3),
+//   K = <k(w) - (s0 / w^3) exp(-s0 / w^3)>,
+//
+// where the first term is the thermal force and the second the friction
+// (K is the derivative of the Maxwellian's mean kick with respect to V, to
+// first order in V / v_th). They cancel at V = v_th eps I / K. For a small
+// time step that is -0.6 push eps v_th, and at the larger steps used here
+// (to reach the balance in few steps) it is somewhat slower.
+//
+// Only collisions with ions are done: electrons are too light to bring
+// tungsten into balance in a reasonable number of steps.
+TEST(ThermalForce, ForceBalance)
+{
+	const ForceCase fc {};
+	constexpr int Z {2};
+	constexpr bool elec {false};
+	constexpr double s0 {3.0};
+#ifdef __OPTIMIZE__
+	constexpr int n_slots {8000};
+#else
+	constexpr int n_slots {800};
+#endif
+
+	const double eps {fc.eps(elec)};
+	const double v_th {fc.v_th(elec)};
+	const double mb {fc.bkg_mass(elec)};
+	const double frac {mb / (ForceCase::imp_mass + mb)};
+	const double dt {s0 / fc.s_rate(elec, Z)};
+
+	// Expected drift, and how many steps the velocity takes to relax by
+	// a factor of e (friction takes away frac K of it per step)
+	const double I {shape_average(ion_shape, [](const double w)
+		{return 1.0 - std::exp(-s0 / (w * w * w));})};
+	const double K {speed_average([](const double w)
+		{
+			const double x {s0 / (w * w * w)};
+			return 1.0 - std::exp(-x) - x * std::exp(-x);
+		})};
+	const double expected {v_th * eps * I / K};
+	const int relax_steps {static_cast<int>(1.0 / (frac * K))};
+	const int n_warmup {6 * relax_steps};
+	const int n_average {4 * relax_steps};
+
+	// Tungsten starting at rest in the middle of the slab
+	Slots::Slots slots(n_slots);
+	slots.set_mass(ForceCase::imp_mass);
+	for (int i {}; i < n_slots; ++i)
+	{
+		slots.set_zone(i, 0);
+		slots.set_t(i, fc.bkg.get_times()[0]);
+		slots.set_x(i, 0.025);
+		slots.set_y(i, 0.0);
+		slots.set_z(i, 0.0);
+		slots.set_q(i, Z);
+		slots.set_state(i, 0);
+		slots.set_vX(i, 0.0);
+		slots.set_vY(i, 0.0);
+		slots.set_vZ(i, 0.0);
+	}
+	Impurity::Statistics imp_stats {};
+	std::vector<pcg32> rngs {};
+	for (int i {}; i < omp_get_max_threads(); ++i)
+		rngs.emplace_back(4321, i);
+
+	// Collide until the balance is reached, then average each particle's
+	// velocity over time. The particles are independent, so the spread
+	// of their time averages gives the error of the mean.
+	std::vector<double> v_par(n_slots, 0.0);
+	std::vector<double> v_perp(n_slots, 0.0);
+	double v_par_sq {};
+	for (int step {}; step < n_warmup + n_average; ++step)
+	{
+		Collisions::nanbu_coll(slots, fc.bkg, fc.opts, elec, dt, imp_stats,
+			rngs);
+		if (step < n_warmup) continue;
+		for (int i {}; i < n_slots; ++i)
+		{
+			v_par[i] += slots.vX()[i] / n_average;
+			v_perp[i] += slots.vY()[i] / n_average;
+			v_par_sq += slots.vX()[i] * slots.vX()[i];
+		}
+	}
+	double mean {}, mean_perp {}, var {}, var_perp {};
+	for (int i {}; i < n_slots; ++i)
+	{
+		mean += v_par[i] / n_slots;
+		mean_perp += v_perp[i] / n_slots;
+	}
+	for (int i {}; i < n_slots; ++i)
+	{
+		var += (v_par[i] - mean) * (v_par[i] - mean) / (n_slots - 1);
+		var_perp += (v_perp[i] - mean_perp) * (v_perp[i] - mean_perp)
+			/ (n_slots - 1);
+	}
+	const double err {std::sqrt(var / n_slots)};
+	const double err_perp {std::sqrt(var_perp / n_slots)};
+
+	// Parallel temperature of the tungsten (eV), which should be the
+	// ions'
+	const double T_par {ForceCase::imp_mass * (v_par_sq
+		/ (static_cast<double>(n_slots) * n_average) - mean * mean)
+		/ Constants::ev_to_j};
+
+	std::cout << "drift = " << mean << " +/- " << err << " m/s, expected "
+		<< expected << " (small-step limit " << -0.6
+		* Collisions::skew_push_ion * eps * v_th << "), " << relax_steps
+		<< " steps to relax, T_par = " << T_par << " eV\n";
+
+	// Against the heat flux, well resolved, and the size expected: within
+	// 4 standard errors plus 5% for the terms beyond first order in the
+	// tungsten's velocity (its thermal speed is a tenth of the ions')
+	EXPECT_LT(mean, 0.0);
+	EXPECT_LT(err, 0.1 * std::abs(expected));
+	EXPECT_NEAR(mean, expected, 4.0 * err + 0.05 * std::abs(expected));
+	EXPECT_NEAR(mean_perp, 0.0, 4.0 * err_perp);
+	EXPECT_NEAR(T_par, ForceCase::T, 0.1 * ForceCase::T);
+}
