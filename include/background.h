@@ -53,6 +53,9 @@ namespace Background
 		// (SOLEDGE3X runs with face fluxes only, otherwise empty). It is
 		// what skews the ion distribution for the thermal force.
 		Vectors::ZonedVector<BkgFPType> m_q_par_i {};
+
+		// Electron parallel conductive heat flux (W/m^2), the same way
+		Vectors::ZonedVector<BkgFPType> m_q_par_e {};
 		Vectors::ZonedVector<BkgFPType> m_vp {};
 		Vectors::ZonedVector<BkgFPType> m_bX {};
 		Vectors::ZonedVector<BkgFPType> m_bY {};
@@ -145,6 +148,7 @@ namespace Background
 		const Vectors::ZonedVector<BkgFPType>& get_ti() const;
 		Vectors::ZonedVector<BkgFPType>& get_ti();
 		const Vectors::ZonedVector<BkgFPType>& get_q_par_i() const;
+		const Vectors::ZonedVector<BkgFPType>& get_q_par_e() const;
 		const Vectors::ZonedVector<BkgFPType>& get_vp() const;
 		Vectors::ZonedVector<BkgFPType>& get_vp();
 		const Vectors::ZonedVector<BkgFPType>& get_bX() const;
@@ -308,6 +312,7 @@ namespace Background
 		void move_into_te(Vectors::ZonedVector<BkgFPType>& te);
 		void move_into_ti(Vectors::ZonedVector<BkgFPType>& ti);
 		void move_into_q_par_i(Vectors::ZonedVector<BkgFPType>& q_par_i);
+		void move_into_q_par_e(Vectors::ZonedVector<BkgFPType>& q_par_e);
 		void move_into_vp(Vectors::ZonedVector<BkgFPType>& vp);
 		void move_into_bX(Vectors::ZonedVector<BkgFPType>& bX);
 		void move_into_bY(Vectors::ZonedVector<BkgFPType>& bY);
@@ -377,6 +382,9 @@ namespace Background
 			const double y0, const double z0) const;
 
 		BkgFPType interp_q_par_i(const int zone, const double t0,
+			const double x0, const double y0, const double z0) const;
+
+		BkgFPType interp_q_par_e(const int zone, const double t0,
 			const double x0, const double y0, const double z0) const;
 
 		BkgFPType interp_uX(const int zone, const double t0, const double x0,

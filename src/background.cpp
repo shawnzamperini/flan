@@ -289,6 +289,14 @@ namespace Background
 		{return m_q_par_i;}
 
 	/**
+	* Returns the electron parallel conductive heat flux q_par (W/m^2),
+	* like get_q_par_i but for the electrons. It skews the electron
+	* distribution, which gives the electron thermal force.
+	*/
+	const Vectors::ZonedVector<BkgFPType>& Background::get_q_par_e() const
+		{return m_q_par_e;}
+
+	/**
 	* Returns the wall mask, stored as a function of (zone, x, y, z). It is
 	* 1 in cells inside the wall and 0 in the plasma. Only SOLEDGE3X
 	* backgrounds have one, otherwise it is empty.
@@ -972,6 +980,13 @@ namespace Background
 		m_q_par_i = std::move(q_par_i);
 	}
 
+	void Background::move_into_q_par_e(
+		Vectors::ZonedVector<BkgFPType>& q_par_e)
+	{
+		set_dims(q_par_e, "q_par_e", true);
+		m_q_par_e = std::move(q_par_e);
+	}
+
 	void Background::move_into_vp(Vectors::ZonedVector<BkgFPType>& vp)
 	{
 		set_dims(vp, "vp", true);
@@ -1365,6 +1380,17 @@ namespace Background
 		return interp_4d(m_q_par_i, zone, t0, x0, y0, z0);
 	}
 
+	/**
+	* Interpolates the electron parallel conductive heat flux, like
+	* interp_q_par_i. A background without one gives 0.
+	*/
+	BkgFPType Background::interp_q_par_e(const int zone, const double t0,
+		const double x0, const double y0, const double z0) const
+	{
+		if (m_q_par_e.get_data().empty()) return 0.0;
+		return interp_4d(m_q_par_e, zone, t0, x0, y0, z0);
+	}
+
 	BkgFPType Background::interp_uX(const int zone, const double t0,
 		const double x0, const double y0, const double z0) const
 	{
@@ -1468,6 +1494,7 @@ namespace Background
 		m_te.broadcast(comm);
 		m_ti.broadcast(comm);
 		m_q_par_i.broadcast(comm);
+		m_q_par_e.broadcast(comm);
 		m_vp.broadcast(comm);
 		m_bX.broadcast(comm);
 		m_bY.broadcast(comm);

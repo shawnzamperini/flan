@@ -537,9 +537,10 @@ TEST_F(ReadS3XEPlasma, Messages)
 		"boundaries 0"), std::string::npos) << out;
 }
 
-// The ion parallel conductive heat flux comes back from the phi-face
-// fluxes: the energy carried by the flow is taken out, the face constant C
-// is fitted, and the result is unnormalized with n0 c0 T0 e.
+// The electron and ion parallel conductive heat fluxes come back from the
+// phi-face fluxes: the energy carried by the flow is taken out, the face
+// constant C is fitted, and the result is unnormalized with n0 c0 T0 e.
+// The two species are read from their own groups, with their own masses.
 TEST_F(ReadS3XEPlasma, HeatFlux)
 {
 	// Without face fluxes there's no heat flux, and a message says so
@@ -548,9 +549,14 @@ TEST_F(ReadS3XEPlasma, HeatFlux)
 	auto bkg {S3X::read_s3xe(options())};
 	std::string out {testing::internal::GetCapturedStdout()};
 	EXPECT_TRUE(bkg.get_q_par_i().get_data().empty());
-	EXPECT_NE(out.find("No ion fluxes on the phi faces"), std::string::npos)
-		<< out;
+	EXPECT_TRUE(bkg.get_q_par_e().get_data().empty());
+	EXPECT_NE(out.find("No spec1 fluxes on the phi faces, so no heat flux "
+		"(q_par_i)"), std::string::npos) << out;
+	EXPECT_NE(out.find("No spec0 fluxes on the phi faces, so no heat flux "
+		"(q_par_e)"), std::string::npos) << out;
 	EXPECT_EQ(bkg.interp_q_par_i(2, bkg.get_times()[0], 3.5, 10.5, 1.0),
+		0.0);
+	EXPECT_EQ(bkg.interp_q_par_e(2, bkg.get_times()[0], 3.5, 10.5, 1.0),
 		0.0);
 
 	// With them, q_par is recovered in every zone and frame, and C is
@@ -560,8 +566,13 @@ TEST_F(ReadS3XEPlasma, HeatFlux)
 	testing::internal::CaptureStdout();
 	bkg = S3X::read_s3xe(options());
 	out = testing::internal::GetCapturedStdout();
-	EXPECT_NE(out.find("Face flux constant C = -1.2"), std::string::npos)
-		<< out;
+	for (const std::string sp : {"spec0", "spec1"})
+	{
+		EXPECT_NE(out.find("Face flux constant C = -1.2"), std::string::npos)
+			<< out;
+		EXPECT_NE(out.find(" from " + sp + " (-2 pi c0 / a0 = "),
+			std::string::npos) << out;
+	}
 	EXPECT_EQ(out.find("Warning!"), std::string::npos) << out;
 
 	const double q0 {n0 * c0 * T0 * Constants::ev_to_j};
@@ -576,6 +587,9 @@ TEST_F(ReadS3XEPlasma, HeatFlux)
 			const double want {S3XTest::test_q_par(R, Z, t) * q0};
 			EXPECT_NEAR(b.get_q_par_i()(zone, t, i, j, k), want,
 				1e-9 * std::abs(want)) << zone << " " << i << " " << j;
+			const double want_e {S3XTest::test_q_par_e(R, Z, t) * q0};
+			EXPECT_NEAR(b.get_q_par_e()(zone, t, i, j, k), want_e,
+				1e-9 * std::abs(want_e)) << zone << " " << i << " " << j;
 		}
 
 		// Ghost cells are filled from the zone across the face
@@ -589,6 +603,9 @@ TEST_F(ReadS3XEPlasma, HeatFlux)
 		EXPECT_NEAR(b.interp_q_par_i(2, b.get_times()[1], x, y, zc),
 			b.get_q_par_i()(2, 1, 3, 10, 1),
 			1e-9 * std::abs(b.get_q_par_i()(2, 1, 3, 10, 1)));
+		EXPECT_NEAR(b.interp_q_par_e(2, b.get_times()[1], x, y, zc),
+			b.get_q_par_e()(2, 1, 3, 10, 1),
+			1e-9 * std::abs(b.get_q_par_e()(2, 1, 3, 10, 1)));
 	};
 	check(bkg);
 
@@ -607,7 +624,7 @@ TEST_F(ReadS3XEPlasma, HeatFlux)
 	write_files();
 	EXPECT_EXIT(S3X::read_s3xe(options()),
 		testing::ExitedWithCode(EXIT_FAILURE), "plasma_00001.h5 doesn't "
-		"have the ion fluxes on the phi faces");
+		"have the spec0 fluxes on the phi faces");
 }
 
 // Problems with the frames stop the run with a message saying what's

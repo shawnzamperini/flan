@@ -142,6 +142,11 @@ namespace S3XTest
 	// along B, written into the phi-face fluxes when a frame has them
 	inline double test_q_par(double, double Z, int t)
 		{return 0.05 * Z - 0.02 + 0.01 * t;}
+	// Electron G / n = 0.2, and the electron heat flux like test_q_par
+	inline double test_G_e(double R, double Z, int t)
+		{return 0.2 * test_ne(R, Z, t);}
+	inline double test_q_par_e(double, double Z, int t)
+		{return -0.03 * Z + 0.5 + 0.02 * t;}
 
 	// Poloidal area of a cell of the test mesh, normalized by a0^2, from
 	// the shoelace formula on its four corners
@@ -321,9 +326,10 @@ namespace S3XTest
 		double tsimu {};
 		int extra_theta {0};	// Extra theta cells in zone 2's datasets
 
-		// If true, also write the ion fluxes through the phi faces, with
-		// fluxn = flux_C G b_phi A_pol / a0^2 and fluxE = (5/2 T + 1/2 m
-		// u^2) fluxn + flux_C q_par b_phi A_pol / a0^2 (b_phi = 1 here)
+		// If true, also write the electron and ion fluxes through the phi
+		// faces, with fluxn = flux_C G b_phi A_pol / a0^2 and fluxE =
+		// (5/2 T + 1/2 m u^2) fluxn + flux_C q_par b_phi A_pol / a0^2
+		// (b_phi = 1 here)
 		bool face_fluxes {false};
 		double flux_C {-0.99 * 2.0 * pi * 98227.0 / 0.5};
 	};
@@ -350,7 +356,8 @@ namespace S3XTest
 		const std::vector<std::pair<std::string, Field>> fields {
 			{"/spec0/n", test_ne}, {"/spec0/T", test_te},
 			{"/spec1/T", test_ti}, {"/spec1/n", test_ne},
-			{"/spec1/G", test_G}, {"/PHI", test_phi}};
+			{"/spec1/G", test_G}, {"/spec0/G", test_G_e},
+			{"/PHI", test_phi}};
 
 		for (int zone {}; zone < 3; ++zone)
 		{
@@ -385,8 +392,13 @@ namespace S3XTest
 			}
 
 			// Nothing depends on phi, so the face values are the cell's
-			if (frame.face_fluxes)
+			for (const bool elec : {false, true})
 			{
+				if (!frame.face_fluxes) break;
+				const Field Gf {elec ? test_G_e : test_G};
+				const Field Tf {elec ? test_te : test_ti};
+				const Field qf {elec ? test_q_par_e : test_q_par};
+				const double mass {elec ? 0.00054858 : 2.014};
 				std::vector<double> fluxn {}, fluxE {};
 				for (int i {}; i < nx; ++i)
 				for (int j {}; j < ny; ++j)
@@ -395,20 +407,19 @@ namespace S3XTest
 					const double R {cell_R(m, zone, i, j)};
 					const double Z {cell_Z(m, zone, i, j)};
 					const double n {test_ne(R, Z, t)};
-					const double G {test_G(R, Z, t)};
+					const double G {Gf(R, Z, t)};
 					const double u {G / n};
-					const double h {2.5 * test_ti(R, Z, t)
-						+ 0.5 * 2.014 * u * u};
+					const double h {2.5 * Tf(R, Z, t) + 0.5 * mass * u * u};
 					const double geom {frame.flux_C
 						* cell_area(m, zone, i, j)};
 					fluxn.push_back(geom * G);
-					fluxE.push_back(h * geom * G
-						+ geom * test_q_par(R, Z, t));
+					fluxE.push_back(h * geom * G + geom * qf(R, Z, t));
 				}
 				const std::vector<hsize_t> shape {static_cast<hsize_t>(nx),
 					static_cast<hsize_t>(ny), static_cast<hsize_t>(nz + 1)};
-				write(file, zg + "/spec1/fluxn/phi", shape, fluxn);
-				write(file, zg + "/spec1/fluxE/phi", shape, fluxE);
+				const std::string sp {elec ? "/spec0" : "/spec1"};
+				write(file, zg + sp + "/fluxn/phi", shape, fluxn);
+				write(file, zg + sp + "/fluxE/phi", shape, fluxE);
 			}
 		}
 		H5Fclose(file);

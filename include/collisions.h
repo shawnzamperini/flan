@@ -22,15 +22,15 @@ namespace Collisions
 		Impurity::Statistics& imp_stats, std::vector<pcg32>& rngs);
 
 	/**
-	* Counts from sampling the skewed (Grad) ion distribution, summed over
-	* every collision on this MPI rank since the start of the run (or the
-	* last reset_skew_counts). They show how well the skew was reproduced:
+	* Counts from sampling a skewed (Grad) background distribution, summed
+	* over every collision with that species on this MPI rank since the
+	* start of the run (or the last reset_skew_counts). They show how well the skew was reproduced:
 	* draws where the Grad factor is negative were dropped (clipped), so
 	* negative / draws is the share of the Maxwellian that was clipped.
 	*/
 	struct SkewCounts
 	{
-		long long samples {};		///< Background ions sampled with a skew
+		long long samples {};		///< Background particles sampled with a skew
 		long long draws {};			///< Maxwellian draws, accepted or not
 		long long negative {};		///< Draws where the Grad factor was < 0
 		long long above_bound {};	///< Draws where it was above the
@@ -45,7 +45,7 @@ namespace Collisions
 		const double m, const double eps, const double bX, const double bY,
 		const double bZ, pcg32& rng, SkewCounts& counts);
 
-	SkewCounts get_skew_counts();
+	SkewCounts get_skew_counts(const bool elec);
 
 	void reset_skew_counts();
 

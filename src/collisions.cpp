@@ -50,9 +50,10 @@ namespace Collisions
 
 	namespace
 	{
-		// Counts from the skewed sampler on this rank, summed at the end
-		// of each nanbu_coll call (see SkewCounts)
-		SkewCounts g_skew_counts {};
+		// Counts from the skewed sampler on this rank for ions [0] and
+		// electrons [1], summed at the end of each nanbu_coll call (see
+		// SkewCounts)
+		std::array<SkewCounts, 2> g_skew_counts {};
 
 		// Largest |eps| used. Grad's expansion is only meant for small
 		// skews, and at |eps| = 1 it is already negative over ~2% of the
@@ -171,11 +172,13 @@ namespace Collisions
 		}
 	}
 
-	/// Counts from the skewed sampler on this rank (see SkewCounts)
-	SkewCounts get_skew_counts() {return g_skew_counts;}
+	/// Counts from the skewed sampler on this rank for collisions with
+	/// electrons (elec = true) or ions (see SkewCounts)
+	SkewCounts get_skew_counts(const bool elec)
+		{return g_skew_counts[elec ? 1 : 0];}
 
-	/// Sets the skewed sampler's counts back to 0
-	void reset_skew_counts() {g_skew_counts = SkewCounts {};}
+	/// Sets the skewed sampler's counts back to 0, for both species
+	void reset_skew_counts() {g_skew_counts = {};}
 
 
 	/**
@@ -544,6 +547,10 @@ namespace Collisions
 	* updated velocity is v at n+1/2. An error is printed if ne < 0 or chi is
 	* NaN.
 	*
+	* The colliding background particle is skewed by that species' parallel
+	* heat flux (q_par_e or q_par_i), if the background has one, which gives
+	* the electron or ion thermal force (see sample_bkg_velocity).
+	*
 	* For ion collisions, s * weight * dt is also added to imp_stats so the
 	* average s in each cell can be calculated later.
 	*
@@ -651,17 +658,18 @@ namespace Collisions
 				T = std::max(opts.min_ti(), T);
 			}
 
-			// Heat-flux skew of the ions (thermal force): eps from the ion
-			// parallel heat flux, with ni = ne, and the unit vector along B
-			// it's measured along. Backgrounds without a heat flux give
-			// q_par = 0, so no skew. Electrons aren't skewed yet.
+			// Heat-flux skew of the species colliding with the impurity
+			// (thermal force): eps from its parallel heat flux, with
+			// ni = ne, and the unit vector along B it's measured along.
+			// Backgrounds without a heat flux give q_par = 0, so no skew.
 			double eps {};
 			double bX {};
 			double bY {};
 			double bZ {};
-			if (!elec)
 			{
-				const double q_par {bkg.interp_q_par_i(zone, t, x, y, z)};
+				const double q_par {elec
+					? bkg.interp_q_par_e(zone, t, x, y, z)
+					: bkg.interp_q_par_i(zone, t, x, y, z)};
 				if (q_par != 0.0)
 				{
 					eps = grad_skew_eps(q_par, ne, T, mass_kg);
@@ -745,11 +753,12 @@ namespace Collisions
 			// Add this thread's skewed sampler counts to the rank's total
 			#pragma omp critical
 			{
-				g_skew_counts.samples += skew_counts.samples;
-				g_skew_counts.draws += skew_counts.draws;
-				g_skew_counts.negative += skew_counts.negative;
-				g_skew_counts.above_bound += skew_counts.above_bound;
-				g_skew_counts.eps_capped += skew_counts.eps_capped;
+				SkewCounts& total {g_skew_counts[elec ? 1 : 0]};
+				total.samples += skew_counts.samples;
+				total.draws += skew_counts.draws;
+				total.negative += skew_counts.negative;
+				total.above_bound += skew_counts.above_bound;
+				total.eps_capped += skew_counts.eps_capped;
 			}
 		} // omp parallel
 	}  // nanbu_coll

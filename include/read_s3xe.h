@@ -102,11 +102,12 @@ namespace S3X
 	void report_ghosts(const Zones::Zones& zones,
 		const Vectors::ZonedVector<BkgFPType>& v, const std::string& name);
 
-	bool has_phi_face_fluxes(const Hdf5::File& file);
+	bool has_phi_face_fluxes(const Hdf5::File& file,
+		const std::string& species);
 
-	double calc_q_par_i(const Hdf5::File& file, const Reference& ref,
+	double calc_q_par(const Hdf5::File& file, const Reference& ref,
 		const Mesh& mesh, const Zones::Zones& zones,
-		const double ion_mass_amu, const int t,
+		const std::string& species, const double mass_amu, const int t,
 		Vectors::ZonedVector<BkgFPType>& q_par);
 
 	void read_frames(const std::vector<std::string>& frame_paths,

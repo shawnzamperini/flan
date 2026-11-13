@@ -803,23 +803,27 @@ namespace S3X
 	}
 
 	/**
-	* Whether a SOLEDGE3X plasma file has the ion fluxes on the phi faces
-	* (spec1/fluxn/phi and spec1/fluxE/phi), which only runs set up to save
-	* face fluxes have. Only zone 1 is checked; if it has them, every zone
-	* must, or reading them stops the run.
+	* Whether a SOLEDGE3X plasma file has a species' fluxes on the phi
+	* faces (e.g., spec1/fluxn/phi and spec1/fluxE/phi), which only runs set
+	* up to save face fluxes have. Only zone 1 is checked; if it has them,
+	* every zone must, or reading them stops the run.
 	*
 	* @param file Plasma file.
+	* @param species The species' group: spec0 (electrons) or spec1 (ions).
 	* @return True if the file has them.
 	*/
-	bool has_phi_face_fluxes(const Hdf5::File& file)
+	bool has_phi_face_fluxes(const Hdf5::File& file,
+		const std::string& species)
 	{
-		return file.exists(zone_group(0) + "/spec1/fluxn/phi")
-			&& file.exists(zone_group(0) + "/spec1/fluxE/phi");
+		return file.exists(zone_group(0) + "/" + species + "/fluxn/phi")
+			&& file.exists(zone_group(0) + "/" + species + "/fluxE/phi");
 	}
 
 	/**
-	* Calculates the ion parallel conductive heat flux of one frame from
-	* SOLEDGE3X's ion fluxes through the phi faces.
+	* Calculates a species' parallel conductive heat flux of one frame from
+	* SOLEDGE3X's fluxes of that species through the phi faces. It is the
+	* same for electrons (spec0) and ions (spec1); only the group and mass
+	* differ.
 	*
 	* What is read, and why phi faces: SOLEDGE3X saves, for every face of
 	* every cell, the particle flux fluxn and the total energy flux fluxE
@@ -832,18 +836,19 @@ namespace S3X
 	* Total vs. conductive: fluxE is the total energy flux, carried by the
 	* flow (the enthalpy 5/2 T and the kinetic energy 1/2 m u^2 per
 	* particle) and by conduction. Only the conductive heat flux q_par is
-	* kept: the thermal force model samples the ion distribution in the
-	* frame moving with the flow (the flow itself is already the drift of
+	* kept: the thermal force model samples the species' distribution in
+	* the frame moving with the flow (the flow itself is already the drift of
 	* the Maxwellian), and in that frame only the conductive part remains
 	* as a skew of the distribution. Per face,
 	*
 	*   q_par = (fluxE - (5/2 T + 1/2 m u^2) fluxn) / (C b_phi A_pol / a0^2)
 	*
 	* where, in SOLEDGE3X's normalized units:
-	*   - T, u: ion temperature (T0) and parallel velocity G / n (c0) on the
-	*     face, from the average of n, T and G in the two cells on either
-	*     side. m is the ion mass in amu, so 1/2 m u^2 is in T0 as well,
-	*     since c0 = sqrt(e T0 / 1 amu).
+	*   - T, u: the species' temperature (T0) and parallel velocity G / n
+	*     (c0) on the face, from the average of n, T and G in the two cells
+	*     on either side. m is its mass in amu, so 1/2 m u^2 is in T0 as
+	*     well, since c0 = sqrt(e T0 / 1 amu). (For electrons it's
+	*     negligible next to 5/2 T.)
 	*   - b_phi = Bphi / |B|, the component of the unit vector along B
 	*     normal to the face.
 	*   - A_pol / a0^2: the face's area, which is the cell's area in the
@@ -852,8 +857,9 @@ namespace S3X
 	*   - C: the constant that turns a flux density along B into what
 	*     SOLEDGE3X saves as a face flux, fluxn = C G b_phi A_pol / a0^2.
 	*     Its definition isn't documented, so it's fitted here (see
-	*     fit_face_flux_constant). For the DIII-D runs it is close to
-	*     -2 pi c0 / a0, which is printed for comparison.
+	*     fit_face_flux_constant), for each species separately as a check:
+	*     it's geometric, so they should agree. For the DIII-D runs it is
+	*     close to -2 pi c0 / a0, which is printed for comparison.
 	*
 	* Dividing by C b_phi A_pol / a0^2 turns the face flux back into a
 	* flux density along B. Since C is fitted against G, which is positive
@@ -867,16 +873,18 @@ namespace S3X
 	* @param ref Reference values.
 	* @param mesh The mesh, for the corners and B.
 	* @param zones The zones.
-	* @param ion_mass_amu Ion mass (amu).
+	* @param species The species' group: spec0 (electrons) or spec1 (ions).
+	* @param mass_amu The species' mass (amu).
 	* @param t Frame index.
 	* @param q_par Where q_par goes, for frame t (ghost cells not filled).
 	* @return The fitted C, for printing.
 	*/
-	double calc_q_par_i(const Hdf5::File& file, const Reference& ref,
+	double calc_q_par(const Hdf5::File& file, const Reference& ref,
 		const Mesh& mesh, const Zones::Zones& zones,
-		const double ion_mass_amu, const int t,
+		const std::string& species, const double mass_amu, const int t,
 		Vectors::ZonedVector<BkgFPType>& q_par)
 	{
+		const std::string sp {"/" + species};
 		const int g {zones.get_ghost()};
 		const int nzones {zones.get_nzones()};
 
@@ -900,12 +908,12 @@ namespace S3X
 				static_cast<hsize_t>(nz + 2 * g)};
 			const std::vector<hsize_t> faces {static_cast<hsize_t>(nx),
 				static_cast<hsize_t>(ny), static_cast<hsize_t>(nz + 1)};
-			const auto n {read_checked(file, zg + "/spec1/n", cells)};
-			const auto T {read_checked(file, zg + "/spec1/T", cells)};
-			const auto G {read_checked(file, zg + "/spec1/G", cells)};
-			const auto fluxn {read_checked(file, zg + "/spec1/fluxn/phi",
+			const auto n {read_checked(file, zg + sp + "/n", cells)};
+			const auto T {read_checked(file, zg + sp + "/T", cells)};
+			const auto G {read_checked(file, zg + sp + "/G", cells)};
+			const auto fluxn {read_checked(file, zg + sp + "/fluxn/phi",
 				faces)};
-			const auto fluxE {read_checked(file, zg + "/spec1/fluxE/phi",
+			const auto fluxE {read_checked(file, zg + sp + "/fluxE/phi",
 				faces)};
 
 			// Cell (i, j, k) in the plasma file's arrays, which have ghost
@@ -960,7 +968,7 @@ namespace S3X
 					// Energy carried by the flow per particle: enthalpy
 					// 5/2 T plus kinetic energy 1/2 m u^2 (both in T0)
 					const double h {2.5 * T_face
-						+ 0.5 * ion_mass_amu * u_face * u_face};
+						+ 0.5 * mass_amu * u_face * u_face};
 
 					const std::size_t f {(static_cast<std::size_t>(i) * ny
 						+ j) * (nz + 1) + k};
@@ -980,17 +988,18 @@ namespace S3X
 		const double q0 {ref.n0 * ref.c0 * ref.T0 * Constants::ev_to_j};
 		if (t == 0)
 		{
-			std::cout << "  Face flux constant C = " << C << " (-2 pi c0 / "
-				"a0 = " << -2.0 * Constants::pi * ref.c0 / mesh.a0 << ")\n";
+			std::cout << "  Face flux constant C = " << C << " from "
+				<< species << " (-2 pi c0 / a0 = "
+				<< -2.0 * Constants::pi * ref.c0 / mesh.a0 << ")\n";
 		}
 		const double C_expect {2.0 * Constants::pi * ref.c0 / mesh.a0};
 		if (std::abs(std::abs(C) / C_expect - 1.0) > 0.05)
 		{
 			std::cout << "Warning! In " << file.path() << ", the fitted "
-				"face flux constant C = " << C << " is more than 5% from "
-				"-2 pi c0 / a0 = " << -C_expect << ". The ion heat flux "
-				"still uses the fitted C, but check that SOLEDGE3X's face "
-				"fluxes are defined as expected.\n";
+				"face flux constant C = " << C << " from " << species
+				<< " is more than 5% from -2 pi c0 / a0 = " << -C_expect
+				<< ". The heat flux still uses the fitted C, but check that "
+				"SOLEDGE3X's face fluxes are defined as expected.\n";
 		}
 
 		for (int zone {}; zone < nzones; ++zone)
@@ -1034,11 +1043,11 @@ namespace S3X
 	* ghost cells as the geometry. Then E and the flows are calculated with
 	* calc_efield_and_flows.
 	*
-	* If the first frame has the ion fluxes through the phi faces (runs set
-	* up to save face fluxes), the ion parallel conductive heat flux q_par_i
-	* is calculated from them (see calc_q_par_i) and moved into the
-	* background too, and every frame must have them. Otherwise q_par_i is
-	* left empty and a message says so.
+	* For each species, if the first frame has its fluxes through the phi
+	* faces (runs set up to save face fluxes), its parallel conductive heat
+	* flux (q_par_e for electrons, q_par_i for ions) is calculated from them
+	* (see calc_q_par) and moved into the background too, and every frame
+	* must have them. Otherwise it is left empty and a message says so.
 	*
 	* Any missing dataset, wrong shape, or a number of zones or ghost cells
 	* that doesn't match the mesh stops the run.
@@ -1061,10 +1070,17 @@ namespace S3X
 		auto upar {zoned(zones, nframes)};
 		std::vector<double> times {};
 
-		// Ion parallel conductive heat flux (W/m^2), only if the files
-		// have the face fluxes it comes from
-		bool have_q_par {};
-		Vectors::ZonedVector<BkgFPType> q_par_i {};
+		// Parallel conductive heat flux (W/m^2) of each species, only if
+		// the files have the face fluxes it comes from
+		struct HeatFlux
+		{
+			std::string species;	// Group in the plasma files
+			std::string name;		// Name in the background
+			bool have {};
+			Vectors::ZonedVector<BkgFPType> q_par {};
+		};
+		std::array<HeatFlux, 2> heat_fluxes {{{"spec0", "q_par_e"},
+			{"spec1", "q_par_i"}}};
 
 		for (int t {}; t < nframes; ++t)
 		{
@@ -1099,25 +1115,35 @@ namespace S3X
 				bkg.set_ion_mass_amu(Hdf5::read_scalar<double>(file,
 					"/plasma_composition/spec1/mass"));
 
-				have_q_par = has_phi_face_fluxes(file);
-				if (have_q_par) q_par_i = zoned(zones, nframes);
-				else
+			}
+			for (auto& h : heat_fluxes)
+			{
+				const bool has {has_phi_face_fluxes(file, h.species)};
+				if (t == 0)
 				{
-					std::cout << "  No ion fluxes on the phi faces, so no "
-						"ion heat flux (q_par_i) is read.\n";
+					h.have = has;
+					if (has) h.q_par = zoned(zones, nframes);
+					else
+					{
+						std::cout << "  No " << h.species << " fluxes on the "
+							"phi faces, so no heat flux (" << h.name
+							<< ") is read.\n";
+					}
 				}
-			}
-			else if (has_phi_face_fluxes(file) != have_q_par)
-			{
-				Errors::fatal_error(path + (have_q_par ? " doesn't have"
-					: " has") + " the ion fluxes on the phi faces, but the "
-					"first frame " + (have_q_par ? "does" : "doesn't")
-					+ ". Every frame needs them, or none.");
-			}
-			if (have_q_par)
-			{
-				calc_q_par_i(file, ref, mesh, zones,
-					bkg.get_ion_mass_amu(), t, q_par_i);
+				else if (has != h.have)
+				{
+					Errors::fatal_error(path + (h.have ? " doesn't have"
+						: " has") + " the " + h.species + " fluxes on the "
+						"phi faces, but the first frame " + (h.have ? "does"
+						: "doesn't") + ". Every frame needs them, or none.");
+				}
+				if (h.have)
+				{
+					const double mass {h.species == "spec0"
+						? bkg.get_elec_mass_amu() : bkg.get_ion_mass_amu()};
+					calc_q_par(file, ref, mesh, zones, h.species, mass, t,
+						h.q_par);
+				}
 			}
 
 			for (int zone {}; zone < nzones; ++zone)
@@ -1184,10 +1210,12 @@ namespace S3X
 		bkg.move_into_ne(ne);
 		bkg.move_into_te(te);
 		bkg.move_into_ti(ti);
-		if (have_q_par)
+		for (auto& h : heat_fluxes)
 		{
-			zones.fill_ghosts(q_par_i);
-			bkg.move_into_q_par_i(q_par_i);
+			if (!h.have) continue;
+			zones.fill_ghosts(h.q_par);
+			if (h.species == "spec0") bkg.move_into_q_par_e(h.q_par);
+			else bkg.move_into_q_par_i(h.q_par);
 		}
 		calc_efield_and_flows(bkg, vp, upar);
 		bkg.move_into_vp(vp);

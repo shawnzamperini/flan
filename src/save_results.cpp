@@ -1108,6 +1108,9 @@ namespace SaveResults
 			{&bkg.get_q_par_i(), "q_par_i", "ion parallel conductive heat "
 				"flux, positive along B (empty unless SOLEDGE3X saved face "
 				"fluxes)", "(W/m2)"},
+			{&bkg.get_q_par_e(), "q_par_e", "electron parallel conductive "
+				"heat flux, positive along B (empty unless SOLEDGE3X saved "
+				"face fluxes)", "(W/m2)"},
 			{&bkg.get_vp(), "Vp", "plasma potential", "(V)"},
 			{&bkg.get_eX(), "E_X", "electric field (X)", "(V/m)"},
 			{&bkg.get_eY(), "E_Y", "electric field (Y)", "(V/m)"},

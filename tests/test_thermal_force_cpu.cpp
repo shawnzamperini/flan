@@ -205,23 +205,35 @@ TEST(ThermalForce, SkewedSampler)
 
 // Without a skew, the sampler is the plain drifting Maxwellian, with the
 // same random numbers as before the skew was added (each component the
-// flow plus rng.normal times v_th), and nothing is counted
+// flow plus rng.normal times v_th), and nothing is counted.
+//
+// The velocities are compared to within rounding, not bit for bit: the
+// library may be compiled with -march=native (Release builds) and this
+// test without it, and then u + v_th * w can be a fused multiply-add on
+// one side and not the other, which changes the last bits. Whether the
+// same random numbers were used is checked exactly instead, by drawing
+// from both generators afterward.
 TEST(ThermalForce, UnskewedSampler)
 {
 	const double T {20.0};
 	const double m {2.014 * Constants::amu_to_kg};
 	const double v_th {std::sqrt(T * Constants::ev_to_j / m)};
+	const double u[3] {3e4, -1e4, 2e4};
 	pcg32 rng(3, 5);
 	pcg32 old_rng(3, 5);
 	Collisions::SkewCounts counts {};
 	for (int k {}; k < 1000; ++k)
 	{
-		const auto [vX, vY, vZ] = Collisions::sample_bkg_velocity(T, 3e4,
-			-1e4, 2e4, m, 0.0, 0.0, 0.0, 1.0, rng, counts);
-		EXPECT_EQ(vX, old_rng.normal(3e4, v_th));
-		EXPECT_EQ(vY, old_rng.normal(-1e4, v_th));
-		EXPECT_EQ(vZ, old_rng.normal(2e4, v_th));
+		const auto [vX, vY, vZ] = Collisions::sample_bkg_velocity(T, u[0],
+			u[1], u[2], m, 0.0, 0.0, 0.0, 1.0, rng, counts);
+		const double v[3] {vX, vY, vZ};
+		for (int c {}; c < 3; ++c)
+		{
+			EXPECT_NEAR(v[c], old_rng.normal(u[c], v_th),
+				1e-13 * (std::abs(u[c]) + v_th)) << k << " " << c;
+		}
 	}
+	EXPECT_EQ(rng.next_uint(), old_rng.next_uint());
 	EXPECT_EQ(counts.samples, 0);
 	EXPECT_EQ(counts.draws, 0);
 }
