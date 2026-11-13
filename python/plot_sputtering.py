@@ -31,10 +31,10 @@ or from Python:
 	print_summary(run)
 	plot_all(run)
 
-The inventory away from the divertor assumes a lower single null: it's the
-part above the X-point, whose height is taken as the lowest corner of the
-core zones (the zones with a core face). Use --upper for an upper single
-null.
+The inventory away from the divertor assumes a single null: it's the part
+above the X-point for a lower single null, whose height is taken as the
+lowest corner of the core zones (the zones with a core face), or below it
+for an upper single null (--upper), using their highest corner.
 """
 
 import argparse
@@ -128,13 +128,26 @@ def load_run(nc_path):
 	return run
 
 
-def x_point_z(run):
+def x_point_z(run, upper=False):
 	"""
-	Returns the height of the X-point (m), taken as the lowest corner of the
-	core zones, or None if there are no core zones.
+	Returns the height of the X-point (m), or None if there are no core
+	zones.
+
+	The core zones (those with a core face) cover the closed flux surfaces
+	inside the separatrix, and the X-point is the separatrix's lowest point
+	for a lower single null, or its highest for an upper single null. So
+	it's taken as the lowest (or highest) corner of the core zones, which
+	is within about a cell of the true X-point.
+
+	Inputs
+	 - run (dict)   : From load_run.
+	 - upper (bool) : The divertor is at the top (upper single null).
 	"""
 	if not run["core_zones"]:
 		return None
+	if upper:
+		return max(run["zones"][z]["Z_corners"].max()
+			for z in run["core_zones"])
 	return min(run["zones"][z]["Z_corners"].min() for z in run["core_zones"])
 
 
@@ -174,7 +187,7 @@ def print_summary(run, upper=False):
 		t_mean * 1e6))
 
 	# Inventory, per zone and away from the divertor
-	z_x = x_point_z(run)
+	z_x = x_point_z(run, upper)
 	total = 0.0
 	away = 0.0
 	per_zone = {}
