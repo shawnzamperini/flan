@@ -622,6 +622,18 @@ namespace Background
 		m_ti = Vectors::ZonedVector<BkgFPType>(std::move(ti));
 	}
 
+	void Background::move_into_q_par_i(Vectors::Vector4D<BkgFPType>& q_par_i)
+	{
+		set_dims(q_par_i, "q_par_i");
+		m_q_par_i = Vectors::ZonedVector<BkgFPType>(std::move(q_par_i));
+	}
+
+	void Background::move_into_q_par_e(Vectors::Vector4D<BkgFPType>& q_par_e)
+	{
+		set_dims(q_par_e, "q_par_e");
+		m_q_par_e = Vectors::ZonedVector<BkgFPType>(std::move(q_par_e));
+	}
+
 	void Background::move_into_vp(Vectors::Vector4D<BkgFPType>& vp)
 	{
 		set_dims(vp, "vp");

@@ -253,6 +253,8 @@ namespace Background
 		void move_into_ne(Vectors::Vector4D<BkgFPType>& ne);
 		void move_into_te(Vectors::Vector4D<BkgFPType>& te);
 		void move_into_ti(Vectors::Vector4D<BkgFPType>& ti);
+		void move_into_q_par_i(Vectors::Vector4D<BkgFPType>& q_par_i);
+		void move_into_q_par_e(Vectors::Vector4D<BkgFPType>& q_par_e);
 		void move_into_vp(Vectors::Vector4D<BkgFPType>& vp);
 		void move_into_bX(Vectors::Vector4D<BkgFPType>& bX);
 		void move_into_bY(Vectors::Vector4D<BkgFPType>& bY);

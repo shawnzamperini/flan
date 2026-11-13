@@ -180,12 +180,13 @@ namespace Options
 	*
 	* Which built-in test case to run when using the test background.
 	*
-	* Valid values are "gyrate", "exb", "gradb", "polarization", "curvature"
-	* and "friction_force". An invalid value prints an error and leaves the
-	* option unchanged. Also sets the control integer returned by
-	* test_opt_int() to 0 for "gyrate", 1 for "exb", 2 for "gradb", 3 for
-	* "polarization", 4 for "curvature", 5 for "friction_force". An invalid
-	* value leaves the control integer unchanged.
+	* Valid values are "gyrate", "exb", "gradb", "polarization", "curvature",
+	* "friction_force" and "thermal_force". An invalid value prints an
+	* error and leaves the option unchanged. Also sets the control integer
+	* returned by test_opt_int() to 0 for "gyrate", 1 for "exb", 2 for
+	* "gradb", 3 for "polarization", 4 for "curvature", 5 for
+	* "friction_force", 6 for "thermal_force". An invalid value leaves the
+	* control integer unchanged.
 	*
 	* @param test_opt New value of the test_opt option.
 	*/
@@ -193,7 +194,7 @@ namespace Options
 	{
 		if (check_input<std::string>("test_opt", test_opt,
 			{"gyrate", "exb", "gradb", "polarization", "curvature", 
-			"friction_force"}))
+			"friction_force", "thermal_force"}))
 		{
 			m_test_opt = test_opt;
 		}
@@ -205,6 +206,7 @@ namespace Options
 		else if (test_opt == "polarization") m_test_opt_int = 3;
 		else if (test_opt == "curvature") m_test_opt_int = 4;
 		else if (test_opt == "friction_force") m_test_opt_int = 5;
+		else if (test_opt == "thermal_force") m_test_opt_int = 6;
 	}
 
 	/**
@@ -2483,8 +2485,8 @@ namespace Options
 	*
 	* The control integer is an integer version of test_opt that is faster
 	* to check than the string: 0 = "gyrate", 1 = "exb", 2 = "gradb", 3 =
-	* "polarization", 4 = "curvature", 5 = "friction_force". It is fetched
-	* through get_control_int, which prints an error if it was never set.
+	* "polarization", 4 = "curvature", 5 = "friction_force", 6 =
+	* "thermal_force". It is fetched through get_control_int, which prints an error if it was never set.
 	*
 	* @return Control integer for test_opt, or -1 if it was never set.
 	*/

@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <gtest/gtest.h>
+#include <omp.h>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,9 @@
 #include "collisions.h"
 #include "constants.h"
 #include "flan_types.h"
+#include "impurity_stats.h"
+#include "read_bkg.h"
+#include "slots.h"
 #include "vectors.h"
 #include "zones.h"
 #include "options.h"
@@ -374,4 +378,272 @@ TEST(ThermalForce, Checks)
 	opts.set_imp_thermal_force("off");
 	opts.set_use_gpu("cuda");
 	Collisions::check_thermal_force(bkg, opts);
+}
+
+namespace
+{
+	// Tungsten at rest in the thermal_force test background (uniform
+	// ne = 1e20 m^-3, Te = Ti = 1 eV, B along +X, heat fluxes in +X with
+	// eps = 0.1 for both species), and what the collision model does to it
+	struct ForceCase
+	{
+		Options::Options opts {};
+		Background::Background bkg {};
+		static constexpr double imp_mass {183.84 * Constants::amu_to_kg};
+		static constexpr double ne {1e20};
+		static constexpr double T {1.0};
+
+		ForceCase()
+		{
+			opts.set_bkg_source("test");
+			opts.set_test_opt("thermal_force");
+			bkg = Background::read_bkg(opts);
+		}
+
+		// Mass (kg) of the background species collided with
+		double bkg_mass(const bool elec) const
+		{
+			return (elec ? bkg.get_elec_mass_amu() : bkg.get_ion_mass_amu())
+				* Constants::amu_to_kg;
+		}
+
+		// Thermal speed sqrt(T / m) of that species (m/s)
+		double v_th(const bool elec) const
+		{
+			return std::sqrt(T * Constants::ev_to_j / bkg_mass(elec));
+		}
+
+		// Skew of that species at the middle of the slab
+		double eps(const bool elec) const
+		{
+			const double t {bkg.get_times()[0]};
+			const double q_par {elec
+				? bkg.interp_q_par_e(0, t, 0.025, 0.0, 0.0)
+				: bkg.interp_q_par_i(0, t, 0.025, 0.0, 0.0)};
+			return Collisions::skew_eps(q_par, ne, T, bkg_mass(elec));
+		}
+
+		// Nanbu's s (how collisional a time step is) per second, for a
+		// background particle at the thermal speed hitting an impurity of
+		// charge Z at rest: s = s_rate dt (v_th / g)^3 at relative speed
+		// g. The same formulas as nanbu_calc_s, written out again here.
+		double s_rate(const bool elec, const int Z) const
+		{
+			const double e {Constants::charge_e};
+			const double mb {bkg_mass(elec)};
+			const double mu {imp_mass * mb / (imp_mass + mb)};
+			const double T_J {T * Constants::ev_to_j};
+			const double b0 {Z * e * e
+				/ (2.0 * Constants::pi * Constants::eps0 * 3.0 * T_J)};
+			const double debye {std::sqrt(Constants::eps0 * T_J
+				/ (ne * e * e))};
+			const double ln_alpha {std::max(std::log(debye / b0), 1.0)};
+			const double sq {Z * e * e / (Constants::eps0 * mu)};
+			const double vt {v_th(elec)};
+			return ln_alpha / (4.0 * Constants::pi) * sq * sq * ne
+				/ (vt * vt * vt);
+		}
+	};
+
+	// Mean and standard error of the change in velocity along B (+X) and
+	// across it (+Y) that one call of nanbu_coll gives impurities at
+	// rest, in m/s, from n_slots * n_calls collisions
+	struct Kick
+	{
+		double par {};
+		double par_err {};
+		double perp {};
+		double perp_err {};
+	};
+
+	Kick measure_kick(const ForceCase& fc, const bool elec, const int Z,
+		const double dt, const int n_slots, const int n_calls)
+	{
+		Slots::Slots slots(n_slots);
+		slots.set_mass(ForceCase::imp_mass);
+		for (int i {}; i < n_slots; ++i)
+		{
+			slots.set_zone(i, 0);
+			slots.set_t(i, fc.bkg.get_times()[0]);
+			slots.set_x(i, 0.025);
+			slots.set_y(i, 0.0);
+			slots.set_z(i, 0.0);
+			slots.set_q(i, Z);
+			slots.set_state(i, 0);
+		}
+
+		Impurity::Statistics imp_stats {};
+		std::vector<pcg32> rngs {};
+		for (int i {}; i < omp_get_max_threads(); ++i)
+			rngs.emplace_back(1234, 2 * i + (elec ? 1 : 0));
+
+		double sum_par {}, sum_par_sq {}, sum_perp {}, sum_perp_sq {};
+		for (int c {}; c < n_calls; ++c)
+		{
+			for (int i {}; i < n_slots; ++i)
+			{
+				slots.set_vX(i, 0.0);
+				slots.set_vY(i, 0.0);
+				slots.set_vZ(i, 0.0);
+			}
+			Collisions::nanbu_coll(slots, fc.bkg, fc.opts, elec, dt,
+				imp_stats, rngs);
+			for (int i {}; i < n_slots; ++i)
+			{
+				const double vX {slots.vX()[i]};
+				const double vY {slots.vY()[i]};
+				sum_par += vX;
+				sum_par_sq += vX * vX;
+				sum_perp += vY;
+				sum_perp_sq += vY * vY;
+			}
+		}
+
+		const double N {static_cast<double>(n_slots) * n_calls};
+		Kick k {};
+		k.par = sum_par / N;
+		k.par_err = std::sqrt((sum_par_sq / N - k.par * k.par) / N);
+		k.perp = sum_perp / N;
+		k.perp_err = std::sqrt((sum_perp_sq / N - k.perp * k.perp) / N);
+		return k;
+	}
+}
+
+// The collision model gives the thermal force: with a heat flux, an
+// impurity at rest gets a net kick along B, opposite to the heat flux
+// (toward where the plasma is hotter), of the size the model should give.
+//
+// In one Nanbu step a background particle with velocity v_b turns the
+// relative velocity by an angle chi, which changes the velocity of an
+// impurity at rest by frac v_b (1 - cos chi) on average over the random
+// azimuth, with frac = m_b / (m_imp + m_b). Nanbu's model has <cos chi> =
+// exp(-s), and s = s0 / w^3 for a background particle at w thermal speeds
+// (s0 = s_rate dt). Averaging over the skewed distribution, the Maxwellian
+// part cancels by symmetry and
+//
+//   <dv_par> = frac v_th eps <w_par^2 (a + b w^2 + c w^4)
+//                             (1 - exp(-s0 / w^3))>,
+//
+// exact at any time step and linear in eps. Slow particles (large s) turn
+// all the way and fast ones barely, and since the slow ones lean against
+// the heat flux, the kick is against it. Checked for both species; the
+// last check is that it is a property of the heat flux (no heat flux, no
+// kick).
+//
+// The kick is small next to the random part of a collision, so resolving it
+// takes millions of collisions. An optimized build does 2e7 for each
+// species at two time steps (s0 = 0.3 and 3), which resolves the kick to
+// 2 - 5%. A build without optimization is about 50 times slower, so it
+// does 2e6 at s0 = 3 only (5 - 7%), enough to catch a wrong sign or a
+// badly wrong size.
+TEST(ThermalForce, NanbuKick)
+{
+	const ForceCase fc {};
+	constexpr int Z {2};
+	constexpr int n_slots {200000};
+#ifdef __OPTIMIZE__
+	constexpr int n_calls {100};
+	const std::vector<double> s0s {0.3, 3.0};
+#else
+	constexpr int n_calls {10};
+	const std::vector<double> s0s {3.0};
+#endif
+
+	for (const bool elec : {false, true})
+	{
+		const Collisions::SkewShape& shape {elec ? elec_shape : ion_shape};
+		const double eps {fc.eps(elec)};
+		EXPECT_NEAR(eps, 0.1, 1e-12);
+		const double mb {fc.bkg_mass(elec)};
+		const double frac {mb / (ForceCase::imp_mass + mb)};
+
+		for (const double s0 : s0s)
+		{
+			const double dt {s0 / fc.s_rate(elec, Z)};
+			const double expected {frac * fc.v_th(elec) * eps
+				* shape_average(shape, [s0](const double w)
+				{return 1.0 - std::exp(-s0 / (w * w * w));})};
+			const Kick k {measure_kick(fc, elec, Z, dt, n_slots, n_calls)};
+
+			SCOPED_TRACE((elec ? "electrons, s0 = " : "ions, s0 = ")
+				+ std::to_string(s0));
+			std::cout << (elec ? "electrons" : "ions") << ", s0 = " << s0
+				<< ": dv_par = " << k.par << " +/- " << k.par_err
+				<< " m/s, expected " << expected << '\n';
+
+			// Against the heat flux (+X), and resolved well enough for
+			// the comparison to mean something
+			EXPECT_LT(expected, 0.0);
+			EXPECT_LT(k.par, 0.0);
+			EXPECT_LT(k.par_err, 0.1 * std::abs(expected));
+
+			// Agrees to within 4 standard errors, plus 3% for what the
+			// sampler clips at eps = 0.1 and Nanbu's table of A(s)
+			EXPECT_NEAR(k.par, expected,
+				4.0 * k.par_err + 0.03 * std::abs(expected));
+
+			// Nothing across B
+			EXPECT_NEAR(k.perp, 0.0, 4.0 * k.perp_err);
+		}
+	}
+
+	// Option off: Maxwellian background, no kick
+	ForceCase off {};
+	off.opts.set_imp_thermal_force("off");
+	const double dt {1.0 / off.s_rate(false, Z)};
+	const Kick k {measure_kick(off, false, Z, dt, n_slots, n_calls / 5)};
+	EXPECT_NEAR(k.par, 0.0, 4.0 * k.par_err);
+}
+
+// In the limit of a small time step the kick is a force, F = m_imp
+// <dv_par> / dt, and with the heat flux of a collisional plasma, q_par =
+// -kappa grad T, it is the textbook thermal force: 2.65 Z^2 grad T from
+// the ions (for a heavy impurity; a factor m_i / mu from the reduced mass
+// mu otherwise) and 0.71 Z^2 grad T from the electrons. This ties
+// together the Coulomb rate in Nanbu's s, Braginskii's conductivities
+// (kappa = 3.906 n T tau_i / m_i and 3.16 n T tau_e / m_e) and the fitted
+// shapes of the skew.
+TEST(ThermalForce, SmallStepLimit)
+{
+	const ForceCase fc {};
+	constexpr int Z {3};
+	constexpr double grad_T {-50.0 * Constants::ev_to_j};	// J/m, hot at -X
+	const double e {Constants::charge_e};
+	const double T_J {ForceCase::T * Constants::ev_to_j};
+
+	for (const bool elec : {false, true})
+	{
+		const Collisions::SkewShape& shape {elec ? elec_shape : ion_shape};
+		const double mb {fc.bkg_mass(elec)};
+		const double mu {ForceCase::imp_mass * mb / (ForceCase::imp_mass + mb)};
+
+		// Coulomb logarithm as in s_rate, so that it cancels
+		const double b0 {Z * e * e
+			/ (2.0 * Constants::pi * Constants::eps0 * 3.0 * T_J)};
+		const double debye {std::sqrt(Constants::eps0 * T_J
+			/ (ForceCase::ne * e * e))};
+		const double ln_alpha {std::max(std::log(debye / b0), 1.0)};
+
+		// Braginskii's collision times (s) and conductivities
+		// (1/(m s)): tau_i has a sqrt(2) that tau_e doesn't
+		const double tau {(elec ? 6.0 * std::sqrt(2.0) : 12.0)
+			* std::pow(Constants::pi, 1.5) * Constants::eps0
+			* Constants::eps0 * std::sqrt(mb) * std::pow(T_J, 1.5)
+			/ (ln_alpha * e * e * e * e * ForceCase::ne)};
+		const double kappa {(elec ? 3.16 : 3.906) * ForceCase::ne * T_J
+			* tau / mb};
+		const double q_par {-kappa * grad_T};
+		const double eps {Collisions::skew_eps(q_par, ForceCase::ne,
+			ForceCase::T, mb)};
+
+		// Kick per second in the small-step limit, 1 - exp(-s) -> s
+		const double dv_dt {mb / (ForceCase::imp_mass + mb) * fc.v_th(elec)
+			* eps * fc.s_rate(elec, Z) * shape_average(shape,
+			[](const double w) {return 1.0 / (w * w * w);})};
+		const double force {ForceCase::imp_mass * dv_dt};
+
+		const double coeff {elec ? 0.71 : 2.6517 * mb / mu};
+		EXPECT_NEAR(force / (Z * Z * grad_T), coeff, 2e-3 * coeff)
+			<< (elec ? "electrons" : "ions");
+	}
 }

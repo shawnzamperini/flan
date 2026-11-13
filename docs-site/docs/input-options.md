@@ -41,7 +41,7 @@ are grouped by what they control.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `test_opt` | string | `"gyrate"` | Which built-in test case to run when using the test background. Valid values: `"gyrate"`, `"exb"`, `"gradb"`, `"polarization"`, `"curvature"`, `"friction_force"`. |
+| `test_opt` | string | `"gyrate"` | Which built-in test case to run when using the test background. Valid values: `"gyrate"`, `"exb"`, `"gradb"`, `"polarization"`, `"curvature"`, `"friction_force"`, `"thermal_force"`. |
 | `save_track` | string | `"off"` | Whether to save particle tracks to the output file. Valid values: `"off"`, `"on"`. |
 
 ## Gkeyll

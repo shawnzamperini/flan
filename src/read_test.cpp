@@ -5,13 +5,15 @@
 *
 * The test backgrounds are simple, analytic plasmas used to check that Flan
 * reproduces textbook single-particle motion (gyration and the ExB, grad-B,
-* polarization and curvature drifts) and the friction force from the
-* collision model. They are used with bkg_source = "test", and the case is
+* polarization and curvature drifts) and the friction and thermal forces
+* from the collision model. They are used with bkg_source = "test", and the case is
 * chosen with test_opt. The regression inputs in regression/ run them.
 */
+#include <algorithm>
 #include <cmath>
 
 #include "background.h"
+#include "constants.h"
 #include "flan_types.h"
 #include "options.h"
 #include "read_bkg.h"
@@ -40,12 +42,19 @@ namespace Test
 	* - friction_force (5): slab, B_X = 1 T and a background flow of
 	*   u_X = 1000 m/s, no electric field, to show the friction force from
 	*   the collision model.
+	* - thermal_force (6): slab, B_X = 1 T, no flow or electric field, and
+	*   parallel conductive heat fluxes of q_par = 0.1 n T v_th for both
+	*   ions and electrons (v_th = sqrt(T / m) of that species), i.e., heat
+	*   flowing in +X with a skew of eps = 0.1 (see Collisions::skew_eps).
+	*   The collision model then pushes impurities in -X, toward where the
+	*   plasma would be hotter: the thermal force.
 	*
 	* The slab is 5 x 5 x 3 cm, x from 0 to 0.05 m, y from -0.025 to 0.025
 	* m and z from -0.015 to 0.015 m, with x = X, y = Y and z = Z. The
 	* cylindrical volume has R from 2.00 to 2.05 m, Z from -0.025 to 0.025 m
-	* and phi from 0 to about pi/2. Only the background flow is nonzero in
-	* the friction force case. The reciprocal basis vectors and Jacobian
+	* and phi from 0 to about pi/2. The background flow is only nonzero in
+	* the friction force case, and only the thermal force case has heat
+	* fluxes. The reciprocal basis vectors and Jacobian
 	* are set for each geometry. The tangent basis vectors are not set.
 	*
 	* @param opts Simulation options, used for test_opt.
@@ -116,12 +125,14 @@ namespace Test
 		//     in a toroidal magnetic field
 		// 5 = Test to show that the fluid friction force manifests from the
 		//     collision model
+		// 6 = Test to show that the thermal force manifests from the
+		//     collision model, when the background has a heat flux
 
 		// Slab geometry options (includes tests for simple gyration, ExB, 
-		// grad-B, polarization drifts and friction force).
+		// grad-B, polarization drifts and friction and thermal forces).
 		if (opts.test_opt_int() == 0 || opts.test_opt_int() == 1 
 			|| opts.test_opt_int() == 2 || opts.test_opt_int() == 3
-			|| opts.test_opt_int() == 5)
+			|| opts.test_opt_int() == 5 || opts.test_opt_int() == 6)
 		{
 			// x, y, z just a simple rectangular volume, 5 x 5 x 3 cm.
 			test_grid_x = Utilities::linspace(0.00, 0.05, xdim+1);
@@ -250,7 +261,8 @@ namespace Test
 
 			// Zero electric field in these tests
 			if (opts.test_opt_int() == 0 || opts.test_opt_int() == 2 ||
-				opts.test_opt_int() == 4 || opts.test_opt_int() == 5)
+				opts.test_opt_int() == 4 || opts.test_opt_int() == 5 ||
+				opts.test_opt_int() == 6)
 			{
 				test_eX.get_data()[idx] = 0.0;
 				test_eY.get_data()[idx] = 0.0;
@@ -313,8 +325,9 @@ namespace Test
 
 			// Friction force test uses a magnetic field in the x direction,
 			// the same direction of the flow since we're interested in the
-			// friction force as a parallel-to-B force
-			else if (opts.test_opt_int() == 5)
+			// friction force as a parallel-to-B force. Likewise for the
+			// thermal force test, where the heat flux is along B.
+			else if (opts.test_opt_int() == 5 || opts.test_opt_int() == 6)
 			{
 				test_bX.get_data()[idx] = 1.0;
 				test_bY.get_data()[idx] = 0.0;
@@ -323,10 +336,11 @@ namespace Test
 
 			}
 			
-			// All drift tests have zero background flow
+			// All drift tests and the thermal force test have zero
+			// background flow
 			if (opts.test_opt_int() == 0 || opts.test_opt_int() == 1 
 				|| opts.test_opt_int() == 2 || opts.test_opt_int() == 3
-				|| opts.test_opt_int() == 4)
+				|| opts.test_opt_int() == 4 || opts.test_opt_int() == 6)
 			{
 				test_uX.get_data()[idx] = 0.0;
 				test_uY.get_data()[idx] = 0.0;
@@ -371,6 +385,31 @@ namespace Test
 		bkg.move_into_uX(test_uX);
 		bkg.move_into_uY(test_uY);
 		bkg.move_into_uZ(test_uZ);
+
+		// Thermal force test: uniform parallel conductive heat fluxes (W/m^2)
+		// for the ions and electrons, in +X since B is. Each is
+		// q_par = eps n T v_th with a skew of eps = 0.1, where n T v_th
+		// (v_th = sqrt(T / m)) is that species' thermal energy moving at
+		// its thermal speed. n and T are the uniform values set above.
+		if (opts.test_opt_int() == 6)
+		{
+			constexpr double eps {0.1};
+			constexpr double n {1e20};						// m^-3
+			constexpr double T_J {1.0 * Constants::ev_to_j};	// J
+			const double mi {opts.gkyl_ion_mass_amu() * Constants::amu_to_kg};
+			const double me {opts.gkyl_elec_mass_amu() * Constants::amu_to_kg};
+
+			Vectors::Vector4D<BkgFPType> test_q_par_i {tdim, xdim, ydim, zdim};
+			Vectors::Vector4D<BkgFPType> test_q_par_e {tdim, xdim, ydim, zdim};
+			std::fill(test_q_par_i.get_data().begin(),
+				test_q_par_i.get_data().end(),
+				eps * n * T_J * std::sqrt(T_J / mi));
+			std::fill(test_q_par_e.get_data().begin(),
+				test_q_par_e.get_data().end(),
+				eps * n * T_J * std::sqrt(T_J / me));
+			bkg.move_into_q_par_i(test_q_par_i);
+			bkg.move_into_q_par_e(test_q_par_e);
+		}
 
 		// Likewise for the reciprocal basis vectors. Tangent basis vectors
 		// not needed, so not saved.
