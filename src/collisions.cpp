@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "background.h"
+#include "collisions.h"
 #include "constants.h"
 #include "impurity_stats.h"
 #include "nanbu_s_a.h"
@@ -47,39 +48,134 @@ namespace Collisions
 	}
 
 
+	namespace
+	{
+		// Counts from the skewed sampler on this rank, summed at the end
+		// of each nanbu_coll call (see SkewCounts)
+		SkewCounts g_skew_counts {};
+
+		// Largest |eps| used. Grad's expansion is only meant for small
+		// skews, and at |eps| = 1 it is already negative over ~2% of the
+		// Maxwellian; anything larger is treated as 1 (and counted).
+		constexpr double max_eps {1.0};
+
+		// Speed (in v_th) up to which skew_bound bounds the Grad factor
+		constexpr double bound_w {5.0};
+	}
+
+	/**
+	* Bound M on the Grad factor F = 1 + eps w_par (w^2 / 5 - 1) used for
+	* rejection sampling (see sample_bkg_velocity).
+	*
+	* |w_par (w^2 / 5 - 1)| is largest at w_par = w, and for w up to 5 it
+	* is at most 5 (25 / 5 - 1) = 20, so F <= 1 + 20 |eps| there. Faster
+	* draws (|w| > 5, about 1 in 10^5 of a Maxwellian) can exceed it; they
+	* are accepted with probability 1 instead of F / M, which is counted.
+	*
+	* @param eps Size of the skew.
+	* @return M.
+	*/
+	double skew_bound(const double eps)
+	{
+		return 1.0 + std::abs(eps) * bound_w
+			* (bound_w * bound_w / 5.0 - 1.0);
+	}
+
 	/**
 	* Samples the velocity of a background particle from a drifting
-	* Maxwellian.
+	* Maxwellian, skewed by a parallel heat flux if eps isn't 0.
 	*
-	* Each component is drawn from a normal distribution with a mean equal
-	* to the flow velocity and a standard deviation of sqrt(kT/m). We call
-	* this thermal sampling of the background velocity.
+	* Unskewed (eps = 0): each component is the flow velocity plus a
+	* normally distributed number times the thermal speed v_th =
+	* sqrt(T / m). We call this thermal sampling of the background
+	* velocity. Nothing is counted, and the random numbers are the same as
+	* before the skew was added, so results without a heat flux haven't
+	* changed.
+	*
+	* Skewed (eps != 0): the distribution is the Grad distribution
+	* f = f_M [1 + eps w_par (w^2 / 5 - 1)] (see grad_factor), sampled by
+	* rejection: draw w = (v - u) / v_th from the unskewed Maxwellian, with
+	* w_par = w . b, and accept it with probability max(F, 0) / M, where F
+	* is the Grad factor and M = skew_bound(eps) >= F. Accepted draws are
+	* distributed as f_M max(F, 0), the Grad distribution with its negative
+	* parts set to 0 (clipped). Clipping removes a little of the heat flux
+	* when the skew is strong: about 2% at eps = 0.1 and 11% at eps = 0.3.
+	* On average M draws are needed per sample.
 	*
 	* @param T Temperature of the background species (eV).
 	* @param uX Cartesian X flow velocity of the background species (m/s).
 	* @param uY Cartesian Y flow velocity of the background species (m/s).
 	* @param uZ Cartesian Z flow velocity of the background species (m/s).
 	* @param m Mass of the background species (kg).
+	* @param eps Size of the skew (see grad_skew_eps), positive when the
+	*        heat flows along B, 0 for none. |eps| > 1 is treated as 1.
+	* @param bX Cartesian X component of the unit vector along B (only used
+	*        if eps isn't 0).
+	* @param bY Cartesian Y component of the unit vector along B.
+	* @param bZ Cartesian Z component of the unit vector along B.
 	* @param rng Random number generator for this thread.
+	* @param counts Counts to add a skewed sample's draws to.
 	* @return Sampled velocity {vX, vY, vZ} in Cartesian space (m/s).
 	*/
 	std::tuple<double, double, double> sample_bkg_velocity(
 		const double T, const double uX, const double uY, const double uZ,
-		const double m, pcg32& rng)
+		const double m, const double eps, const double bX, const double bY,
+		const double bZ, pcg32& rng, SkewCounts& counts)
 	{
-		// Sampling from a drifting Maxwellian, which can be done by just
-		// sampling from a normally distributed number with uXYZ = mean = drift 
-		// and mu = sqrt(kT/m). We call this thermal sampling of the background
-		// velocity. Unfortunately throwing away the second random number 
-		// here. T [eV], m [kg]
-		double mu {std::sqrt(T * Constants::ev_to_j / m)};  // m/s
-		double vX {rng.normal(uX, mu)};
-		double vY {rng.normal(uY, mu)};
-		double vZ {rng.normal(uZ, mu)};
+		const double v_th {std::sqrt(T * Constants::ev_to_j / m)};  // m/s
 
-		// Return as tuple
-		return std::make_tuple(vX, vY, vZ);
+		// Unskewed: a single draw from the drifting Maxwellian
+		if (eps == 0.0)
+		{
+			const double wX {rng.normal(0.0, 1.0)};
+			const double wY {rng.normal(0.0, 1.0)};
+			const double wZ {rng.normal(0.0, 1.0)};
+			return std::make_tuple(uX + v_th * wX, uY + v_th * wY,
+				uZ + v_th * wZ);
+		}
+
+		// Skewed: rejection sampling
+		counts.samples++;
+		double e {eps};
+		if (std::abs(e) > max_eps)
+		{
+			e = std::copysign(max_eps, e);
+			counts.eps_capped++;
+		}
+		const double M {skew_bound(e)};
+
+		while (true)
+		{
+			counts.draws++;
+			const double wX {rng.normal(0.0, 1.0)};
+			const double wY {rng.normal(0.0, 1.0)};
+			const double wZ {rng.normal(0.0, 1.0)};
+			const double w_par {wX * bX + wY * bY + wZ * bZ};
+			const double w_sq {wX * wX + wY * wY + wZ * wZ};
+			const double F {grad_factor(e, w_par, w_sq)};
+
+			bool accept {};
+			if (F <= 0.0) counts.negative++;
+			else if (F > M)
+			{
+				counts.above_bound++;
+				accept = true;
+			}
+			else accept = rng.next_double() * M < F;
+
+			if (accept)
+			{
+				return std::make_tuple(uX + v_th * wX, uY + v_th * wY,
+					uZ + v_th * wZ);
+			}
+		}
 	}
+
+	/// Counts from the skewed sampler on this rank (see SkewCounts)
+	SkewCounts get_skew_counts() {return g_skew_counts;}
+
+	/// Sets the skewed sampler's counts back to 0
+	void reset_skew_counts() {g_skew_counts = SkewCounts {};}
 
 
 	/**
@@ -88,7 +184,8 @@ namespace Collisions
 	*
 	* The relative velocity g is between the impurity and a background
 	* particle whose velocity is sampled from a drifting Maxwellian (flow
-	* plus thermal sampling) with sample_bkg_velocity. The Coulomb logarithm
+	* plus thermal sampling) with sample_bkg_velocity, skewed by the heat
+	* flux if eps isn't 0 (the thermal force). The Coulomb logarithm
 	* uses the Debye length and the expectation value of the impact
 	* parameter b0, and is clamped to be at least 1. The background species
 	* is assumed to be singly charged with ni = ne. An error is printed if
@@ -111,7 +208,14 @@ namespace Collisions
 	* @param vZ Cartesian Z velocity of the impurity (m/s).
 	* @param q Charge state of the impurity. Must not be 0.
 	* @param slots Particle slots, used for the impurity mass.
+	* @param eps Heat-flux skew of the background species (see
+	*        grad_skew_eps), 0 for none.
+	* @param bX Cartesian X component of the unit vector along B (only used
+	*        if eps isn't 0).
+	* @param bY Cartesian Y component of the unit vector along B.
+	* @param bZ Cartesian Z component of the unit vector along B.
 	* @param rng Random number generator for this thread.
+	* @param skew_counts Counts for the skewed sampler.
 	* @return {s, gX, gY, gZ}, where gX, gY and gZ are the Cartesian
 	*         components of the relative velocity (m/s).
 	*/
@@ -121,7 +225,8 @@ namespace Collisions
 		const double Te, const double ne, const int zone, const double t,
 		const double x, const double y, const double z, const double vX,
 		const double vY, const double vZ, const int q, Slots::Slots& slots,
-		pcg32& rng)
+		const double eps, const double bX, const double bY, const double bZ,
+		pcg32& rng, SkewCounts& skew_counts)
 	{
 		// While I think the below is still valid, it was solved in calc_chi
 		// by returning an isotropically distributed chi at large s (small A)
@@ -150,9 +255,11 @@ namespace Collisions
 		double uZ {bkg.interp_uZ(zone, t, x, y, z)}; 
 
 		// Random sample of background species instantanoues velocity 
-		// (flow + thermal sampling) that particle is colliding with.
-		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(T, uX, 
-			uY, uZ, mass_kg, rng);
+		// (flow + thermal sampling) that particle is colliding with. With a
+		// heat flux (eps != 0), it comes from the skewed distribution,
+		// which is what gives the thermal force.
+		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(T, uX, uY, uZ,
+			mass_kg, eps, bX, bY, bZ, rng, skew_counts);
 
 		// XYZ components of instantaneous relative velocity
 		double inst_gX {vX - bkg_vX};
@@ -467,6 +574,10 @@ namespace Collisions
 			int tid = omp_get_thread_num();
 			pcg32& rng = rngs[tid];
 
+			// This thread's counts from the skewed sampler, added to the
+			// rank's total at the end
+			SkewCounts skew_counts {};
+
 		#pragma omp for
 		for (int i=0; i < slots.N(); ++i)
 		{
@@ -540,6 +651,34 @@ namespace Collisions
 				T = std::max(opts.min_ti(), T);
 			}
 
+			// Heat-flux skew of the ions (thermal force): eps from the ion
+			// parallel heat flux, with ni = ne, and the unit vector along B
+			// it's measured along. Backgrounds without a heat flux give
+			// q_par = 0, so no skew. Electrons aren't skewed yet.
+			double eps {};
+			double bX {};
+			double bY {};
+			double bZ {};
+			if (!elec)
+			{
+				const double q_par {bkg.interp_q_par_i(zone, t, x, y, z)};
+				if (q_par != 0.0)
+				{
+					eps = grad_skew_eps(q_par, ne, T, mass_kg);
+					bX = bkg.interp_4d(bkg.get_bX(), zone, t, x, y, z);
+					bY = bkg.interp_4d(bkg.get_bY(), zone, t, x, y, z);
+					bZ = bkg.interp_4d(bkg.get_bZ(), zone, t, x, y, z);
+					const double B {std::sqrt(bX * bX + bY * bY + bZ * bZ)};
+					if (B > 0.0)
+					{
+						bX /= B;
+						bY /= B;
+						bZ /= B;
+					}
+					else eps = 0.0;
+				}
+			}
+
 			// The Nanbu model has three main variables in it:
 			// s:    How collisional is this step?
 			// A(s): What is the shape of the scattering distribution? A(s) is
@@ -550,7 +689,8 @@ namespace Collisions
 			// Calculate s (Eq. 19), making sure to pass in the full time step
 			// velocities.
 			auto [s, gX, gY, gZ] = nanbu_calc_s(bkg, dt, T, 
-				mass_kg, Te, ne, zone, t, x, y, z, vX, vY, vZ, q, slots, rng);
+				mass_kg, Te, ne, zone, t, x, y, z, vX, vY, vZ, q, slots, eps,
+				bX, bY, bZ, rng, skew_counts);
 
 			// Add to running sum of s values in each cell so we can do an average
 			// later. Only consider for ions since they are the dominant collision
@@ -601,6 +741,16 @@ namespace Collisions
 			slots.set_vZ(i, vZ_post);
 
 		}  // slots loop
+
+			// Add this thread's skewed sampler counts to the rank's total
+			#pragma omp critical
+			{
+				g_skew_counts.samples += skew_counts.samples;
+				g_skew_counts.draws += skew_counts.draws;
+				g_skew_counts.negative += skew_counts.negative;
+				g_skew_counts.above_bound += skew_counts.above_bound;
+				g_skew_counts.eps_capped += skew_counts.eps_capped;
+			}
 		} // omp parallel
 	}  // nanbu_coll
 

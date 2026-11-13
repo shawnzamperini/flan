@@ -5,6 +5,8 @@
 #pragma once
 
 #include <cmath>
+#include <tuple>
+#include <vector>
 
 #include "background.h"
 #include "constants.h"
@@ -18,6 +20,34 @@ namespace Collisions
 	void nanbu_coll(Slots::Slots& slots, const Background::Background& bkg,
 		const Options::Options& opts, bool elec, const double dt,
 		Impurity::Statistics& imp_stats, std::vector<pcg32>& rngs);
+
+	/**
+	* Counts from sampling the skewed (Grad) ion distribution, summed over
+	* every collision on this MPI rank since the start of the run (or the
+	* last reset_skew_counts). They show how well the skew was reproduced:
+	* draws where the Grad factor is negative were dropped (clipped), so
+	* negative / draws is the share of the Maxwellian that was clipped.
+	*/
+	struct SkewCounts
+	{
+		long long samples {};		///< Background ions sampled with a skew
+		long long draws {};			///< Maxwellian draws, accepted or not
+		long long negative {};		///< Draws where the Grad factor was < 0
+		long long above_bound {};	///< Draws where it was above the
+									///< rejection bound (|w| > 5)
+		long long eps_capped {};	///< Samples where |eps| > 1 was capped
+	};
+
+	double skew_bound(const double eps);
+
+	std::tuple<double, double, double> sample_bkg_velocity(
+		const double T, const double uX, const double uY, const double uZ,
+		const double m, const double eps, const double bX, const double bY,
+		const double bZ, pcg32& rng, SkewCounts& counts);
+
+	SkewCounts get_skew_counts();
+
+	void reset_skew_counts();
 
 	/**
 	* @name Heat-flux skew of the background distribution (thermal force)
