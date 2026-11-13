@@ -276,6 +276,19 @@ namespace Background
 	///@}
 
 	/**
+	* Returns the ion parallel conductive heat flux q_par (W/m^2), stored
+	* as a function of (zone, t, x, y, z). It is the heat conducted along
+	* B in the frame moving with the ion flow (not the energy carried by
+	* the flow), positive along B like the parallel flow. It sets how
+	* skewed the ion distribution is, eps = q_par / (n T v_th), which is
+	* what gives the thermal force in the collision model. Only SOLEDGE3X
+	* backgrounds whose files have the face fluxes have it, otherwise it
+	* is empty.
+	*/
+	const Vectors::ZonedVector<BkgFPType>& Background::get_q_par_i() const
+		{return m_q_par_i;}
+
+	/**
 	* Returns the wall mask, stored as a function of (zone, x, y, z). It is
 	* 1 in cells inside the wall and 0 in the plasma. Only SOLEDGE3X
 	* backgrounds have one, otherwise it is empty.
@@ -952,6 +965,13 @@ namespace Background
 		m_ti = std::move(ti);
 	}
 
+	void Background::move_into_q_par_i(
+		Vectors::ZonedVector<BkgFPType>& q_par_i)
+	{
+		set_dims(q_par_i, "q_par_i", true);
+		m_q_par_i = std::move(q_par_i);
+	}
+
 	void Background::move_into_vp(Vectors::ZonedVector<BkgFPType>& vp)
 	{
 		set_dims(vp, "vp", true);
@@ -1434,6 +1454,7 @@ namespace Background
 		m_ne.broadcast(comm);
 		m_te.broadcast(comm);
 		m_ti.broadcast(comm);
+		m_q_par_i.broadcast(comm);
 		m_vp.broadcast(comm);
 		m_bX.broadcast(comm);
 		m_bY.broadcast(comm);

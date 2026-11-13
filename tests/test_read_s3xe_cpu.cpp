@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "background.h"
+#include "constants.h"
 #include "options.h"
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
@@ -534,6 +535,69 @@ TEST_F(ReadS3XEPlasma, Messages)
 		"boundaries 0"), std::string::npos) << out;
 	EXPECT_NE(out.find("u_par: edges 0, corners 0, averaged corners 0, "
 		"boundaries 0"), std::string::npos) << out;
+}
+
+// The ion parallel conductive heat flux comes back from the phi-face
+// fluxes: the energy carried by the flow is taken out, the face constant C
+// is fitted, and the result is unnormalized with n0 c0 T0 e.
+TEST_F(ReadS3XEPlasma, HeatFlux)
+{
+	// Without face fluxes there's no heat flux, and a message says so
+	write_files();
+	testing::internal::CaptureStdout();
+	auto bkg {S3X::read_s3xe(options())};
+	std::string out {testing::internal::GetCapturedStdout()};
+	EXPECT_TRUE(bkg.get_q_par_i().get_data().empty());
+	EXPECT_NE(out.find("No ion fluxes on the phi faces"), std::string::npos)
+		<< out;
+
+	// With them, q_par is recovered in every zone and frame, and C is
+	// printed next to -2 pi c0 / a0
+	for (auto& f : m_frames) f.face_fluxes = true;
+	write_files();
+	testing::internal::CaptureStdout();
+	bkg = S3X::read_s3xe(options());
+	out = testing::internal::GetCapturedStdout();
+	EXPECT_NE(out.find("Face flux constant C = -1.2"), std::string::npos)
+		<< out;
+	EXPECT_EQ(out.find("Warning!"), std::string::npos) << out;
+
+	const double q0 {n0 * c0 * T0 * Constants::ev_to_j};
+	auto check = [&](const Background::Background& b)
+	{
+		for (const auto [zone, i, j, k] : std::vector<std::array<int, 4>>
+			{{0, 0, 0, 0}, {1, 6, 21, 3}, {2, 3, 39, 5}, {2, 7, 10, 2}})
+		for (int t {}; t < 2; ++t)
+		{
+			const double R {S3XTest::cell_R(m_mesh, zone, i, j)};
+			const double Z {S3XTest::cell_Z(m_mesh, zone, i, j)};
+			const double want {S3XTest::test_q_par(R, Z, t) * q0};
+			EXPECT_NEAR(b.get_q_par_i()(zone, t, i, j, k), want,
+				1e-9 * std::abs(want)) << zone << " " << i << " " << j;
+		}
+
+		// Ghost cells are filled from the zone across the face
+		EXPECT_DOUBLE_EQ(b.get_q_par_i()(0, 1, 12, 5, 2),
+			b.get_q_par_i()(2, 1, 0, 5, 2));
+	};
+	check(bkg);
+
+	// A C far from -2 pi c0 / a0 gives a warning, but since C is fitted,
+	// q_par is still right. So does the opposite sign.
+	for (auto& f : m_frames) f.flux_C = 3.0 * 2.0 * S3XTest::pi * c0 / 0.5;
+	write_files();
+	testing::internal::CaptureStdout();
+	bkg = S3X::read_s3xe(options());
+	out = testing::internal::GetCapturedStdout();
+	EXPECT_NE(out.find("Warning! In"), std::string::npos) << out;
+	check(bkg);
+
+	// Every frame needs them, or none
+	m_frames[1].face_fluxes = false;
+	write_files();
+	EXPECT_EXIT(S3X::read_s3xe(options()),
+		testing::ExitedWithCode(EXIT_FAILURE), "plasma_00001.h5 doesn't "
+		"have the ion fluxes on the phi faces");
 }
 
 // Problems with the frames stop the run with a message saying what's

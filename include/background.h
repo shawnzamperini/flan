@@ -48,6 +48,11 @@ namespace Background
 		Vectors::ZonedVector<BkgFPType> m_ne {};
 		Vectors::ZonedVector<BkgFPType> m_te {};
 		Vectors::ZonedVector<BkgFPType> m_ti {};
+
+		// Ion parallel conductive heat flux (W/m^2), positive along B
+		// (SOLEDGE3X runs with face fluxes only, otherwise empty). It is
+		// what skews the ion distribution for the thermal force.
+		Vectors::ZonedVector<BkgFPType> m_q_par_i {};
 		Vectors::ZonedVector<BkgFPType> m_vp {};
 		Vectors::ZonedVector<BkgFPType> m_bX {};
 		Vectors::ZonedVector<BkgFPType> m_bY {};
@@ -139,6 +144,7 @@ namespace Background
 		Vectors::ZonedVector<BkgFPType>& get_te();
 		const Vectors::ZonedVector<BkgFPType>& get_ti() const;
 		Vectors::ZonedVector<BkgFPType>& get_ti();
+		const Vectors::ZonedVector<BkgFPType>& get_q_par_i() const;
 		const Vectors::ZonedVector<BkgFPType>& get_vp() const;
 		Vectors::ZonedVector<BkgFPType>& get_vp();
 		const Vectors::ZonedVector<BkgFPType>& get_bX() const;
@@ -301,6 +307,7 @@ namespace Background
 		void move_into_ne(Vectors::ZonedVector<BkgFPType>& ne);
 		void move_into_te(Vectors::ZonedVector<BkgFPType>& te);
 		void move_into_ti(Vectors::ZonedVector<BkgFPType>& ti);
+		void move_into_q_par_i(Vectors::ZonedVector<BkgFPType>& q_par_i);
 		void move_into_vp(Vectors::ZonedVector<BkgFPType>& vp);
 		void move_into_bX(Vectors::ZonedVector<BkgFPType>& bX);
 		void move_into_bY(Vectors::ZonedVector<BkgFPType>& bY);

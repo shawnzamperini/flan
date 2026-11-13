@@ -12,6 +12,7 @@
 
 #include "background.h"
 #include "flan_types.h"
+#include "hdf5_utils.h"
 #include "options.h"
 #include "vectors.h"
 #include "zones.h"
@@ -101,8 +102,16 @@ namespace S3X
 	void report_ghosts(const Zones::Zones& zones,
 		const Vectors::ZonedVector<BkgFPType>& v, const std::string& name);
 
+	bool has_phi_face_fluxes(const Hdf5::File& file);
+
+	double calc_q_par_i(const Hdf5::File& file, const Reference& ref,
+		const Mesh& mesh, const Zones::Zones& zones,
+		const double ion_mass_amu, const int t,
+		Vectors::ZonedVector<BkgFPType>& q_par);
+
 	void read_frames(const std::vector<std::string>& frame_paths,
-		const Reference& ref, Background::Background& bkg);
+		const Reference& ref, const Mesh& mesh,
+		Background::Background& bkg);
 
 	void calc_efield_and_flows(Background::Background& bkg,
 		const Vectors::ZonedVector<BkgFPType>& vp,

@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "background.h"
+#include "constants.h"
 #include "errors.h"
 #include "flan_types.h"
 #include "hdf5_utils.h"
@@ -122,6 +123,53 @@ namespace S3X
 			for (int i {}; i < n; ++i)
 				centers[i] = 0.5 * (edges[i] + edges[i + 1]);
 			return {centers, edges};
+		}
+
+		/// A phi face used to fit C: SOLEDGE3X's particle flux through it
+		/// (fluxn) and the flux density along B times the face's geometry
+		/// (G b_phi A_pol / a0^2), which C turns into fluxn.
+		struct FitPoint
+		{
+			double fluxn {};
+			double G_geom {};
+		};
+
+		/**
+		* Fits the constant C in fluxn = C G b_phi A_pol / a0^2, which turns a
+		* parallel particle flux density G into SOLEDGE3X's face flux (see
+		* calc_q_par_i). C is the median of fluxn / (G b_phi A_pol / a0^2)
+		* over the faces whose |G b_phi A_pol / a0^2| is at least a tenth of
+		* the largest, so faces with almost no parallel flux, where turbulent
+		* fluxes and round-off dominate the ratio, are left out. The median
+		* also ignores the few faces where they still do.
+		*
+		* @param points Faces in the plasma.
+		* @param path Plasma file, for the error message.
+		* @return C.
+		*/
+		double fit_face_flux_constant(const std::vector<FitPoint>& points,
+			const std::string& path)
+		{
+			double largest {};
+			for (const auto& p : points)
+				largest = std::max(largest, std::abs(p.G_geom));
+
+			std::vector<double> ratios {};
+			for (const auto& p : points)
+			{
+				if (largest > 0.0 && std::abs(p.G_geom) >= 0.1 * largest)
+					ratios.push_back(p.fluxn / p.G_geom);
+			}
+			if (ratios.size() < 10)
+			{
+				Errors::fatal_error("Can't fit the constant relating "
+					"SOLEDGE3X's phi face fluxes to G in " + path + ": only "
+					+ std::to_string(ratios.size()) + " faces have a "
+					"parallel flux.");
+			}
+			const auto mid {ratios.begin() + ratios.size() / 2};
+			std::nth_element(ratios.begin(), mid, ratios.end());
+			return *mid;
 		}
 	}
 
@@ -755,6 +803,220 @@ namespace S3X
 	}
 
 	/**
+	* Whether a SOLEDGE3X plasma file has the ion fluxes on the phi faces
+	* (spec1/fluxn/phi and spec1/fluxE/phi), which only runs set up to save
+	* face fluxes have. Only zone 1 is checked; if it has them, every zone
+	* must, or reading them stops the run.
+	*
+	* @param file Plasma file.
+	* @return True if the file has them.
+	*/
+	bool has_phi_face_fluxes(const Hdf5::File& file)
+	{
+		return file.exists(zone_group(0) + "/spec1/fluxn/phi")
+			&& file.exists(zone_group(0) + "/spec1/fluxE/phi");
+	}
+
+	/**
+	* Calculates the ion parallel conductive heat flux of one frame from
+	* SOLEDGE3X's ion fluxes through the phi faces.
+	*
+	* What is read, and why phi faces: SOLEDGE3X saves, for every face of
+	* every cell, the particle flux fluxn and the total energy flux fluxE
+	* crossing it. Through a phi face (a face in the poloidal plane), B is
+	* almost normal (b_phi ~ 1), so these are almost entirely the parallel
+	* fluxes. Through theta faces, B is at a shallow angle (b . n ~ 0.1-0.3)
+	* and the turbulent and drift fluxes crossing them rival the parallel
+	* part, so they can't be used.
+	*
+	* Total vs. conductive: fluxE is the total energy flux, carried by the
+	* flow (the enthalpy 5/2 T and the kinetic energy 1/2 m u^2 per
+	* particle) and by conduction. Only the conductive heat flux q_par is
+	* kept: the thermal force model samples the ion distribution in the
+	* frame moving with the flow (the flow itself is already the drift of
+	* the Maxwellian), and in that frame only the conductive part remains
+	* as a skew of the distribution. Per face,
+	*
+	*   q_par = (fluxE - (5/2 T + 1/2 m u^2) fluxn) / (C b_phi A_pol / a0^2)
+	*
+	* where, in SOLEDGE3X's normalized units:
+	*   - T, u: ion temperature (T0) and parallel velocity G / n (c0) on the
+	*     face, from the average of n, T and G in the two cells on either
+	*     side. m is the ion mass in amu, so 1/2 m u^2 is in T0 as well,
+	*     since c0 = sqrt(e T0 / 1 amu).
+	*   - b_phi = Bphi / |B|, the component of the unit vector along B
+	*     normal to the face.
+	*   - A_pol / a0^2: the face's area, which is the cell's area in the
+	*     poloidal plane, from the shoelace formula on the cell's four
+	*     normalized corners (the R0 offset doesn't change an area).
+	*   - C: the constant that turns a flux density along B into what
+	*     SOLEDGE3X saves as a face flux, fluxn = C G b_phi A_pol / a0^2.
+	*     Its definition isn't documented, so it's fitted here (see
+	*     fit_face_flux_constant). For the DIII-D runs it is close to
+	*     -2 pi c0 / a0, which is printed for comparison.
+	*
+	* Dividing by C b_phi A_pol / a0^2 turns the face flux back into a
+	* flux density along B. Since C is fitted against G, which is positive
+	* along B, q_par is positive along B too, like u_par.
+	*
+	* The cell-centered value is the average of the cell's two phi faces,
+	* in W/m^2 (q_par n0 c0 T0 e). Inside the wall (chi = 1), SOLEDGE3X's
+	* plasma is penalized and q_par there means nothing physically.
+	*
+	* @param file Plasma file of this frame.
+	* @param ref Reference values.
+	* @param mesh The mesh, for the corners and B.
+	* @param zones The zones.
+	* @param ion_mass_amu Ion mass (amu).
+	* @param t Frame index.
+	* @param q_par Where q_par goes, for frame t (ghost cells not filled).
+	* @return The fitted C, for printing.
+	*/
+	double calc_q_par_i(const Hdf5::File& file, const Reference& ref,
+		const Mesh& mesh, const Zones::Zones& zones,
+		const double ion_mass_amu, const int t,
+		Vectors::ZonedVector<BkgFPType>& q_par)
+	{
+		const int g {zones.get_ghost()};
+		const int nzones {zones.get_nzones()};
+
+		// Per zone and face (psi i, theta j, phi face k = 0..Nphi, face k
+		// between cells k - 1 and k): the conductive part of the energy
+		// flux in SOLEDGE3X's units (fluxE - h fluxn), b_phi A_pol / a0^2,
+		// and what the fit of C needs.
+		std::vector<std::vector<double>> conductive(nzones);
+		std::vector<std::vector<double>> geom(nzones);
+		std::vector<FitPoint> fit_points {};
+
+		for (int zone {}; zone < nzones; ++zone)
+		{
+			const std::string zg {zone_group(zone)};
+			const int nx {zones.get_nx(zone)};
+			const int ny {zones.get_ny(zone)};
+			const int nz {zones.get_nz(zone)};
+			const std::vector<hsize_t> cells {
+				static_cast<hsize_t>(nx + 2 * g),
+				static_cast<hsize_t>(ny + 2 * g),
+				static_cast<hsize_t>(nz + 2 * g)};
+			const std::vector<hsize_t> faces {static_cast<hsize_t>(nx),
+				static_cast<hsize_t>(ny), static_cast<hsize_t>(nz + 1)};
+			const auto n {read_checked(file, zg + "/spec1/n", cells)};
+			const auto T {read_checked(file, zg + "/spec1/T", cells)};
+			const auto G {read_checked(file, zg + "/spec1/G", cells)};
+			const auto fluxn {read_checked(file, zg + "/spec1/fluxn/phi",
+				faces)};
+			const auto fluxE {read_checked(file, zg + "/spec1/fluxE/phi",
+				faces)};
+
+			// Cell (i, j, k) in the plasma file's arrays, which have ghost
+			// cells, so k = -1 is the ghost cell before the first plane
+			auto cell = [&](const int i, const int j, const int k)
+			{
+				return (static_cast<std::size_t>(i + g) * (ny + 2 * g)
+					+ (j + g)) * (nz + 2 * g) + (k + g);
+			};
+
+			conductive[zone].resize(fluxn.size());
+			geom[zone].resize(fluxn.size());
+			const auto& Rc {mesh.R_corners[zone]};
+			const auto& Zc {mesh.Z_corners[zone]};
+			for (int i {}; i < nx; ++i)
+			for (int j {}; j < ny; ++j)
+			{
+				// Poloidal area of the cell (normalized by a0^2), with the
+				// shoelace formula on its corners in order around it
+				const std::array<std::size_t, 4> c {
+					static_cast<std::size_t>(i * (ny + 1) + j),
+					static_cast<std::size_t>((i + 1) * (ny + 1) + j),
+					static_cast<std::size_t>((i + 1) * (ny + 1) + j + 1),
+					static_cast<std::size_t>(i * (ny + 1) + j + 1)};
+				double twice_area {};
+				for (int p {}; p < 4; ++p)
+				{
+					const std::size_t a {c[p]};
+					const std::size_t b {c[(p + 1) % 4]};
+					twice_area += Rc[a] * Zc[b] - Rc[b] * Zc[a];
+				}
+				const double A_pol {0.5 * std::abs(twice_area)};
+
+				const int m {i * ny + j};
+				const double Bmag {std::sqrt(mesh.Br[zone][m]
+					* mesh.Br[zone][m] + mesh.Bz[zone][m] * mesh.Bz[zone][m]
+					+ mesh.Bphi[zone][m] * mesh.Bphi[zone][m])};
+				const double b_phi {Bmag > 0.0 ? mesh.Bphi[zone][m] / Bmag
+					: 0.0};
+				const bool plasma {mesh.chi[zone][m] < 0.5};
+
+				for (int k {}; k <= nz; ++k)
+				{
+					const std::size_t lo {cell(i, j, k - 1)};
+					const std::size_t hi {cell(i, j, k)};
+					const double n_face {0.5 * (n[lo] + n[hi])};
+					const double T_face {0.5 * (T[lo] + T[hi])};
+					const double G_face {0.5 * (G[lo] + G[hi])};
+					const double u_face {n_face > 0.0 ? G_face / n_face
+						: 0.0};
+
+					// Energy carried by the flow per particle: enthalpy
+					// 5/2 T plus kinetic energy 1/2 m u^2 (both in T0)
+					const double h {2.5 * T_face
+						+ 0.5 * ion_mass_amu * u_face * u_face};
+
+					const std::size_t f {(static_cast<std::size_t>(i) * ny
+						+ j) * (nz + 1) + k};
+					conductive[zone][f] = fluxE[f] - h * fluxn[f];
+					geom[zone][f] = b_phi * A_pol;
+					if (plasma)
+					{
+						fit_points.push_back({fluxn[f], G_face
+							* geom[zone][f]});
+					}
+				}
+			}
+		}
+
+		// Unnormalize to W/m^2
+		const double C {fit_face_flux_constant(fit_points, file.path())};
+		const double q0 {ref.n0 * ref.c0 * ref.T0 * Constants::ev_to_j};
+		if (t == 0)
+		{
+			std::cout << "  Face flux constant C = " << C << " (-2 pi c0 / "
+				"a0 = " << -2.0 * Constants::pi * ref.c0 / mesh.a0 << ")\n";
+		}
+		const double C_expect {2.0 * Constants::pi * ref.c0 / mesh.a0};
+		if (std::abs(std::abs(C) / C_expect - 1.0) > 0.05)
+		{
+			std::cout << "Warning! In " << file.path() << ", the fitted "
+				"face flux constant C = " << C << " is more than 5% from "
+				"-2 pi c0 / a0 = " << -C_expect << ". The ion heat flux "
+				"still uses the fitted C, but check that SOLEDGE3X's face "
+				"fluxes are defined as expected.\n";
+		}
+
+		for (int zone {}; zone < nzones; ++zone)
+		{
+			const int ny {zones.get_ny(zone)};
+			const int nz {zones.get_nz(zone)};
+			for (int i {}; i < zones.get_nx(zone); ++i)
+			for (int j {}; j < ny; ++j)
+			for (int k {}; k < nz; ++k)
+			{
+				// q_par on the cell's two phi faces, then their average
+				double sum {};
+				for (const int kf : {k, k + 1})
+				{
+					const std::size_t f {(static_cast<std::size_t>(i) * ny
+						+ j) * (nz + 1) + kf};
+					const double denom {C * geom[zone][f]};
+					sum += denom != 0.0 ? conductive[zone][f] / denom : 0.0;
+				}
+				q_par(zone, t, i, j, k) = 0.5 * sum * q0;
+			}
+		}
+		return C;
+	}
+
+	/**
 	* Reads the plasma of every frame and moves it into the background.
 	*
 	* The background must already have its zones, geometry and magnetic
@@ -772,15 +1034,22 @@ namespace S3X
 	* ghost cells as the geometry. Then E and the flows are calculated with
 	* calc_efield_and_flows.
 	*
+	* If the first frame has the ion fluxes through the phi faces (runs set
+	* up to save face fluxes), the ion parallel conductive heat flux q_par_i
+	* is calculated from them (see calc_q_par_i) and moved into the
+	* background too, and every frame must have them. Otherwise q_par_i is
+	* left empty and a message says so.
+	*
 	* Any missing dataset, wrong shape, or a number of zones or ghost cells
 	* that doesn't match the mesh stops the run.
 	*
 	* @param frame_paths Paths of the plasma files, in time order.
 	* @param ref Reference values.
+	* @param mesh The mesh, for the heat flux.
 	* @param bkg Background to move the plasma into.
 	*/
 	void read_frames(const std::vector<std::string>& frame_paths,
-		const Reference& ref, Background::Background& bkg)
+		const Reference& ref, const Mesh& mesh, Background::Background& bkg)
 	{
 		const Zones::Zones& zones {bkg.get_zones()};
 		const int nframes {static_cast<int>(frame_paths.size())};
@@ -791,6 +1060,11 @@ namespace S3X
 		auto vp {zoned(zones, nframes)};
 		auto upar {zoned(zones, nframes)};
 		std::vector<double> times {};
+
+		// Ion parallel conductive heat flux (W/m^2), only if the files
+		// have the face fluxes it comes from
+		bool have_q_par {};
+		Vectors::ZonedVector<BkgFPType> q_par_i {};
 
 		for (int t {}; t < nframes; ++t)
 		{
@@ -824,6 +1098,26 @@ namespace S3X
 					"/plasma_composition/spec0/mass"));
 				bkg.set_ion_mass_amu(Hdf5::read_scalar<double>(file,
 					"/plasma_composition/spec1/mass"));
+
+				have_q_par = has_phi_face_fluxes(file);
+				if (have_q_par) q_par_i = zoned(zones, nframes);
+				else
+				{
+					std::cout << "  No ion fluxes on the phi faces, so no "
+						"ion heat flux (q_par_i) is read.\n";
+				}
+			}
+			else if (has_phi_face_fluxes(file) != have_q_par)
+			{
+				Errors::fatal_error(path + (have_q_par ? " doesn't have"
+					: " has") + " the ion fluxes on the phi faces, but the "
+					"first frame " + (have_q_par ? "does" : "doesn't")
+					+ ". Every frame needs them, or none.");
+			}
+			if (have_q_par)
+			{
+				calc_q_par_i(file, ref, mesh, zones,
+					bkg.get_ion_mass_amu(), t, q_par_i);
 			}
 
 			for (int zone {}; zone < nzones; ++zone)
@@ -890,6 +1184,11 @@ namespace S3X
 		bkg.move_into_ne(ne);
 		bkg.move_into_te(te);
 		bkg.move_into_ti(ti);
+		if (have_q_par)
+		{
+			zones.fill_ghosts(q_par_i);
+			bkg.move_into_q_par_i(q_par_i);
+		}
 		calc_efield_and_flows(bkg, vp, upar);
 		bkg.move_into_vp(vp);
 	}
@@ -1040,7 +1339,7 @@ namespace S3X
 
 		// The ion temperature is needed for the grad B drift, so the
 		// plasma (which includes calculating the flows) comes last
-		read_frames(frame_paths, ref, bkg);
+		read_frames(frame_paths, ref, mesh, bkg);
 
 		return bkg;
 	}

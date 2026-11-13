@@ -1105,6 +1105,9 @@ namespace SaveResults
 			{&bkg.get_ne(), "ne", "electron density", "(m-3)"},
 			{&bkg.get_te(), "Te", "electron temperature", "(eV)"},
 			{&bkg.get_ti(), "Ti", "ion temperature", "(eV)"},
+			{&bkg.get_q_par_i(), "q_par_i", "ion parallel conductive heat "
+				"flux, positive along B (empty unless SOLEDGE3X saved face "
+				"fluxes)", "(W/m2)"},
 			{&bkg.get_vp(), "Vp", "plasma potential", "(V)"},
 			{&bkg.get_eX(), "E_X", "electric field (X)", "(V/m)"},
 			{&bkg.get_eY(), "E_Y", "electric field (Y)", "(V/m)"},

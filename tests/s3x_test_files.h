@@ -138,6 +138,31 @@ namespace S3XTest
 	// G / n = 0.3, so u_par = 0.3 c0
 	inline double test_G(double R, double Z, int t)
 		{return 0.3 * test_ne(R, Z, t);}
+	// Ion parallel conductive heat flux (normalized by n0 c0 T0), positive
+	// along B, written into the phi-face fluxes when a frame has them
+	inline double test_q_par(double, double Z, int t)
+		{return 0.05 * Z - 0.02 + 0.01 * t;}
+
+	// Poloidal area of a cell of the test mesh, normalized by a0^2, from
+	// the shoelace formula on its four corners
+	inline double cell_area(const TestMesh& m, int zone, int i, int j)
+	{
+		const std::array<std::array<int, 2>, 4> c {{{i, j}, {i + 1, j},
+			{i + 1, j + 1}, {i, j + 1}}};
+		double twice {};
+		for (int p {}; p < 4; ++p)
+		{
+			const auto& a {c[p]};
+			const auto& b {c[(p + 1) % 4]};
+			const double ra {corner_r(m, zone, a[0])};
+			const double ta {corner_theta(m, zone, a[1])};
+			const double rb {corner_r(m, zone, b[0])};
+			const double tb {corner_theta(m, zone, b[1])};
+			twice += ra * std::cos(ta) * rb * std::sin(tb)
+				- rb * std::cos(tb) * ra * std::sin(ta);
+		}
+		return 0.5 * std::abs(twice);
+	}
 
 	inline void write(hid_t file, const std::string& name,
 		const std::vector<hsize_t>& shape, const std::vector<double>& data)
@@ -295,6 +320,12 @@ namespace S3XTest
 		int nghosts {2};
 		double tsimu {};
 		int extra_theta {0};	// Extra theta cells in zone 2's datasets
+
+		// If true, also write the ion fluxes through the phi faces, with
+		// fluxn = flux_C G b_phi A_pol / a0^2 and fluxE = (5/2 T + 1/2 m
+		// u^2) fluxn + flux_C q_par b_phi A_pol / a0^2 (b_phi = 1 here)
+		bool face_fluxes {false};
+		double flux_C {-0.99 * 2.0 * pi * 98227.0 / 0.5};
 	};
 
 	// Plasma file for frame t of the test mesh, whose zones (from
@@ -351,6 +382,33 @@ namespace S3XTest
 				write(file, zg + name, {static_cast<hsize_t>(nx + 2 * g),
 					static_cast<hsize_t>(ny + 2 * g),
 					static_cast<hsize_t>(nz + 2 * g)}, data);
+			}
+
+			// Nothing depends on phi, so the face values are the cell's
+			if (frame.face_fluxes)
+			{
+				std::vector<double> fluxn {}, fluxE {};
+				for (int i {}; i < nx; ++i)
+				for (int j {}; j < ny; ++j)
+				for (int k {}; k <= nz; ++k)
+				{
+					const double R {cell_R(m, zone, i, j)};
+					const double Z {cell_Z(m, zone, i, j)};
+					const double n {test_ne(R, Z, t)};
+					const double G {test_G(R, Z, t)};
+					const double u {G / n};
+					const double h {2.5 * test_ti(R, Z, t)
+						+ 0.5 * 2.014 * u * u};
+					const double geom {frame.flux_C
+						* cell_area(m, zone, i, j)};
+					fluxn.push_back(geom * G);
+					fluxE.push_back(h * geom * G
+						+ geom * test_q_par(R, Z, t));
+				}
+				const std::vector<hsize_t> shape {static_cast<hsize_t>(nx),
+					static_cast<hsize_t>(ny), static_cast<hsize_t>(nz + 1)};
+				write(file, zg + "/spec1/fluxn/phi", shape, fluxn);
+				write(file, zg + "/spec1/fluxE/phi", shape, fluxE);
 			}
 		}
 		H5Fclose(file);
