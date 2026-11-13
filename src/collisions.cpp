@@ -57,31 +57,10 @@ namespace Collisions
 		// SkewCounts)
 		std::array<SkewCounts, 2> g_skew_counts {};
 
-		// Largest |eps| used. Grad's expansion is only meant for small
-		// skews, and at |eps| = 1 it is already negative over ~2% of the
-		// Maxwellian; anything larger is treated as 1 (and counted).
+		// Largest |eps| used. The skew is an expansion meant for small
+		// eps, and at |eps| = 1 it is already negative over a few percent
+		// of the Maxwellian; anything larger is treated as 1 (and counted).
 		constexpr double max_eps {1.0};
-
-		// Speed (in v_th) up to which skew_bound bounds the Grad factor
-		constexpr double bound_w {5.0};
-	}
-
-	/**
-	* Bound M on the Grad factor F = 1 + eps w_par (w^2 / 5 - 1) used for
-	* rejection sampling (see sample_bkg_velocity).
-	*
-	* |w_par (w^2 / 5 - 1)| is largest at w_par = w, and for w up to 5 it
-	* is at most 5 (25 / 5 - 1) = 20, so F <= 1 + 20 |eps| there. Faster
-	* draws (|w| > 5, about 1 in 10^5 of a Maxwellian) can exceed it; they
-	* are accepted with probability 1 instead of F / M, which is counted.
-	*
-	* @param eps Size of the skew.
-	* @return M.
-	*/
-	double skew_bound(const double eps)
-	{
-		return 1.0 + std::abs(eps) * bound_w
-			* (bound_w * bound_w / 5.0 - 1.0);
 	}
 
 	/**
@@ -95,23 +74,25 @@ namespace Collisions
 	* before the skew was added, so results without a heat flux haven't
 	* changed.
 	*
-	* Skewed (eps != 0): the distribution is the Grad distribution
-	* f = f_M [1 + eps w_par (w^2 / 5 - 1)] (see grad_factor), sampled by
+	* Skewed (eps != 0): the distribution is f = f_M [1 + eps w_par
+	* (a + b w^2 + c w^4)] (see skew_factor and skew_shape), sampled by
 	* rejection: draw w = (v - u) / v_th from the unskewed Maxwellian, with
 	* w_par = w . b, and accept it with probability max(F, 0) / M, where F
-	* is the Grad factor and M = skew_bound(eps) >= F. Accepted draws are
-	* distributed as f_M max(F, 0), the Grad distribution with its negative
-	* parts set to 0 (clipped). Clipping removes a little of the heat flux
-	* when the skew is strong: about 2% at eps = 0.1 and 11% at eps = 0.3.
-	* On average M draws are needed per sample.
+	* is the skew factor and M = skew_bound(eps, shape) >= F. Accepted
+	* draws are distributed as f_M max(F, 0), the skewed distribution with
+	* its negative parts set to 0 (clipped). Clipping removes a little of
+	* the heat flux when the skew is strong: with the ion shape, under 1%
+	* at eps = 0.07 and about 14% at eps = 0.3. On average M draws are
+	* needed per sample.
 	*
 	* @param T Temperature of the background species (eV).
 	* @param uX Cartesian X flow velocity of the background species (m/s).
 	* @param uY Cartesian Y flow velocity of the background species (m/s).
 	* @param uZ Cartesian Z flow velocity of the background species (m/s).
 	* @param m Mass of the background species (kg).
-	* @param eps Size of the skew (see grad_skew_eps), positive when the
-	*        heat flows along B, 0 for none. |eps| > 1 is treated as 1.
+	* @param eps Size of the skew (see skew_eps), positive when the heat
+	*        flows along B, 0 for none. |eps| > 1 is treated as 1.
+	* @param shape Shape of the skew (only used if eps isn't 0).
 	* @param bX Cartesian X component of the unit vector along B (only used
 	*        if eps isn't 0).
 	* @param bY Cartesian Y component of the unit vector along B.
@@ -122,8 +103,9 @@ namespace Collisions
 	*/
 	std::tuple<double, double, double> sample_bkg_velocity(
 		const double T, const double uX, const double uY, const double uZ,
-		const double m, const double eps, const double bX, const double bY,
-		const double bZ, pcg32& rng, SkewCounts& counts)
+		const double m, const double eps, const SkewShape& shape,
+		const double bX, const double bY, const double bZ, pcg32& rng,
+		SkewCounts& counts)
 	{
 		const double v_th {std::sqrt(T * Constants::ev_to_j / m)};  // m/s
 
@@ -145,7 +127,7 @@ namespace Collisions
 			e = std::copysign(max_eps, e);
 			counts.eps_capped++;
 		}
-		const double M {skew_bound(e)};
+		const double M {skew_bound(e, shape)};
 
 		while (true)
 		{
@@ -155,7 +137,7 @@ namespace Collisions
 			const double wZ {rng.normal(0.0, 1.0)};
 			const double w_par {wX * bX + wY * bY + wZ * bZ};
 			const double w_sq {wX * wX + wY * wY + wZ * wZ};
-			const double F {grad_factor(e, w_par, w_sq)};
+			const double F {skew_factor(e, w_par, w_sq, shape)};
 
 			bool accept {};
 			if (F <= 0.0) counts.negative++;
@@ -286,7 +268,7 @@ namespace Collisions
 	* Prints how the skewed (thermal force) sampling went, for ions and
 	* electrons: how many background particles were sampled with a skew,
 	* the average number of Maxwellian draws each took, the share of draws
-	* clipped because the Grad factor was negative (the part of the skew
+	* clipped because the skew factor was negative (the part of the skew
 	* that's lost), and how often a draw was above the rejection bound or
 	* |eps| was capped at 1.
 	*
@@ -305,7 +287,7 @@ namespace Collisions
 			{
 				std::cout << ", " << double(c.draws) / c.samples
 					<< " draws each, " << double(c.negative) / c.draws
-					<< " of draws clipped (Grad factor < 0), "
+					<< " of draws clipped (skew factor < 0), "
 					<< c.above_bound << " above the bound, " << c.eps_capped
 					<< " with |eps| capped at 1";
 			}
@@ -344,8 +326,9 @@ namespace Collisions
 	* @param vZ Cartesian Z velocity of the impurity (m/s).
 	* @param q Charge state of the impurity. Must not be 0.
 	* @param slots Particle slots, used for the impurity mass.
-	* @param eps Heat-flux skew of the background species (see
-	*        grad_skew_eps), 0 for none.
+	* @param eps Heat-flux skew of the background species (see skew_eps),
+	*        0 for none.
+	* @param shape Shape of the skew (only used if eps isn't 0).
 	* @param bX Cartesian X component of the unit vector along B (only used
 	*        if eps isn't 0).
 	* @param bY Cartesian Y component of the unit vector along B.
@@ -361,8 +344,9 @@ namespace Collisions
 		const double Te, const double ne, const int zone, const double t,
 		const double x, const double y, const double z, const double vX,
 		const double vY, const double vZ, const int q, Slots::Slots& slots,
-		const double eps, const double bX, const double bY, const double bZ,
-		pcg32& rng, SkewCounts& skew_counts)
+		const double eps, const SkewShape& shape, const double bX,
+		const double bY, const double bZ, pcg32& rng,
+		SkewCounts& skew_counts)
 	{
 		// While I think the below is still valid, it was solved in calc_chi
 		// by returning an isotropically distributed chi at large s (small A)
@@ -395,7 +379,7 @@ namespace Collisions
 		// heat flux (eps != 0), it comes from the skewed distribution,
 		// which is what gives the thermal force.
 		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(T, uX, uY, uZ,
-			mass_kg, eps, bX, bY, bZ, rng, skew_counts);
+			mass_kg, eps, shape, bX, bY, bZ, rng, skew_counts);
 
 		// XYZ components of instantaneous relative velocity
 		double inst_gX {vX - bkg_vX};
@@ -707,6 +691,12 @@ namespace Collisions
 		// Nanbu, K. Theory of cumulative small-angle collisions in plasmas. 
 		// Phys. Rev. E 55, 4642–4652 (1997).
 
+		// Shape of this species' heat-flux skew (thermal force). The push
+		// is the collisional (fluid closure) one, which is right for a
+		// fluid background like SOLEDGE3X.
+		const SkewShape shape {skew_shape(
+			elec ? skew_push_elec : skew_push_ion)};
+
 		#pragma omp parallel
 		{
 
@@ -807,7 +797,7 @@ namespace Collisions
 					: bkg.interp_q_par_i(zone, t, x, y, z)};
 				if (q_par != 0.0)
 				{
-					eps = grad_skew_eps(q_par, ne, T, mass_kg);
+					eps = skew_eps(q_par, ne, T, mass_kg);
 					bX = bkg.interp_4d(bkg.get_bX(), zone, t, x, y, z);
 					bY = bkg.interp_4d(bkg.get_bY(), zone, t, x, y, z);
 					bZ = bkg.interp_4d(bkg.get_bZ(), zone, t, x, y, z);
@@ -833,7 +823,7 @@ namespace Collisions
 			// velocities.
 			auto [s, gX, gY, gZ] = nanbu_calc_s(bkg, dt, T, 
 				mass_kg, Te, ne, zone, t, x, y, z, vX, vY, vZ, q, slots, eps,
-				bX, bY, bZ, rng, skew_counts);
+				shape, bX, bY, bZ, rng, skew_counts);
 
 			// Add to running sum of s values in each cell so we can do an average
 			// later. Only consider for ions since they are the dominant collision

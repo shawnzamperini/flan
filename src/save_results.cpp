@@ -1555,7 +1555,7 @@ namespace SaveResults
 
 		// How the thermal force's skewed sampling went: per species, the
 		// background particles sampled with a skew, the Maxwellian draws
-		// they took, draws clipped (Grad factor < 0) or above the
+		// they took, draws clipped (skew factor < 0) or above the
 		// rejection bound, and samples with |eps| capped at 1
 		if (skew_counts != nullptr)
 		{
