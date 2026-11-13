@@ -17,6 +17,7 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <mpi.h>
 #include <omp.h>
 #include <utility>
 #include <vector>
@@ -24,6 +25,7 @@
 #include "background.h"
 #include "collisions.h"
 #include "constants.h"
+#include "errors.h"
 #include "impurity_stats.h"
 #include "nanbu_s_a.h"
 #include "options.h"
@@ -179,6 +181,137 @@ namespace Collisions
 
 	/// Sets the skewed sampler's counts back to 0, for both species
 	void reset_skew_counts() {g_skew_counts = {};}
+
+	/**
+	* Sums the skewed sampler's counts over every MPI rank.
+	*
+	* @return The sums for ions [0] and electrons [1] on rank 0. Other
+	*         ranks get their own counts back.
+	*/
+	std::array<SkewCounts, 2> reduce_skew_counts()
+	{
+		std::array<long long, 10> local {};
+		for (int s {}; s < 2; ++s)
+		{
+			const SkewCounts& c {g_skew_counts[s]};
+			local[5 * s] = c.samples;
+			local[5 * s + 1] = c.draws;
+			local[5 * s + 2] = c.negative;
+			local[5 * s + 3] = c.above_bound;
+			local[5 * s + 4] = c.eps_capped;
+		}
+		std::array<long long, 10> total {};
+		MPI_Reduce(local.data(), total.data(),
+			static_cast<int>(local.size()), MPI_LONG_LONG, MPI_SUM, 0,
+			MPI_COMM_WORLD);
+
+		int rank {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		if (rank != 0) return g_skew_counts;
+
+		std::array<SkewCounts, 2> sums {};
+		for (int s {}; s < 2; ++s)
+		{
+			sums[s].samples = total[5 * s];
+			sums[s].draws = total[5 * s + 1];
+			sums[s].negative = total[5 * s + 2];
+			sums[s].above_bound = total[5 * s + 3];
+			sums[s].eps_capped = total[5 * s + 4];
+		}
+		return sums;
+	}
+
+	/**
+	* Checks what the thermal force (imp_thermal_force = "on", the default)
+	* can do with this background and these options:
+	*   - A background with neither heat flux (Gkeyll, test backgrounds,
+	*     SOLEDGE3X files without face fluxes) has no skew to sample, so the
+	*     collisions use Maxwellians and a warning says the thermal force
+	*     isn't included. This keeps "on" a safe default.
+	*   - With only one of q_par_i and q_par_e, the run stops: half a
+	*     thermal force would be easy to mistake for the whole one.
+	*   - With heat fluxes on the GPU, the run stops, since the GPU
+	*     collisions don't sample the skew yet and would quietly leave the
+	*     thermal force out.
+	*   - With the collisions off, there's nothing for the skew to act
+	*     through, so a warning is printed.
+	* With imp_thermal_force = "off", nothing is checked.
+	*
+	* @param bkg Background plasma.
+	* @param opts Simulation options.
+	*/
+	void check_thermal_force(const Background::Background& bkg,
+		const Options::Options& opts)
+	{
+		if (opts.imp_thermal_force_int() != 1) return;
+
+		// Warnings come from rank 0 only (or always, without MPI)
+		int mpi_initialized {};
+		MPI_Initialized(&mpi_initialized);
+		int rank {};
+		if (mpi_initialized) MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		auto warn = [&](const std::string& msg)
+			{if (rank == 0) std::cout << "Warning! " << msg << '\n';};
+
+		const bool have_i {!bkg.get_q_par_i().get_data().empty()};
+		const bool have_e {!bkg.get_q_par_e().get_data().empty()};
+		if (!have_i && !have_e)
+		{
+			warn("The background has no parallel heat fluxes, so the "
+				"thermal force isn't\nincluded (imp_thermal_force = \"on\" "
+				"needs SOLEDGE3X plasma files with\nthe fluxes on the phi "
+				"faces). The collisions use Maxwellians.");
+			return;
+		}
+		if (have_i != have_e)
+		{
+			Errors::fatal_error(std::string("imp_thermal_force = \"on\" "
+				"needs both parallel heat fluxes, but the background only "
+				"has ") + (have_i ? "q_par_i" : "q_par_e") + ".");
+		}
+		if (opts.use_gpu_int() > 0)
+		{
+			Errors::fatal_error("imp_thermal_force = \"on\" only runs on "
+				"the CPU for now. Set use_gpu = \"off\", or "
+				"imp_thermal_force = \"off\" to run on the GPU without it.");
+		}
+		if (opts.imp_collisions_int() != 1)
+		{
+			warn("imp_thermal_force = \"on\" does nothing with "
+				"imp_collisions = \"off\".");
+		}
+	}
+
+	/**
+	* Prints how the skewed (thermal force) sampling went, for ions and
+	* electrons: how many background particles were sampled with a skew,
+	* the average number of Maxwellian draws each took, the share of draws
+	* clipped because the Grad factor was negative (the part of the skew
+	* that's lost), and how often a draw was above the rejection bound or
+	* |eps| was capped at 1.
+	*
+	* @param totals Counts for ions [0] and electrons [1], from
+	*        reduce_skew_counts.
+	*/
+	void print_skew_counts(const std::array<SkewCounts, 2>& totals)
+	{
+		std::cout << "Thermal force (heat-flux skewed sampling):\n";
+		for (int s {}; s < 2; ++s)
+		{
+			const SkewCounts& c {totals[s]};
+			std::cout << "  " << (s == 0 ? "Ions" : "Electrons") << ": "
+				<< c.samples << " sampled with a skew";
+			if (c.samples > 0)
+			{
+				std::cout << ", " << double(c.draws) / c.samples
+					<< " draws each, " << double(c.negative) / c.draws
+					<< " of draws clipped (Grad factor < 0), "
+					<< c.above_bound << " above the bound, " << c.eps_capped
+					<< " with |eps| capped at 1";
+			}
+			std::cout << '\n';
+		}
+	}
 
 
 	/**
@@ -547,9 +680,9 @@ namespace Collisions
 	* updated velocity is v at n+1/2. An error is printed if ne < 0 or chi is
 	* NaN.
 	*
-	* The colliding background particle is skewed by that species' parallel
-	* heat flux (q_par_e or q_par_i), if the background has one, which gives
-	* the electron or ion thermal force (see sample_bkg_velocity).
+	* With imp_thermal_force = "on", the colliding background particle is
+	* skewed by that species' parallel heat flux (q_par_e or q_par_i), which
+	* gives the electron or ion thermal force (see sample_bkg_velocity).
 	*
 	* For ion collisions, s * weight * dt is also added to imp_stats so the
 	* average s in each cell can be calculated later.
@@ -557,7 +690,8 @@ namespace Collisions
 	* @param slots Particle slots. The velocities are updated in place.
 	* @param bkg Background plasma, which also holds the masses of the
 	*        background electrons and ions.
-	* @param opts Simulation options, used for min_ti.
+	* @param opts Simulation options, used for min_ti and
+	*        imp_thermal_force.
 	* @param elec If true, collide with electrons (Te). Otherwise collide
 	*        with ions (Ti, limited to at least min_ti).
 	* @param dt Time step (s).
@@ -659,13 +793,14 @@ namespace Collisions
 			}
 
 			// Heat-flux skew of the species colliding with the impurity
-			// (thermal force): eps from its parallel heat flux, with
-			// ni = ne, and the unit vector along B it's measured along.
-			// Backgrounds without a heat flux give q_par = 0, so no skew.
+			// (thermal force, only with imp_thermal_force = "on"): eps from
+			// its parallel heat flux, with ni = ne, and the unit vector
+			// along B it's measured along. Where q_par = 0, no skew.
 			double eps {};
 			double bX {};
 			double bY {};
 			double bZ {};
+			if (opts.imp_thermal_force_int() == 1)
 			{
 				const double q_par {elec
 					? bkg.interp_q_par_e(zone, t, x, y, z)

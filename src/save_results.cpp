@@ -61,16 +61,21 @@ namespace SaveResults
 	*        saved in the sputtering group if given along with source.
 	* @param fates What happened to the particles, saved as attributes of
 	*        the sputtering group if given along with source.
+	* @param skew_counts How the thermal force's skewed sampling went for
+	*        ions [0] and electrons [1], saved as attributes of a
+	*        thermal_force group if given (imp_thermal_force = "on").
 	*/
 	void save_results(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts,
 		const Sputtering::Source* source,
 		const Sputtering::Deposition* deposition,
-		const Boundary::Fates* fates)
+		const Boundary::Fates* fates,
+		const std::array<Collisions::SkewCounts, 2>* skew_counts)
 	{
 		// Right now this is just a redirect to the netcdf option. I built 
 		// it this way to allow other save options in the future if desired.
-		save_netcdf(bkg, imp_stats, opts, source, deposition, fates);
+		save_netcdf(bkg, imp_stats, opts, source, deposition, fates,
+			skew_counts);
 	
 	}
 
@@ -579,6 +584,9 @@ namespace SaveResults
 			"single_value)", "(eV)");
 		save_string(input_group, opts.imp_collisions(), "imp_collisions", 
 			dim_str, "impurity collisions with background plasma option");
+		save_string(input_group, opts.imp_thermal_force(),
+			"imp_thermal_force", dim_str, "thermal force in the collisions "
+			"(heat-flux skewed background) option");
 		save_string(input_group, opts.imp_time_step_opt(), "imp_time_step_opt", 
 			dim_str, "impurity time step option");
 		save_scalar(input_group, opts.imp_time_step(), "imp_time_step", 
@@ -1451,12 +1459,16 @@ namespace SaveResults
 	*        saved in the sputtering group if given along with source.
 	* @param fates What happened to the particles, saved as attributes of
 	*        the sputtering group if given along with source.
+	* @param skew_counts How the thermal force's skewed sampling went for
+	*        ions [0] and electrons [1], saved as attributes of a
+	*        thermal_force group if given.
 	*/
 	void save_netcdf(const Background::Background& bkg, 
 		Impurity::Statistics& imp_stats, const Options::Options& opts,
 		const Sputtering::Source* source,
 		const Sputtering::Deposition* deposition,
-		const Boundary::Fates* fates)
+		const Boundary::Fates* fates,
+		const std::array<Collisions::SkewCounts, 2>* skew_counts)
 	{
 		std::cout << "Saving netCDF file...\n";
 
@@ -1540,6 +1552,26 @@ namespace SaveResults
 
 		if (source != nullptr)
 			save_sputtering(nc_file, *source, opts, deposition, fates);
+
+		// How the thermal force's skewed sampling went: per species, the
+		// background particles sampled with a skew, the Maxwellian draws
+		// they took, draws clipped (Grad factor < 0) or above the
+		// rejection bound, and samples with |eps| capped at 1
+		if (skew_counts != nullptr)
+		{
+			netCDF::NcGroup tf {nc_file.addGroup("thermal_force")};
+			for (int s {}; s < 2; ++s)
+			{
+				const Collisions::SkewCounts& c {(*skew_counts)[s]};
+				const std::string sp {s == 0 ? "ions_" : "electrons_"};
+				tf.putAtt(sp + "samples", netCDF::ncInt64, c.samples);
+				tf.putAtt(sp + "draws", netCDF::ncInt64, c.draws);
+				tf.putAtt(sp + "negative", netCDF::ncInt64, c.negative);
+				tf.putAtt(sp + "above_bound", netCDF::ncInt64,
+					c.above_bound);
+				tf.putAtt(sp + "eps_capped", netCDF::ncInt64, c.eps_capped);
+			}
+		}
 
 		std::cout << "Saved as " << nc_filename << '\n';
 	}

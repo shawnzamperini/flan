@@ -877,12 +877,15 @@ namespace S3X
 	* @param mass_amu The species' mass (amu).
 	* @param t Frame index.
 	* @param q_par Where q_par goes, for frame t (ghost cells not filled).
+	* @param strict If true, a fitted C more than 5% from -2 pi c0 / a0
+	*        stops the run (the thermal force uses q_par); otherwise it's a
+	*        warning.
 	* @return The fitted C, for printing.
 	*/
 	double calc_q_par(const Hdf5::File& file, const Reference& ref,
 		const Mesh& mesh, const Zones::Zones& zones,
 		const std::string& species, const double mass_amu, const int t,
-		Vectors::ZonedVector<BkgFPType>& q_par)
+		Vectors::ZonedVector<BkgFPType>& q_par, const bool strict)
 	{
 		const std::string sp {"/" + species};
 		const int g {zones.get_ghost()};
@@ -993,6 +996,16 @@ namespace S3X
 				<< -2.0 * Constants::pi * ref.c0 / mesh.a0 << ")\n";
 		}
 		const double C_expect {2.0 * Constants::pi * ref.c0 / mesh.a0};
+		if (std::abs(std::abs(C) / C_expect - 1.0) > 0.05 && strict)
+		{
+			Errors::fatal_error("In " + file.path() + ", the fitted face "
+				"flux constant C = " + std::to_string(C) + " from " + species
+				+ " is more than 5% from -2 pi c0 / a0 = "
+				+ std::to_string(-C_expect) + ", so SOLEDGE3X's face fluxes "
+				"may not be defined as expected. The thermal force "
+				"(imp_thermal_force = \"on\") needs them; set it to \"off\" "
+				"to run without it.");
+		}
 		if (std::abs(std::abs(C) / C_expect - 1.0) > 0.05)
 		{
 			std::cout << "Warning! In " << file.path() << ", the fitted "
@@ -1056,9 +1069,12 @@ namespace S3X
 	* @param ref Reference values.
 	* @param mesh The mesh, for the heat flux.
 	* @param bkg Background to move the plasma into.
+	* @param strict If true, a face flux constant far from what's expected
+	*        stops the run (see calc_q_par).
 	*/
 	void read_frames(const std::vector<std::string>& frame_paths,
-		const Reference& ref, const Mesh& mesh, Background::Background& bkg)
+		const Reference& ref, const Mesh& mesh, Background::Background& bkg,
+		const bool strict)
 	{
 		const Zones::Zones& zones {bkg.get_zones()};
 		const int nframes {static_cast<int>(frame_paths.size())};
@@ -1142,7 +1158,7 @@ namespace S3X
 					const double mass {h.species == "spec0"
 						? bkg.get_elec_mass_amu() : bkg.get_ion_mass_amu()};
 					calc_q_par(file, ref, mesh, zones, h.species, mass, t,
-						h.q_par);
+						h.q_par, strict);
 				}
 			}
 
@@ -1367,7 +1383,8 @@ namespace S3X
 
 		// The ion temperature is needed for the grad B drift, so the
 		// plasma (which includes calculating the flows) comes last
-		read_frames(frame_paths, ref, mesh, bkg);
+		read_frames(frame_paths, ref, mesh, bkg,
+			opts.imp_thermal_force_int() == 1);
 
 		return bkg;
 	}

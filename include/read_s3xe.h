@@ -108,11 +108,11 @@ namespace S3X
 	double calc_q_par(const Hdf5::File& file, const Reference& ref,
 		const Mesh& mesh, const Zones::Zones& zones,
 		const std::string& species, const double mass_amu, const int t,
-		Vectors::ZonedVector<BkgFPType>& q_par);
+		Vectors::ZonedVector<BkgFPType>& q_par, const bool strict = false);
 
 	void read_frames(const std::vector<std::string>& frame_paths,
 		const Reference& ref, const Mesh& mesh,
-		Background::Background& bkg);
+		Background::Background& bkg, const bool strict = false);
 
 	void calc_efield_and_flows(Background::Background& bkg,
 		const Vectors::ZonedVector<BkgFPType>& vp,

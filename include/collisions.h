@@ -4,6 +4,7 @@
 */
 #pragma once
 
+#include <array>
 #include <cmath>
 #include <tuple>
 #include <vector>
@@ -48,6 +49,13 @@ namespace Collisions
 	SkewCounts get_skew_counts(const bool elec);
 
 	void reset_skew_counts();
+
+	std::array<SkewCounts, 2> reduce_skew_counts();
+
+	void check_thermal_force(const Background::Background& bkg,
+		const Options::Options& opts);
+
+	void print_skew_counts(const std::array<SkewCounts, 2>& totals);
 
 	/**
 	* @name Heat-flux skew of the background distribution (thermal force)

@@ -119,6 +119,7 @@ namespace Options
 		std::string m_imp_temp_start_opt      {"main_ion"};
 		double m_imp_temp_start_val                  {0.0};
 		std::string m_imp_collisions             {"nanbu"};
+		std::string m_imp_thermal_force             {"on"};
 		std::string m_imp_time_step_opt       {"constant"};
 		double m_imp_time_step                      {1e-8};
 		double m_imp_time_step_min                 {1e-12};
@@ -155,6 +156,7 @@ namespace Options
 		int m_imp_zstart_opt_int		{-1};
 		int m_imp_temp_start_opt_int	{-1};
 		int m_imp_collisions_int		{-1};
+		int m_imp_thermal_force_int		{-1};
 		int m_var_red_split_int			{-1};
 		int m_var_red_import_int		{-1};
 		int m_var_red_rusrol_int		{-1};
@@ -258,6 +260,7 @@ namespace Options
 		void set_imp_temp_start_opt(std::string imp_temp_start_opt);
 		void set_imp_temp_start_val(double imp_temp_start_val);
 		void set_imp_collisions(std::string imp_collisions);
+		void set_imp_thermal_force(std::string imp_thermal_force);
 		void set_var_red_split(std::string var_red_split);
 		void set_var_red_import(std::string var_red_import);
 		void set_var_red_freq(double var_red_freq);
@@ -348,6 +351,7 @@ namespace Options
 		const std::string& imp_temp_start_opt() const;
 		double imp_temp_start_val() const;
 		const std::string& imp_collisions() const;
+		const std::string& imp_thermal_force() const;
 		const std::string& var_red_split() const;
 		const std::string& var_red_import() const;
 		double var_red_freq() const;
@@ -381,6 +385,7 @@ namespace Options
 		int imp_zstart_opt_int() const;
 		int imp_temp_start_opt_int() const;
 		int imp_collisions_int() const;
+		int imp_thermal_force_int() const;
 		int var_red_split_int() const;
 		int var_red_import_int() const;
 		int var_red_rusrol_int() const;

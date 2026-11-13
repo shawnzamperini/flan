@@ -119,6 +119,7 @@ are grouped by what they control.
 | `imp_temp_start_opt` | string | `"main_ion"` | How each impurity's starting temperature is chosen: a single value (`imp_temp_start_val`) or the local main ion temperature. Starting velocities are sampled from an isotropic Maxwellian at this temperature. Valid values: `"single_value"`, `"main_ion"`. |
 | `imp_temp_start_val` | float | `0.0` | Starting temperature of every impurity when `imp_temp_start_opt` is `"single_value"` (eV). |
 | `imp_collisions` | string | `"nanbu"` | Collision model for the impurities, either off or the Nanbu model. Valid values: `"off"`, `"nanbu"`. |
+| `imp_thermal_force` | string | `"on"` | Whether the Nanbu collisions include the electron and ion thermal forces, by colliding impurities with background distributions skewed by their parallel heat fluxes. The heat fluxes come from SOLEDGE3X plasma files with the fluxes on the phi faces; other backgrounds have none, so a warning says the thermal force isn't included. With heat fluxes, it runs on the CPU only. Valid values: `"off"`, `"on"`. |
 | `imp_time_step_opt` | string | `"constant"` | Whether the impurity time step is constant or variable. Valid values: `"constant"`, `"variable"`. |
 | `imp_time_step` | float | `1e-8` | Impurity time step (s). |
 | `imp_time_step_min` | float | `1e-12` | Minimum impurity time step when the time step is variable (s). |

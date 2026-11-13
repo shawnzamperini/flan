@@ -65,6 +65,7 @@ namespace Options
 		set_imp_zstart_opt(m_imp_zstart_opt);
 		set_imp_temp_start_opt(m_imp_temp_start_opt);
 		set_imp_collisions(m_imp_collisions);
+		set_imp_thermal_force(m_imp_thermal_force);
 		set_var_red_split(m_var_red_split);
 		set_var_red_import(m_var_red_import);
 		set_var_red_rusrol(m_var_red_rusrol);
@@ -1220,6 +1221,35 @@ namespace Options
 		}
 
 	/**
+	* Sets the imp_thermal_force option.
+	*
+	* Whether the Nanbu collisions include the thermal force: "on" samples
+	* the colliding background electrons and ions from distributions skewed
+	* by their parallel heat fluxes (see Collisions::sample_bkg_velocity),
+	* "off" from Maxwellians. "on" (the default) only has an effect with a
+	* background that has heat fluxes (SOLEDGE3X files with face fluxes),
+	* and then needs the CPU (see Collisions::check_thermal_force).
+	*
+	* Valid values are "off" and "on". An invalid value prints an error and
+	* leaves the option unchanged. Also sets the control integer returned
+	* by imp_thermal_force_int() to 0 for "off", 1 for "on". An invalid
+	* value leaves the control integer unchanged.
+	*
+	* @param imp_thermal_force New value of the imp_thermal_force option.
+	*/
+	void Options::set_imp_thermal_force(std::string imp_thermal_force)
+	{
+		if (check_input<std::string>("imp_thermal_force", imp_thermal_force,
+			{"off", "on"}))
+		{
+			m_imp_thermal_force = imp_thermal_force;
+		}
+
+		if (imp_thermal_force == "off") m_imp_thermal_force_int = 0;
+		else if (imp_thermal_force == "on") m_imp_thermal_force_int = 1;
+	}
+
+	/**
 	* Sets the var_red_split option.
 	*
 	* When particles are split for variance reduction: never, at
@@ -2222,6 +2252,15 @@ namespace Options
 		{return m_imp_collisions;}
 
 	/**
+	* Returns the imp_thermal_force option, whether the Nanbu collisions
+	* include the thermal force ("on") or not ("off").
+	*
+	* @return Value of the imp_thermal_force option.
+	*/
+	const std::string& Options::imp_thermal_force() const
+		{return m_imp_thermal_force;}
+
+	/**
 	* Returns the var_red_split option.
 	*
 	* When particles are split for variance reduction: never, at
@@ -2541,6 +2580,20 @@ namespace Options
 	*/
 	int Options::imp_collisions_int() const
 		{return get_control_int("imp_collisions", m_imp_collisions_int);}
+
+	/**
+	* Returns the control integer for the imp_thermal_force option: 0 =
+	* "off", 1 = "on". It is fetched through get_control_int, which prints
+	* an error if it was never set.
+	*
+	* @return Control integer for imp_thermal_force, or -1 if it was never
+	*         set.
+	*/
+	int Options::imp_thermal_force_int() const
+	{
+		return get_control_int("imp_thermal_force",
+			m_imp_thermal_force_int);
+	}
 
 	/**
 	* Returns the control integer for the var_red_split option.

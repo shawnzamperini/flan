@@ -6,6 +6,7 @@
 * An input file builds an Inputs map and calls flan with it, between
 * MPI_Init and MPI_Finalize (see regression/blank_input_file.cpp).
 */
+#include <array>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -15,6 +16,7 @@
 
 #include "background.h"
 #include "boundary.h"
+#include "collisions.h"
 #include "config.h"
 #include "errors.h"
 #include "flan.h"
@@ -105,17 +107,18 @@ R"(
 	if (rank == 0) std::cout << "Loading input...\n";
 	Options::Options opts {Options::load_options(inpts)};
 
-	// Temporary warning until the collision model includes the thermal
-	// forces. Planned for after the sputtering and redeposition work.
-	if (rank == 0 && opts.imp_collisions_int() == 1)
+	// Without the thermal force, Nanbu collides impurities with
+	// Maxwellians, which have no heat flux and so give no thermal force.
+	// (With it on but no heat fluxes, check_thermal_force says so.)
+	if (rank == 0 && opts.imp_collisions_int() == 1
+		&& opts.imp_thermal_force_int() != 1)
 	{
-		std::cout << "\nWarning! The Nanbu collision model collides "
-			"impurities with a\nMaxwellian of the local background plasma, "
-			"so it may not include\nthe thermal forces (from the "
-			"temperature gradients). Upgrading it\nis planned, either by "
-			"tracking the temperature gradient for\nSOLEDGE3X backgrounds, "
-			"or by sampling from a modified distribution\nfunction "
-			"calculated from Gkeyll.\n\n";
+		std::cout << "\nWarning! imp_thermal_force = \"off\", so the Nanbu "
+			"collision model\ncollides impurities with Maxwellians of the "
+			"background plasma,\nwhich leaves out the thermal forces (from "
+			"the temperature\ngradients). Set imp_thermal_force = \"on\" "
+			"with a SOLEDGE3X\nbackground whose files have the face fluxes "
+			"to include them.\n\n";
 	}
 
 	// Load plasma background on rank 0. The other ranks get it from the
@@ -131,6 +134,9 @@ R"(
 
 	// Broadcast the background to all the processes.
 	bkg.broadcast(MPI_COMM_WORLD);
+
+	// The thermal force needs the heat fluxes and the CPU
+	Collisions::check_thermal_force(bkg, opts);
 
 	// The sputtered source. Every rank calculates its own from the
 	// broadcast background, since every rank starts particles from it.
@@ -178,10 +184,19 @@ R"(
 	// Begin main particle following loop.
 	timer.start(Timer::Section::Imp);
 	Boundary::Fates fates {};
+	Collisions::reset_skew_counts();
 	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
 		timer, source ? &*source : nullptr,
 		deposition ? &*deposition : nullptr, &fates)};
 	timer.stop(Timer::Section::Imp);
+
+	// How the thermal force's skewed sampling went, over every rank
+	std::optional<std::array<Collisions::SkewCounts, 2>> skew_counts {};
+	if (opts.imp_thermal_force_int() == 1)
+	{
+		skew_counts = Collisions::reduce_skew_counts();
+		if (rank == 0) Collisions::print_skew_counts(*skew_counts);
+	}
 
 	// Add up where the sputtered atoms landed over every rank
 	if (deposition)
@@ -216,7 +231,8 @@ R"(
 		timer.start(Timer::Section::Save);
 		SaveResults::save_results(bkg, global_stats, opts,
 			source ? &*source : nullptr,
-			deposition ? &*deposition : nullptr, &fates);
+			deposition ? &*deposition : nullptr, &fates,
+			skew_counts ? &*skew_counts : nullptr);
 		timer.stop(Timer::Section::Save);
 	}
 

@@ -210,6 +210,10 @@ Last Update: 8/22/25 (commit XXX)
      - Impurity collisions with background toggle
      - "on"
 
+   * - :ref:`imp_thermal_force <imp_thermal_force>`
+     - Thermal force in the collisions toggle
+     - "on"
+
    * - :ref:`imp_time_step_opt <imp_time_step_opt>`
      - Time step option
      - "constant"
@@ -563,6 +567,14 @@ Nanbu, K. Theory of cumulative small-angle collisions in plasmas. Phys. Rev. E 5
 
   - **"off"**: Collision model turned off.
   - **"on"**: Collision model turned on.
+
+imp_thermal_force
+-----------------
+
+Whether the Nanbu collisions include the electron and ion thermal forces. With it on, the background electron or ion an impurity collides with is sampled from a distribution skewed by that species' parallel heat flux, instead of a Maxwellian. Since Coulomb collisions are strongest with slow particles, the skew gives a net push toward higher temperature. The heat fluxes come from SOLEDGE3X plasma files with the fluxes on the phi faces; other backgrounds have none, so a warning says the thermal force isn't included. With heat fluxes, it runs on the CPU only.
+
+  - **"off"**: Collide with Maxwellians (no thermal force).
+  - **"on"**: Collide with the heat-flux skewed distributions.
 
 imp_time_step_opt
 -----------------

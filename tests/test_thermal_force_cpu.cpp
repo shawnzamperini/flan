@@ -4,11 +4,18 @@
 */
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <gtest/gtest.h>
+#include <string>
 #include <vector>
 
+#include "background.h"
 #include "collisions.h"
 #include "constants.h"
+#include "flan_types.h"
+#include "vectors.h"
+#include "zones.h"
+#include "options.h"
 #include "pcg32.h"
 
 namespace
@@ -236,4 +243,52 @@ TEST(ThermalForce, UnskewedSampler)
 	EXPECT_EQ(rng.next_uint(), old_rng.next_uint());
 	EXPECT_EQ(counts.samples, 0);
 	EXPECT_EQ(counts.draws, 0);
+}
+
+// The thermal force is on by default. Without heat fluxes it only warns
+// (any device); with only one heat flux, or with heat fluxes on the GPU, it
+// stops the run; off checks nothing.
+TEST(ThermalForce, Checks)
+{
+	Background::Background bkg {};
+	Options::Options opts {};
+	EXPECT_EQ(opts.imp_thermal_force_int(), 1);
+
+	testing::internal::CaptureStdout();
+	Collisions::check_thermal_force(bkg, opts);
+	EXPECT_NE(testing::internal::GetCapturedStdout().find("no parallel heat "
+		"fluxes, so the thermal force isn't"), std::string::npos);
+	opts.set_use_gpu("cuda");
+	testing::internal::CaptureStdout();
+	Collisions::check_thermal_force(bkg, opts);
+	EXPECT_NE(testing::internal::GetCapturedStdout().find("Warning!"),
+		std::string::npos);
+
+	// One zone, one cell and frame, so the background can hold heat fluxes
+	Zones::Zones zones(0);
+	zones.add_zone({0.5}, {0.5}, {0.5}, {0.0, 1.0}, {0.0, 1.0}, {0.0, 1.0});
+	zones.set_face(0, Zones::Face::xmin, Zones::face_absorbing);
+	bkg.move_into_zones(zones);
+	auto heat_flux = [&]()
+	{
+		return Vectors::ZonedVector<BkgFPType>(1, bkg.get_zones().get_nx_all(),
+			bkg.get_zones().get_ny_all(), bkg.get_zones().get_nz_all(), 0);
+	};
+	auto q_i {heat_flux()};
+	bkg.move_into_q_par_i(q_i);
+	EXPECT_EXIT(Collisions::check_thermal_force(bkg, opts),
+		testing::ExitedWithCode(EXIT_FAILURE), "only has q_par_i");
+	auto q_e {heat_flux()};
+	bkg.move_into_q_par_e(q_e);
+	EXPECT_EXIT(Collisions::check_thermal_force(bkg, opts),
+		testing::ExitedWithCode(EXIT_FAILURE), "only runs on the CPU");
+
+	opts.set_use_gpu("off");
+	testing::internal::CaptureStdout();
+	Collisions::check_thermal_force(bkg, opts);
+	EXPECT_EQ(testing::internal::GetCapturedStdout(), "");
+
+	opts.set_imp_thermal_force("off");
+	opts.set_use_gpu("cuda");
+	Collisions::check_thermal_force(bkg, opts);
 }

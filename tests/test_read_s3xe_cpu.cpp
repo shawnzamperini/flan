@@ -609,20 +609,29 @@ TEST_F(ReadS3XEPlasma, HeatFlux)
 	};
 	check(bkg);
 
-	// A C far from -2 pi c0 / a0 gives a warning, but since C is fitted,
-	// q_par is still right. So does the opposite sign.
+	// With the thermal force off, a C far from -2 pi c0 / a0 gives a
+	// warning, but since C is fitted, q_par is still right. So does the
+	// opposite sign.
 	for (auto& f : m_frames) f.flux_C = 3.0 * 2.0 * S3XTest::pi * c0 / 0.5;
 	write_files();
+	auto opts {options()};
+	opts.set_imp_thermal_force("off");
 	testing::internal::CaptureStdout();
-	bkg = S3X::read_s3xe(options());
+	bkg = S3X::read_s3xe(opts);
 	out = testing::internal::GetCapturedStdout();
 	EXPECT_NE(out.find("Warning! In"), std::string::npos) << out;
 	check(bkg);
 
+	// With it on (the default), the heat flux is used, so that C stops the
+	// run instead
+	EXPECT_EXIT(S3X::read_s3xe(options()),
+		testing::ExitedWithCode(EXIT_FAILURE),
+		"is more than 5% from -2 pi c0 / a0");
+
 	// Every frame needs them, or none
 	m_frames[1].face_fluxes = false;
 	write_files();
-	EXPECT_EXIT(S3X::read_s3xe(options()),
+	EXPECT_EXIT(S3X::read_s3xe(opts),
 		testing::ExitedWithCode(EXIT_FAILURE), "plasma_00001.h5 doesn't "
 		"have the spec0 fluxes on the phi faces");
 }

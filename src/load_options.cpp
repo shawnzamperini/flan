@@ -566,6 +566,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "imp_thermal_force")
+			{
+				auto set_func = std::bind(&Options::set_imp_thermal_force,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "var_red_split")
 			{
 				auto set_func = std::bind(&Options::set_var_red_split, &opts,
