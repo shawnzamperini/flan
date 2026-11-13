@@ -1352,6 +1352,19 @@ namespace Background
 		return interp_4d(m_ne, zone, t0, x0, y0, z0);
 	}
 
+	/**
+	* Interpolates the ion parallel conductive heat flux q_par (W/m^2,
+	* positive along B) at a point, like interp_ti. A background without a
+	* heat flux (see get_q_par_i) gives 0, i.e., no skew of the ion
+	* distribution.
+	*/
+	BkgFPType Background::interp_q_par_i(const int zone, const double t0,
+		const double x0, const double y0, const double z0) const
+	{
+		if (m_q_par_i.get_data().empty()) return 0.0;
+		return interp_4d(m_q_par_i, zone, t0, x0, y0, z0);
+	}
+
 	BkgFPType Background::interp_uX(const int zone, const double t0,
 		const double x0, const double y0, const double z0) const
 	{

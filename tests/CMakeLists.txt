@@ -58,6 +58,11 @@ target_compile_definitions(test_sputtering_cpu PRIVATE
 	FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 add_test(NAME SputteringCPUTest COMMAND test_sputtering_cpu)
 
+add_executable(test_thermal_force_cpu test_thermal_force_cpu.cpp)
+target_link_libraries(test_thermal_force_cpu PRIVATE flan gtest_main
+	OpenMP::OpenMP_CXX)
+add_test(NAME ThermalForceCPUTest COMMAND test_thermal_force_cpu)
+
 add_executable(test_read_s3xe_cpu test_read_s3xe_cpu.cpp)
 target_link_libraries(test_read_s3xe_cpu PRIVATE flan gtest_main hdf5)
 add_test(NAME ReadS3XECPUTest COMMAND test_read_s3xe_cpu)

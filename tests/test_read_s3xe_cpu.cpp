@@ -550,6 +550,8 @@ TEST_F(ReadS3XEPlasma, HeatFlux)
 	EXPECT_TRUE(bkg.get_q_par_i().get_data().empty());
 	EXPECT_NE(out.find("No ion fluxes on the phi faces"), std::string::npos)
 		<< out;
+	EXPECT_EQ(bkg.interp_q_par_i(2, bkg.get_times()[0], 3.5, 10.5, 1.0),
+		0.0);
 
 	// With them, q_par is recovered in every zone and frame, and C is
 	// printed next to -2 pi c0 / a0
@@ -579,6 +581,14 @@ TEST_F(ReadS3XEPlasma, HeatFlux)
 		// Ghost cells are filled from the zone across the face
 		EXPECT_DOUBLE_EQ(b.get_q_par_i()(0, 1, 12, 5, 2),
 			b.get_q_par_i()(2, 1, 0, 5, 2));
+
+		// At a cell center, interpolating gives the cell's value
+		const double x {3.5};
+		const double y {10.5};
+		const double zc {b.get_zones().get_z(2)[1]};
+		EXPECT_NEAR(b.interp_q_par_i(2, b.get_times()[1], x, y, zc),
+			b.get_q_par_i()(2, 1, 3, 10, 1),
+			1e-9 * std::abs(b.get_q_par_i()(2, 1, 3, 10, 1)));
 	};
 	check(bkg);
 

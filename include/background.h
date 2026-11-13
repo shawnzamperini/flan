@@ -376,6 +376,9 @@ namespace Background
 		BkgFPType interp_ne(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
 
+		BkgFPType interp_q_par_i(const int zone, const double t0,
+			const double x0, const double y0, const double z0) const;
+
 		BkgFPType interp_uX(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
 
