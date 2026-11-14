@@ -62,6 +62,10 @@ and the relative velocity is $\mathbf{g} = \mathbf{v}_a - \mathbf{v}_b$. The sam
 flow velocity, from the Gkeyll ion moments, is used for both ions and electrons.
 The background masses come from `gkyl_ion_mass_amu` and `gkyl_elec_mass_amu`.
 
+When the background has parallel heat fluxes and `imp_thermal_force = "on"`,
+the Maxwellian is skewed by the species' heat flux before sampling. This is
+what gives the thermal force, see [Thermal Force](thermal-force.md).
+
 ### 2. Calculate *s*
 
 $s$ is calculated with the formula above, with an impurity of charge state $Z$
@@ -151,7 +155,9 @@ edge and scrape-off layer plasmas, but each can break down.
   density is small compared to the plasma density.
 - **The background is close to a Maxwellian.** Background velocities are sampled
   from a drifting, isotropic Maxwellian with a single temperature, so
-  temperature anisotropy and non-Maxwellian tails are not captured.
+  temperature anisotropy and non-Maxwellian tails are not captured. The one
+  departure that is included is the skew that carries the parallel heat
+  flux (see [Thermal Force](thermal-force.md)).
 - **The background changes little over one time step.** The plasma
   parameters are evaluated once at the start of the step and held fixed
   for the collision.
@@ -160,6 +166,13 @@ One thing the model does *not* require is a time step much smaller than the
 collision time. The $\chi$ distribution is valid for any $s$, which is the
 point of the model. In practice, Flan's time step is set by resolving the gyromotion in
 the Boris push, which usually makes $s$ small anyway.
+
+There is one catch. $s$ is calculated with the relative speed of the one
+background particle sampled, and the slowest of those have a large $s$ long
+before the typical one does. The average force on a slow, heavy impurity
+(friction and the thermal force) therefore does weaken as the time step
+grows, which matters first for collisions with electrons in cold, dense
+plasma. See [The time step](thermal-force.md#the-time-step) for numbers.
 
 **Invalid or questionable when:**
 

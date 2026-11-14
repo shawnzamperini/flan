@@ -17,6 +17,8 @@ Everything is read from :ref:`s3x_dir <s3x_dir>`:
 
 The plasma is unnormalized with the reference values: densities by n0, temperatures by T0, the potential by phi0, the parallel ion flow is G / n times c0, and the time is tsimu times tau0. SOLEDGE3X's reference mass is 1 amu, so c0 and tau0 are not the main ion's sound speed and inverse cyclotron frequency. The electric field is minus the gradient of the potential, and the background ion flow is the parallel flow plus the E x B and grad B drifts, the same as for Gkeyll backgrounds.
 
+If the plasma files have the fluxes on the cell faces (fluxn and fluxE, for both species and in every frame), Flan also computes the parallel conductive heat fluxes of the ions and electrons from the fluxes on the phi faces, and uses them for the thermal force in the collisions (see :ref:`imp_thermal_force <imp_thermal_force>`). The constant that converts the saved fluxes to physical units is fitted against the parallel flow and printed for each species at the start of the run; it must be within 5% of -2 pi c0 / a0. The heat fluxes are saved with the background as q_par_i and q_par_e (W/m2). Without the face fluxes, a warning says the thermal force isn't included.
+
 SOLEDGE3X's (R, Z, phi) is right-handed, so phi increases clockwise seen from above.
 
 Zones

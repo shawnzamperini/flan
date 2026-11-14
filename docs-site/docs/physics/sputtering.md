@@ -441,20 +441,18 @@ For deuterium sputtering tungsten near threshold:
 - **The ones that get away set the leakage.** The few percent that
   escape prompt redeposition carry the impurity along the field lines,
   and where they go is decided by the parallel forces on them.
-- **Two missing pieces push in opposite directions.**
-    - Without the sheath's electric field, fewer ions are pulled back to
-      the wall right away, so prompt redeposition is underestimated and
-      more atoms escape than should.
-    - Without the thermal force in the collision model (see the warning at
-      the start of a run), the ions that escape aren't pushed away from
-      the target by the ion temperature gradient. For a high-Z impurity
-      near the target that force can be much stronger than the friction
-      with the main ion flow, so leakage away from the target is
-      underestimated.
-
-  Both are planned. Until then, the redeposited share and the prompt
-  landing times are the most trustworthy results, and the impurity away
-  from the targets is the least.
+- **The sheath is still missing.** Without the sheath's electric field,
+  fewer ions are pulled back to the wall right away, so prompt
+  redeposition is underestimated and more atoms escape than should. It is
+  planned. Until then, the redeposited share and the prompt landing times
+  are the most trustworthy results, and the impurity away from the targets
+  is the least.
+- **The thermal force is included when the background has heat fluxes.**
+  The ions that escape are pushed along the field toward higher
+  temperature, which competes with the friction with the main ion flow
+  (see [Thermal Force](thermal-force.md)). Without heat fluxes, or with
+  `imp_thermal_force = "off"`, that push is absent, and a warning at the
+  start of the run says so.
 
 ## Making a new table
 
@@ -578,8 +576,7 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
 - **Sputtered atoms' distributions.** The Thompson energy and cosine
   angle distributions are the usual approximations. RustBCA could give the
   real distributions for each impact energy and angle instead.
-- **No sheath and no thermal force yet.** See
-  [What to expect](#what-to-expect).
+- **No sheath yet.** See [What to expect](#what-to-expect).
 
 ## References
 

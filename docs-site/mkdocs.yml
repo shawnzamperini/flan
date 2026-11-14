@@ -34,6 +34,7 @@ nav:
   - Physics:
       - Impurity Transport: physics/impurity-transport.md
       - Collisions: physics/collisions.md
+      - Thermal Force: physics/thermal-force.md
       - Ionization/Recombination: physics/ionization-recombination.md
       - Sputtering: physics/sputtering.md
   - Developer:
