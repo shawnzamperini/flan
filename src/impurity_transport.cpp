@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <omp.h>
+#include <sstream>
 #include <thread>
 #include <tuple>
 #include <vector>
@@ -18,6 +19,7 @@
 #include "boundary.h"
 #include "collisions.h"
 #include "constants.h"
+#include "errors.h"
 #include "flan_types.h"
 #include "impurity_stats.h"
 #include "impurity_transport.h"
@@ -1070,9 +1072,25 @@ namespace ImpurityTransport
 				<< "wrapper call and print statements are on.\n";
 #endif
 
-		// Some warnings to include as I still implement things
-		std::cout << "Warning! Need to still implement lcfs_x to divide"
-			<< " core/SOL BCs\n";
+		// An lcfs z boundary splits the domain into core (x < lcfs_x) and
+		// SOL (x >= lcfs_x), assuming x increases outward. lcfs_x defaults
+		// to 0.0, so make sure it was actually set to something inside the
+		// domain. Otherwise every particle would be treated as all core or
+		// all SOL.
+		if (opts.min_zbound_type_int() == 3 || opts.max_zbound_type_int() == 3)
+		{
+			const double x_min {static_cast<double>(bkg.get_x_min())};
+			const double x_max {static_cast<double>(bkg.get_x_max())};
+			if (opts.lcfs_x() <= x_min || opts.lcfs_x() >= x_max)
+			{
+				std::ostringstream msg;
+				msg << "lcfs_x = " << opts.lcfs_x() << " is not inside the "
+					<< "background x range (" << x_min << ", " << x_max 
+					<< "), but the z boundaries are lcfs. Set lcfs_x to the "
+					<< "x coordinate of the last closed flux surface.";
+				Errors::fatal_error(msg.str());
+			}
+		}
 
 		// Rank and number of processes
 		int rank {};

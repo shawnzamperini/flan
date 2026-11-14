@@ -547,11 +547,13 @@ namespace Options
 	*
 	* Boundary condition at the minimum z boundary.
 	*
-	* Valid values are "absorbing", "periodic" and "core". An invalid value
-	* prints an error and leaves the option unchanged. Also sets the control
-	* integer returned by min_zbound_type_int() to 0 for "absorbing", 1 for
-	* "periodic", 2 for "core". An invalid value leaves the control integer
-	* unchanged.
+	* Valid values are "absorbing", "periodic", "core" and "lcfs". "lcfs"
+	* is periodic for particles inside the last closed flux surface
+	* (x < lcfs_x) and absorbing outside it. An invalid value prints an
+	* error and leaves the option unchanged. Also sets the control integer
+	* returned by min_zbound_type_int() to 0 for "absorbing", 1 for
+	* "periodic", 2 for "core", 3 for "lcfs". An invalid value leaves the
+	* control integer unchanged.
 	*
 	* @param min_zbound_type New value of the min_zbound_type option.
 	*/
@@ -559,7 +561,7 @@ namespace Options
 	{
 		// Only assign if valid option, leaving as default if not
 		if (check_input<std::string>("min_zbound_type", min_zbound_type,
-			{"absorbing", "periodic", "core"}))
+			{"absorbing", "periodic", "core", "lcfs"}))
 		{
 			m_min_zbound_type = min_zbound_type;
 		}
@@ -568,6 +570,7 @@ namespace Options
 		if (min_zbound_type == "absorbing") m_min_zbound_type_int = 0;
 		else if (min_zbound_type == "periodic") m_min_zbound_type_int = 1;
 		else if (min_zbound_type == "core") m_min_zbound_type_int = 2;
+		else if (min_zbound_type == "lcfs") m_min_zbound_type_int = 3;
 	}
 
 	/**
@@ -575,11 +578,13 @@ namespace Options
 	*
 	* Boundary condition at the maximum z boundary.
 	*
-	* Valid values are "absorbing", "periodic" and "core". An invalid value
-	* prints an error and leaves the option unchanged. Also sets the control
-	* integer returned by max_zbound_type_int() to 0 for "absorbing", 1 for
-	* "periodic", 2 for "core". An invalid value leaves the control integer
-	* unchanged.
+	* Valid values are "absorbing", "periodic", "core" and "lcfs". "lcfs"
+	* is periodic for particles inside the last closed flux surface
+	* (x < lcfs_x) and absorbing outside it. An invalid value prints an
+	* error and leaves the option unchanged. Also sets the control integer
+	* returned by max_zbound_type_int() to 0 for "absorbing", 1 for
+	* "periodic", 2 for "core", 3 for "lcfs". An invalid value leaves the
+	* control integer unchanged.
 	*
 	* @param max_zbound_type New value of the max_zbound_type option.
 	*/
@@ -587,7 +592,7 @@ namespace Options
 	{
 		// Only assign if valid option, leaving as default if not
 		if (check_input<std::string>("max_zbound_type", max_zbound_type,
-			{"absorbing", "periodic", "core"}))
+			{"absorbing", "periodic", "core", "lcfs"}))
 		{
 			m_max_zbound_type = max_zbound_type;
 		}
@@ -596,6 +601,7 @@ namespace Options
 		if (max_zbound_type == "absorbing") m_max_zbound_type_int = 0;
 		else if (max_zbound_type == "periodic") m_max_zbound_type_int = 1;
 		else if (max_zbound_type == "core") m_max_zbound_type_int = 2;
+		else if (max_zbound_type == "lcfs") m_max_zbound_type_int = 3;
 	}
 
 	/**

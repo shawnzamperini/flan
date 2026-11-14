@@ -693,6 +693,10 @@ namespace Options
 	*    If not, collisions are turned off.
 	*  - A periodic x, y or z boundary is periodic on both the minimum and
 	*    maximum side. If only one side is, both are set to periodic.
+	*  - An "lcfs" z boundary is used on both the minimum and maximum side.
+	*    If only one side is, both are set to "lcfs".
+	*  - An "lcfs" z boundary is not used with GPU acceleration, since it is
+	*    only implemented on the CPU so far. The run is stopped if it is.
 	*  - GPU acceleration is off in a CPU-only build.
 	*
 	* A warning is printed whenever an option is changed. Placeholders are
@@ -742,6 +746,19 @@ namespace Options
 			opts.max_zbound_type(), &Options::set_min_zbound_type,
 			&Options::set_max_zbound_type);
 
+		// The lcfs z boundary is periodic inside lcfs_x, so like a periodic
+		// boundary it only makes sense if both z sides use it.
+		if ((opts.min_zbound_type() == "lcfs")
+			!= (opts.max_zbound_type() == "lcfs"))
+		{
+			std::cout << "Warning! min_zbound_type = "
+				<< opts.min_zbound_type() << " and max_zbound_type = "
+				<< opts.max_zbound_type() << ", but an lcfs boundary must be "
+				<< "used on both sides. Setting both to lcfs.\n";
+			opts.set_min_zbound_type("lcfs");
+			opts.set_max_zbound_type("lcfs");
+		}
+
 #ifndef USE_CUDA
 		// Turn off GPU option if it was turned on for a CPU-only build.
 		if (opts.use_gpu_int() > 0)
@@ -752,6 +769,17 @@ namespace Options
 			opts.set_use_gpu("off");
 		}
 #endif
+
+		// TODO: Remove once the lcfs boundary is added to check_bounds_kernel
+		// in cuda/boundary.cu. Until then the kernel would match no branch
+		// for an lcfs boundary (type 3) and particles would pass through the
+		// z boundaries without anything happening.
+		if (opts.use_gpu_int() > 0 && opts.min_zbound_type() == "lcfs")
+		{
+			Errors::fatal_error("min_zbound_type/max_zbound_type = lcfs is "
+				"only implemented on the CPU so far. Set use_gpu = off or "
+				"use a different z boundary type.");
+		}
 
 	}
 }

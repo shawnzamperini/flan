@@ -41,3 +41,102 @@ TEST(Boundary, CoreHit)
 		true, rng);
     EXPECT_LE(a, 10.0);
 }
+
+// LCFS boundary. Domain is x in [0, 1] with lcfs_x = 0.5 (x < 0.5 is core,
+// assuming x increases outward), y in [0, 4], z in [-2, 2].
+namespace
+{
+	constexpr double lcfs_x {0.5};
+	constexpr double y_min {0.0}, y_max {4.0};
+	constexpr double z_min {-2.0}, z_max {2.0};
+}
+
+TEST(Boundary, LcfsCoreWrapsMax)
+{
+	// Core particle past z_max wraps to the other side and stays alive. No
+	// twist-shift, so y is unchanged.
+	double y {1.0}, z {2.5};
+	int state = Boundary::lcfs_bc(y, z, 0.2, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.0, 0.0, true);
+	EXPECT_EQ(state, 0);
+	EXPECT_DOUBLE_EQ(z, -1.5);
+	EXPECT_DOUBLE_EQ(y, 1.0);
+}
+
+TEST(Boundary, LcfsCoreWrapsMin)
+{
+	double y {1.0}, z {-2.5};
+	int state = Boundary::lcfs_bc(y, z, 0.2, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.0, 0.0, false);
+	EXPECT_EQ(state, 0);
+	EXPECT_DOUBLE_EQ(z, 1.5);
+	EXPECT_DOUBLE_EQ(y, 1.0);
+}
+
+TEST(Boundary, LcfsCoreOnlyChecksItsSide)
+{
+	// Past z_max, but we're checking the z_min side, so nothing happens.
+	double y {1.0}, z {2.5};
+	int state = Boundary::lcfs_bc(y, z, 0.2, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.0, 0.0, false);
+	EXPECT_EQ(state, 0);
+	EXPECT_DOUBLE_EQ(z, 2.5);
+}
+
+TEST(Boundary, LcfsSolAbsorbs)
+{
+	// SOL particle past either z bound is killed and not moved.
+	double y {1.0}, z {2.5};
+	EXPECT_EQ(Boundary::lcfs_bc(y, z, 0.8, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.0, 0.0, true), 1);
+	EXPECT_DOUBLE_EQ(z, 2.5);
+
+	z = -2.5;
+	EXPECT_EQ(Boundary::lcfs_bc(y, z, 0.8, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.0, 0.0, false), 1);
+
+	// Inside the domain, alive
+	z = 0.0;
+	EXPECT_EQ(Boundary::lcfs_bc(y, z, 0.8, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.0, 0.0, true), 0);
+}
+
+TEST(Boundary, LcfsAtLcfsIsSol)
+{
+	// Exactly at lcfs_x counts as SOL (absorbed).
+	double y {1.0}, z {2.5};
+	EXPECT_EQ(Boundary::lcfs_bc(y, z, lcfs_x, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.0, 0.0, true), 1);
+}
+
+TEST(Boundary, LcfsBufferOnlyInSol)
+{
+	// z = 1.95 is inside z_max but within a 0.1 buffer. SOL: absorbed.
+	double y {1.0}, z {1.95};
+	EXPECT_EQ(Boundary::lcfs_bc(y, z, 0.8, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.1, 0.0, true), 1);
+
+	// Core: buffer ignored, not wrapped either.
+	EXPECT_EQ(Boundary::lcfs_bc(y, z, 0.2, lcfs_x, y_min, y_max, z_min,
+		z_max, 0.1, 0.0, true), 0);
+	EXPECT_DOUBLE_EQ(z, 1.95);
+}
+
+TEST(Boundary, LcfsTwistShiftHook)
+{
+	// With a nonzero shift, crossing z_max adds it to y (wrapping in y)
+	// and crossing z_min subtracts it.
+	double y {3.5}, z {2.5};
+	Boundary::lcfs_bc(y, z, 0.2, lcfs_x, y_min, y_max, z_min, z_max, 0.0,
+		1.0, true);
+	EXPECT_DOUBLE_EQ(y, 0.5);  // 3.5 + 1.0 = 4.5 -> wraps to 0.5
+
+	// Going back across z_min undoes it
+	z = -2.5;
+	Boundary::lcfs_bc(y, z, 0.2, lcfs_x, y_min, y_max, z_min, z_max, 0.0,
+		1.0, false);
+	EXPECT_DOUBLE_EQ(y, 3.5);
+
+	// The hook currently returns no shift
+	EXPECT_DOUBLE_EQ(Boundary::twist_shift_dy(0.2), 0.0);
+}

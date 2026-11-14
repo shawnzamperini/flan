@@ -25,6 +25,12 @@ namespace Boundary
 		double b_buffer, double c_min, double c_max, double c_buffer, 
 		bool max_bound, pcg32& rng);
 
+	double twist_shift_dy(double x);
+
+	int lcfs_bc(double& y, double& z, double x, double lcfs_x,
+		double y_min, double y_max, double z_min, double z_max,
+		double z_buffer, double y_shift, bool max_bound);
+
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
 		std::vector<pcg32>& rngs);

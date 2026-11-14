@@ -71,6 +71,23 @@ endif()
 find_package(MPI REQUIRED)
 find_package(OpenMP REQUIRED)
 
+# On Cray systems (e.g., Perlmutter) the compiler wrappers link Cray MPICH,
+# which has to be launched with srun. FindMPI can instead pick up an mpiexec
+# from elsewhere on the PATH (e.g., a conda env), which starts N separate
+# 1-rank jobs instead of one N-rank job, so tests/test_mpi fails. Use srun
+# for MPIEXEC_EXECUTABLE (used to run the MPI test) on Cray systems.
+if(DEFINED ENV{CRAYPE_VERSION})
+    find_program(FLAN_SRUN srun)
+    if(FLAN_SRUN AND NOT MPIEXEC_EXECUTABLE STREQUAL FLAN_SRUN)
+        message(STATUS "Cray system detected: using ${FLAN_SRUN} instead of "
+            "${MPIEXEC_EXECUTABLE} to launch MPI tests")
+        set(MPIEXEC_EXECUTABLE ${FLAN_SRUN} CACHE FILEPATH
+            "Executable for running MPI programs" FORCE)
+        set(MPIEXEC_NUMPROC_FLAG "-n" CACHE STRING
+            "Flag used by MPI to specify the number of processes" FORCE)
+    endif()
+endif()
+
 # ------------------------------------------------------------
 # Source files
 # ------------------------------------------------------------
