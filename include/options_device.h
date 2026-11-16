@@ -32,6 +32,11 @@ namespace Options
 		double min_te;			///< Minimum electron temperature (eV)
 		double min_ti;			///< Minimum ion temperature (eV)
 
+		double imp_coll_subcycle_target;	///< Largest s0 of a collision
+											///< sub-step
+		int imp_coll_subcycle_cap;	///< Largest number of sub-steps per
+									///< collision (1 = no sub-cycling)
+
 		// Starting time and position. Each opt_int is 0 for single_value
 		// (start at *_val), 1 for range (uniform between *range_min and
 		// *range_max) and 2 for full_range (uniform over the whole

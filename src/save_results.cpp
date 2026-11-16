@@ -587,6 +587,12 @@ namespace SaveResults
 		save_string(input_group, opts.imp_thermal_force(),
 			"imp_thermal_force", dim_str, "thermal force in the collisions "
 			"(heat-flux skewed background) option");
+		save_scalar(input_group, opts.imp_coll_subcycle_target(),
+			"imp_coll_subcycle_target", dim_scalar, "largest s0 (Nanbu s "
+			"at the background thermal speed) of a collision sub-step", "");
+		save_scalar(input_group, opts.imp_coll_subcycle_cap(),
+			"imp_coll_subcycle_cap", dim_scalar, "largest number of "
+			"sub-steps per collision (1 = no sub-cycling)", "");
 		save_string(input_group, opts.imp_time_step_opt(), "imp_time_step_opt", 
 			dim_str, "impurity time step option");
 		save_scalar(input_group, opts.imp_time_step(), "imp_time_step", 

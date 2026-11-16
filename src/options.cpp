@@ -1252,6 +1252,56 @@ namespace Options
 	}
 
 	/**
+	* Sets the imp_coll_subcycle_target option.
+	*
+	* The Nanbu collision of one time step is split into sub-steps, each
+	* with a newly sampled background particle, so that each sub-step is
+	* at most this collisional. It is measured by s0, the Nanbu s term for
+	* a background particle at its thermal speed (see
+	* Collisions::nanbu_num_substeps for why this is needed). Smaller
+	* values bring the friction and thermal force closer to their fluid
+	* values and cost more sub-steps. Must be above 0, or the run is
+	* stopped.
+	*
+	* @param imp_coll_subcycle_target New value of the
+	*        imp_coll_subcycle_target option.
+	*/
+	void Options::set_imp_coll_subcycle_target(
+		double imp_coll_subcycle_target)
+	{
+		if (!(imp_coll_subcycle_target > 0.0))
+		{
+			Errors::fatal_error("imp_coll_subcycle_target must be above 0, "
+				"got " + std::to_string(imp_coll_subcycle_target) + ". To "
+				"turn collision sub-cycling off, set imp_coll_subcycle_cap "
+				"= 1.");
+		}
+		m_imp_coll_subcycle_target = imp_coll_subcycle_target;
+	}
+
+	/**
+	* Sets the imp_coll_subcycle_cap option.
+	*
+	* The largest number of sub-steps one Nanbu collision is split into
+	* (see set_imp_coll_subcycle_target). It limits the cost in very
+	* collisional plasma. 1 turns sub-cycling off. Must be at least 1, or
+	* the run is stopped.
+	*
+	* @param imp_coll_subcycle_cap New value of the imp_coll_subcycle_cap
+	*        option.
+	*/
+	void Options::set_imp_coll_subcycle_cap(int imp_coll_subcycle_cap)
+	{
+		if (imp_coll_subcycle_cap < 1)
+		{
+			Errors::fatal_error("imp_coll_subcycle_cap must be at least 1 "
+				"(1 turns collision sub-cycling off), got "
+				+ std::to_string(imp_coll_subcycle_cap) + ".");
+		}
+		m_imp_coll_subcycle_cap = imp_coll_subcycle_cap;
+	}
+
+	/**
 	* Sets the var_red_split option.
 	*
 	* When particles are split for variance reduction: never, at
@@ -2261,6 +2311,24 @@ namespace Options
 	*/
 	const std::string& Options::imp_thermal_force() const
 		{return m_imp_thermal_force;}
+
+	/**
+	* Returns the imp_coll_subcycle_target option, the largest s0 a
+	* sub-step of a Nanbu collision is meant to have.
+	*
+	* @return Value of the imp_coll_subcycle_target option.
+	*/
+	double Options::imp_coll_subcycle_target() const
+		{return m_imp_coll_subcycle_target;}
+
+	/**
+	* Returns the imp_coll_subcycle_cap option, the largest number of
+	* sub-steps one Nanbu collision is split into (1 = no sub-cycling).
+	*
+	* @return Value of the imp_coll_subcycle_cap option.
+	*/
+	int Options::imp_coll_subcycle_cap() const
+		{return m_imp_coll_subcycle_cap;}
 
 	/**
 	* Returns the var_red_split option.

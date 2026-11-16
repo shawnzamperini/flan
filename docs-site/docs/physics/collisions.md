@@ -172,7 +172,10 @@ background particle sampled, and the slowest of those have a large $s$ long
 before the typical one does. The average force on a slow, heavy impurity
 (friction and the thermal force) therefore does weaken as the time step
 grows, which matters first for collisions with electrons in cold, dense
-plasma. See [The time step](thermal-force.md#the-time-step) for numbers.
+plasma. To counter this, a collision that is too coarse is split into
+sub-steps, each with a newly sampled background particle
+(`imp_coll_subcycle_target` and `imp_coll_subcycle_cap`). See
+[The time step](thermal-force.md#the-time-step) for numbers.
 
 **Invalid or questionable when:**
 

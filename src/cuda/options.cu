@@ -45,6 +45,9 @@ namespace Options
 		opts_h.min_te         = m_min_te;
 		opts_h.min_ti         = m_min_ti;
 
+		opts_h.imp_coll_subcycle_target = m_imp_coll_subcycle_target;
+		opts_h.imp_coll_subcycle_cap    = m_imp_coll_subcycle_cap;
+
 		opts_h.imp_mass_amu   = m_imp_mass_amu;
 
 		opts_h.imp_num        = m_imp_num;

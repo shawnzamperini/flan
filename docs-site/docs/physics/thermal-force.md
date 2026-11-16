@@ -197,7 +197,7 @@ are in, and the thermal force there is only approximate.
 
 The `thermal_force` test background (`test_opt = "thermal_force"`) is a
 uniform slab with the magnetic field along $x$ and ion and electron heat
-fluxes along the field with $\epsilon = 0.1$. Three tests in
+fluxes along the field with $\epsilon = 0.1$. The tests in
 `tests/test_thermal_force_cpu.cpp` use it or the same plasma.
 
 - **The kick is the right size.** Tungsten at rest is collided millions
@@ -216,6 +216,11 @@ fluxes along the field with $\epsilon = 0.1$. Three tests in
   flux at the speed where friction cancels the thermal force, and that
   speed matches the expected one within the statistical error (2%). Its
   temperature settles at the ions'.
+- **Sub-cycling recovers the force.** One time step with $s_0 \approx 3$
+  is split into 30 sub-steps, and the kick matches 30 times the exact
+  kick of one such sub-step, well above the kick without sub-cycling. A
+  step that doesn't need splitting gives exactly the same result as with
+  sub-cycling off.
 
 ## The time step
 
@@ -246,8 +251,50 @@ $\sqrt{m_i/m_e} \approx 60$ times that of the ions. In hot, thin plasma
 both are small. In cold, dense plasma the ion value is usually still
 small, but the electron one may not be, and the electron thermal force is
 then underestimated. $s_0$ grows with density and $Z^2$, and falls with
-temperature as $T^{-3/2}$. A smaller `imp_time_step` is the remedy for
-now.
+temperature as $T^{-3/2}$.
+
+### Sub-cycling
+
+A smaller `imp_time_step` would fix this, but it slows down everything
+else. Instead, Flan splits only the collision. When $s_0$ of a time step
+is above a target, the collision is done as $n$ collisions of
+$\Delta t / n$, each with a newly sampled background particle:
+
+$$
+n = \min\left(n_\text{cap},\ \left\lceil \frac{s_0}{s_\text{target}} \right\rceil\right)
+$$
+
+The impurity then meets $n$ background particles in the step in place of
+one, and each sub-step has $s_0 / n$. The plasma at the impurity's
+position is interpolated once for all of them, and the impurity's
+velocity is updated after each. Ions and electrons are handled
+separately, each with its own $s_0$. Where $s_0$ is already at or below
+the target, nothing changes.
+
+The target sets how close the forces get to their small-step values, as
+long as the cap isn't reached:
+
+| Target | Ion thermal force | Electron thermal force | Friction |
+|---|---|---|---|
+| 0.1 | 0.83 | 0.91 | 0.88 |
+| 0.03 (default) | 0.91 | 0.96 | 0.94 |
+| 0.01 | 0.95 | 0.98 | 0.97 |
+
+The shortfall shrinks slowly, as about $s_\text{target}^{2/3}$, because
+there are always some background particles slow enough to have $s > 1$
+(those below $s_0^{1/3}$ thermal speeds), and the forces lean heavily on
+the slow ones. Getting within a percent would take a target near 0.001.
+
+The cap limits the cost in very collisional plasma. Once $s_0$ exceeds
+$s_\text{target}\,n_\text{cap}$ (3.84 with the defaults), the forces fall
+off again as in the table above, with $s_0 / n_\text{cap}$ in place of
+$s_0$. An impurity in plasma that collisional is already tied closely to
+the background flow.
+
+The two options are `imp_coll_subcycle_target` (default 0.03) and
+`imp_coll_subcycle_cap` (default 128). A cap of 1 turns sub-cycling off.
+It applies to all Nanbu collisions, with or without the thermal force,
+and on the CPU and the GPU.
 
 ## Using it
 
@@ -286,7 +333,9 @@ What Flan does in each situation:
 - **Hydrogenic electron coefficient.** The electron push is for
   $Z_\text{eff} = 1$.
 - **Large skews are approximate.** See [Sampling](#sampling).
-- **Depends on the time step.** See [The time step](#the-time-step).
+- **A few percent low.** Even with sub-cycling the force is somewhat
+  below the fluid value, and more so where the cap on sub-steps is
+  reached. See [The time step](#the-time-step).
 - **SOLEDGE3X and CPU only**, for now.
 
 ## References

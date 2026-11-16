@@ -106,93 +106,30 @@ namespace Collisions
 
 
 	/**
-	* Calculates the s term in the Nanbu collision model (Eq. 19), which
-	* measures how collisional this time step is.
+	* Device version of Collisions::nanbu_s_coeff: the part of the s term
+	* in the Nanbu collision model (Eq. 19) that is the same for every
+	* background particle the impurity could collide with at this location,
+	* s = coeff * dt / g^3. It is calculated once per particle and time
+	* step, however many sub-steps the collision is split into.
 	*
-	* The relative velocity g is between the impurity and a background
-	* particle whose velocity is sampled from a drifting Maxwellian (flow
-	* plus thermal sampling) with sample_bkg_velocity_cuda. The Coulomb
-	* logarithm uses the Debye length and the expectation value of the
-	* impact parameter b0, and is clamped to be at least 1. The background
-	* species is assumed to be singly charged with ni = ne. A message is
-	* printed if the Coulomb logarithm is NaN.
+	* The Coulomb logarithm uses the Debye length and the expectation
+	* value of the impact parameter b0, and is held at or above 1. The
+	* background species is assumed to be singly charged with ni = ne. A
+	* message is printed if the Coulomb logarithm is NaN.
 	*
-	* @param bkg_d Background plasma on the device.
-	* @param dt Time step (s).
+	* @param q Charge state of the impurity. Must not be 0.
 	* @param T Temperature of the background species colliding with the
 	*        impurity (eV).
-	* @param mass_kg Mass of the background species (kg).
 	* @param Te Electron temperature (eV), used for the Debye length.
 	* @param ne Electron density (m^-3).
-	* @param tidx Index of the time frame. Currently unused.
-	* @param xidx x index of the grid cell. Currently unused.
-	* @param yidx y index of the grid cell. Currently unused.
-	* @param zidx z index of the grid cell. Currently unused.
-	* @param t Time of the particle (s).
-	* @param x Computational x coordinate of the particle.
-	* @param y Computational y coordinate of the particle.
-	* @param z Computational z coordinate of the particle.
-	* @param vX Cartesian X velocity of the impurity (m/s).
-	* @param vY Cartesian Y velocity of the impurity (m/s).
-	* @param vZ Cartesian Z velocity of the impurity (m/s).
-	* @param q Charge state of the impurity.
 	* @param imp_mass Mass of the impurity (kg).
-	* @param rng Random number generator for this particle.
-	* @param stencil_4d Interpolation stencil at the particle location, used
-	*        to interpolate the flow velocity.
-	* @return The s term and the Cartesian components of the relative
-	*         velocity (m/s).
+	* @param mass_kg Mass of the background species (kg).
+	* @return coeff (m^3/s^4), so that s = coeff * dt / g^3.
 	*/
 	__device__ __forceinline__
-	NanbuSResult nanbu_calc_s_cuda(const Background::BackgroundDevice& bkg_d,
-		const double dt, const double T, const double mass_kg, const double Te,
-		const double ne, const int tidx, const int xidx, const int yidx, 
-		const int zidx, const double t, const double x, const double y,
-		const double z, const double vX, const double vY, const double vZ,
-		const int q, const double imp_mass, pcg32& rng, 
-		Interpolate::InterpolationStencil stencil_4d)
+	double nanbu_s_coeff_cuda(const int q, const double T, const double Te,
+		const double ne, const double imp_mass, const double mass_kg)
 	{
-
-		// Interpolate to get background flow at particle location
-		const double uX {Interpolate::interpolate_field_4d(bkg_d.uX, 
-			stencil_4d, t, x, y, z)};
-		const double uY {Interpolate::interpolate_field_4d(bkg_d.uY, 
-			stencil_4d, t, x, y, z)};
-		const double uZ {Interpolate::interpolate_field_4d(bkg_d.uZ, 
-			stencil_4d, t, x, y, z)};
-
-		// Sample background particle velocity
-		double bkg_vX, bkg_vY, bkg_vZ;
-		sample_bkg_velocity_cuda(T, uX, uY, uZ, mass_kg, rng, bkg_vX, bkg_vY, 
-			bkg_vZ);
-
-		// Instantaneous relative velocity
-		double inst_gX = vX - bkg_vX;
-		double inst_gY = vY - bkg_vY;
-		double inst_gZ = vZ - bkg_vZ;
-
-		// Mean relative velocity. Not actually part of the Nanbu algorithm, 
-		// but if you want to match analytic fluid results this is often
-		// a built in assumption in those derivations, so you'd swap inst_g
-		// out with mean_g. inst_g is more kinetic/accurate though.
-		//const double mean_gX = vX - uX;
-		//const double mean_gY = vY - uY;
-		//const double mean_gZ = vZ - uZ;
-
-		// Magnitude
-		//double mean_g = sqrt(mean_gX * mean_gX + mean_gY * mean_gY +
-		//		 mean_gZ * mean_gZ);
-		double inst_g = sqrt(inst_gX * inst_gX + inst_gY * inst_gY +
-				 inst_gZ * inst_gZ);
-
-		//mean_g = fmax(mean_g, 1.0e-3);
-		inst_g = fmax(inst_g, 1.0e-3);
-
-		// Optional correction left disabled as in CPU version
-		//inst_gX *= mean_g / inst_g;
-		//inst_gY *= mean_g / inst_g;
-		//inst_gZ *= mean_g / inst_g;
-
 		// Reduced mass
 		const double mu_ab = imp_mass * mass_kg / (imp_mass + mass_kg);
 
@@ -212,23 +149,121 @@ namespace Collisions
 		if (isnan(ln_alpha)) printf("nan ln_alpha\n");
 		ln_alpha = fmax(ln_alpha, 1.0);
 
-		// Calculate s
+		// Everything in s but dt / g^3
 		const double square_term = q * Constants::charge_e * 
 			Constants::charge_e / (Constants::eps0 * mu_ab);
-		const double s = ln_alpha / (4.0 * Constants::pi) * square_term *
-			square_term * ne / (inst_g * inst_g * inst_g) * dt;
+		return ln_alpha / (4.0 * Constants::pi) * square_term *
+			square_term * ne;
 
-		// Needed to match assumptions made in the equation for the friction 
-		// force, maybe sorta? It's confusing
-		//const double s = ln_alpha / (4.0 * Constants::pi) * square_term *
-		//	square_term * ne / (mean_g * mean_g * mean_g) * dt;
+	}  // nanbu_s_coeff_cuda
 
+
+	/**
+	* Samples the background particle an impurity collides with from a
+	* drifting Maxwellian (flow plus thermal sampling) and calculates the
+	* s term in the Nanbu collision model (Eq. 19) for that pair, s =
+	* s_coeff * dt / g^3, with g their relative speed. The instantaneous g
+	* is used for both its direction and its magnitude, as in Nanbu's
+	* paper.
+	*
+	* Each call samples a new background particle, so calling it once per
+	* sub-step is what lets the impurity meet several of them in one time
+	* step.
+	*
+	* @param s_coeff From nanbu_s_coeff_cuda, at the impurity location.
+	* @param dt Time this collision covers (s): the time step, or one
+	*        sub-step of it.
+	* @param T Temperature of the background species colliding with the
+	*        impurity (eV).
+	* @param mass_kg Mass of the background species (kg).
+	* @param uX Cartesian X flow velocity of the background at the impurity
+	*        location (m/s).
+	* @param uY Cartesian Y flow velocity (m/s).
+	* @param uZ Cartesian Z flow velocity (m/s).
+	* @param vX Cartesian X velocity of the impurity (m/s).
+	* @param vY Cartesian Y velocity of the impurity (m/s).
+	* @param vZ Cartesian Z velocity of the impurity (m/s).
+	* @param rng Random number generator for this particle.
+	* @return The s term and the Cartesian components of the relative
+	*         velocity (m/s).
+	*/
+	__device__ __forceinline__
+	NanbuSResult nanbu_calc_s_cuda(const double s_coeff, const double dt,
+		const double T, const double mass_kg, const double uX,
+		const double uY, const double uZ, const double vX, const double vY,
+		const double vZ, pcg32& rng)
+	{
+		// Sample background particle velocity
+		double bkg_vX, bkg_vY, bkg_vZ;
+		sample_bkg_velocity_cuda(T, uX, uY, uZ, mass_kg, rng, bkg_vX, bkg_vY, 
+			bkg_vZ);
+
+		// Instantaneous relative velocity
+		double inst_gX = vX - bkg_vX;
+		double inst_gY = vY - bkg_vY;
+		double inst_gZ = vZ - bkg_vZ;
+
+		// Magnitude
+		double inst_g = sqrt(inst_gX * inst_gX + inst_gY * inst_gY +
+				 inst_gZ * inst_gZ);
+		inst_g = fmax(inst_g, 1.0e-3);
+
+		// Calculate s (Eq. 19)
+		const double s = s_coeff / (inst_g * inst_g * inst_g) * dt;
 
 		// Return as struct
 		return {s, inst_gX, inst_gY, inst_gZ};
-		//return {s, mean_gX, mean_gY, mean_gZ};
 
 	}  // nanbu_calc_s_cuda
+
+
+	/**
+	* Device version of Collisions::nanbu_s0: the Nanbu s term for a
+	* background particle moving at its thermal speed v_th = sqrt(T / m)
+	* relative to the impurity, which measures how collisional the time
+	* step is.
+	*
+	* @param s_coeff From nanbu_s_coeff_cuda.
+	* @param dt Time step (s).
+	* @param T Temperature of the background species (eV).
+	* @param mass_kg Mass of the background species (kg).
+	* @return s0 (dimensionless).
+	*/
+	__device__ __forceinline__
+	double nanbu_s0_cuda(const double s_coeff, const double dt,
+		const double T, const double mass_kg)
+	{
+		const double v_th = sqrt(T * Constants::ev_to_j / mass_kg);
+		return s_coeff * dt / (v_th * v_th * v_th);
+	}
+
+
+	/**
+	* Device version of Collisions::nanbu_num_substeps (see collisions.h
+	* for why collisions are sub-cycled): the number of sub-steps to split
+	* one Nanbu collision into so each has s0 at or below target, at most
+	* cap. 1 if s0 is at or below target or isn't a number.
+	*
+	* @param s0 From nanbu_s0_cuda, for the full time step.
+	* @param target Largest s0 a sub-step is meant to have
+	*        (imp_coll_subcycle_target).
+	* @param cap Largest number of sub-steps (imp_coll_subcycle_cap).
+	* @return Number of sub-steps, from 1 to cap.
+	*/
+	__device__ __forceinline__
+	int nanbu_num_substeps_cuda(const double s0, const double target,
+		const int cap)
+	{
+		// Also catches NaN, for which the comparison is false
+		if (!(s0 > target)) return 1;
+
+		// Compare as doubles first: s0 / target can be far too large for
+		// an int in very collisional plasma
+		const double n = ceil(s0 / target);
+		if (n >= cap) return cap;
+		const int n_int = static_cast<int>(n);
+		return n_int < 1 ? 1 : n_int;
+	}
 
 
 	/**
@@ -402,6 +437,11 @@ namespace Collisions
 	* happens after the Boris update, the updated velocity is v at n+1/2. A
 	* message is printed if chi is NaN.
 	*
+	* Where the time step is too collisional for the model, the collision
+	* is split into sub-steps, each with a newly sampled background
+	* particle, set by imp_coll_subcycle_target and imp_coll_subcycle_cap
+	* (see the notes on sub-cycling in collisions.h).
+	*
 	* @param slots_d Particle slots on the device. The velocities are
 	*        updated in place.
 	* @param bkg_d Background plasma on the device.
@@ -414,7 +454,8 @@ namespace Collisions
 	* @param elec_mass_amu Electron mass (amu).
 	* @param ion_mass_amu Main ion mass (amu).
 	* @param opts_d Simulation options on the device, used for min_ne,
-	*        min_te and min_ti.
+	*        min_te, min_ti, imp_coll_subcycle_target and
+	*        imp_coll_subcycle_cap.
 	*/
 	__global__
 	void nanbu_coll_kernel(Slots::SlotsDevice slots_d, 
@@ -487,18 +528,48 @@ namespace Collisions
 			T = fmax(opts_d->min_ti, T);
 		}
 
+		// Everything in s but dt / g^3 (see nanbu_s_coeff_cuda), and the
+		// background flow. Neither changes during the time step, so they
+		// are calculated once, before the sub-steps.
+		const double s_coeff {nanbu_s_coeff_cuda(q, T, Te, ne, slots_d.mass,
+			mass_kg)};
+		const double uX {Interpolate::interpolate_field_4d(bkg_d.uX, 
+			stencil_4d, t, x, y, z)};
+		const double uY {Interpolate::interpolate_field_4d(bkg_d.uY, 
+			stencil_4d, t, x, y, z)};
+		const double uZ {Interpolate::interpolate_field_4d(bkg_d.uZ, 
+			stencil_4d, t, x, y, z)};
+
+		// Sub-cycling. Nanbu's model collides the impurity with ONE
+		// background particle per call. The friction force comes mostly
+		// from slow background particles (s ~ 1 / g^3), and when the time
+		// step is long for them (s >> 1) that one collision is already
+		// fully random: it can't count for more, though in reality the
+		// impurity would have met many slow particles in that time. The
+		// force then comes out too weak. So when the step is too
+		// collisional, it is split into n_sub collisions of dt / n_sub,
+		// each with a newly sampled background particle. With n_sub = 1
+		// this is the plain model. See the notes in collisions.h.
+		const int n_sub {nanbu_num_substeps_cuda(
+			nanbu_s0_cuda(s_coeff, dt, T, mass_kg),
+			opts_d->imp_coll_subcycle_target,
+			opts_d->imp_coll_subcycle_cap)};
+		const double dt_sub {dt / n_sub};
+
+		for (int i_sub {}; i_sub < n_sub; ++i_sub)
+		{
+
 		// The Nanbu model has three main variables in it:
-		// s:    How collisional is this step?
+		// s:    How collisional is this (sub-)step?
 		// A(s): What is the shape of the scattering distribution? A(s) is
 		//       the PDF.
 		// chi:  What is the actual deflection angle this time? It is calculated
 		//       via direct inversion from the CDF formed from our PDF (A(s)). 
 
-		// Calculate s (Eq. 19), making sure to pass in the full time step
-		// velocities.
-		NanbuSResult s_res {nanbu_calc_s_cuda(bkg_d, dt, T, mass_kg, Te, ne, 
-			tidx, xidx, yidx, zidx, t, x, y, z, vX, vY, vZ, q, slots_d.mass, 
-			rngs_d[i], stencil_4d)};
+		// Sample a background particle and calculate s (Eq. 19) for it,
+		// with the impurity velocity as it is after the previous sub-steps.
+		NanbuSResult s_res {nanbu_calc_s_cuda(s_coeff, dt_sub, T, mass_kg,
+			uX, uY, uZ, vX, vY, vZ, rngs_d[i])};
 		double s {s_res.s};
 		double gX {s_res.gX};
 		double gY {s_res.gY};
@@ -517,7 +588,7 @@ namespace Collisions
 			int Nz {stats_d.Nz};
 			int idx {slots_d.tidx[i] * (Nx * Ny * Nz) + slots_d.xidx[i] 
 				* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
-			double p_w_dt {slots_d.weight[i] * dt};  // Change to float
+			double p_w_dt {slots_d.weight[i] * dt_sub};  // Change to float
 
 			atomicAdd(&stats_d.s[idx], s * p_w_dt);
 		}
@@ -543,11 +614,18 @@ namespace Collisions
 		Vec3d v_post {nanbu_post_coll_cuda(gX, gY, gZ, chi, slots_d.mass, 
 			mass_kg, vX, vY, vZ, rngs_d[i])};
 
+		// The next sub-step collides from this velocity
+		vX = v_post.x;
+		vY = v_post.y;
+		vZ = v_post.z;
+
+		}  // sub-steps
+
 		// Update impurity velocity, which is v_n+1/2 since this is happening
 		// after the Boris update.
-		slots_d.vX[i] = v_post.x;
-		slots_d.vY[i] = v_post.y;
-		slots_d.vZ[i] = v_post.z;
+		slots_d.vX[i] = vX;
+		slots_d.vY[i] = vY;
+		slots_d.vZ[i] = vZ;
 
 	}  // nanbu_coll_kernel
 

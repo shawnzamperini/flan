@@ -2,6 +2,7 @@
 * Tests of the heat-flux skew used for the thermal force: the size of the
 * skew eps, its shape, and sampling the distribution they define.
 */
+#include <limits>
 #include <array>
 #include <cmath>
 #include <cstdlib>
@@ -397,6 +398,11 @@ namespace
 		{
 			opts.set_bkg_source("test");
 			opts.set_test_opt("thermal_force");
+
+			// No collision sub-cycling unless a test turns it on: most of
+			// these tests check the kick of a single Nanbu collision
+			// against its exact value at that time step
+			opts.set_imp_coll_subcycle_cap(1);
 			bkg = Background::read_bkg(opts);
 		}
 
@@ -593,6 +599,151 @@ TEST(ThermalForce, NanbuKick)
 	const double dt {1.0 / off.s_rate(false, Z)};
 	const Kick k {measure_kick(off, false, Z, dt, n_slots, n_calls / 5)};
 	EXPECT_NEAR(k.par, 0.0, 4.0 * k.par_err);
+}
+
+// How many sub-steps a collision is split into: s0 / target rounded up,
+// from 1 to the cap, and 1 when there is nothing to split.
+TEST(ThermalForce, NumSubsteps)
+{
+	using Collisions::nanbu_num_substeps;
+
+	// At or below the target: the plain model
+	EXPECT_EQ(nanbu_num_substeps(0.0, 0.03, 128), 1);
+	EXPECT_EQ(nanbu_num_substeps(0.02, 0.03, 128), 1);
+	EXPECT_EQ(nanbu_num_substeps(0.03, 0.03, 128), 1);
+
+	// Rounded up, so every sub-step is at or below the target
+	EXPECT_EQ(nanbu_num_substeps(0.031, 0.03, 128), 2);
+	EXPECT_EQ(nanbu_num_substeps(0.25, 0.1, 128), 3);
+	EXPECT_EQ(nanbu_num_substeps(2.95, 0.1, 128), 30);
+
+	// Capped, also when s0 / target is too large for an int
+	EXPECT_EQ(nanbu_num_substeps(100.0, 0.03, 128), 128);
+	EXPECT_EQ(nanbu_num_substeps(1e300, 1e-10, 128), 128);
+	EXPECT_EQ(nanbu_num_substeps(std::numeric_limits<double>::infinity(),
+		0.03, 128), 128);
+
+	// A cap of 1 turns it off, and a NaN doesn't split
+	EXPECT_EQ(nanbu_num_substeps(100.0, 0.03, 1), 1);
+	EXPECT_EQ(nanbu_num_substeps(std::nan(""), 0.03, 128), 1);
+
+	// s0 is s for a background particle at its thermal speed: s_coeff dt
+	// / v_th^3, and it is what ForceCase::s_rate writes out separately
+	const ForceCase fc {};
+	for (const bool elec : {false, true})
+	{
+		const double mb {fc.bkg_mass(elec)};
+		const double s_coeff {Collisions::nanbu_s_coeff(2, ForceCase::T,
+			ForceCase::T, ForceCase::ne, ForceCase::imp_mass, mb)};
+		constexpr double dt {1e-9};
+		const double s0 {Collisions::nanbu_s0(s_coeff, dt, ForceCase::T,
+			mb)};
+		EXPECT_NEAR(s0, fc.s_rate(elec, 2) * dt, 1e-10 * s0);
+	}
+}
+
+// Sub-cycling recovers the force a long time step loses.
+//
+// One Nanbu collision at s0 = 2.95 gives only about 0.3 (ions) or 0.45
+// (electrons) of the small-step thermal force, since the slow background
+// particles that carry it are already turned all the way (see NanbuKick).
+// With a target of 0.1 the step is split into 30 collisions of s0 =
+// 0.0983, each with a new background particle. The impurity is heavy, so
+// its velocity barely changes between them, and the kick of the whole step
+// is 30 times the exact kick of one such collision: about 0.83 (ions) or
+// 0.91 (electrons) of the small-step force. That is what is checked, and
+// that it is well above the kick without sub-cycling.
+//
+// An optimized build does 3e7 collisions for each species. A build without
+// optimization does 6e6 for the ions only.
+TEST(ThermalForce, SubCycledKick)
+{
+	ForceCase fc {};
+	constexpr double target {0.1};
+	constexpr int n_sub {30};
+	fc.opts.set_imp_coll_subcycle_target(target);
+	fc.opts.set_imp_coll_subcycle_cap(128);
+	constexpr int Z {2};
+	constexpr double s0 {2.95};
+	constexpr int n_slots {200000};
+#ifdef __OPTIMIZE__
+	constexpr int n_calls {5};
+	const std::vector<bool> species {false, true};
+#else
+	constexpr int n_calls {1};
+	const std::vector<bool> species {false};
+#endif
+
+	for (const bool elec : species)
+	{
+		const Collisions::SkewShape& shape {elec ? elec_shape : ion_shape};
+		const double eps {fc.eps(elec)};
+		const double mb {fc.bkg_mass(elec)};
+		const double frac {mb / (ForceCase::imp_mass + mb)};
+		const double dt {s0 / fc.s_rate(elec, Z)};
+
+		// The step really is split into n_sub
+		const double s_coeff {Collisions::nanbu_s_coeff(Z, ForceCase::T,
+			ForceCase::T, ForceCase::ne, ForceCase::imp_mass, mb)};
+		ASSERT_EQ(Collisions::nanbu_num_substeps(Collisions::nanbu_s0(
+			s_coeff, dt, ForceCase::T, mb), target, 128), n_sub);
+
+		// Exact kick of one collision at a given s0 (see NanbuKick)
+		const auto one_kick = [&](const double s0_coll)
+		{
+			return frac * fc.v_th(elec) * eps * shape_average(shape,
+				[s0_coll](const double w)
+				{return 1.0 - std::exp(-s0_coll / (w * w * w));});
+		};
+		const double expected {n_sub * one_kick(s0 / n_sub)};
+		const double without {one_kick(s0)};
+		const Kick k {measure_kick(fc, elec, Z, dt, n_slots, n_calls)};
+
+		SCOPED_TRACE(elec ? "electrons" : "ions");
+		std::cout << (elec ? "electrons" : "ions") << ", s0 = " << s0
+			<< " in " << n_sub << " sub-steps: dv_par = " << k.par
+			<< " +/- " << k.par_err << " m/s, expected " << expected
+			<< " (" << without << " without sub-cycling)\n";
+
+		// Sub-cycling should about double the kick or more
+		EXPECT_LT(expected, 1.8 * without);
+		EXPECT_LT(k.par_err, 0.15 * std::abs(expected));
+
+		// Agrees with the sum of the sub-steps to within 4 standard
+		// errors plus 3%, and is clear of the kick without sub-cycling
+		EXPECT_NEAR(k.par, expected,
+			4.0 * k.par_err + 0.03 * std::abs(expected));
+		EXPECT_LT(k.par, without - 4.0 * k.par_err);
+
+		// Nothing across B
+		EXPECT_NEAR(k.perp, 0.0, 4.0 * k.perp_err);
+	}
+}
+
+// A step that doesn't need splitting is the plain model exactly: with the
+// same random number seeds, turning sub-cycling on changes nothing when
+// s0 is at or below the target.
+TEST(ThermalForce, SubCycleNotNeeded)
+{
+	constexpr int Z {2};
+	const ForceCase off {};
+	ForceCase on {};
+	on.opts.set_imp_coll_subcycle_target(0.5);
+	on.opts.set_imp_coll_subcycle_cap(128);
+
+	for (const bool elec : {false, true})
+	{
+		const double dt {0.3 / off.s_rate(elec, Z)};
+		const Kick k_off {measure_kick(off, elec, Z, dt, 2000, 2)};
+		const Kick k_on {measure_kick(on, elec, Z, dt, 2000, 2)};
+		EXPECT_EQ(k_on.par, k_off.par);
+		EXPECT_EQ(k_on.perp, k_off.perp);
+
+		// And it does change things once the step is above the target
+		const Kick k_split {measure_kick(on, elec, Z, 10.0 * dt, 2000, 2)};
+		const Kick k_plain {measure_kick(off, elec, Z, 10.0 * dt, 2000, 2)};
+		EXPECT_NE(k_split.par, k_plain.par);
+	}
 }
 
 // In the limit of a small time step the kick is a force, F = m_imp

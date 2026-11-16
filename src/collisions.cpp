@@ -297,121 +297,36 @@ namespace Collisions
 
 
 	/**
-	* Calculates the s term in the Nanbu collision model (Eq. 19), which
-	* measures how collisional this time step is.
+	* Calculates the part of the s term in the Nanbu collision model (Eq.
+	* 19) that is the same for every background particle the impurity could
+	* collide with at this location: s = coeff * dt / g^3, where g is the
+	* relative speed of the pair. So,
 	*
-	* The relative velocity g is between the impurity and a background
-	* particle whose velocity is sampled from a drifting Maxwellian (flow
-	* plus thermal sampling) with sample_bkg_velocity, skewed by the heat
-	* flux if eps isn't 0 (the thermal force). The Coulomb logarithm
-	* uses the Debye length and the expectation value of the impact
-	* parameter b0, and is clamped to be at least 1. The background species
-	* is assumed to be singly charged with ni = ne. An error is printed if
-	* the Coulomb logarithm or s is NaN.
+	*   coeff = ln(Lambda) / (4 pi) * (q e^2 / (eps0 mu))^2 * ne,
 	*
-	* @param bkg Background plasma, used to interpolate the flow velocity.
-	* @param imp_time_step Time step (s).
+	* with mu the reduced mass. It is split off from nanbu_calc_s so it is
+	* calculated once per particle and time step, however many sub-steps
+	* the collision is split into (see nanbu_num_substeps).
+	*
+	* The Coulomb logarithm uses the Debye length and the expectation
+	* value of the impact parameter b0, and is clamped to be at least 1. The
+	* background species is assumed to be singly charged with ni = ne. An
+	* error is printed if the Coulomb logarithm is NaN.
+	*
+	* @param q Charge state of the impurity. Must not be 0.
 	* @param T Temperature of the background species colliding with the
 	*        impurity (eV).
-	* @param mass_kg Mass of the background species (kg).
 	* @param Te Electron temperature (eV), used for the Debye length.
 	* @param ne Electron density (m^-3).
-	* @param zone Zone containing the particle.
-	* @param t Time of the particle (s).
-	* @param x Computational x coordinate of the particle.
-	* @param y Computational y coordinate of the particle.
-	* @param z Computational z coordinate of the particle.
-	* @param vX Cartesian X velocity of the impurity (m/s).
-	* @param vY Cartesian Y velocity of the impurity (m/s).
-	* @param vZ Cartesian Z velocity of the impurity (m/s).
-	* @param q Charge state of the impurity. Must not be 0.
-	* @param slots Particle slots, used for the impurity mass.
-	* @param eps Heat-flux skew of the background species (see skew_eps),
-	*        0 for none.
-	* @param shape Shape of the skew (only used if eps isn't 0).
-	* @param bX Cartesian X component of the unit vector along B (only used
-	*        if eps isn't 0).
-	* @param bY Cartesian Y component of the unit vector along B.
-	* @param bZ Cartesian Z component of the unit vector along B.
-	* @param rng Random number generator for this thread.
-	* @param skew_counts Counts for the skewed sampler.
-	* @return {s, gX, gY, gZ}, where gX, gY and gZ are the Cartesian
-	*         components of the relative velocity (m/s).
+	* @param imp_mass Mass of the impurity (kg).
+	* @param mass_kg Mass of the background species (kg).
+	* @return coeff (m^3/s^4), so that s = coeff * dt / g^3.
 	*/
-	std::tuple<double, double, double, double> nanbu_calc_s(
-		const Background::Background& bkg, 
-		const double imp_time_step, const double T, const double mass_kg, 
-		const double Te, const double ne, const int zone, const double t,
-		const double x, const double y, const double z, const double vX,
-		const double vY, const double vZ, const int q, Slots::Slots& slots,
-		const double eps, const SkewShape& shape, const double bX,
-		const double bY, const double bZ, pcg32& rng,
-		SkewCounts& skew_counts)
+	double nanbu_s_coeff(const int q, const double T, const double Te,
+		const double ne, const double imp_mass, const double mass_kg)
 	{
-		// While I think the below is still valid, it was solved in calc_chi
-		// by returning an isotropically distributed chi at large s (small A)
-		// values. Can likely remove this part of things.
-		// ---
-		// There is an insanely subtle thing to comment on here that has real
-		// effects. The Nanbu algorithm uses the instantaneous g to calcuate
-		// s. This means that particle velocities far from the background
-		// velocity get disaproportionally large kicks since s ~ g-3. This
-		// can cause the average many-particle velocity to actually overshoot
-		// the mean flow as they accelerate up to it from rest, ignoring all
-		// other collisional phenomena. This is technically incorrect and 
-		// unphysical, so we modify the algorithm as such:
-		//   - Sample the background velocity including thermal sampling,
-		//     vX, vY, vZ. This determines the X,Y,Z direction of g and allows
-		//     random collisions with randomly directed background particles
-		//	   to stay part of the algorithm. We call these the instantaneous
-		//     relative velocities.
-		//   - Enforce |g| to be that from using the flow velocity, no thermal
-		//     sampling, and rescale gX, gY, gZ. This prevents overshooting 
-		//     the mean flow. We call this the mean relative velocity.
-
-		// Background flow at impurity location
-		double uX {bkg.interp_uX(zone, t, x, y, z)}; 
-		double uY {bkg.interp_uY(zone, t, x, y, z)}; 
-		double uZ {bkg.interp_uZ(zone, t, x, y, z)}; 
-
-		// Random sample of background species instantanoues velocity 
-		// (flow + thermal sampling) that particle is colliding with. With a
-		// heat flux (eps != 0), it comes from the skewed distribution,
-		// which is what gives the thermal force.
-		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(T, uX, uY, uZ,
-			mass_kg, eps, shape, bX, bY, bZ, rng, skew_counts);
-
-		// XYZ components of instantaneous relative velocity
-		double inst_gX {vX - bkg_vX};
-		double inst_gY {vY - bkg_vY};
-		double inst_gZ {vZ - bkg_vZ};
-
-		// XYZ components of mean relative velocity
-		//double mean_gX {vX - uX};
-		//double mean_gY {vY - uY};
-		//double mean_gZ {vZ - uZ};
-
-		// Magnitude of instantaneous and mean relative velocities.
-		//double mean_g {std::sqrt(mean_gX*mean_gX + mean_gY*mean_gY 
-		//	+ mean_gZ*mean_gZ)};
-		double inst_g {std::sqrt(inst_gX*inst_gX + inst_gY*inst_gY 
-			+ inst_gZ*inst_gZ)};
-
-		// Limit to a sufficiently small number to avoid overflows that can 
-		// occur in std::exp and std::sinh later on.
-		//mean_g = std::max(mean_g, 0.001);
-		inst_g = std::max(inst_g, 0.001);
-
-		// Scale the instantanous velocity magnitude to equal the mean. 
-		// Conceptually there is a basis for this, but I am not 100% convinced
-		// and I'd rather just leave the algorithm alone and not modify it if
-		// not necessary.
-		//inst_gX = inst_gX * mean_g / inst_g;
-		//inst_gY = inst_gY * mean_g / inst_g;
-		//inst_gZ = inst_gZ * mean_g / inst_g;
-
 		// Reduced mass of impurity and species colliding with
-		double mu_ab {slots.mass() * mass_kg / (slots.mass() + mass_kg)};
+		double mu_ab {imp_mass * mass_kg / (imp_mass + mass_kg)};
 
 		// Expectation value of g^2. Limit to a sufficiently small number to
 		// avoid overflows that can occur in std::exp and std::sinh.
@@ -446,19 +361,92 @@ namespace Collisions
 			}
 		}
 
-		// Calculate s (Eq. 19). Assume ni=ne and singly charge background.
+		// Everything in s (Eq. 19) but dt / g^3. Assume ni=ne and singly
+		// charged background.
 		double square_term {q * Constants::charge_e 
 			* Constants::charge_e / (Constants::eps0 * mu_ab)};
+		return ln_alpha / (4.0 * Constants::pi) * square_term * square_term
+			* ne;
+	}
 
-		// The correct and original kinetic calculaton of s
-		double s {ln_alpha / (4.0 * Constants::pi) * square_term * square_term
-			* ne / (inst_g*inst_g*inst_g) * imp_time_step};
 
-		// Needed to match assumptions made in the equation for the friction 
-		// force
-		//double s {ln_alpha / (4.0 * Constants::pi) * square_term * square_term
-		//	* ne / (mean_g*mean_g*mean_g) * imp_time_step};
-			
+	/**
+	* Samples the background particle an impurity collides with and
+	* calculates the s term in the Nanbu collision model (Eq. 19) for that
+	* pair, which measures how collisional this (sub-)step is for them.
+	*
+	* The relative velocity g is between the impurity and a background
+	* particle whose velocity is sampled from a drifting Maxwellian (flow
+	* plus thermal sampling) with sample_bkg_velocity, skewed by the heat
+	* flux if eps isn't 0 (the thermal force). Then s = s_coeff * dt / g^3
+	* (see nanbu_s_coeff). An error is printed if s is NaN.
+	*
+	* Each call samples a new background particle, so calling it once per
+	* sub-step is what lets the impurity meet several of them in one time
+	* step (see nanbu_num_substeps).
+	*
+	* @param s_coeff From nanbu_s_coeff, at the impurity location.
+	* @param dt Time this collision covers (s): the time step, or one
+	*        sub-step of it.
+	* @param T Temperature of the background species colliding with the
+	*        impurity (eV).
+	* @param mass_kg Mass of the background species (kg).
+	* @param uX Cartesian X flow velocity of the background at the impurity
+	*        location (m/s).
+	* @param uY Cartesian Y flow velocity (m/s).
+	* @param uZ Cartesian Z flow velocity (m/s).
+	* @param vX Cartesian X velocity of the impurity (m/s).
+	* @param vY Cartesian Y velocity of the impurity (m/s).
+	* @param vZ Cartesian Z velocity of the impurity (m/s).
+	* @param eps Heat-flux skew of the background species (see skew_eps),
+	*        0 for none.
+	* @param shape Shape of the skew (only used if eps isn't 0).
+	* @param bX Cartesian X component of the unit vector along B (only used
+	*        if eps isn't 0).
+	* @param bY Cartesian Y component of the unit vector along B.
+	* @param bZ Cartesian Z component of the unit vector along B.
+	* @param rng Random number generator for this thread.
+	* @param skew_counts Counts for the skewed sampler.
+	* @return {s, gX, gY, gZ}, where gX, gY and gZ are the Cartesian
+	*         components of the relative velocity (m/s).
+	*/
+	std::tuple<double, double, double, double> nanbu_calc_s(
+		const double s_coeff, const double dt, const double T,
+		const double mass_kg, const double uX, const double uY,
+		const double uZ, const double vX, const double vY, const double vZ,
+		const double eps, const SkewShape& shape, const double bX,
+		const double bY, const double bZ, pcg32& rng,
+		SkewCounts& skew_counts)
+	{
+		// Note: the algorithm uses the instantaneous relative velocity
+		// (flow + thermal sampling of the background particle) for both the
+		// direction and the magnitude of g, as in Nanbu's paper. Since
+		// s ~ 1 / g^3, slow pairs get much larger s than the typical one,
+		// which is what sub-cycling is for (see nanbu_num_substeps).
+
+		// Random sample of background species instantanoues velocity 
+		// (flow + thermal sampling) that particle is colliding with. With a
+		// heat flux (eps != 0), it comes from the skewed distribution,
+		// which is what gives the thermal force.
+		auto [bkg_vX, bkg_vY, bkg_vZ] = sample_bkg_velocity(T, uX, uY, uZ,
+			mass_kg, eps, shape, bX, bY, bZ, rng, skew_counts);
+
+		// XYZ components of instantaneous relative velocity
+		double inst_gX {vX - bkg_vX};
+		double inst_gY {vY - bkg_vY};
+		double inst_gZ {vZ - bkg_vZ};
+
+		// Magnitude of the instantaneous relative velocity
+		double inst_g {std::sqrt(inst_gX*inst_gX + inst_gY*inst_gY 
+			+ inst_gZ*inst_gZ)};
+
+		// Limit to a sufficiently small number to avoid overflows that can 
+		// occur in std::exp and std::sinh later on.
+		inst_g = std::max(inst_g, 0.001);
+
+		// Calculate s (Eq. 19)
+		double s {s_coeff / (inst_g*inst_g*inst_g) * dt};
+
 		// I believe this should be avoided now, but I leave this error message
 		// since you never know.
 		if (std::isnan(s))
@@ -467,8 +455,9 @@ namespace Collisions
 			{
 				std::cerr << "Error! s = nan\n";
 				std::cerr << "  s = " << s << '\n';
+				std::cerr << "  s_coeff = " << s_coeff << '\n';
+				std::cerr << "  dt = " << dt << '\n';
 				std::cerr << "  T = " << T << '\n';
-				std::cerr << "  Te = " << Te << '\n';
 				std::cerr << "  bkg_vX = " << bkg_vX << '\n';
 				std::cerr << "  bkg_vY = " << bkg_vY << '\n';
 				std::cerr << "  bkg_vZ = " << bkg_vZ << '\n';
@@ -479,16 +468,6 @@ namespace Collisions
 				std::cerr << "  inst_gX = " << inst_gX << '\n';
 				std::cerr << "  inst_gY = " << inst_gY << '\n';
 				std::cerr << "  inst_gZ = " << inst_gZ << '\n';
-				//std::cerr << "  mean_g = " << mean_g << '\n';
-				//std::cerr << "  mean_gX = " << mean_gX << '\n';
-				//std::cerr << "  mean_gY = " << mean_gY << '\n';
-				//std::cerr << "  mean_gZ = " << mean_gZ << '\n';
-				std::cerr << "  expect_g_sq = " << expect_g_sq << '\n';
-				std::cerr << "  ne = " << ne << '\n';
-				std::cerr << "  charge = " << q << '\n';
-				std::cerr << "  debye_length = " << debye_length << '\n';
-				std::cerr << "  expect_b0 = " << expect_b0 << '\n';
-				std::cerr << "  ln_alpha = " << ln_alpha << '\n';
 			}
 		}
 
@@ -664,6 +643,11 @@ namespace Collisions
 	* updated velocity is v at n+1/2. An error is printed if ne < 0 or chi is
 	* NaN.
 	*
+	* Where the time step is too collisional for the model (see
+	* nanbu_num_substeps), the collision is split into sub-steps, each with
+	* a newly sampled background particle, set by imp_coll_subcycle_target
+	* and imp_coll_subcycle_cap.
+	*
 	* With imp_thermal_force = "on", the colliding background particle is
 	* skewed by that species' parallel heat flux (q_par_e or q_par_i), which
 	* gives the electron or ion thermal force (see sample_bkg_velocity).
@@ -674,8 +658,9 @@ namespace Collisions
 	* @param slots Particle slots. The velocities are updated in place.
 	* @param bkg Background plasma, which also holds the masses of the
 	*        background electrons and ions.
-	* @param opts Simulation options, used for min_ti and
-	*        imp_thermal_force.
+	* @param opts Simulation options, used for min_ti,
+	*        imp_thermal_force, imp_coll_subcycle_target and
+	*        imp_coll_subcycle_cap.
 	* @param elec If true, collide with electrons (Te). Otherwise collide
 	*        with ions (Ti, limited to at least min_ti).
 	* @param dt Time step (s).
@@ -812,18 +797,48 @@ namespace Collisions
 				}
 			}
 
+			// Everything in s but dt / g^3 (see nanbu_s_coeff), and the
+			// background flow. Neither changes during the time step, so
+			// they are calculated once, before the sub-steps.
+			const double s_coeff {nanbu_s_coeff(q, T, Te, ne, slots.mass(),
+				mass_kg)};
+			const double uX {bkg.interp_uX(zone, t, x, y, z)}; 
+			const double uY {bkg.interp_uY(zone, t, x, y, z)}; 
+			const double uZ {bkg.interp_uZ(zone, t, x, y, z)}; 
+
+			// Sub-cycling. Nanbu's model collides the impurity with ONE
+			// background particle per call. The friction and the thermal
+			// force come mostly from slow background particles (s ~ 1 /
+			// g^3), and when the time step is long for them (s >> 1) that
+			// one collision is already fully random: it can't count for
+			// more, though in reality the impurity would have met many
+			// slow particles in that time. The forces then come out too
+			// weak. So when the step is too collisional, it is split into
+			// n_sub collisions of dt / n_sub, each with a newly sampled
+			// background particle. With n_sub = 1 this is the plain model.
+			// See nanbu_num_substeps.
+			const int n_sub {nanbu_num_substeps(
+				nanbu_s0(s_coeff, dt, T, mass_kg),
+				opts.imp_coll_subcycle_target(),
+				opts.imp_coll_subcycle_cap())};
+			const double dt_sub {dt / n_sub};
+
+			for (int i_sub {}; i_sub < n_sub; ++i_sub)
+			{
+
 			// The Nanbu model has three main variables in it:
-			// s:    How collisional is this step?
+			// s:    How collisional is this (sub-)step?
 			// A(s): What is the shape of the scattering distribution? A(s) is
 			//       the PDF.
 			// chi:  What is the actual deflection angle this time? It is calculated
 			//       via direct inversion from the CDF formed from our PDF (A(s)). 
 
-			// Calculate s (Eq. 19), making sure to pass in the full time step
-			// velocities.
-			auto [s, gX, gY, gZ] = nanbu_calc_s(bkg, dt, T, 
-				mass_kg, Te, ne, zone, t, x, y, z, vX, vY, vZ, q, slots, eps,
-				shape, bX, bY, bZ, rng, skew_counts);
+			// Sample a background particle and calculate s (Eq. 19) for
+			// it, with the impurity velocity as it is after the previous
+			// sub-steps.
+			auto [s, gX, gY, gZ] = nanbu_calc_s(s_coeff, dt_sub, T,
+				mass_kg, uX, uY, uZ, vX, vY, vZ, eps, shape, bX, bY, bZ,
+				rng, skew_counts);
 
 			// Add to running sum of s values in each cell so we can do an average
 			// later. Only consider for ions since they are the dominant collision
@@ -840,7 +855,8 @@ namespace Collisions
 				int zidx {slots.zidx()[i]};
 
 				#pragma omp critical
-				imp_stats.add_s(zone, tidx, xidx, yidx, zidx, s * p_w * dt);
+				imp_stats.add_s(zone, tidx, xidx, yidx, zidx,
+					s * p_w * dt_sub);
 			}
 			*/
 
@@ -867,11 +883,18 @@ namespace Collisions
 			auto [vX_post, vY_post, vZ_post] = nanbu_post_coll(gX, gY, gZ, chi, 
 				slots.mass(), mass_kg, vX, vY, vZ, rng);
 
+			// The next sub-step collides from this velocity
+			vX = vX_post;
+			vY = vY_post;
+			vZ = vZ_post;
+
+			}  // sub-steps
+
 			// Update impurity velocity, which is v_n+1/2 since this is happening
 			// after the Boris update.
-			slots.set_vX(i, vX_post);
-			slots.set_vY(i, vY_post);
-			slots.set_vZ(i, vZ_post);
+			slots.set_vX(i, vX);
+			slots.set_vY(i, vY);
+			slots.set_vZ(i, vZ);
 
 		}  // slots loop
 

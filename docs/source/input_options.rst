@@ -214,6 +214,14 @@ Last Update: 8/22/25 (commit XXX)
      - Thermal force in the collisions toggle
      - "on"
 
+   * - :ref:`imp_coll_subcycle_target <imp_coll_subcycle_target>`
+     - Largest s0 of a collision sub-step
+     - 0.03
+
+   * - :ref:`imp_coll_subcycle_cap <imp_coll_subcycle_cap>`
+     - Largest number of sub-steps per collision
+     - 128
+
    * - :ref:`imp_time_step_opt <imp_time_step_opt>`
      - Time step option
      - "constant"
@@ -575,6 +583,16 @@ Whether the Nanbu collisions include the electron and ion thermal forces. With i
 
   - **"off"**: Collide with Maxwellians (no thermal force).
   - **"on"**: Collide with the heat-flux skewed distributions.
+
+imp_coll_subcycle_target
+------------------------
+
+Each time step the Nanbu model collides an impurity with one background particle. The friction and thermal force come mostly from slow background particles, and when the time step is long for those, that one collision is already fully random and can't count for more, so the forces come out too weak. To counter this, a collision that is too coarse is split into sub-steps, each with a newly sampled background particle. This option is the largest s0 a sub-step is meant to have, where s0 is the Nanbu s term for a background particle at its thermal speed. The number of sub-steps is s0 / imp_coll_subcycle_target rounded up, limited by :ref:`imp_coll_subcycle_cap <imp_coll_subcycle_cap>`. Smaller values bring the forces closer to their fluid values (about 83-91% at 0.1, 91-96% at 0.03, 95-98% at 0.01) and cost more sub-steps. Must be above 0.
+
+imp_coll_subcycle_cap
+---------------------
+
+Largest number of sub-steps one collision is split into (see :ref:`imp_coll_subcycle_target <imp_coll_subcycle_target>`). It limits the cost in very collisional plasma. A value of 1 turns collision sub-cycling off. Must be at least 1.
 
 imp_time_step_opt
 -----------------

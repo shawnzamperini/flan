@@ -573,6 +573,22 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "imp_coll_subcycle_target")
+			{
+				auto set_func = std::bind(
+					&Options::set_imp_coll_subcycle_target, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_coll_subcycle_cap")
+			{
+				auto set_func = std::bind(
+					&Options::set_imp_coll_subcycle_cap, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
 			else if (key == "var_red_split")
 			{
 				auto set_func = std::bind(&Options::set_var_red_split, &opts,

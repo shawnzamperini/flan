@@ -120,6 +120,8 @@ namespace Options
 		double m_imp_temp_start_val                  {0.0};
 		std::string m_imp_collisions             {"nanbu"};
 		std::string m_imp_thermal_force             {"on"};
+		double m_imp_coll_subcycle_target           {0.03};
+		int m_imp_coll_subcycle_cap                  {128};
 		std::string m_imp_time_step_opt       {"constant"};
 		double m_imp_time_step                      {1e-8};
 		double m_imp_time_step_min                 {1e-12};
@@ -261,6 +263,8 @@ namespace Options
 		void set_imp_temp_start_val(double imp_temp_start_val);
 		void set_imp_collisions(std::string imp_collisions);
 		void set_imp_thermal_force(std::string imp_thermal_force);
+		void set_imp_coll_subcycle_target(double imp_coll_subcycle_target);
+		void set_imp_coll_subcycle_cap(int imp_coll_subcycle_cap);
 		void set_var_red_split(std::string var_red_split);
 		void set_var_red_import(std::string var_red_import);
 		void set_var_red_freq(double var_red_freq);
@@ -352,6 +356,8 @@ namespace Options
 		double imp_temp_start_val() const;
 		const std::string& imp_collisions() const;
 		const std::string& imp_thermal_force() const;
+		double imp_coll_subcycle_target() const;
+		int imp_coll_subcycle_cap() const;
 		const std::string& var_red_split() const;
 		const std::string& var_red_import() const;
 		double var_red_freq() const;
