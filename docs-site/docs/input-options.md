@@ -32,7 +32,15 @@ are grouped by what they control.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `bkg_source` | string | `"gkeyll"` | Source of the background plasma, either a built-in test background or a Gkeyll simulation. Valid values: `"test"`, `"gkeyll"`. |
+| `bkg_source` | string | `"gkeyll"` | Source of the background plasma: a built-in test background, the slab background (a box of uniform plasma in a uniform magnetic field, set entirely by the `slab_*` options and used by the regression cases), a Gkeyll simulation or a SOLEDGE3X simulation. Valid values: `"test"`, `"slab"`, `"gkeyll"`, `"soledge3x"`. |
+| `slab_ne` | float | `1e19` | Electron (and ion) density of the slab background (m^-3). Only used with `bkg_source = "slab"`. |
+| `slab_te` | float | `10.0` | Electron temperature of the slab background (eV). Only used with `bkg_source = "slab"`. |
+| `slab_ti` | float | `10.0` | Ion temperature of the slab background (eV). Only used with `bkg_source = "slab"`. |
+| `slab_flow` | float | `0.0` | Plasma flow of the slab background along the magnetic field, which is in +X (m/s). Only used with `bkg_source = "slab"`. |
+| `slab_heat_flux_i` | float | `0.0` | Ion parallel conductive heat flux of the slab background, in units of n T_i v_th,i with v_th,i = sqrt(T_i / m_i). Positive is along the field (+X). This is the size of the heat-flux skew that gives the ion thermal force; about 0.1 is a mild skew. Only used with `bkg_source = "slab"`. |
+| `slab_heat_flux_e` | float | `0.0` | Electron parallel conductive heat flux of the slab background, in units of n T_e v_th,e with v_th,e = sqrt(T_e / m_e). Positive is along the field (+X). Only used with `bkg_source = "slab"`. |
+| `slab_bmag` | float | `1.0` | Magnetic field strength of the slab background (T). The field is uniform and in +X. Only used with `bkg_source = "slab"`. |
+| `slab_tmax` | float | `50e-6` | End of the slab background's time range, which starts at 0 (s). The output has 128 time frames evenly spaced over it. Only used with `bkg_source = "slab"`. |
 | `min_ne` | float | `1e15` | Lower limit on the electron density (m^-3). |
 | `min_te` | float | `0.1` | Lower limit on the electron temperature (eV). |
 | `min_ti` | float | `0.1` | Lower limit on the ion temperature (eV), applied when calculating collisions with the background ions and when sampling starting velocities with `imp_temp_start_opt = "main_ion"`. |

@@ -74,6 +74,14 @@ namespace Options
 		double m_min_ne                             {1e15};
 		double m_min_te                              {0.1};
 		double m_min_ti                              {0.1};
+		double m_slab_ne                              {1e19};
+		double m_slab_te                              {10.0};
+		double m_slab_ti                              {10.0};
+		double m_slab_flow                            {0.0};
+		double m_slab_heat_flux_i                     {0.0};
+		double m_slab_heat_flux_e                     {0.0};
+		double m_slab_bmag                            {1.0};
+		double m_slab_tmax                            {50e-6};
 
 		// Geometry options
 		std::string m_tbound_type            {"absorbing"};
@@ -223,6 +231,14 @@ namespace Options
 		void set_min_ne(double min_ne);
 		void set_min_te(double min_te);
 		void set_min_ti(double min_ti);
+		void set_slab_ne(double slab_ne);
+		void set_slab_te(double slab_te);
+		void set_slab_ti(double slab_ti);
+		void set_slab_flow(double slab_flow);
+		void set_slab_heat_flux_i(double slab_heat_flux_i);
+		void set_slab_heat_flux_e(double slab_heat_flux_e);
+		void set_slab_bmag(double slab_bmag);
+		void set_slab_tmax(double slab_tmax);
 		void set_tbound_type(std::string tbound_type);
 		void set_min_xbound_type(std::string min_xbound_type);
 		void set_max_xbound_type(std::string max_xbound_type);
@@ -316,6 +332,14 @@ namespace Options
 		double min_ne() const;
 		double min_te() const;
 		double min_ti() const;
+		double slab_ne() const;
+		double slab_te() const;
+		double slab_ti() const;
+		double slab_flow() const;
+		double slab_heat_flux_i() const;
+		double slab_heat_flux_e() const;
+		double slab_bmag() const;
+		double slab_tmax() const;
 		const std::string& tbound_type() const;
 		const std::string& min_xbound_type() const;
 		const std::string& max_xbound_type() const;

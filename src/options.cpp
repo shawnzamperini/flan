@@ -150,21 +150,22 @@ namespace Options
 	/**
 	* Sets the bkg_source option.
 	*
-	* Source of the background plasma: a built-in test background, a
+	* Source of the background plasma: a built-in test background, the
+	* slab background (a uniform plasma set by the slab_* options), a
 	* Gkeyll simulation or a SOLEDGE3X simulation.
 	*
-	* Valid values are "test", "gkeyll" and "soledge3x". An invalid value
-	* prints an error and leaves the option unchanged. Also sets the
+	* Valid values are "test", "slab", "gkeyll" and "soledge3x". An invalid
+	* value prints an error and leaves the option unchanged. Also sets the
 	* control integer returned by bkg_source_int() to 0 for "test", 1 for
-	* "gkeyll", 2 for "soledge3x". An invalid value leaves the control
-	* integer unchanged.
+	* "gkeyll", 2 for "soledge3x", 3 for "slab". An invalid value leaves
+	* the control integer unchanged.
 	*
 	* @param bkg_source New value of the bkg_source option.
 	*/
 	void Options::set_bkg_source(std::string bkg_source) 
 	{
 		if (check_input<std::string>("bkg_source", bkg_source,
-			{"test", "gkeyll", "soledge3x"}))
+			{"test", "slab", "gkeyll", "soledge3x"}))
 		{
 			m_bkg_source = bkg_source;
 		}
@@ -173,6 +174,7 @@ namespace Options
 		if (bkg_source == "test") m_bkg_source_int = 0;
 		else if (bkg_source == "gkeyll") m_bkg_source_int = 1;
 		else if (bkg_source == "soledge3x") m_bkg_source_int = 2;
+		else if (bkg_source == "slab") m_bkg_source_int = 3;
 	}
 
 	/**
@@ -412,6 +414,102 @@ namespace Options
 	*/
 	void Options::set_min_ti(double min_ti) 
 		{m_min_ti = min_ti;}
+
+	/**
+	* Sets the slab_ne option.
+	*
+	* Electron density of the slab background, uniform in space and time
+	* (m^-3). The ion density is the same. Only used with bkg_source =
+	* "slab".
+	*
+	* @param slab_ne New value of the slab_ne option.
+	*/
+	void Options::set_slab_ne(double slab_ne)
+		{m_slab_ne = slab_ne;}
+
+	/**
+	* Sets the slab_te option.
+	*
+	* Electron temperature of the slab background, uniform in space and time
+	* (eV). Only used with bkg_source = "slab".
+	*
+	* @param slab_te New value of the slab_te option.
+	*/
+	void Options::set_slab_te(double slab_te)
+		{m_slab_te = slab_te;}
+
+	/**
+	* Sets the slab_ti option.
+	*
+	* Ion temperature of the slab background, uniform in space and time
+	* (eV). Only used with bkg_source = "slab".
+	*
+	* @param slab_ti New value of the slab_ti option.
+	*/
+	void Options::set_slab_ti(double slab_ti)
+		{m_slab_ti = slab_ti;}
+
+	/**
+	* Sets the slab_flow option.
+	*
+	* Flow velocity of the slab background's plasma along the magnetic
+	* field, which is in +X (m/s). Impurities are dragged toward it by
+	* friction. Only used with bkg_source = "slab".
+	*
+	* @param slab_flow New value of the slab_flow option.
+	*/
+	void Options::set_slab_flow(double slab_flow)
+		{m_slab_flow = slab_flow;}
+
+	/**
+	* Sets the slab_heat_flux_i option.
+	*
+	* Parallel conductive heat flux of the slab background's ions, in units
+	* of n T_i v_th,i with v_th,i = sqrt(T_i / m_i). Positive is along the
+	* magnetic field (+X). This is the size of the heat-flux skew (eps in
+	* Collisions::skew_eps) that gives the ion thermal force; about 0.1 is a
+	* mild skew. Only used with bkg_source = "slab".
+	*
+	* @param slab_heat_flux_i New value of the slab_heat_flux_i option.
+	*/
+	void Options::set_slab_heat_flux_i(double slab_heat_flux_i)
+		{m_slab_heat_flux_i = slab_heat_flux_i;}
+
+	/**
+	* Sets the slab_heat_flux_e option.
+	*
+	* Parallel conductive heat flux of the slab background's electrons, in
+	* units of n T_e v_th,e with v_th,e = sqrt(T_e / m_e). Positive is along
+	* the magnetic field (+X). This is the size of the heat-flux skew that
+	* gives the electron thermal force. Only used with bkg_source = "slab".
+	*
+	* @param slab_heat_flux_e New value of the slab_heat_flux_e option.
+	*/
+	void Options::set_slab_heat_flux_e(double slab_heat_flux_e)
+		{m_slab_heat_flux_e = slab_heat_flux_e;}
+
+	/**
+	* Sets the slab_bmag option.
+	*
+	* Strength of the slab background's magnetic field, which is uniform and
+	* in +X (T). Only used with bkg_source = "slab".
+	*
+	* @param slab_bmag New value of the slab_bmag option.
+	*/
+	void Options::set_slab_bmag(double slab_bmag)
+		{m_slab_bmag = slab_bmag;}
+
+	/**
+	* Sets the slab_tmax option.
+	*
+	* End of the slab background's time range, which starts at 0 (s). The
+	* output has 128 time frames evenly spaced over it. Only used with
+	* bkg_source = "slab".
+	*
+	* @param slab_tmax New value of the slab_tmax option.
+	*/
+	void Options::set_slab_tmax(double slab_tmax)
+		{m_slab_tmax = slab_tmax;}
 
 	/**
 	* Sets the tbound_type option.
@@ -1888,6 +1986,70 @@ namespace Options
 	*/
 	double Options::min_ti() const 
 		{return m_min_ti;}
+
+	/**
+	* Returns the slab_ne option (slab background: electron (and ion) density).
+	*
+	* @return Value of the slab_ne option.
+	*/
+	double Options::slab_ne() const
+		{return m_slab_ne;}
+
+	/**
+	* Returns the slab_te option (slab background: electron temperature).
+	*
+	* @return Value of the slab_te option.
+	*/
+	double Options::slab_te() const
+		{return m_slab_te;}
+
+	/**
+	* Returns the slab_ti option (slab background: ion temperature).
+	*
+	* @return Value of the slab_ti option.
+	*/
+	double Options::slab_ti() const
+		{return m_slab_ti;}
+
+	/**
+	* Returns the slab_flow option (slab background: plasma flow along B (+X)).
+	*
+	* @return Value of the slab_flow option.
+	*/
+	double Options::slab_flow() const
+		{return m_slab_flow;}
+
+	/**
+	* Returns the slab_heat_flux_i option (slab background: ion parallel heat flux / (n Ti v_th,i)).
+	*
+	* @return Value of the slab_heat_flux_i option.
+	*/
+	double Options::slab_heat_flux_i() const
+		{return m_slab_heat_flux_i;}
+
+	/**
+	* Returns the slab_heat_flux_e option (slab background: electron parallel heat flux / (n Te v_th,e)).
+	*
+	* @return Value of the slab_heat_flux_e option.
+	*/
+	double Options::slab_heat_flux_e() const
+		{return m_slab_heat_flux_e;}
+
+	/**
+	* Returns the slab_bmag option (slab background: magnetic field strength (along +X)).
+	*
+	* @return Value of the slab_bmag option.
+	*/
+	double Options::slab_bmag() const
+		{return m_slab_bmag;}
+
+	/**
+	* Returns the slab_tmax option (slab background: end of the time range).
+	*
+	* @return Value of the slab_tmax option.
+	*/
+	double Options::slab_tmax() const
+		{return m_slab_tmax;}
 
 	/**
 	* Returns the tbound_type option.

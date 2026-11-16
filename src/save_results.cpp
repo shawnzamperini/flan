@@ -416,6 +416,22 @@ namespace SaveResults
 			"lower limit on the electron temperature", "(eV)");
 		save_scalar(input_group, opts.min_ti(), "min_ti", dim_scalar, 
 			"lower limit on the ion temperature", "(eV)");
+		save_scalar(input_group, opts.slab_ne(), "slab_ne", dim_scalar,
+			"slab background: electron (and ion) density", "(m-3)");
+		save_scalar(input_group, opts.slab_te(), "slab_te", dim_scalar,
+			"slab background: electron temperature", "(eV)");
+		save_scalar(input_group, opts.slab_ti(), "slab_ti", dim_scalar,
+			"slab background: ion temperature", "(eV)");
+		save_scalar(input_group, opts.slab_flow(), "slab_flow", dim_scalar,
+			"slab background: plasma flow along B (+X)", "(m/s)");
+		save_scalar(input_group, opts.slab_heat_flux_i(), "slab_heat_flux_i", dim_scalar,
+			"slab background: ion parallel heat flux / (n Ti v_th,i)", "");
+		save_scalar(input_group, opts.slab_heat_flux_e(), "slab_heat_flux_e", dim_scalar,
+			"slab background: electron parallel heat flux / (n Te v_th,e)", "");
+		save_scalar(input_group, opts.slab_bmag(), "slab_bmag", dim_scalar,
+			"slab background: magnetic field strength (along +X)", "(T)");
+		save_scalar(input_group, opts.slab_tmax(), "slab_tmax", dim_scalar,
+			"slab background: end of the time range", "(s)");
 
 		// Testing
 		save_string(input_group, opts.test_opt(), "test_opt", dim_str, 

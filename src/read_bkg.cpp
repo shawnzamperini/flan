@@ -14,6 +14,7 @@
 #include "options.h"
 #include "read_gkyl.h"
 #include "read_s3xe.h"
+#include "read_slab.h"
 #include "read_test.h"
 #include "zones.h"
 
@@ -23,7 +24,8 @@ namespace Background
 	* Reads in the plasma background from the source chosen by the
 	* bkg_source option.
 	*
-	* "test" loads a hardcoded test background with Test::read_test,
+	* "test" loads a hardcoded test background with Test::read_test, "slab"
+	* makes a uniform plasma from the slab_* options with Slab::read_slab,
 	* "gkeyll" loads a Gkeyll simulation with Gkyl::read_gkyl and
 	* "soledge3x" loads a SOLEDGE3X simulation with S3X::read_s3xe. If the
 	* source is not recognized, the run is stopped with Errors::fatal_error.
@@ -57,6 +59,13 @@ namespace Background
 		else if (opts.bkg_source_int() == 2)
 		{
 			bkg = S3X::read_s3xe(opts);
+		}
+
+		// Make the slab background, a uniform plasma set by the slab_*
+		// options
+		else if (opts.bkg_source_int() == 3)
+		{
+			bkg = Slab::read_slab(opts);
 		}
 
 		// Unrecognized option

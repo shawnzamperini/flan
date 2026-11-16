@@ -314,6 +314,62 @@ namespace Options
 				assign_option<double>(set_func, var, key);
 			}
 
+			else if (key == "slab_ne")
+			{
+				auto set_func = std::bind(&Options::set_slab_ne, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_te")
+			{
+				auto set_func = std::bind(&Options::set_slab_te, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_ti")
+			{
+				auto set_func = std::bind(&Options::set_slab_ti, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_flow")
+			{
+				auto set_func = std::bind(&Options::set_slab_flow, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_heat_flux_i")
+			{
+				auto set_func = std::bind(&Options::set_slab_heat_flux_i, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_heat_flux_e")
+			{
+				auto set_func = std::bind(&Options::set_slab_heat_flux_e, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_bmag")
+			{
+				auto set_func = std::bind(&Options::set_slab_bmag, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_tmax")
+			{
+				auto set_func = std::bind(&Options::set_slab_tmax, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "tbound_type")
 			{
 				auto set_func = std::bind(&Options::set_tbound_type, &opts,

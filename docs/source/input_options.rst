@@ -62,6 +62,38 @@ Last Update: 8/22/25 (commit XXX)
      - Source of the background plasma
      - "gkeyll"
 
+   * - :ref:`slab_ne <slab_ne>`
+     - Electron
+     - 1e19
+
+   * - :ref:`slab_te <slab_te>`
+     - Electron temperature of the slab background
+     - 10.0
+
+   * - :ref:`slab_ti <slab_ti>`
+     - Ion temperature of the slab background
+     - 10.0
+
+   * - :ref:`slab_flow <slab_flow>`
+     - Plasma flow of the slab background along the magnetic field, which is in +X
+     - 0.0
+
+   * - :ref:`slab_heat_flux_i <slab_heat_flux_i>`
+     - Ion parallel conductive heat flux of the slab background
+     - 0.0
+
+   * - :ref:`slab_heat_flux_e <slab_heat_flux_e>`
+     - Electron parallel conductive heat flux of the slab background
+     - 0.0
+
+   * - :ref:`slab_bmag <slab_bmag>`
+     - Magnetic field strength of the slab background
+     - 1.0
+
+   * - :ref:`slab_tmax <slab_tmax>`
+     - End of the slab background's time range, which starts at 0
+     - 50e-6
+
    * - :ref:`s3x_dir <s3x_dir>`
      - Full path to the directory containing the SOLEDGE3X files
      - "undefined"
@@ -353,6 +385,47 @@ Where the background plasma comes from.
   - **"test"**: A built-in test background, chosen with test_opt. Used by the test cases.
   - **"gkeyll"**: A Gkeyll simulation, see the gkyl_* options.
   - **"soledge3x"**: A SOLEDGE3X simulation, see the s3x_* options and :doc:`soledge3x`.
+  - **"slab"**: A box of uniform plasma in a uniform magnetic field along +X, set entirely by the slab_* options. Used by the regression cases (regression/reg_*.cpp) to check the physics against analytic results. The box is a 5 cm cube; make the boundaries periodic to keep particles in it. If both heat fluxes are 0 the background has none, and can be run on the GPU.
+
+slab_ne
+-------
+
+Electron (and ion) density of the slab background (m^-3). Only used with bkg_source = "slab".
+
+slab_te
+-------
+
+Electron temperature of the slab background (eV). Only used with bkg_source = "slab".
+
+slab_ti
+-------
+
+Ion temperature of the slab background (eV). Only used with bkg_source = "slab".
+
+slab_flow
+---------
+
+Plasma flow of the slab background along the magnetic field, which is in +X (m/s). Only used with bkg_source = "slab".
+
+slab_heat_flux_i
+----------------
+
+Ion parallel conductive heat flux of the slab background, in units of n T_i v_th,i with v_th,i = sqrt(T_i / m_i). Positive is along the field (+X). This is the size of the heat-flux skew that gives the ion thermal force; about 0.1 is a mild skew. Only used with bkg_source = "slab".
+
+slab_heat_flux_e
+----------------
+
+Electron parallel conductive heat flux of the slab background, in units of n T_e v_th,e with v_th,e = sqrt(T_e / m_e). Positive is along the field (+X). Only used with bkg_source = "slab".
+
+slab_bmag
+---------
+
+Magnetic field strength of the slab background (T). The field is uniform and in +X. Only used with bkg_source = "slab".
+
+slab_tmax
+---------
+
+End of the slab background's time range, which starts at 0 (s). The output has 128 time frames evenly spaced over it. Only used with bkg_source = "slab".
 
 s3x_dir
 -------
