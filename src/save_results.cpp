@@ -432,6 +432,14 @@ namespace SaveResults
 			"slab background: magnetic field strength (along +X)", "(T)");
 		save_scalar(input_group, opts.slab_tmax(), "slab_tmax", dim_scalar,
 			"slab background: end of the time range", "(s)");
+		save_scalar(input_group, opts.slab_efield_y(), "slab_efield_y", dim_scalar,
+			"slab background: electric field in +Y at t = 0", "(V/m)");
+		save_scalar(input_group, opts.slab_efield_y_rate(), "slab_efield_y_rate", dim_scalar,
+			"slab background: rate of change of the electric field in +Y", "(V/m/s)");
+		save_scalar(input_group, opts.slab_bgrad_y(), "slab_bgrad_y", dim_scalar,
+			"slab background: relative gradient of the field strength in +Y", "(1/m)");
+		save_scalar(input_group, opts.slab_major_radius(), "slab_major_radius", dim_scalar,
+			"slab background: major radius the box is bent to (0 = straight)", "(m)");
 
 		// Testing
 		save_string(input_group, opts.test_opt(), "test_opt", dim_str, 
@@ -598,6 +606,12 @@ namespace SaveResults
 			"imp_temp_start_val", dim_scalar, 
 			"impurity starting temperature (imp_temp_start_opt = "
 			"single_value)", "(eV)");
+		save_scalar(input_group, opts.imp_vX_start_val(), "imp_vX_start_val", dim_scalar,
+			"impurity starting velocity in X, added to the thermal one", "(m/s)");
+		save_scalar(input_group, opts.imp_vY_start_val(), "imp_vY_start_val", dim_scalar,
+			"impurity starting velocity in Y, added to the thermal one", "(m/s)");
+		save_scalar(input_group, opts.imp_vZ_start_val(), "imp_vZ_start_val", dim_scalar,
+			"impurity starting velocity in Z, added to the thermal one", "(m/s)");
 		save_string(input_group, opts.imp_collisions(), "imp_collisions", 
 			dim_str, "impurity collisions with background plasma option");
 		save_string(input_group, opts.imp_thermal_force(),

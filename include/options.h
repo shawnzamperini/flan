@@ -82,6 +82,10 @@ namespace Options
 		double m_slab_heat_flux_e                     {0.0};
 		double m_slab_bmag                            {1.0};
 		double m_slab_tmax                            {50e-6};
+		double m_slab_efield_y                        {0.0};
+		double m_slab_efield_y_rate                   {0.0};
+		double m_slab_bgrad_y                         {0.0};
+		double m_slab_major_radius                    {0.0};
 
 		// Geometry options
 		std::string m_tbound_type            {"absorbing"};
@@ -126,6 +130,9 @@ namespace Options
 		double m_imp_zrange_max                      {0.0};
 		std::string m_imp_temp_start_opt      {"main_ion"};
 		double m_imp_temp_start_val                  {0.0};
+		double m_imp_vX_start_val                     {0.0};
+		double m_imp_vY_start_val                     {0.0};
+		double m_imp_vZ_start_val                     {0.0};
 		std::string m_imp_collisions             {"nanbu"};
 		std::string m_imp_thermal_force             {"on"};
 		double m_imp_coll_subcycle_target           {0.03};
@@ -239,6 +246,10 @@ namespace Options
 		void set_slab_heat_flux_e(double slab_heat_flux_e);
 		void set_slab_bmag(double slab_bmag);
 		void set_slab_tmax(double slab_tmax);
+		void set_slab_efield_y(double slab_efield_y);
+		void set_slab_efield_y_rate(double slab_efield_y_rate);
+		void set_slab_bgrad_y(double slab_bgrad_y);
+		void set_slab_major_radius(double slab_major_radius);
 		void set_tbound_type(std::string tbound_type);
 		void set_min_xbound_type(std::string min_xbound_type);
 		void set_max_xbound_type(std::string max_xbound_type);
@@ -277,6 +288,9 @@ namespace Options
 		void set_imp_zrange_max(double imp_zrange_max);
 		void set_imp_temp_start_opt(std::string imp_temp_start_opt);
 		void set_imp_temp_start_val(double imp_temp_start_val);
+		void set_imp_vX_start_val(double imp_vX_start_val);
+		void set_imp_vY_start_val(double imp_vY_start_val);
+		void set_imp_vZ_start_val(double imp_vZ_start_val);
 		void set_imp_collisions(std::string imp_collisions);
 		void set_imp_thermal_force(std::string imp_thermal_force);
 		void set_imp_coll_subcycle_target(double imp_coll_subcycle_target);
@@ -340,6 +354,10 @@ namespace Options
 		double slab_heat_flux_e() const;
 		double slab_bmag() const;
 		double slab_tmax() const;
+		double slab_efield_y() const;
+		double slab_efield_y_rate() const;
+		double slab_bgrad_y() const;
+		double slab_major_radius() const;
 		const std::string& tbound_type() const;
 		const std::string& min_xbound_type() const;
 		const std::string& max_xbound_type() const;
@@ -378,6 +396,9 @@ namespace Options
 		double imp_zrange_max() const;
 		const std::string& imp_temp_start_opt() const;
 		double imp_temp_start_val() const;
+		double imp_vX_start_val() const;
+		double imp_vY_start_val() const;
+		double imp_vZ_start_val() const;
 		const std::string& imp_collisions() const;
 		const std::string& imp_thermal_force() const;
 		double imp_coll_subcycle_target() const;

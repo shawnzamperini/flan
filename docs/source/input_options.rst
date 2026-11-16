@@ -94,6 +94,22 @@ Last Update: 8/22/25 (commit XXX)
      - End of the slab background's time range, which starts at 0
      - 50e-6
 
+   * - :ref:`slab_efield_y <slab_efield_y>`
+     - Electric field of the slab background in +Y at t = 0
+     - 0.0
+
+   * - :ref:`slab_efield_y_rate <slab_efield_y_rate>`
+     - Rate of change of that electric field
+     - 0.0
+
+   * - :ref:`slab_bgrad_y <slab_bgrad_y>`
+     - Relative gradient of the slab background's field strength in +Y
+     - 0.0
+
+   * - :ref:`slab_major_radius <slab_major_radius>`
+     - Major radius the slab background is bent to (0 = straight)
+     - 0.0
+
    * - :ref:`s3x_dir <s3x_dir>`
      - Full path to the directory containing the SOLEDGE3X files
      - "undefined"
@@ -237,6 +253,18 @@ Last Update: 8/22/25 (commit XXX)
    * - :ref:`imp_zone_start_val <imp_zone_start_val>`
      - Zone particles start in (numbered from 1)
      - 1
+
+   * - :ref:`imp_vX_start_val <imp_vX_start_val>`
+     - Starting velocity in X, added to the thermal one
+     - 0.0
+
+   * - :ref:`imp_vY_start_val <imp_vY_start_val>`
+     - Starting velocity in Y, added to the thermal one
+     - 0.0
+
+   * - :ref:`imp_vZ_start_val <imp_vZ_start_val>`
+     - Starting velocity in Z, added to the thermal one
+     - 0.0
 
    * - :ref:`imp_collisions <imp_collisions>`
      - Impurity collisions with background toggle
@@ -426,6 +454,26 @@ slab_tmax
 ---------
 
 End of the slab background's time range, which starts at 0 (s). The output has 128 time frames evenly spaced over it. Only used with bkg_source = "slab".
+
+slab_efield_y
+-------------
+
+Electric field of the slab background in +Y at t = 0 (V/m), uniform in space. It is across the magnetic field, so it gives an ExB drift in -Z of E / B. Only for a straight slab (slab_major_radius = 0). Only used with bkg_source = "slab".
+
+slab_efield_y_rate
+------------------
+
+Rate at which the slab background's electric field in +Y changes (V/m/s): E_Y = slab_efield_y + slab_efield_y_rate * t. A changing field gives a polarization drift along it. Only for a straight slab. Only used with bkg_source = "slab".
+
+slab_bgrad_y
+------------
+
+Relative gradient of the slab background's magnetic field strength in +Y (1/m): B_X = slab_bmag * (1 + slab_bgrad_y * Y). It gives a grad-B drift. Don't make the y boundaries periodic with it. Only for a straight slab. Only used with bkg_source = "slab".
+
+slab_major_radius
+-----------------
+
+If above 0, the slab background's box is bent into a quarter of a torus of this major radius (m), to give the magnetic field curvature: x becomes the major radius R (from 2.5 cm inside to 2.5 cm outside this value), y the height Z and z the toroidal angle (0 to pi/2). The field is then toroidal with strength slab_bmag * slab_major_radius / R, and the flow and heat fluxes are along it. 0 is the straight slab, with the field along +X. Only used with bkg_source = "slab".
 
 s3x_dir
 -------
@@ -638,6 +686,21 @@ imp_zone_start_val
 ------------------
 
 Zone particles start in, numbered from 1 like the SOLEDGE3X zones. The starting x, y and z (:ref:`imp_xstart_opt <imp_xstart_opt>`, etc.) are in that zone's coordinates. Gkeyll and test backgrounds have a single zone, so this must be 1 for them.
+
+imp_vX_start_val
+----------------
+
+Velocity in Cartesian X that every impurity starts with (m/s), added to the velocity sampled at the starting temperature. With a starting temperature of 0 every impurity starts with exactly this velocity. Not used for sputtered impurities.
+
+imp_vY_start_val
+----------------
+
+Same as :ref:`imp_vX_start_val <imp_vX_start_val>`, in Cartesian Y (m/s).
+
+imp_vZ_start_val
+----------------
+
+Same as :ref:`imp_vX_start_val <imp_vX_start_val>`, in Cartesian Z (m/s).
 
 imp_collisions
 --------------

@@ -78,6 +78,10 @@ namespace Options
 									///< 1 main_ion
 		double imp_temp_start_val;	///< Starting temperature for
 									///< single_value (eV)
+		double imp_vX_start_val;	///< Starting velocity in X added to
+									///< the thermal one (m/s)
+		double imp_vY_start_val;	///< Same, in Y (m/s)
+		double imp_vZ_start_val;	///< Same, in Z (m/s)
 
 	}; // OptionsDevice
 }  // namespace Options

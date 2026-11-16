@@ -83,6 +83,9 @@ namespace Options
 
 		opts_h.imp_temp_start_opt_int = m_imp_temp_start_opt_int;
 		opts_h.imp_temp_start_val = m_imp_temp_start_val;
+		opts_h.imp_vX_start_val = m_imp_vX_start_val;
+		opts_h.imp_vY_start_val = m_imp_vY_start_val;
+		opts_h.imp_vZ_start_val = m_imp_vZ_start_val;
 
 		OptionsDevice* opts_d = nullptr;
 		cudaMalloc(&opts_d, sizeof(OptionsDevice));

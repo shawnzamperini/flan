@@ -512,6 +512,62 @@ namespace Options
 		{m_slab_tmax = slab_tmax;}
 
 	/**
+	* Sets the slab_efield_y option.
+	*
+	* Electric field of the slab background in +Y at t = 0 (V/m), uniform in
+	* space. It is across the magnetic field (+X), so it gives an ExB drift
+	* in -Z of E / B. Only for a straight slab (slab_major_radius = 0). Only
+	* used with bkg_source = "slab".
+	*
+	* @param slab_efield_y New value of the slab_efield_y option.
+	*/
+	void Options::set_slab_efield_y(double slab_efield_y)
+		{m_slab_efield_y = slab_efield_y;}
+
+	/**
+	* Sets the slab_efield_y_rate option.
+	*
+	* Rate at which the slab background's electric field in +Y changes
+	* (V/m/s): E_Y = slab_efield_y + slab_efield_y_rate * t. A changing
+	* field gives a polarization drift along it. Only for a straight slab.
+	* Only used with bkg_source = "slab".
+	*
+	* @param slab_efield_y_rate New value of the slab_efield_y_rate option.
+	*/
+	void Options::set_slab_efield_y_rate(double slab_efield_y_rate)
+		{m_slab_efield_y_rate = slab_efield_y_rate;}
+
+	/**
+	* Sets the slab_bgrad_y option.
+	*
+	* Relative gradient of the slab background's magnetic field strength in
+	* +Y (1/m): B_X = slab_bmag * (1 + slab_bgrad_y * Y). It is across the
+	* field, so it gives a grad-B drift. Don't make the y boundaries
+	* periodic with it. Only for a straight slab. Only used with bkg_source
+	* = "slab".
+	*
+	* @param slab_bgrad_y New value of the slab_bgrad_y option.
+	*/
+	void Options::set_slab_bgrad_y(double slab_bgrad_y)
+		{m_slab_bgrad_y = slab_bgrad_y;}
+
+	/**
+	* Sets the slab_major_radius option.
+	*
+	* If above 0, the slab background's box is bent into a quarter of a
+	* torus of this major radius (m), to give the magnetic field curvature:
+	* x becomes the major radius R (from 2.5 cm inside to 2.5 cm outside
+	* this value), y the height Z and z the toroidal angle (0 to pi/2). The
+	* field is then toroidal with strength slab_bmag * slab_major_radius /
+	* R, and the flow and heat fluxes are along it. 0 is the straight slab,
+	* with the field along +X. Only used with bkg_source = "slab".
+	*
+	* @param slab_major_radius New value of the slab_major_radius option.
+	*/
+	void Options::set_slab_major_radius(double slab_major_radius)
+		{m_slab_major_radius = slab_major_radius;}
+
+	/**
 	* Sets the tbound_type option.
 	*
 	* Boundary condition at the start and end of the background time range.
@@ -1295,6 +1351,43 @@ namespace Options
 		{m_imp_temp_start_val = imp_temp_start_val;}
 
 	/**
+	* Sets the imp_vX_start_val option.
+	*
+	* Velocity in Cartesian X that every impurity starts with (m/s), added
+	* to the velocity sampled at the starting temperature. With
+	* imp_temp_start_val = 0 every impurity starts with exactly this
+	* velocity. Not used for sputtered impurities.
+	*
+	* @param imp_vX_start_val New value of the imp_vX_start_val option.
+	*/
+	void Options::set_imp_vX_start_val(double imp_vX_start_val)
+		{m_imp_vX_start_val = imp_vX_start_val;}
+
+	/**
+	* Sets the imp_vY_start_val option.
+	*
+	* Velocity in Cartesian Y that every impurity starts with (m/s), added
+	* to the velocity sampled at the starting temperature. See
+	* imp_vX_start_val.
+	*
+	* @param imp_vY_start_val New value of the imp_vY_start_val option.
+	*/
+	void Options::set_imp_vY_start_val(double imp_vY_start_val)
+		{m_imp_vY_start_val = imp_vY_start_val;}
+
+	/**
+	* Sets the imp_vZ_start_val option.
+	*
+	* Velocity in Cartesian Z that every impurity starts with (m/s), added
+	* to the velocity sampled at the starting temperature. See
+	* imp_vX_start_val.
+	*
+	* @param imp_vZ_start_val New value of the imp_vZ_start_val option.
+	*/
+	void Options::set_imp_vZ_start_val(double imp_vZ_start_val)
+		{m_imp_vZ_start_val = imp_vZ_start_val;}
+
+	/**
 	* Sets the imp_collisions option.
 	*
 	* Collision model for the impurities, either off or the Nanbu model.
@@ -2052,6 +2145,38 @@ namespace Options
 		{return m_slab_tmax;}
 
 	/**
+	* Returns the slab_efield_y option (slab background: electric field in +Y at t = 0).
+	*
+	* @return Value of the slab_efield_y option.
+	*/
+	double Options::slab_efield_y() const
+		{return m_slab_efield_y;}
+
+	/**
+	* Returns the slab_efield_y_rate option (slab background: rate of change of the electric field in +Y).
+	*
+	* @return Value of the slab_efield_y_rate option.
+	*/
+	double Options::slab_efield_y_rate() const
+		{return m_slab_efield_y_rate;}
+
+	/**
+	* Returns the slab_bgrad_y option (slab background: relative gradient of the field strength in +Y).
+	*
+	* @return Value of the slab_bgrad_y option.
+	*/
+	double Options::slab_bgrad_y() const
+		{return m_slab_bgrad_y;}
+
+	/**
+	* Returns the slab_major_radius option (slab background: major radius the box is bent to (0 = straight)).
+	*
+	* @return Value of the slab_major_radius option.
+	*/
+	double Options::slab_major_radius() const
+		{return m_slab_major_radius;}
+
+	/**
 	* Returns the tbound_type option.
 	*
 	* Boundary condition at the start and end of the background time range.
@@ -2454,6 +2579,30 @@ namespace Options
 	*/
 	double Options::imp_temp_start_val() const 
 		{return m_imp_temp_start_val;}
+
+	/**
+	* Returns the imp_vX_start_val option (impurity starting velocity in X, added to the thermal one).
+	*
+	* @return Value of the imp_vX_start_val option.
+	*/
+	double Options::imp_vX_start_val() const
+		{return m_imp_vX_start_val;}
+
+	/**
+	* Returns the imp_vY_start_val option (impurity starting velocity in Y, added to the thermal one).
+	*
+	* @return Value of the imp_vY_start_val option.
+	*/
+	double Options::imp_vY_start_val() const
+		{return m_imp_vY_start_val;}
+
+	/**
+	* Returns the imp_vZ_start_val option (impurity starting velocity in Z, added to the thermal one).
+	*
+	* @return Value of the imp_vZ_start_val option.
+	*/
+	double Options::imp_vZ_start_val() const
+		{return m_imp_vZ_start_val;}
 
 	/**
 	* Returns the imp_collisions option.

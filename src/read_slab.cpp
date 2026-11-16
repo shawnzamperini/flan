@@ -5,8 +5,10 @@
 *        input options
 *
 * The slab background (bkg_source = "slab") is a box of uniform plasma in
-* a uniform magnetic field, with everything about the plasma given by the
-* slab_* input options. It exists so the physics in Flan can be checked
+* a simple magnetic field, with everything about the plasma and the fields
+* given by the slab_* input options. The field is uniform by default; an
+* electric field, a field gradient and curvature (by bending the box into
+* part of a torus) can be added for the drifts. It exists so the physics in Flan can be checked
 * against analytic results: a case is fully defined by its input file,
 * with nothing about it hard-coded here, and the checks can be repeated at
 * other densities, temperatures and so on. The cases in regression/ that
@@ -33,19 +35,44 @@ namespace Slab
 	/**
 	* Creates the slab background from the slab_* options.
 	*
-	* Geometry: a 5 cm cube, x from 0 to 0.05 m and y and z from -0.025 to
-	* 0.025 m, with x = X, y = Y and z = Z (Cartesian, so the Jacobian is
-	* 1), in 8 x 8 x 8 cells. The plasma is uniform, so the grid only needs
-	* to be fine enough to interpolate on. For particles to stay in the
-	* box, make the boundaries periodic in the input file. There are 128
-	* time frames from 0 to slab_tmax, and the plasma doesn't change in
-	* time. The frames set the time resolution of the output.
+	* Straight slab (slab_major_radius = 0, the default)
+	* --------------------------------------------------
+	* A 5 cm cube, x from 0 to 0.05 m and y and z from -0.025 to 0.025 m,
+	* with x = X, y = Y and z = Z (Cartesian, so the Jacobian is 1), in
+	* 8 x 8 x 8 cells. The fields are uniform or linear, so the grid only
+	* needs to be fine enough to interpolate on. For particles to stay in
+	* the box, make the boundaries periodic in the input file.
 	*
-	* Plasma:
-	* - Magnetic field slab_bmag along +X, no electric field.
+	* - Magnetic field along +X, B_X = slab_bmag (1 + slab_bgrad_y Y). The
+	*   gradient is across the field and gives a grad-B drift. With a
+	*   gradient the field isn't periodic in y, so leave those boundaries
+	*   absorbing and keep the particles away from them.
+	* - Electric field along +Y, E_Y = slab_efield_y + slab_efield_y_rate
+	*   t, uniform in space. It gives an ExB drift, and a polarization
+	*   drift when it changes in time.
+	*
+	* Bent slab (slab_major_radius = R0 > 0)
+	* --------------------------------------
+	* The box is bent into a quarter of a torus, to give the magnetic field
+	* curvature: cylindrical coordinates with x = R from R0 - 0.025 to
+	* R0 + 0.025 m, y = Z from -0.025 to 0.025 m and z = phi (the toroidal
+	* angle) from 0 to pi/2, in 8 x 8 x 32 cells. Cartesian X = R cos(phi),
+	* Y = R sin(phi), and the Jacobian is R.
+	*
+	* - Magnetic field in the toroidal direction (+phi), B = slab_bmag R0
+	*   / R, as for the vacuum field of a tokamak. Its curvature and
+	*   gradient give the curvature and grad-B drifts.
+	* - No electric field or extra gradient: the run is stopped if
+	*   slab_efield_y, slab_efield_y_rate or slab_bgrad_y isn't 0.
+	*
+	* Both
+	* ----
+	* There are 128 time frames from 0 to slab_tmax. The frames set the
+	* time resolution of the output.
+	*
 	* - Density slab_ne (electrons and ions), temperatures slab_te and
 	*   slab_ti.
-	* - Flow slab_flow along +X, i.e., along the field.
+	* - Flow slab_flow along the magnetic field.
 	* - Parallel conductive heat fluxes q_par = slab_heat_flux_i n T_i
 	*   v_th,i for the ions and slab_heat_flux_e n T_e v_th,e for the
 	*   electrons, with v_th = sqrt(T / m) of that species. So the
@@ -56,7 +83,8 @@ namespace Slab
 	*
 	* The ion and electron masses are gkyl_ion_mass_amu and
 	* gkyl_elec_mass_amu. The run is stopped if a density, temperature,
-	* field strength or slab_tmax isn't above 0.
+	* field strength or slab_tmax isn't above 0, or if the field strength
+	* would reach 0 inside the box because of slab_bgrad_y.
 	*
 	* @param opts Simulation options, used for the slab_* options and the
 	*        masses.
@@ -79,15 +107,46 @@ namespace Slab
 		need_positive(opts.slab_bmag(), "slab_bmag");
 		need_positive(opts.slab_tmax(), "slab_tmax");
 
+		// Straight, or bent to this major radius
+		const double R0 {opts.slab_major_radius()};
+		const bool bent {R0 > 0.0};
+		constexpr double half_width {0.025};
+		if (R0 < 0.0 || (bent && R0 <= half_width))
+		{
+			Errors::fatal_error("slab_major_radius must be 0 (straight "
+				"slab) or above 0.025 m, got " + std::to_string(R0) + ".");
+		}
+		if (bent && (opts.slab_efield_y() != 0.0
+			|| opts.slab_efield_y_rate() != 0.0
+			|| opts.slab_bgrad_y() != 0.0))
+		{
+			Errors::fatal_error("slab_efield_y, slab_efield_y_rate and "
+				"slab_bgrad_y are only for a straight slab "
+				"(slab_major_radius = 0).");
+		}
+		if (std::abs(opts.slab_bgrad_y()) * half_width >= 1.0)
+		{
+			Errors::fatal_error("slab_bgrad_y is too large: the magnetic "
+				"field would reach 0 inside the box (|slab_bgrad_y| must "
+				"be under 40 1/m).");
+		}
+
+		// The bent slab needs more cells along the toroidal angle, since
+		// the Cartesian components of the field turn with it
 		constexpr int tdim {128};
 		constexpr int xdim {8};
 		constexpr int ydim {8};
-		constexpr int zdim {8};
+		const int zdim {bent ? 32 : 8};
 
-		// Cell edges of the 5 cm cube, and the time frames
-		auto grid_x = Utilities::linspace(0.00, 0.05, xdim + 1);
-		auto grid_y = Utilities::linspace(-0.025, 0.025, ydim + 1);
-		auto grid_z = Utilities::linspace(-0.025, 0.025, zdim + 1);
+		// Cell edges, and the time frames. Straight: x, y, z are X, Y, Z
+		// (m). Bent: x is R (m), y is Z (m) and z is phi (rad).
+		auto grid_x = bent
+			? Utilities::linspace(R0 - half_width, R0 + half_width, xdim + 1)
+			: Utilities::linspace(0.0, 2.0 * half_width, xdim + 1);
+		auto grid_y = Utilities::linspace(-half_width, half_width, ydim + 1);
+		auto grid_z = bent
+			? Utilities::linspace(0.0, Constants::pi / 2.0, zdim + 1)
+			: Utilities::linspace(-half_width, half_width, zdim + 1);
 		auto times = Utilities::linspace(0.0, opts.slab_tmax(), tdim);
 
 		// Cell centers: evenly spaced, starting half a cell in
@@ -101,8 +160,9 @@ namespace Slab
 		auto z = Utilities::linspace(grid_z.front() + zwidth / 2.0,
 			grid_z.back() - zwidth / 2.0, zdim);
 
-		// Geometry. x = X, y = Y, z = Z: the reciprocal basis vectors are
-		// the unit vectors and the Jacobian is 1.
+		// Geometry: the reciprocal basis vectors (gradients of x, y, z in
+		// Cartesian space), the Jacobian and the Cartesian coordinates of
+		// the cell centers.
 		Vectors::Vector3D<BkgFPType> dxdX {xdim, ydim, zdim};
 		Vectors::Vector3D<BkgFPType> dxdY {xdim, ydim, zdim};
 		Vectors::Vector3D<BkgFPType> dxdZ {xdim, ydim, zdim};
@@ -123,40 +183,102 @@ namespace Slab
 		for (int k {}; k < zdim; ++k)
 		{
 			const int idx {dxdX.calc_index(i, j, k)};
-			dxdX.get_data()[idx] = 1.0;
-			dydY.get_data()[idx] = 1.0;
-			dzdZ.get_data()[idx] = 1.0;
-			J.get_data()[idx] = 1.0;
-			X.get_data()[idx] = x[i];
-			Y.get_data()[idx] = y[j];
-			Z.get_data()[idx] = z[k];
+			if (bent)
+			{
+				// Cylindrical: x = R, y = Z, z = phi. grad R = (cos phi,
+				// sin phi, 0), grad Z = (0, 0, 1) and grad phi = (-sin
+				// phi, cos phi, 0) / R.
+				const double R {x[i]};
+				const double phi {z[k]};
+				dxdX.get_data()[idx] = std::cos(phi);
+				dxdY.get_data()[idx] = std::sin(phi);
+				dydZ.get_data()[idx] = 1.0;
+				dzdX.get_data()[idx] = -std::sin(phi) / R;
+				dzdY.get_data()[idx] = std::cos(phi) / R;
+				J.get_data()[idx] = R;
+				X.get_data()[idx] = R * std::cos(phi);
+				Y.get_data()[idx] = R * std::sin(phi);
+				Z.get_data()[idx] = y[j];
+			}
+			else
+			{
+				// x = X, y = Y, z = Z
+				dxdX.get_data()[idx] = 1.0;
+				dydY.get_data()[idx] = 1.0;
+				dzdZ.get_data()[idx] = 1.0;
+				J.get_data()[idx] = 1.0;
+				X.get_data()[idx] = x[i];
+				Y.get_data()[idx] = y[j];
+				Z.get_data()[idx] = z[k];
+			}
 		}
 		}
 		}
 
-		// A field with the same value everywhere and at all times
-		auto uniform = [](const double val)
+		// Makes a field from a function of the time frame and cell
+		// indices
+		auto make_field = [&](auto&& func)
 		{
 			Vectors::Vector4D<BkgFPType> v {tdim, xdim, ydim, zdim};
-			std::fill(v.get_data().begin(), v.get_data().end(),
-				static_cast<BkgFPType>(val));
+			for (int it {}; it < tdim; ++it)
+			{
+			for (int i {}; i < xdim; ++i)
+			{
+			for (int j {}; j < ydim; ++j)
+			{
+			for (int k {}; k < zdim; ++k)
+			{
+				v.get_data()[v.calc_index(it, i, j, k)]
+					= static_cast<BkgFPType>(func(it, i, j, k));
+			}
+			}
+			}
+			}
 			return v;
 		};
+		auto uniform = [&](const double val)
+		{
+			return make_field([val](int, int, int, int) {return val;});
+		};
 
-		// Plasma: B and the flow along +X, no electric field
+		// Field strength, and the Cartesian components of the unit vector
+		// along the field. Straight: along +X, with the optional gradient
+		// in Y. Bent: toroidal, (-sin phi, cos phi, 0), falling as 1 / R.
+		auto b_strength = [&](int, int i, int j, int)
+		{
+			return bent ? opts.slab_bmag() * R0 / x[i]
+				: opts.slab_bmag() * (1.0 + opts.slab_bgrad_y() * y[j]);
+		};
+		auto dir_X = [&](int, int, int, int k)
+			{return bent ? -std::sin(z[k]) : 1.0;};
+		auto dir_Y = [&](int, int, int, int k)
+			{return bent ? std::cos(z[k]) : 0.0;};
+
+		// Plasma. The flow is along the field. The electric field is
+		// along +Y and changes linearly in time (straight slab only).
 		auto ne = uniform(opts.slab_ne());
 		auto te = uniform(opts.slab_te());
 		auto ti = uniform(opts.slab_ti());
-		auto bX = uniform(opts.slab_bmag());
-		auto bY = uniform(0.0);
+		auto bX = make_field([&](int it, int i, int j, int k)
+			{return b_strength(it, i, j, k) * dir_X(it, i, j, k);});
+		auto bY = make_field([&](int it, int i, int j, int k)
+			{return b_strength(it, i, j, k) * dir_Y(it, i, j, k);});
 		auto bZ = uniform(0.0);
-		auto bmag = uniform(opts.slab_bmag());
+		auto bmag = make_field(b_strength);
+		auto e_field = [&](int it, int, int, int)
+		{
+			return opts.slab_efield_y()
+				+ opts.slab_efield_y_rate() * times[it];
+		};
 		auto eX = uniform(0.0);
-		auto eY = uniform(0.0);
+		auto eY = make_field(e_field);
 		auto eZ = uniform(0.0);
-		auto emag = uniform(0.0);
-		auto uX = uniform(opts.slab_flow());
-		auto uY = uniform(0.0);
+		auto emag = make_field([&](int it, int i, int j, int k)
+			{return std::abs(e_field(it, i, j, k));});
+		auto uX = make_field([&](int it, int i, int j, int k)
+			{return opts.slab_flow() * dir_X(it, i, j, k);});
+		auto uY = make_field([&](int it, int i, int j, int k)
+			{return opts.slab_flow() * dir_Y(it, i, j, k);});
 		auto uZ = uniform(0.0);
 
 		// Put it all into a Background
@@ -182,7 +304,7 @@ namespace Slab
 		bkg.move_into_uY(uY);
 		bkg.move_into_uZ(uZ);
 
-		// Parallel conductive heat fluxes (W/m^2), positive along B (+X):
+		// Parallel conductive heat fluxes (W/m^2), positive along B:
 		// q_par = eps n T v_th, with eps the option and n T v_th that
 		// species' thermal energy moving at its thermal speed v_th =
 		// sqrt(T / m). Only made if one of them is nonzero, so that a slab

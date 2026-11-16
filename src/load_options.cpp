@@ -370,6 +370,34 @@ namespace Options
 				assign_option<double>(set_func, var, key);
 			}
 
+			else if (key == "slab_efield_y")
+			{
+				auto set_func = std::bind(&Options::set_slab_efield_y, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_efield_y_rate")
+			{
+				auto set_func = std::bind(&Options::set_slab_efield_y_rate, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_bgrad_y")
+			{
+				auto set_func = std::bind(&Options::set_slab_bgrad_y, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "slab_major_radius")
+			{
+				auto set_func = std::bind(&Options::set_slab_major_radius, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "tbound_type")
 			{
 				auto set_func = std::bind(&Options::set_tbound_type, &opts,
@@ -606,6 +634,27 @@ namespace Options
 				auto set_func = std::bind(&Options::set_imp_temp_start_opt,
 					&opts, std::placeholders::_1);
 				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "imp_vX_start_val")
+			{
+				auto set_func = std::bind(&Options::set_imp_vX_start_val, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_vY_start_val")
+			{
+				auto set_func = std::bind(&Options::set_imp_vY_start_val, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "imp_vZ_start_val")
+			{
+				auto set_func = std::bind(&Options::set_imp_vZ_start_val, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
 			}
 
 			else if (key == "imp_temp_start_val")

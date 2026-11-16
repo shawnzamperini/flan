@@ -716,7 +716,9 @@ namespace Slots
 	* "single_value", or the main ion temperature interpolated at the
 	* particle location with Background::interp_ti if it is "main_ion".
 	* The interpolated ion temperature is held at or above min_ti, since it
-	* can go negative near the grid edges.
+	* can go negative near the grid edges. The directed starting velocity
+	* (imp_vX_start_val, imp_vY_start_val, imp_vZ_start_val) is added to
+	* the sampled one.
 	*
 	* @param bkg Background plasma, used for the ion temperature.
 	* @param opts Simulation options.
@@ -796,6 +798,13 @@ namespace Slots
 		double vX {rng.normal(0.0, sigma)};
 		double vY {rng.normal(0.0, sigma)};
 		double vZ {rng.normal(0.0, sigma)};
+
+		// Plus the directed starting velocity (imp_v*_start_val, 0 by
+		// default), e.g., for a beam or a case where every particle must
+		// start the same way
+		vX += opts.imp_vX_start_val();
+		vY += opts.imp_vY_start_val();
+		vZ += opts.imp_vZ_start_val();
 
 		return {vX, vY, vZ};
 	}
