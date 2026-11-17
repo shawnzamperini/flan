@@ -53,8 +53,10 @@ which should be run on any new grid or case:
   and curvature `bxcvx` both agree with this. So a point is at
   (X, Y, Z) = (R cos z, R sin z, Z), unlike SOLEDGE3X, where Y has the
   opposite sign.
-- **Field direction**: `Bpxy` > 0, so +y runs along the poloidal part of
-  b. The sign of `Btxy` sets the toroidal direction of the field.
+- **Field direction**: the poloidal field (`Brxy`, `Bzxy`) points along
+  +y in every cell (hypnotoad orients y that way), so +y runs along the
+  poloidal part of b. The sign of `Btxy` sets the toroidal direction of
+  the field.
 - **Parallel flow**: V = NV / (AA N), positive toward +y. It points into
   both targets, as the sheath boundary requires.
 - **Toroidal coordinate**: z is the lab-frame toroidal angle (shifted
@@ -83,22 +85,27 @@ read before and after the change was the same bit for bit, and
 `test_axisym_mesh_cpu` tests the shared code on a mesh where everything
 is known analytically, for both handednesses.
 
-**Phase 2: readers and options.**
+**Phase 2: readers and options.** Done.
 
-- `npz.h/.cpp`: a reader for uncompressed `.npz` files (the zip local
-  headers and the `.npy` header), which stops with a clear error on a
-  compressed or Fortran-order file. Unit tested.
-- `read_hermes.cpp`: reads the hypnotoad grid into the 6 zones and the
-  snapshots into the background, converting to SI: n_e, T_e = P_e / N_e,
-  T_i = P_i / N_e, V = NV / (AA N) and phi. Unit tested on a small
-  synthetic grid.
-- Options: `bkg_source = "hermes"`, `hermes_format` (`"jax"`; `"bout"` is
-  accepted but stops with "not implemented"), the grid file, the snapshot
-  directory, the first and last snapshot and a stride, and the
-  normalization, ion mass, conduction coefficients and `zperiod`. These
-  follow "Adding an input option" in [Code Structure](code-structure.md).
-- The stride matters for memory, since each loaded frame holds many
-  derived 3D fields.
+- `npz.h/.cpp` reads uncompressed `.npz` files, taking the entry sizes
+  from the zip's central directory, since numpy writes zip64 local
+  headers without them. Compressed or Fortran-order files stop the run.
+  Tested in `test_npz_cpu`.
+- `read_hermes.cpp` reads the hypnotoad grid into the 6 zones (each with
+  the grid's global cell indices as x and y), builds the
+  `Axisym::Mesh` from the cell corners and B, and reads the snapshots:
+  n_e = Ne Nnorm, T_e = (Pe / Ne) Tnorm, T_i = (Pi / Ne) Tnorm,
+  phi Tnorm, and the flow along B, NVi / (AA Ne) c_s0, with its sign
+  from the direction of the poloidal field relative to +y. Tested in
+  `test_read_hermes_cpu` on a small grid and snapshots the test writes.
+- Options `bkg_source = "hermes"` and `hermes_*` (see
+  [Input Options](../input-options.md)). `hermes_format = "bout"` is
+  accepted but stops with "not implemented yet".
+- Known difference: Flan puts each cell's center at the average of its
+  four corners, as for SOLEDGE3X, while hypnotoad's `Rxy`, `Zxy` (where
+  B is given) lie on the curved flux surface. They differ by a few
+  percent of a cell typically, up to about a fifth of a cell in the
+  largest outer SOL cells.
 
 **Phase 3: field-aligned interpolation and gradients.** On a shifted-metric
 grid a field line moves many toroidal cells between neighboring y planes,
@@ -185,7 +192,7 @@ Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
    and with it the ion grad-B drift in the "forward" grid points toward the
    X-point.
 3. NV is the momentum density AA·n·V, with V positive toward +y, and +y
-   along the poloidal part of b (`Bpxy` > 0).
+   along the poloidal part of b (the poloidal field points along +y).
 4. One ion species of charge 1, quasineutral, so n_i = n_e.
 5. The domain covers 1/`zperiod` of the torus and is periodic in z. A
    particle crossing the z boundary reappears rotated by 2π/`zperiod`, and

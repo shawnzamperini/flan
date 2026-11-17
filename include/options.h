@@ -61,6 +61,19 @@ namespace Options
 		std::string m_s3x_ref_file {"refParam_raptorX.h5"};
 		std::string m_s3x_chi_absorb                {"on"};
 
+		// Options related to reading in HERMES (Hermes-3, JAX-Hermes3) runs
+		std::string m_hermes_format {"jax"};
+		std::string m_hermes_grid_file {"undefined"};
+		std::string m_hermes_snap_dir {"undefined"};
+		int m_hermes_snap_start {0};
+		int m_hermes_snap_end {1};
+		int m_hermes_snap_stride {1};
+		double m_hermes_nnorm {1e19};
+		double m_hermes_tnorm {100.0};
+		double m_hermes_bnorm {1.0};
+		double m_hermes_ion_mass_amu {2.0};
+		int m_hermes_zperiod {1};
+
 		// Options for sputtering of the walls by the background plasma
 		std::string m_imp_source_opt            {"manual"};
 		std::string m_sput_table_file        {"undefined"};
@@ -186,6 +199,7 @@ namespace Options
 		int m_max_zbound_type_int		{-1};
 		int m_calc_grad_elec_int		{-1};
 		int m_s3x_chi_absorb_int                      {-1};
+		int m_hermes_format_int                       {-1};
 		int m_imp_source_opt_int                      {-1};
 		int m_sput_flux_opt_int                       {-1};
 		int m_sput_bohm_floor_int                     {-1};
@@ -226,6 +240,17 @@ namespace Options
 		void set_s3x_frame_end(int s3x_frame_end);
 		void set_s3x_ref_file(std::string s3x_ref_file);
 		void set_s3x_chi_absorb(std::string s3x_chi_absorb);
+		void set_hermes_format(std::string hermes_format);
+		void set_hermes_grid_file(std::string hermes_grid_file);
+		void set_hermes_snap_dir(std::string hermes_snap_dir);
+		void set_hermes_snap_start(int hermes_snap_start);
+		void set_hermes_snap_end(int hermes_snap_end);
+		void set_hermes_snap_stride(int hermes_snap_stride);
+		void set_hermes_nnorm(double hermes_nnorm);
+		void set_hermes_tnorm(double hermes_tnorm);
+		void set_hermes_bnorm(double hermes_bnorm);
+		void set_hermes_ion_mass_amu(double hermes_ion_mass_amu);
+		void set_hermes_zperiod(int hermes_zperiod);
 		void set_imp_source_opt(std::string imp_source_opt);
 		void set_sput_table_file(std::string sput_table_file);
 		void set_sput_flux_opt(std::string sput_flux_opt);
@@ -333,6 +358,17 @@ namespace Options
 		int s3x_frame_end() const;
 		const std::string& s3x_ref_file() const;
 		const std::string& s3x_chi_absorb() const;
+		const std::string& hermes_format() const;
+		const std::string& hermes_grid_file() const;
+		const std::string& hermes_snap_dir() const;
+		int hermes_snap_start() const;
+		int hermes_snap_end() const;
+		int hermes_snap_stride() const;
+		double hermes_nnorm() const;
+		double hermes_tnorm() const;
+		double hermes_bnorm() const;
+		double hermes_ion_mass_amu() const;
+		int hermes_zperiod() const;
 		const std::string& imp_source_opt() const;
 		const std::string& sput_table_file() const;
 		const std::string& sput_flux_opt() const;
@@ -446,6 +482,7 @@ namespace Options
 		int max_zbound_type_int() const;
 		int calc_grad_elec_int() const;
 		int s3x_chi_absorb_int() const;
+		int hermes_format_int() const;
 		int imp_source_opt_int() const;
 		int sput_flux_opt_int() const;
 		int sput_bohm_floor_int() const;

@@ -32,7 +32,7 @@ are grouped by what they control.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `bkg_source` | string | `"gkeyll"` | Source of the background plasma: the slab background (a box of plasma in simple fields, set entirely by the `slab_*` options and used by the regression cases and unit tests), a Gkeyll simulation or a SOLEDGE3X simulation. Valid values: `"slab"`, `"gkeyll"`, `"soledge3x"`. |
+| `bkg_source` | string | `"gkeyll"` | Source of the background plasma: the slab background (a box of plasma in simple fields, set entirely by the `slab_*` options and used by the regression cases and unit tests), a Gkeyll simulation, a SOLEDGE3X simulation or a HERMES (JAX-Hermes3) simulation. Valid values: `"slab"`, `"gkeyll"`, `"soledge3x"`, `"hermes"`. |
 | `slab_ne` | float | `1e19` | Electron (and ion) density of the slab background (m^-3). Only used with `bkg_source = "slab"`. |
 | `slab_te` | float | `10.0` | Electron temperature of the slab background (eV). Only used with `bkg_source = "slab"`. |
 | `slab_ti` | float | `10.0` | Ion temperature of the slab background (eV). Only used with `bkg_source = "slab"`. |
@@ -83,6 +83,33 @@ Used with `bkg_source = "soledge3x"`. See [SOLEDGE3X Backgrounds](running/soledg
 | `s3x_frame_start` | int | `0` | First SOLEDGE3X plasma frame to load, i.e., the number in `plasma_%05d.h5`. |
 | `s3x_frame_end` | int | `1` | Last SOLEDGE3X plasma frame to load. The frames from `s3x_frame_start` to `s3x_frame_end` are loaded, which must be at least two, since the background is interpolated in time between frames. |
 | `s3x_chi_absorb` | string | `"on"` | SOLEDGE3X marks the cells inside the wall with chi = 1 (its penalization mask). With `"on"`, a particle that ends a time step in a cell with chi = 1 is absorbed, as if it hit the wall. With `"off"`, particles move through the wall cells, which hold SOLEDGE3X's penalized plasma. Valid values: `"on"`, `"off"`. |
+
+## HERMES
+
+Used with `bkg_source = "hermes"`. The background is read from a
+single-null hypnotoad grid and the run's snapshots, and split into 6
+zones: 1 inner PFR, 2 core, 3 outer PFR, 4 inner leg, 5 main SOL and
+6 outer leg. In every zone, x and y are the grid's global cell indices
+(x counting the 2 guard cells on each side, so the separatrix is at
+x = `ixseps1`) and z is the toroidal angle in radians. The normalization
+must be the run's: for JAX-Hermes3 it's in the case's input JSON
+(`pars.norm`, `average_atomic_mass`, `zperiod`). See the
+[HERMES Coupling Plan](developer/hermes-coupling.md) for what isn't
+included yet.
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `hermes_format` | string | `"jax"` | Output format of the HERMES run: `"jax"` for JAX-Hermes3 (one `.npz` snapshot per time) or `"bout"` for BOUT++ Hermes-3 dump files, which isn't implemented yet. Valid values: `"jax"`, `"bout"`. |
+| `hermes_grid_file` | string | `"undefined"` | Full path to the run's hypnotoad grid file (netCDF). Must be set. |
+| `hermes_snap_dir` | string | `"undefined"` | Full path to the directory with the snapshots (`snap*.npz` for JAX-Hermes3). Must be set. |
+| `hermes_snap_start` | int | `0` | First snapshot to load, as an index (from 0) into the snapshots in `hermes_snap_dir` sorted by name, which for JAX-Hermes3 is time order. |
+| `hermes_snap_end` | int | `1` | Last snapshot to load (inclusive), as an index like `hermes_snap_start`. Negative values count from the end: -1 is the last snapshot. At least two snapshots must be loaded, since the background is interpolated in time between them. |
+| `hermes_snap_stride` | int | `1` | Load every `hermes_snap_stride`-th snapshot from `hermes_snap_start` to `hermes_snap_end`. Each loaded snapshot holds many 3D fields, so this keeps long time windows within memory. |
+| `hermes_nnorm` | float | `1e19` | Density (m^-3) the run is normalized by (Nnorm). |
+| `hermes_tnorm` | float | `100.0` | Temperature (eV) the run is normalized by (Tnorm). Potentials are in units of Tnorm too, and velocities in units of sqrt(e Tnorm / m_p). |
+| `hermes_bnorm` | float | `1.0` | Magnetic field (T) the run is normalized by (Bnorm). Times are in units of m_p / (e Bnorm). |
+| `hermes_ion_mass_amu` | float | `2.0` | Mass number (AA) of the main ions. The parallel flow is NVi / (AA Ne), and this is also the ion mass the impurities collide with. |
+| `hermes_zperiod` | int | `1` | The run covers 1 / `hermes_zperiod` of the torus in the toroidal direction (zperiod in the HERMES input). |
 
 ## Geometry and boundaries
 

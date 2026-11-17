@@ -484,6 +484,30 @@ namespace SaveResults
 		save_string(input_group, opts.s3x_chi_absorb(), "s3x_chi_absorb", dim_str,
 			"absorb particles inside the SOLEDGE3X wall option");
 
+		// Options related to reading in HERMES runs
+		save_string(input_group, opts.hermes_format(), "hermes_format", dim_str,
+			"HERMES output format");
+		save_string(input_group, opts.hermes_grid_file(), "hermes_grid_file", dim_str,
+			"HERMES hypnotoad grid file");
+		save_string(input_group, opts.hermes_snap_dir(), "hermes_snap_dir", dim_str,
+			"directory containing HERMES snapshots");
+		save_scalar(input_group, opts.hermes_snap_start(), "hermes_snap_start", dim_scalar,
+			"first HERMES snapshot to load", "");
+		save_scalar(input_group, opts.hermes_snap_end(), "hermes_snap_end", dim_scalar,
+			"last HERMES snapshot to load", "");
+		save_scalar(input_group, opts.hermes_snap_stride(), "hermes_snap_stride", dim_scalar,
+			"HERMES snapshot stride", "");
+		save_scalar(input_group, opts.hermes_nnorm(), "hermes_nnorm", dim_scalar,
+			"HERMES density normalization", "(m-3)");
+		save_scalar(input_group, opts.hermes_tnorm(), "hermes_tnorm", dim_scalar,
+			"HERMES temperature normalization", "(eV)");
+		save_scalar(input_group, opts.hermes_bnorm(), "hermes_bnorm", dim_scalar,
+			"HERMES magnetic field normalization", "(T)");
+		save_scalar(input_group, opts.hermes_ion_mass_amu(), "hermes_ion_mass_amu", dim_scalar,
+			"HERMES main ion mass number", "(amu)");
+		save_scalar(input_group, opts.hermes_zperiod(), "hermes_zperiod", dim_scalar,
+			"HERMES toroidal periodicity", "");
+
 		// Sputtering
 		save_string(input_group, opts.imp_source_opt(), "imp_source_opt",
 			dim_str, "where impurities come from option");

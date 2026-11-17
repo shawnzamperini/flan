@@ -79,6 +79,7 @@ namespace Options
 		set_max_zbound_type(m_max_zbound_type);
 		set_calc_grad_elec(m_calc_grad_elec);
 		set_s3x_chi_absorb(m_s3x_chi_absorb);
+		set_hermes_format(m_hermes_format);
 		set_imp_source_opt(m_imp_source_opt);
 		set_sput_flux_opt(m_sput_flux_opt);
 		set_sput_bohm_floor(m_sput_bohm_floor);
@@ -151,20 +152,21 @@ namespace Options
 	*
 	* Source of the background plasma: the slab background (a box of
 	* plasma in simple fields, set entirely by the slab_* options), a
-	* Gkeyll simulation or a SOLEDGE3X simulation.
+	* Gkeyll simulation, a SOLEDGE3X simulation or a HERMES (Hermes-3 or
+	* JAX-Hermes3) simulation.
 	*
-	* Valid values are "slab", "gkeyll" and "soledge3x". An invalid value
-	* prints an error and leaves the option unchanged. Also sets the
-	* control integer returned by bkg_source_int() to 0 for "slab", 1 for
-	* "gkeyll", 2 for "soledge3x". An invalid value leaves the control
-	* integer unchanged.
+	* Valid values are "slab", "gkeyll", "soledge3x" and "hermes". An
+	* invalid value prints an error and leaves the option unchanged. Also
+	* sets the control integer returned by bkg_source_int() to 0 for
+	* "slab", 1 for "gkeyll", 2 for "soledge3x", 3 for "hermes". An invalid
+	* value leaves the control integer unchanged.
 	*
 	* @param bkg_source New value of the bkg_source option.
 	*/
 	void Options::set_bkg_source(std::string bkg_source) 
 	{
 		if (check_input<std::string>("bkg_source", bkg_source,
-			{"slab", "gkeyll", "soledge3x"}))
+			{"slab", "gkeyll", "soledge3x", "hermes"}))
 		{
 			m_bkg_source = bkg_source;
 		}
@@ -172,6 +174,7 @@ namespace Options
 		// Assign control integers
 		if (bkg_source == "gkeyll") m_bkg_source_int = 1;
 		else if (bkg_source == "soledge3x") m_bkg_source_int = 2;
+		else if (bkg_source == "hermes") m_bkg_source_int = 3;
 		else if (bkg_source == "slab") m_bkg_source_int = 0;
 	}
 
@@ -636,6 +639,135 @@ namespace Options
 		if (s3x_chi_absorb == "off") m_s3x_chi_absorb_int = 0;
 		else if (s3x_chi_absorb == "on") m_s3x_chi_absorb_int = 1;
 	}
+
+	/**
+	* Sets the hermes_format option.
+	*
+	* Output format of the HERMES run: "jax" for JAX-Hermes3 (a hypnotoad grid
+	* plus one .npz snapshot per time) or "bout" for BOUT++ Hermes-3 dump
+	* files (not implemented yet). Also sets the control integer returned by
+	* hermes_format_int() to 0 for "jax", 1 for "bout".
+	*
+	* @param hermes_format New value of the hermes_format option.
+	*/
+	void Options::set_hermes_format(std::string hermes_format)
+	{
+		if (check_input<std::string>("hermes_format", hermes_format,
+			{"jax", "bout"}))
+		{
+			m_hermes_format = hermes_format;
+		}
+
+		// Assign control integers
+		if (hermes_format == "jax") m_hermes_format_int = 0;
+		else if (hermes_format == "bout") m_hermes_format_int = 1;
+	}
+
+	/**
+	* Sets the hermes_grid_file option.
+	*
+	* Path to the hypnotoad grid file (netCDF) of the HERMES run.
+	*
+	* @param hermes_grid_file New value of the hermes_grid_file option.
+	*/
+	void Options::set_hermes_grid_file(std::string hermes_grid_file)
+		{m_hermes_grid_file = hermes_grid_file;}
+
+	/**
+	* Sets the hermes_snap_dir option.
+	*
+	* Directory with the HERMES snapshots (snap*.npz for JAX-Hermes3).
+	*
+	* @param hermes_snap_dir New value of the hermes_snap_dir option.
+	*/
+	void Options::set_hermes_snap_dir(std::string hermes_snap_dir)
+		{m_hermes_snap_dir = hermes_snap_dir;}
+
+	/**
+	* Sets the hermes_snap_start option.
+	*
+	* First snapshot to load, as an index into the snapshots in
+	* hermes_snap_dir sorted by name (time), from 0.
+	*
+	* @param hermes_snap_start New value of the hermes_snap_start option.
+	*/
+	void Options::set_hermes_snap_start(int hermes_snap_start)
+		{m_hermes_snap_start = hermes_snap_start;}
+
+	/**
+	* Sets the hermes_snap_end option.
+	*
+	* Last snapshot to load (inclusive), as an index like hermes_snap_start.
+	* Negative counts from the end (-1 is the last).
+	*
+	* @param hermes_snap_end New value of the hermes_snap_end option.
+	*/
+	void Options::set_hermes_snap_end(int hermes_snap_end)
+		{m_hermes_snap_end = hermes_snap_end;}
+
+	/**
+	* Sets the hermes_snap_stride option.
+	*
+	* Load every hermes_snap_stride-th snapshot from hermes_snap_start to
+	* hermes_snap_end.
+	*
+	* @param hermes_snap_stride New value of the hermes_snap_stride option.
+	*/
+	void Options::set_hermes_snap_stride(int hermes_snap_stride)
+		{m_hermes_snap_stride = hermes_snap_stride;}
+
+	/**
+	* Sets the hermes_nnorm option.
+	*
+	* Density (m^-3) the HERMES output is normalized by (Nnorm).
+	*
+	* @param hermes_nnorm New value of the hermes_nnorm option.
+	*/
+	void Options::set_hermes_nnorm(double hermes_nnorm)
+		{m_hermes_nnorm = hermes_nnorm;}
+
+	/**
+	* Sets the hermes_tnorm option.
+	*
+	* Temperature (eV) the HERMES output is normalized by (Tnorm).
+	*
+	* @param hermes_tnorm New value of the hermes_tnorm option.
+	*/
+	void Options::set_hermes_tnorm(double hermes_tnorm)
+		{m_hermes_tnorm = hermes_tnorm;}
+
+	/**
+	* Sets the hermes_bnorm option.
+	*
+	* Magnetic field (T) the HERMES output is normalized by (Bnorm), which
+	* sets the time unit 1 / Omega_ci = m_p / (e Bnorm).
+	*
+	* @param hermes_bnorm New value of the hermes_bnorm option.
+	*/
+	void Options::set_hermes_bnorm(double hermes_bnorm)
+		{m_hermes_bnorm = hermes_bnorm;}
+
+	/**
+	* Sets the hermes_ion_mass_amu option.
+	*
+	* Mass number (AA) of the HERMES main ions, used to turn NVi into the
+	* parallel flow and as the background ion mass.
+	*
+	* @param hermes_ion_mass_amu New value of the hermes_ion_mass_amu option.
+	*/
+	void Options::set_hermes_ion_mass_amu(double hermes_ion_mass_amu)
+		{m_hermes_ion_mass_amu = hermes_ion_mass_amu;}
+
+	/**
+	* Sets the hermes_zperiod option.
+	*
+	* The HERMES domain covers 1 / hermes_zperiod of the torus (zperiod in the
+	* HERMES input).
+	*
+	* @param hermes_zperiod New value of the hermes_zperiod option.
+	*/
+	void Options::set_hermes_zperiod(int hermes_zperiod)
+		{m_hermes_zperiod = hermes_zperiod;}
 
 	/**
 	* Sets the imp_source_opt option.
@@ -1993,6 +2125,124 @@ namespace Options
 		{return m_s3x_chi_absorb;}
 
 	/**
+	* Returns the hermes_format option.
+	*
+	* Output format of the HERMES run: "jax" for JAX-Hermes3 (a hypnotoad grid
+	* plus one .npz snapshot per time) or "bout" for BOUT++ Hermes-3 dump
+	* files (not implemented yet).
+	*
+	* @return Value of the hermes_format option.
+	*/
+	const std::string& Options::hermes_format() const
+		{return m_hermes_format;}
+
+	/**
+	* Returns the hermes_grid_file option.
+	*
+	* Path to the hypnotoad grid file (netCDF) of the HERMES run.
+	*
+	* @return Value of the hermes_grid_file option.
+	*/
+	const std::string& Options::hermes_grid_file() const
+		{return m_hermes_grid_file;}
+
+	/**
+	* Returns the hermes_snap_dir option.
+	*
+	* Directory with the HERMES snapshots (snap*.npz for JAX-Hermes3).
+	*
+	* @return Value of the hermes_snap_dir option.
+	*/
+	const std::string& Options::hermes_snap_dir() const
+		{return m_hermes_snap_dir;}
+
+	/**
+	* Returns the hermes_snap_start option.
+	*
+	* First snapshot to load, as an index into the snapshots in
+	* hermes_snap_dir sorted by name (time), from 0.
+	*
+	* @return Value of the hermes_snap_start option.
+	*/
+	int Options::hermes_snap_start() const
+		{return m_hermes_snap_start;}
+
+	/**
+	* Returns the hermes_snap_end option.
+	*
+	* Last snapshot to load (inclusive), as an index like hermes_snap_start.
+	* Negative counts from the end (-1 is the last).
+	*
+	* @return Value of the hermes_snap_end option.
+	*/
+	int Options::hermes_snap_end() const
+		{return m_hermes_snap_end;}
+
+	/**
+	* Returns the hermes_snap_stride option.
+	*
+	* Load every hermes_snap_stride-th snapshot from hermes_snap_start to
+	* hermes_snap_end.
+	*
+	* @return Value of the hermes_snap_stride option.
+	*/
+	int Options::hermes_snap_stride() const
+		{return m_hermes_snap_stride;}
+
+	/**
+	* Returns the hermes_nnorm option.
+	*
+	* Density (m^-3) the HERMES output is normalized by (Nnorm).
+	*
+	* @return Value of the hermes_nnorm option.
+	*/
+	double Options::hermes_nnorm() const
+		{return m_hermes_nnorm;}
+
+	/**
+	* Returns the hermes_tnorm option.
+	*
+	* Temperature (eV) the HERMES output is normalized by (Tnorm).
+	*
+	* @return Value of the hermes_tnorm option.
+	*/
+	double Options::hermes_tnorm() const
+		{return m_hermes_tnorm;}
+
+	/**
+	* Returns the hermes_bnorm option.
+	*
+	* Magnetic field (T) the HERMES output is normalized by (Bnorm), which
+	* sets the time unit 1 / Omega_ci = m_p / (e Bnorm).
+	*
+	* @return Value of the hermes_bnorm option.
+	*/
+	double Options::hermes_bnorm() const
+		{return m_hermes_bnorm;}
+
+	/**
+	* Returns the hermes_ion_mass_amu option.
+	*
+	* Mass number (AA) of the HERMES main ions, used to turn NVi into the
+	* parallel flow and as the background ion mass.
+	*
+	* @return Value of the hermes_ion_mass_amu option.
+	*/
+	double Options::hermes_ion_mass_amu() const
+		{return m_hermes_ion_mass_amu;}
+
+	/**
+	* Returns the hermes_zperiod option.
+	*
+	* The HERMES domain covers 1 / hermes_zperiod of the torus (zperiod in the
+	* HERMES input).
+	*
+	* @return Value of the hermes_zperiod option.
+	*/
+	int Options::hermes_zperiod() const
+		{return m_hermes_zperiod;}
+
+	/**
 	* @name Sputtering option getters
 	* See the setters for what each option means.
 	*/
@@ -3100,6 +3350,9 @@ namespace Options
 
 	int Options::s3x_chi_absorb_int() const
 		{return get_control_int("s3x_chi_absorb", m_s3x_chi_absorb_int);}
+
+	int Options::hermes_format_int() const
+		{return get_control_int("hermes_format", m_hermes_format_int);}
 
 	int Options::imp_source_opt_int() const
 		{return get_control_int("imp_source_opt", m_imp_source_opt_int);}

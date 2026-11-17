@@ -74,6 +74,16 @@ add_executable(test_read_s3xe_cpu test_read_s3xe_cpu.cpp)
 target_link_libraries(test_read_s3xe_cpu PRIVATE flan gtest_main hdf5)
 add_test(NAME ReadS3XECPUTest COMMAND test_read_s3xe_cpu)
 
+add_executable(test_npz_cpu test_npz_cpu.cpp)
+target_link_libraries(test_npz_cpu PRIVATE flan gtest_main netcdf-cxx4
+	netcdf)
+add_test(NAME NpzCPUTest COMMAND test_npz_cpu)
+
+add_executable(test_read_hermes_cpu test_read_hermes_cpu.cpp)
+target_link_libraries(test_read_hermes_cpu PRIVATE flan gtest_main
+	netcdf-cxx4 netcdf)
+add_test(NAME ReadHermesCPUTest COMMAND test_read_hermes_cpu)
+
 add_executable(test_axisym_mesh_cpu test_axisym_mesh_cpu.cpp)
 target_link_libraries(test_axisym_mesh_cpu PRIVATE flan gtest_main)
 add_test(NAME AxisymMeshCPUTest COMMAND test_axisym_mesh_cpu)
