@@ -209,6 +209,94 @@ namespace Boundary
 
 
 	/**
+	* Returns the twist-shift y offset, Delta y(x), for a particle on a
+	* closed field line that wraps across the z boundary.
+	*
+	* This is a hook for a future twist-shift implementation and currently
+	* always returns 0, so lcfs_bc does a plain periodic wrap in z. With a
+	* twist-shift, a closed field line leaving z_max re-enters at z_min at
+	* a different y, so Delta y(x) should match the shift Gkeyll used for
+	* the background (e.g., tabulated on the x grid from a user-supplied
+	* function and linearly interpolated here). The sign convention must
+	* also match Gkeyll's; see lcfs_bc for how the shift is applied.
+	*
+	* @param x Particle's x coordinate.
+	* @return Shift in y applied when wrapping from z_max to z_min (the
+	*         opposite sign is applied from z_min to z_max).
+	*/
+	double twist_shift_dy([[maybe_unused]] double x)
+	{
+		// TODO: Implement twist-shift. Returning 0 gives a plain periodic
+		// boundary in z.
+		return 0.0;
+	}
+
+	/**
+	* Applies a last closed flux surface (LCFS) boundary condition at one
+	* z boundary.
+	*
+	* Inside the LCFS (x < lcfs_x) field lines are closed, so the boundary
+	* is periodic: a particle past this z boundary is wrapped to the other
+	* side, and its y is shifted by y_shift (the twist-shift) and wrapped
+	* periodically in y. Outside the LCFS (x >= lcfs_x, the SOL) field
+	* lines end on a wall, so the boundary is absorbing, including the z
+	* buffer. A particle exactly at lcfs_x counts as SOL.
+	*
+	* ASSUMPTION: x increases outward (x < lcfs_x is the core side). This
+	* is true for the geometries currently used, but may not always be.
+	* If x ever increases inward, the core/SOL test here must be flipped.
+	*
+	* Only the side given by max_bound is checked. Crossing z_max adds
+	* y_shift to y, and crossing z_min subtracts it, so a particle that
+	* goes out and back returns to its original field line. The periodic
+	* wrap in z uses no buffer, the same as periodic_bc.
+	*
+	* @param[in,out] y Particle's y coordinate. Only changed by the
+	*        twist-shift on the core side.
+	* @param[in,out] z Particle's z coordinate. Wrapped on the core side.
+	* @param x Particle's x coordinate.
+	* @param lcfs_x x coordinate of the LCFS.
+	* @param y_min Minimum of y.
+	* @param y_max Maximum of y.
+	* @param z_min Minimum of z.
+	* @param z_max Maximum of z.
+	* @param z_buffer Distance the absorbing (SOL) z boundary is moved
+	*        inward.
+	* @param y_shift Twist-shift y offset, from twist_shift_dy. 0 gives a
+	*        plain periodic boundary.
+	* @param max_bound If true, check the z_max side. Otherwise check the
+	*        z_min side.
+	* @return 1 if the particle was absorbed (dead), else 0.
+	*/
+	int lcfs_bc(double& y, double& z, double x, double lcfs_x,
+		double y_min, double y_max, double z_min, double z_max,
+		double z_buffer, double y_shift, bool max_bound)
+	{
+		// Core side (closed field lines). Assumes x increases outward, see
+		// above.
+		if (x < lcfs_x)
+		{
+			const bool crossed {max_bound ? z > z_max : z < z_min};
+			if (crossed)
+			{
+				const double L {z_max - z_min};
+				z = max_bound ? z - L : z + L;
+
+				// Twist-shift. y is wrapped since the shift can push it
+				// out of the domain (y was already checked this step). With
+				// y_shift = 0 this leaves an in-domain y unchanged.
+				const double y_new {max_bound ? y + y_shift : y - y_shift};
+				y = periodic_bc(y_new, y_min, y_max);
+			}
+			return 0;
+		}
+
+		// SOL side (open field lines): absorbing
+		return absorbing_bc(z, max_bound ? z_max : z_min, max_bound,
+			z_buffer);
+	}
+
+	/**
 	* Puts a particle that hit a core face back in on a core face.
 	*
 	* The particle is put back on a core face of the same kind as the one
@@ -292,6 +380,9 @@ namespace Boundary
 	*   imp_*bound_buffer of that dimension. A dead particle skips the
 	*   remaining checks. The two are counted separately in fates.
 	* - face_core: the particle is put back on a core face with core_face.
+	* - face_lcfs (z faces of a single-zone background only): lcfs_bc,
+	*   periodic in z (with the twist-shift in y) for particles inside
+	*   lcfs_x and absorbing, with imp_zbound_buffer, outside it.
 	* - The zone itself (periodic): periodic_bc.
 	* - Another zone: if the particle is past the face, it moves into that
 	*   zone. Its coordinate normal to the face is shifted from this zone's
@@ -444,6 +535,21 @@ namespace Boundary
 				{
 					local.core += core_face(pos, zone, face, core_zones[f],
 						zones, buffers, rng);
+				}
+
+				// LCFS: periodic inside lcfs_x, absorbing outside. Only z
+				// faces can be lcfs (checked when the zones are made), so
+				// a = 2 here and lcfs_bc gets y and z.
+				else if (code == Zones::face_lcfs)
+				{
+					state = lcfs_bc(pos[1], pos[2], pos[0], opts.lcfs_x(),
+						zones.get_min(zone, 1), zones.get_max(zone, 1), lo,
+						hi, buffers[a], twist_shift_dy(pos[0]), max_bound);
+					if (state)
+					{
+						++local.absorbed;
+						break;
+					}
 				}
 
 				// Periodic

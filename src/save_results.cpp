@@ -1095,8 +1095,8 @@ namespace SaveResults
 		faces_var.putVar(faces.data());
 		faces_var.putAtt("description", "what is across each face (rows "
 			"xmin, xmax, ymin, ymax, zmin, zmax) of each zone: a zone number "
-			"from 1 (the zone itself is periodic), -1 absorbing, -2 core or -4 "
-			"wall");
+			"from 1 (the zone itself is periodic), -1 absorbing, -2 core, -4 "
+			"wall or -5 lcfs (periodic inside lcfs_x, absorbing outside)");
 
 		// Geometry arrays at the cell centers
 		const std::vector<ZoneVar> geometry {

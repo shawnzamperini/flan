@@ -20,9 +20,10 @@ Cite [this PPCF publication](https://iopscience.iop.org/article/10.1088/1361-658
 
 ## Upcoming Changes
 
-
-- Restructure impurity transport routines to use SoA for efficient memory and GPU implementation (ready for merge to main)
-- Couple to CGYRO and/or SOLEDGE3X (starting late 2026)
+- Sputtering and prompt redeposition model (in construction on soledge3x branch)
+- Couple to SOLEDGE3X (done, not merged to main yet)
+- Couple to HERMES (not started)
+- ~~Restructure impurity transport routines to use SoA for efficient memory and GPU implementation (ready for merge to main)~~ Merged to main 10/20/26
 - ~~Incorporate MPI to spread computation across multiple nodes~~ Merged to main 6/3/26
 - ~~Add time profiling~~ Merged to main 7/31/25
 - ~~Upgrade to Nanbu collision model~~ Merged to main 7/23/25

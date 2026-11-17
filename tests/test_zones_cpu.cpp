@@ -116,8 +116,9 @@ TEST(ZonesCPU, SingleZoneFromBoundTypes)
 	EXPECT_EQ(Zones::face_from_bound_type(0, 0), Zones::face_absorbing);
 	EXPECT_EQ(Zones::face_from_bound_type(1, 0), 0);
 	EXPECT_EQ(Zones::face_from_bound_type(2, 0), Zones::face_core);
-	EXPECT_EXIT(Zones::face_from_bound_type(3, 0),
-		testing::ExitedWithCode(EXIT_FAILURE), "Bound type 3");
+	EXPECT_EQ(Zones::face_from_bound_type(3, 0), Zones::face_lcfs);
+	EXPECT_EXIT(Zones::face_from_bound_type(4, 0),
+		testing::ExitedWithCode(EXIT_FAILURE), "Bound type 4");
 
 	auto [x, gx] = uniform(10, -0.1, 0.1);
 	auto [y, gy] = uniform(20, 0.0, 1.0);
@@ -138,6 +139,14 @@ TEST(ZonesCPU, SingleZoneFromBoundTypes)
 	zones.validate();
 	EXPECT_EQ(zones.get_core_zones(), (std::vector<int> {0}));
 	EXPECT_DOUBLE_EQ(zones.get_z_min(0), -1.0);
+
+	// lcfs faces are allowed in z only
+	zones.set_face(0, Zones::zmin, Zones::face_from_bound_type(3, 0));
+	zones.set_face(0, Zones::zmax, Zones::face_from_bound_type(3, 0));
+	zones.validate();
+	zones.set_face(0, Zones::ymin, Zones::face_lcfs);
+	EXPECT_EXIT(zones.validate(), testing::ExitedWithCode(EXIT_FAILURE),
+		"only z faces");
 }
 
 // Each kind of inconsistency stops the run

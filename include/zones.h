@@ -48,6 +48,14 @@ namespace Zones
 	*/
 	inline constexpr int face_wall {-4};
 
+	/**
+	* Face code for a z face of a single-zone (Gkeyll) background that is a
+	* last closed flux surface boundary (bound type "lcfs"): periodic for
+	* particles inside lcfs_x (closed field lines) and absorbing outside it
+	* (see Boundary::lcfs_bc). Only z faces can have it.
+	*/
+	inline constexpr int face_lcfs {-5};
+
 	/// A cell of a zone. i, j and k may be ghost cell indices.
 	struct Cell
 	{

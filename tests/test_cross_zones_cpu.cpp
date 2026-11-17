@@ -574,6 +574,87 @@ TEST(CrossZonesCPU, SingleZoneMatchesOldBounds)
 	omp_set_num_threads(threads);
 }
 
+// An lcfs z boundary on a single zone (from the bound type options) does
+// exactly what lcfs_bc does on the zmin side and then the zmax side:
+// particles inside lcfs_x wrap around in z, those outside are absorbed,
+// with the z buffer. x and y are periodic here, so only z can change.
+TEST(CrossZonesCPU, SingleZoneLcfsMatchesLcfsBC)
+{
+	const std::array<double, 3> lo {-0.1, 0.0, -1.0};
+	const std::array<double, 3> hi {0.1, 2.0, 1.0};
+	constexpr double lcfs_x {0.02};
+	constexpr double z_buf {0.03};
+	const int n {400};
+
+	Options::Options opts {};
+	opts.set_min_xbound_type("periodic");
+	opts.set_max_xbound_type("periodic");
+	opts.set_min_ybound_type("periodic");
+	opts.set_max_ybound_type("periodic");
+	opts.set_min_zbound_type("lcfs");
+	opts.set_max_zbound_type("lcfs");
+	opts.set_lcfs_x(lcfs_x);
+	opts.set_imp_zbound_buffer(z_buf);
+
+	auto [x, gx] = uniform(10, lo[0], hi[0]);
+	auto [y, gy] = uniform(8, lo[1], hi[1]);
+	auto [z, gz] = uniform(6, lo[2], hi[2]);
+	auto zones {Background::single_zone(x, y, z, gx, gy, gz, opts)};
+	EXPECT_EQ(zones.get_face(0, Zones::zmin), Zones::face_lcfs);
+	EXPECT_EQ(zones.get_face(0, Zones::zmax), Zones::face_lcfs);
+	const auto bkg {make_background(std::move(zones))};
+
+	// Inside the domain in x and y, from 30% below to 30% above it in z
+	pcg32 pos_rng(11, 1);
+	Slots::Slots slots(n);
+	std::vector<std::array<double, 3>> want(n);
+	for (int i {}; i < n; ++i)
+	{
+		for (int d {}; d < 3; ++d)
+		{
+			const double L {hi[d] - lo[d]};
+			want[i][d] = d < 2 ? lo[d] + L * pos_rng.next_double()
+				: lo[d] - 0.3 * L + 1.6 * L * pos_rng.next_double();
+		}
+		slots.set_t(i, 0.5);
+		slots.set_x(i, want[i][0]);
+		slots.set_y(i, want[i][1]);
+		slots.set_z(i, want[i][2]);
+	}
+
+	auto rngs {make_rngs()};
+	Boundary::Fates fates {};
+	Boundary::check_bounds_cpu(slots, bkg, opts, rngs, fates);
+
+	int absorbed {};
+	int wrapped {};
+	for (int i {}; i < n; ++i)
+	{
+		auto [px, py, pz] = want[i];
+		int state {Boundary::lcfs_bc(py, pz, px, lcfs_x, lo[1], hi[1],
+			lo[2], hi[2], z_buf, 0.0, false)};
+		if (!state)
+		{
+			state = Boundary::lcfs_bc(py, pz, px, lcfs_x, lo[1], hi[1],
+				lo[2], hi[2], z_buf, 0.0, true);
+		}
+		absorbed += state;
+		if (pz != want[i][2]) ++wrapped;
+
+		ASSERT_EQ(slots.state()[i], state) << "particle " << i;
+		if (state) continue;
+		EXPECT_EQ(slots.x()[i], px) << i;
+		EXPECT_EQ(slots.y()[i], py) << i;
+		EXPECT_EQ(slots.z()[i], pz) << i;
+	}
+
+	// Both kinds of particle were tried, and absorption at an lcfs face is
+	// counted as absorbed
+	EXPECT_GT(absorbed, 0);
+	EXPECT_GT(wrapped, 0);
+	EXPECT_EQ(fates.absorbed, absorbed);
+}
+
 // What happens to particles at the boundaries is counted: crossings into
 // other zones (two for the corner), absorption at absorbing and wall
 // faces, the core and the end of the background time, and runaways

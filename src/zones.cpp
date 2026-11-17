@@ -85,7 +85,7 @@ namespace Zones
 	* @param zone Zone index.
 	* @param face Face to set.
 	* @param code Zone across the face (>= 0, the zone itself for
-	*        periodic), face_absorbing, face_core or face_wall.
+	*        periodic), face_absorbing, face_core, face_wall or face_lcfs.
 	*/
 	void Zones::set_face(const int zone, const Face face, const int code)
 	{
@@ -99,7 +99,7 @@ namespace Zones
 	* @param zone Zone index.
 	* @param face Face to get.
 	* @return Zone across the face (>= 0, the zone itself for periodic),
-	*         face_absorbing, face_core or face_wall.
+	*         face_absorbing, face_core, face_wall or face_lcfs.
 	*/
 	int Zones::get_face(const int zone, const Face face) const
 	{
@@ -470,6 +470,12 @@ namespace Zones
 				const std::string fname {zname + " " + face_names[face]};
 				if (code == face_absorbing || code == face_core
 					|| code == face_wall) continue;
+				if (code == face_lcfs)
+				{
+					if (face == zmin || face == zmax) continue;
+					Errors::fatal_error(fname + " is an lcfs face, which "
+						"only z faces can be.");
+				}
 				if (code < 0 || code >= get_nzones())
 				{
 					Errors::fatal_error(fname + " has invalid code "
@@ -775,8 +781,8 @@ namespace Zones
 	/**
 	* Converts a Gkeyll-style *bound_type option into a face code.
 	*
-	* The bound types are 0 = absorbing, 1 = periodic and 2 = core. A
-	* periodic face connects the zone to itself. Any other value stops the
+	* The bound types are 0 = absorbing, 1 = periodic, 2 = core and 3 =
+	* lcfs (z faces only). A periodic face connects the zone to itself. Any other value stops the
 	* run with Errors::fatal_error.
 	*
 	* @param bound_type Value of a *bound_type_int option.
@@ -790,6 +796,7 @@ namespace Zones
 			case 0: return face_absorbing;
 			case 1: return zone;
 			case 2: return face_core;
+			case 3: return face_lcfs;
 		}
 		Errors::fatal_error("Bound type " + std::to_string(bound_type)
 			+ " has no matching face code.");
