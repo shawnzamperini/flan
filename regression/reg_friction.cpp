@@ -25,6 +25,14 @@
 *   z10_nosub  W10+, sub-cycling off: shows what sub-cycling corrects
 *   z5         W5+, to check the Z^2 scaling of the friction
 *   z10_gpu    as z10, on the GPU
+*   c4         C4+, starting at the ion temperature: the friction rate
+*              that goes with reg_thermal_force c4_ions (same plasma,
+*              time step and sub-cycling), where it is used to get the
+*              thermal force on a light impurity
+*
+* A light impurity at the ion temperature is not slow compared with the
+* ions, so its fluid rate is the one between two Maxwellians: the slow
+* rate times (1 + m_i T_z / (m_z T_i))^(-3/2), about 0.79 for C in D.
 *
 * The output is reg_friction_<variant>.nc in the working directory.
 */
@@ -36,18 +44,37 @@
 #include "mpi.h"
 
 /**
+* The impurity of a variant.
+*/
+struct Impurity
+{
+	int atom_num {};		///< Atomic number
+	double mass_amu {};		///< Mass (amu)
+	double temp_start {};	///< Starting temperature (eV); 0 = at rest
+};
+
+/// Tungsten, starting at rest
+constexpr Impurity tungsten {74, 183.84, 0.0};
+
+/// Carbon, starting at the ion temperature of the plasma (10 eV) so that
+/// its velocity spread stays the same through the run
+constexpr Impurity carbon {6, 12.011, 10.0};
+
+/**
 * Inputs of one variant of the case.
 *
 * @param variant Name of the variant, used in the case name.
-* @param charge Charge state of the tungsten.
+* @param imp The impurity.
+* @param charge Charge state of the impurity.
 * @param tmax Length of the run (s), several slowing-down times.
 * @param dt Time step (s).
 * @param subcycle Whether the collisions are sub-cycled.
 * @param gpu Whether to run on the GPU.
 * @return The inputs.
 */
-Inputs create_inputs(const std::string& variant, const int charge,
-	const double tmax, const double dt, const bool subcycle, const bool gpu)
+Inputs create_inputs(const std::string& variant, const Impurity& imp,
+	const int charge, const double tmax, const double dt,
+	const bool subcycle, const bool gpu)
 {
 	Inputs inpts;
 
@@ -78,10 +105,11 @@ Inputs create_inputs(const std::string& variant, const int charge,
 	inpts["min_zbound_type"] = "periodic";
 	inpts["max_zbound_type"] = "periodic";
 
-	// Tungsten, all starting at t = 0 in the middle of the box, at rest
+	// Impurities, all starting at t = 0 in the middle of the box with no
+	// mean velocity
 	inpts["imp_num"] = 20000;
-	inpts["imp_atom_num"] = 74;
-	inpts["imp_mass_amu"] = 183.84;
+	inpts["imp_atom_num"] = imp.atom_num;
+	inpts["imp_mass_amu"] = imp.mass_amu;
 	inpts["imp_init_charge"] = charge;
 	inpts["imp_iz_recomb"] = "off";
 	inpts["imp_tstart_opt"] = "single_value";
@@ -93,7 +121,7 @@ Inputs create_inputs(const std::string& variant, const int charge,
 	inpts["imp_zstart_opt"] = "single_value";
 	inpts["imp_zstart_val"] = 0.0;
 	inpts["imp_temp_start_opt"] = "single_value";
-	inpts["imp_temp_start_val"] = 0.0;
+	inpts["imp_temp_start_val"] = imp.temp_start;
 
 	// Time step and collisions. No thermal force: there is no heat flux.
 	inpts["imp_time_step_opt"] = "constant";
@@ -120,19 +148,27 @@ int main(int argc, char* argv[])
 	// 1/24 of a gyration (W10+ gyrates in 1.2 us at 1 T, W5+ in 2.4 us).
 	// They are long for the collisions on purpose: s0, Nanbu's s at the
 	// thermal speed, is about 3 for the ions with W10+, where the model
-	// without sub-cycling gives well under the fluid friction.
+	// without sub-cycling gives well under the fluid friction. C4+ slows
+	// down in about 2.7 us and gyrates in 0.2 us: its step is 1/10 of a
+	// gyration, and its run about 6 slowing-down times.
 	if (variant == "z10")
-		inpts = create_inputs(variant, 10, 40e-6, 5e-8, true, false);
+		inpts = create_inputs(variant, tungsten, 10, 40e-6, 5e-8, true,
+			false);
 	else if (variant == "z10_nosub")
-		inpts = create_inputs(variant, 10, 40e-6, 5e-8, false, false);
+		inpts = create_inputs(variant, tungsten, 10, 40e-6, 5e-8, false,
+			false);
 	else if (variant == "z5")
-		inpts = create_inputs(variant, 5, 150e-6, 1e-7, true, false);
+		inpts = create_inputs(variant, tungsten, 5, 150e-6, 1e-7, true,
+			false);
 	else if (variant == "z10_gpu")
-		inpts = create_inputs(variant, 10, 40e-6, 5e-8, true, true);
+		inpts = create_inputs(variant, tungsten, 10, 40e-6, 5e-8, true,
+			true);
+	else if (variant == "c4")
+		inpts = create_inputs(variant, carbon, 4, 16e-6, 2e-8, true, false);
 	else
 	{
 		std::cerr << "Usage: reg_friction <variant>, with <variant> one of "
-			"z10, z10_nosub, z5, z10_gpu\n";
+			"z10, z10_nosub, z5, z10_gpu, c4\n";
 		MPI_Finalize();
 		return 1;
 	}

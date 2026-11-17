@@ -200,7 +200,11 @@ The tests in `tests/test_thermal_force_cpu.cpp` use the slab background
 $x$ and ion and electron heat fluxes along the field with
 $\epsilon = 0.1$ (`slab_heat_flux_i` and `slab_heat_flux_e`). The
 regression case `regression/reg_thermal_force.cpp` checks the drift at
-force balance in a full run.
+force balance in a full run, for tungsten and for carbon (see below).
+`regression/check_collisions.py` also turns each drift into the
+coefficients it corresponds to, $\beta_i = -m_z \nu_s v_\text{drift} /
+(Z^2 \nabla_\parallel T_i)$ and the same for $\alpha_e$, for comparison
+with the fluid values.
 
 - **The kick is the right size.** Tungsten at rest is collided millions
   of times, and its mean change in velocity along the field is compared
@@ -219,6 +223,18 @@ force balance in a full run.
   flux at the speed where friction cancels the thermal force, and that
   speed matches the expected one within the statistical error (2%). Its
   temperature settles at the ions'.
+- **Light impurities.** The skew is fitted for a slow, heavy impurity,
+  so how the force changes with the impurity's mass comes only from the
+  collisions. Carbon (C$^{4+}$ in deuterium, starting at the ion
+  temperature) drifts at the speed set by Stangeby's mass-dependent
+  coefficient,
+  $\beta_i = 3(\mu + 5\sqrt{2}\,Z^2(1.1\mu^{5/2} - 0.35\mu^{3/2}) - 1)
+  / (2.6 - 2\mu + 5.4\mu^2)$ with $\mu = m_z/(m_z + m_i)$, which is
+  about $2.05\,Z^2$ for C in D against $2.65\,Z^2$ in the heavy limit.
+  The friction here is that between two Maxwellians, since carbon at the
+  ion temperature is not slow next to the ions. Measured against Flan's
+  own friction rate, the force is a few percent below Stangeby's value,
+  as for tungsten (see [The time step](#the-time-step)).
 - **Sub-cycling recovers the force.** One time step with $s_0 \approx 3$
   is split into 30 sub-steps, and the kick matches 30 times the exact
   kick of one such sub-step, well above the kick without sub-cycling. A
@@ -325,9 +341,11 @@ What Flan does in each situation:
   force from temperature gradients across the field is not included.
 - **Average force only.** The skew is fitted to give the right mean force
   on a slow, heavy impurity. For lighter impurities, whose thermal speed
-  isn't small next to the background ions', the collisions still include
-  the impurity's own motion, but the result hasn't been checked against
-  the mass-dependent coefficients in the literature.
+  isn't small next to the background ions', the collisions include the
+  impurity's own motion. For carbon in deuterium this reproduces
+  Stangeby's mass-dependent ion coefficient (see [Tests](#tests)); other
+  mass ratios and the electron coefficient for light impurities haven't
+  been checked.
 - **Fitted to a collisional plasma.** The push values are those of a
   fluid closure. Where the plasma is not collisional the heat flux read
   from the background is still used as is, but the shape of the real

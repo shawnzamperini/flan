@@ -14,8 +14,14 @@ Cases (each made by the program of the same name in regression/):
       Tungsten starting at rest in a plasma at rest that carries parallel
       heat fluxes. The fluid result is a drift against the heat flux at
       the speed where friction cancels the thermal force,
-      v_drift = -(2.65 Z^2 grad T_i + 0.71 Z^2 grad T_e) tau_s / m_z,
-      with grad T = q_par / kappa (Braginskii).
+      v_drift = -Z^2 (beta_i grad T_i + 0.71 grad T_e) tau_s / m_z,
+      with grad T = q_par / kappa (Braginskii) and Stangeby's
+      mass-dependent beta_i (2.65 for a heavy impurity).
+
+  Both also have a light-impurity variant (C4+ starting at the ion
+  temperature). Its friction rate is that between two Maxwellians, and
+  the collision model's expectation (check 2) is only worked out for a
+  slow impurity, so a light one is checked against fluid only.
 
 Every number the checks need (density, temperatures, flow, masses, charge,
 time step, sub-cycling settings) is read from the inputs saved in the
@@ -37,6 +43,11 @@ Each variant is checked twice:
      any finite step (see the thermal force page of the docs), by an
      amount that can be calculated. This tighter check catches a change
      in the code that the 10% check would let through.
+
+After the checks, the effective thermal-force coefficients (beta_i,
+alpha_e) that the thermal-force runs correspond to are printed for
+comparison with the fluid and Stangeby values (see thermal_coefficients).
+They are not checked.
 
 Usage:
     python check_collisions.py [directory with the .nc files]
@@ -91,6 +102,10 @@ class Run:
             self.m_e = scalar("gkyl_elec_mass_amu") * AMU  # kg
             self.m_imp = scalar("imp_mass_amu") * AMU      # kg
             self.charge = int(scalar("imp_init_charge"))
+            # Starting temperature (eV): 0 for impurities starting at
+            # rest (the heavy cases), the ion temperature for a light
+            # impurity, which would otherwise heat up during the run
+            self.t_imp = scalar("imp_temp_start_val")
             self.dt = scalar("imp_time_step")              # s
             self.imp_num = int(scalar("imp_num"))
             self.sub_target = scalar("imp_coll_subcycle_target")
@@ -118,6 +133,16 @@ class Run:
     @property
     def subcycled(self):
         return self.sub_cap > 1
+
+    @property
+    def slow(self):
+        """
+        Whether the impurities are slow compared with the background ions:
+        their thermal speed squared is under 5% of the ions'. The
+        collision model's expectations (model_friction_rate, model_drift)
+        are worked out for a slow impurity and are only checked then.
+        """
+        return self.m_i * self.t_imp / (self.m_imp * self.ti) < 0.05
 
     def v_err(self):
         """
@@ -159,11 +184,20 @@ def spitzer_rate(run, m_b, t_b, lnl):
 
         nu_s = (1 + m_z / m_b) (4 / (3 sqrt(pi))) (m_b / (2 T))^(3/2)
                n Z^2 e^4 lnL / (4 pi eps0^2 m_z^2)
+
+    For impurities with a Maxwellian spread at temperature T_z, the rate
+    at which their mean velocity relaxes is that between two Maxwellians:
+    (m_b / 2 T)^(3/2) becomes (2 T / m_b + 2 T_z / m_z)^(-3/2), i.e. the
+    rate above times (1 + m_b T_z / (m_z T))^(-3/2). This matters for a
+    light impurity (about 0.79 for C in D at T_z = T_i); for tungsten
+    starting at rest T_z = 0.
     """
     t_j = t_b * E_CHARGE
+    spread = (1.0 + m_b * run.t_imp / (run.m_imp * t_b))**-1.5
     return ((1.0 + run.m_imp / m_b) * 4.0 / (3.0 * math.sqrt(math.pi))
             * (m_b / (2.0 * t_j))**1.5 * run.ne * run.charge**2
-            * E_CHARGE**4 * lnl / (4.0 * math.pi * EPS0**2 * run.m_imp**2))
+            * E_CHARGE**4 * lnl / (4.0 * math.pi * EPS0**2 * run.m_imp**2)
+            * spread)
 
 
 def fluid_friction_rate(run):
@@ -286,15 +320,22 @@ def grad_t(run, elec):
 def fluid_drift(run):
     """
     Drift (m/s) at which fluid friction cancels the fluid thermal force,
-    -(2.65 Z^2 grad T_i + 0.71 Z^2 grad T_e) / (m_z nu_s). The
-    coefficients are the heavy-impurity ones. Negative: against the heat
-    flux.
+    -Z^2 (beta_i grad T_i + 0.71 grad T_e) / (m_z nu_s), with Stangeby's
+    mass-dependent beta_i (stangeby_beta): 2.61 for W in D, 2.65 in the
+    heavy limit, about 2.05 for C in D. Negative: against the heat flux.
     """
     if not run.thermal_force:
         return 0.0
-    force = run.charge**2 * (ALPHA_I * grad_t(run, False)
-                             + ALPHA_E * grad_t(run, True))
-    return -force / (run.m_imp * fluid_friction_rate(run))
+    return -fluid_thermal_force(run) / (run.m_imp * fluid_friction_rate(run))
+
+
+def fluid_thermal_force(run):
+    """
+    Fluid thermal force (N) along B, Z^2 (beta_i grad T_i + 0.71 grad
+    T_e), whether or not the run has the thermal force on.
+    """
+    return run.charge**2 * (stangeby_beta(run) * grad_t(run, False)
+                            + ALPHA_E * grad_t(run, True))
 
 
 def thermal_factor(s0, push):
@@ -395,6 +436,7 @@ def check_friction(run):
     fluid = fluid_friction_rate(run)
     model = model_friction_rate(run)
     run.rate, run.rate_fluid, run.rate_model = rate, fluid, model
+    run.rate_err = rate_err
 
     # Slowing-down time, in microseconds, against the fluid result (not
     # enforced without sub-cycling) and against the model's expectation
@@ -406,19 +448,27 @@ def check_friction(run):
     checks.append(Check(run, "tau_s vs fluid", tau, 1e6 / fluid,
                         TOL_FLUID * 1e6 / fluid + N_SIGMA * tau_err, "us",
                         enforced=resolved))
-    checks.append(Check(run, "tau_s vs model", tau, 1e6 / model,
-                        TOL_MODEL * 1e6 / model + N_SIGMA * tau_err, "us"))
+    # The model's expectation is for a slow impurity: a light one is
+    # checked against fluid only
+    if run.slow:
+        checks.append(Check(run, "tau_s vs model", tau, 1e6 / model,
+                            TOL_MODEL * 1e6 / model + N_SIGMA * tau_err,
+                            "us"))
+    else:
+        run.rate_model = float("nan")
 
     # Late in the run the impurities move with the flow. Over the last
     # quarter of the run, compare with u (1 - exp(-t / tau_s)) at the
-    # model's rate, since a run that slows down at the right rate should
-    # also end up in the right place (the variant without sub-cycling
-    # hasn't fully caught up with the flow by then).
+    # model's rate (the fluid one for a light impurity), since a run that
+    # slows down at the right rate should also end up in the right place
+    # (the variant without sub-cycling hasn't fully caught up with the
+    # flow by then).
+    ref, tol = (model, TOL_MODEL) if run.slow else (fluid, TOL_FLUID)
     late = run.t[:-1] > 0.75 * run.t[-1]
     v_late = run.v_par[:-1][late].mean()
-    expected = run.flow * (1.0 - np.exp(-model * run.t[:-1][late]).mean())
+    expected = run.flow * (1.0 - np.exp(-ref * run.t[:-1][late]).mean())
     checks.append(Check(run, "final v_par", v_late, expected,
-                        TOL_MODEL * abs(run.flow) + N_SIGMA * run.v_err(),
+                        tol * abs(run.flow) + N_SIGMA * run.v_err(),
                         "m/s"))
 
     # Nothing across the field
@@ -431,7 +481,7 @@ def check_friction(run):
 def check_thermal_force(run):
     checks = []
     fluid = fluid_drift(run)
-    model = model_drift(run)
+    model = model_drift(run) if run.slow else float("nan")
     nu_s = fluid_friction_rate(run)
     run.drift_fluid, run.drift_model, run.rate_fluid = fluid, model, nu_s
 
@@ -452,16 +502,16 @@ def check_thermal_force(run):
 
     # The scale for the tolerances is the fluid drift with both heat
     # fluxes on, also for the variant with the thermal force off
-    scale = abs(fluid) if fluid != 0.0 else abs(
-        run.charge**2 * (ALPHA_I * grad_t(run, False) + ALPHA_E
-                         * grad_t(run, True)) / (run.m_imp * nu_s))
+    scale = abs(fluid_thermal_force(run) / (run.m_imp * nu_s))
     resolved = (not run.thermal_force) or unresolved_share(
-        run, ALPHA_I * grad_t(run, False), ALPHA_E * grad_t(run, True)) < 0.5
+        run, stangeby_beta(run) * grad_t(run, False),
+        ALPHA_E * grad_t(run, True)) < 0.5
     checks.append(Check(run, "drift vs fluid", drift, fluid,
                         TOL_FLUID * scale + N_SIGMA * drift_err, "m/s",
                         enforced=resolved))
-    checks.append(Check(run, "drift vs model", drift, model,
-                        TOL_MODEL * scale + N_SIGMA * drift_err, "m/s"))
+    if run.slow:
+        checks.append(Check(run, "drift vs model", drift, model,
+                            TOL_MODEL * scale + N_SIGMA * drift_err, "m/s"))
 
     # Nothing across the field
     for label, v in (("mean v_Y", run.v_perp1), ("mean v_Z", run.v_perp2)):
@@ -471,10 +521,155 @@ def check_thermal_force(run):
 
 
 # ----------------------------------------------------------------------
+# Effective thermal-force coefficients
+# ----------------------------------------------------------------------
+def stangeby_beta(run):
+    """
+    Stangeby's mass-dependent ion thermal-force coefficient, divided by
+    Z^2 so it compares with Flan's beta_i / Z^2:
+
+        beta_i = 3 (mu + 5 sqrt(2) Z^2 (1.1 mu^(5/2) - 0.35 mu^(3/2)) - 1)
+                 / (2.6 - 2 mu + 5.4 mu^2),   mu = m_z / (m_z + m_i).
+
+    For a heavy impurity (mu -> 1, large Z) it goes to 2.65. It is given
+    for reference: Flan's skew is fitted to the heavy limit.
+    """
+    mu = run.m_imp / (run.m_imp + run.m_i)
+    z2 = run.charge**2
+    beta = 3.0 * (mu + 5.0 * math.sqrt(2.0) * z2
+                  * (1.1 * mu**2.5 - 0.35 * mu**1.5) - 1.0) \
+        / (2.6 - 2.0 * mu + 5.4 * mu**2)
+    return beta / z2
+
+
+def same_plasma(a, b):
+    """
+    Whether two runs have the same plasma, impurity, time step and
+    sub-cycling, so that the slowing-down rate measured in one (a
+    reg_friction run) applies to the other. The flow doesn't matter: the
+    friction depends on the velocity relative to it.
+    """
+    keys = ("ne", "te", "ti", "m_i", "m_e", "m_imp", "charge", "t_imp",
+            "dt", "sub_target", "sub_cap")
+    return all(math.isclose(getattr(a, k), getattr(b, k), rel_tol=1e-6,
+                            abs_tol=1e-12) for k in keys)
+
+
+class Coefficient:
+    """One line of the effective-coefficient table."""
+
+    def __init__(self, run, label, flan_fluid, flan, err, nu_from, model,
+                 fitted, stangeby):
+        self.run, self.label = run, label
+        self.flan_fluid, self.flan, self.err = flan_fluid, flan, err
+        self.nu_from, self.model = nu_from, model
+        self.fitted, self.stangeby = fitted, stangeby
+
+
+def thermal_coefficients(thermal, friction):
+    """
+    Effective thermal-force coefficients of the reg_thermal_force runs:
+    the alpha_e and beta_i of F = Z^2 (beta_i grad T_i + alpha_e grad T_e)
+    that Flan's drift at force balance corresponds to. At force balance
+    the friction m_z nu_s v_drift cancels the thermal force, so
+
+        coefficient = -m_z nu_s v_drift / (Z^2 grad T).
+
+    A run with only the ion heat flux gives beta_i, one with only the
+    electron heat flux alpha_e, and one with both (and equal temperature
+    gradients, as in reg_thermal_force) their sum.
+
+    The friction rate nu_s is taken two ways:
+
+      - the fluid (Spitzer) rate, which gives the coefficient a fluid code
+        would infer from Flan's drift. Nanbu's friction shortfall at a
+        finite step shows up in it.
+      - Flan's own rate: the one measured by a reg_friction run of the
+        same plasma, time step and sub-cycling if there is one, else what
+        the collision model should give (model_friction_rate; the fluid
+        rate for an impurity that isn't slow). This isolates the thermal
+        force itself.
+
+    For comparison, the table also gives what the collision model should
+    give at the run's step (its thermal kick per unit Z^2 grad T; slow
+    impurities only), the heavy-limit value Flan's skew is fitted to, and
+    Stangeby's mass-dependent beta_i, which is the fluid result the
+    drift is checked against.
+
+    grad T is not an input of the slab: it is the gradient that would
+    carry the run's heat flux in a collisional plasma (grad_t), so these
+    are coefficients per unit heat flux, converted with Braginskii's
+    conductivities.
+    """
+    rows = []
+    for run in thermal:
+        if not run.thermal_force:
+            continue
+        g_i, g_e = grad_t(run, False), grad_t(run, True)
+        if g_e == 0.0 and g_i != 0.0:
+            label, grad, fitted, stangeby = ("beta_i", g_i, ALPHA_I,
+                                             stangeby_beta(run))
+        elif g_i == 0.0 and g_e != 0.0:
+            label, grad, fitted, stangeby = ("alpha_e", g_e, ALPHA_E,
+                                             ALPHA_E)
+        elif math.isclose(g_i, g_e, rel_tol=1e-3):
+            label, grad = "beta_i+alpha_e", g_i
+            fitted = ALPHA_I + ALPHA_E
+            stangeby = stangeby_beta(run) + ALPHA_E
+        else:
+            # Unequal gradients: one drift can't separate the two
+            continue
+
+        def coefficient(rate):
+            return -run.m_imp * rate * run.drift / (run.charge**2 * grad)
+
+        matches = [f for f in friction if same_plasma(f, run)]
+        if matches:
+            src = matches[0]
+            nu, nu_err = src.rate, src.rate_err
+            nu_from = src.name.replace("reg_", "")
+        elif run.slow:
+            nu, nu_err, nu_from = model_friction_rate(run), 0.0, "model"
+        else:
+            nu, nu_err, nu_from = fluid_friction_rate(run), 0.0, "fluid"
+        flan = coefficient(nu)
+        err = abs(flan) * math.hypot(run.drift_err / run.drift,
+                                     nu_err / nu)
+        # The model's expectation is for a slow impurity only (nan else)
+        model = -run.m_imp * model_friction_rate(run) * run.drift_model \
+            / (run.charge**2 * grad)
+        rows.append(Coefficient(run, label,
+                                coefficient(fluid_friction_rate(run)), flan,
+                                err, nu_from, model, fitted, stangeby))
+    return rows
+
+
+def print_coefficients(rows):
+    print("Effective thermal-force coefficients, F / (Z^2 grad T). "
+          "Not checked: for comparison.")
+    print("  Flan/fluid nu: with the fluid friction rate.  Flan/Flan nu: "
+          "with Flan's own friction rate (nu from).")
+    print("  model: what the collision model should give at the run's "
+          "step (slow impurities only).")
+    print("  fitted: heavy limit, what the skew is fitted to.  Stangeby: "
+          "his mass-dependent beta_i (+ 0.71).")
+    head = (f"{'run':<30} {'coefficient':<15} {'Flan/fluid nu':>13} "
+            f"{'Flan/Flan nu':>12} {'+-':>6} {'nu from':<18} {'model':>6} "
+            f"{'fitted':>6} {'Stangeby':>8}")
+    print(head)
+    print("-" * len(head))
+    for r in rows:
+        print(f"{r.run.name:<30} {r.label:<15} {r.flan_fluid:13.3f} "
+              f"{r.flan:12.3f} {r.err:6.3f} {r.nu_from:<18} {r.model:6.3f} "
+              f"{r.fitted:6.3f} {r.stangeby:8.3f}")
+
+
+# ----------------------------------------------------------------------
 # Plot
 # ----------------------------------------------------------------------
-COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"]
-MARKERS = ["o", "s", "^", "D", "v", "P"]
+COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300",
+          "#7a5cd6", "#52514e"]
+MARKERS = ["o", "s", "^", "D", "v", "P", "X", "h"]
 
 
 def plot_friction(runs, path):
@@ -562,7 +757,7 @@ def plot_thermal_force(runs, path):
     ax.axvline(5.0, color=muted, lw=0.8, ls=":")
     ax.set_xlabel("Time / fluid slowing-down time")
     ax.set_ylabel("Mean parallel velocity (m/s)")
-    ax.set_title("Thermal force: tungsten pushed against the heat flux\n"
+    ax.set_title("Thermal force: impurities pushed against the heat flux\n"
                  "Markers: Flan.  Dashed: fluid drift at force balance.",
                  loc="left", fontsize=11)
     ax.legend(frameon=False, ncol=2, loc="upper right")
@@ -638,6 +833,10 @@ def main():
 
     print_table(checks)
     print()
+    coefficients = thermal_coefficients(thermal, friction)
+    if coefficients:
+        print_coefficients(coefficients)
+        print()
     for path in plots:
         print(f"Plot: {path}")
     failed = [c for c in checks if c.enforced and not c.ok]

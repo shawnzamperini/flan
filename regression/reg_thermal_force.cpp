@@ -13,8 +13,9 @@
 *
 *   v_drift = -(F_i + F_e) / (m_z / tau_s),
 *
-* with the fluid forces F_i = 2.65 Z^2 grad T_i and F_e = 0.71 Z^2
-* grad T_e, grad T = q_par / kappa from Braginskii's conductivities, and
+* with the fluid forces F_i = beta_i Z^2 grad T_i and F_e = 0.71 Z^2
+* grad T_e, beta_i Stangeby's mass-dependent coefficient (2.61 for W in
+* D, 2.65 in the heavy limit, see below), grad T = q_par / kappa from Braginskii's conductivities, and
 * tau_s the slowing-down time of reg_friction.cpp. Both the forces and the
 * friction go as Z^2, so the drift doesn't depend on the charge.
 * check_collisions.py reads the output, works all this out from the inputs
@@ -39,6 +40,8 @@
 *   z10_nosub  as z10 with sub-cycling off: shows what it corrects
 *   z10_off    as z10 with imp_thermal_force = "off": no drift
 *   z5         W5+: the same drift as z10
+*   c4_ions    C4+ starting at the ion temperature, ion heat flux only:
+*              the thermal force on a light impurity (see below)
 *
 * The output is reg_thermal_force_<variant>.nc in the working directory.
 *
@@ -57,6 +60,19 @@
 *   carry only about a fifth of the thermal force, but z10 is close to
 *   the edge.
 *
+* The light impurity. The heat-flux skew belongs to the background and is
+* fitted so that a slow, heavy impurity gets 2.65 Z^2 grad T_i. A light
+* impurity is not slow compared with the ions, and how the force changes
+* with its mass comes only from the collisions themselves, so c4_ions
+* compares Flan with Stangeby's mass-dependent coefficient,
+*
+*   beta_i = 3 (mu + 5 sqrt(2) Z^2 (1.1 mu^(5/2) - 0.35 mu^(3/2)) - 1)
+*            / (2.6 - 2 mu + 5.4 mu^2),   mu = m_z / (m_z + m_i),
+*
+* about 2.05 Z^2 for C in D, against 2.65 Z^2 in the heavy limit. Its
+* friction rate is that of two Maxwellians, and reg_friction c4 measures
+* it in the same plasma.
+*
 * To check the 0.71 against fluid here, raise imp_coll_subcycle_cap for
 * z10_elec to about 5000 and expect a long run. In the limit of small
 * steps it is checked by the unit test ThermalForce.SmallStepLimit.
@@ -69,10 +85,31 @@
 #include "mpi.h"
 
 /**
+* The impurity of a variant.
+*/
+struct Impurity
+{
+	int atom_num {};		///< Atomic number
+	double mass_amu {};		///< Mass (amu)
+	double temp_start {};	///< Starting temperature (eV); 0 = at rest
+	int num {};				///< Number of impurities followed
+};
+
+/// Tungsten, starting at rest
+constexpr Impurity tungsten {74, 183.84, 0.0, 10000};
+
+/// Carbon, starting at the ion temperature of the plasma (10 eV) so that
+/// its velocity spread stays the same through the run. Its thermal speed
+/// is 4 times tungsten's, so more of them are needed for the same
+/// statistical error of the drift.
+constexpr Impurity carbon {6, 12.011, 10.0, 20000};
+
+/**
 * Inputs of one variant of the case.
 *
 * @param variant Name of the variant, used in the case name.
-* @param charge Charge state of the tungsten.
+* @param imp The impurity.
+* @param charge Charge state of the impurity.
 * @param tmax Length of the run (s), about 11 slowing-down times, so the
 *        second half of the run is at force balance.
 * @param dt Time step (s).
@@ -82,7 +119,8 @@
 * @param thermal_force Whether the collisions include the thermal force.
 * @return The inputs.
 */
-Inputs create_inputs(const std::string& variant, const int charge,
+Inputs create_inputs(const std::string& variant, const Impurity& imp,
+	const int charge,
 	const double tmax, const double dt, const double eps_i,
 	const double eps_e, const bool subcycle, const bool thermal_force)
 {
@@ -113,10 +151,11 @@ Inputs create_inputs(const std::string& variant, const int charge,
 	inpts["min_zbound_type"] = "periodic";
 	inpts["max_zbound_type"] = "periodic";
 
-	// Tungsten, all starting at t = 0 in the middle of the box, at rest
-	inpts["imp_num"] = 10000;
-	inpts["imp_atom_num"] = 74;
-	inpts["imp_mass_amu"] = 183.84;
+	// Impurities, all starting at t = 0 in the middle of the box with no
+	// mean velocity
+	inpts["imp_num"] = imp.num;
+	inpts["imp_atom_num"] = imp.atom_num;
+	inpts["imp_mass_amu"] = imp.mass_amu;
 	inpts["imp_init_charge"] = charge;
 	inpts["imp_iz_recomb"] = "off";
 	inpts["imp_tstart_opt"] = "single_value";
@@ -128,7 +167,7 @@ Inputs create_inputs(const std::string& variant, const int charge,
 	inpts["imp_zstart_opt"] = "single_value";
 	inpts["imp_zstart_val"] = 0.0;
 	inpts["imp_temp_start_opt"] = "single_value";
-	inpts["imp_temp_start_val"] = 0.0;
+	inpts["imp_temp_start_val"] = imp.temp_start;
 
 	// Time step and collisions
 	inpts["imp_time_step_opt"] = "constant";
@@ -162,27 +201,33 @@ int main(int argc, char* argv[])
 	// Run lengths and time steps as in reg_friction.cpp, but twice as
 	// long, to average the drift over the second half
 	if (variant == "z10")
-		inpts = create_inputs(variant, 10, 80e-6, 5e-8, eps_i, eps_e,
-			true, true);
+		inpts = create_inputs(variant, tungsten, 10, 80e-6, 5e-8,
+			eps_i, eps_e, true, true);
 	else if (variant == "z10_ions")
-		inpts = create_inputs(variant, 10, 80e-6, 5e-8, eps_i, 0.0,
-			true, true);
+		inpts = create_inputs(variant, tungsten, 10, 80e-6, 5e-8,
+			eps_i, 0.0, true, true);
 	else if (variant == "z10_elec")
-		inpts = create_inputs(variant, 10, 80e-6, 5e-8, 0.0, eps_e,
-			true, true);
+		inpts = create_inputs(variant, tungsten, 10, 80e-6, 5e-8,
+			0.0, eps_e, true, true);
 	else if (variant == "z10_nosub")
-		inpts = create_inputs(variant, 10, 80e-6, 5e-8, eps_i, eps_e,
-			false, true);
+		inpts = create_inputs(variant, tungsten, 10, 80e-6, 5e-8,
+			eps_i, eps_e, false, true);
 	else if (variant == "z10_off")
-		inpts = create_inputs(variant, 10, 80e-6, 5e-8, eps_i, eps_e,
-			true, false);
+		inpts = create_inputs(variant, tungsten, 10, 80e-6, 5e-8,
+			eps_i, eps_e, true, false);
 	else if (variant == "z5")
-		inpts = create_inputs(variant, 5, 300e-6, 1e-7, eps_i, eps_e,
+		inpts = create_inputs(variant, tungsten, 5, 300e-6, 1e-7,
+			eps_i, eps_e, true, true);
+	// C4+: 2.7 us slowing-down time, 0.2 us gyration. About 22
+	// slowing-down times, so the drift is averaged over many of them.
+	else if (variant == "c4_ions")
+		inpts = create_inputs(variant, carbon, 4, 60e-6, 2e-8, eps_i, 0.0,
 			true, true);
 	else
 	{
 		std::cerr << "Usage: reg_thermal_force <variant>, with <variant> "
-			"one of z10, z10_ions, z10_elec, z10_nosub, z10_off, z5\n";
+			"one of z10, z10_ions, z10_elec, z10_nosub, z10_off, z5, "
+			"c4_ions\n";
 		MPI_Finalize();
 		return 1;
 	}
