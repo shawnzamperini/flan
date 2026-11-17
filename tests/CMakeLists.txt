@@ -67,6 +67,10 @@ add_executable(test_read_s3xe_cpu test_read_s3xe_cpu.cpp)
 target_link_libraries(test_read_s3xe_cpu PRIVATE flan gtest_main hdf5)
 add_test(NAME ReadS3XECPUTest COMMAND test_read_s3xe_cpu)
 
+add_executable(test_axisym_mesh_cpu test_axisym_mesh_cpu.cpp)
+target_link_libraries(test_axisym_mesh_cpu PRIVATE flan gtest_main)
+add_test(NAME AxisymMeshCPUTest COMMAND test_axisym_mesh_cpu)
+
 add_executable(test_s3x_bkg_cpu test_s3x_bkg_cpu.cpp)
 target_link_libraries(test_s3x_bkg_cpu PRIVATE flan gtest_main hdf5
 	OpenMP::OpenMP_CXX)

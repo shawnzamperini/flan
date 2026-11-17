@@ -341,6 +341,28 @@ namespace Background
 	///@}
 
 	/**
+	* Get or set the handedness of a multi-zone background's toroidal angle
+	* z: a point at major radius R is at (R cos z, phi_sign R sin z, Z) in
+	* Cartesian coordinates, so phi_sign is +1 if (R, z, Z) is right handed
+	* and -1 if it's left handed (e.g., SOLEDGE3X). It's set with the
+	* geometry (Axisym::calc_geometry) and used wherever Cartesian vectors
+	* are built from (R, z, Z) ones, e.g., the wall normals for sputtering.
+	*/
+	///@{
+	double Background::get_phi_sign() const {return m_phi_sign;}
+
+	void Background::set_phi_sign(const double phi_sign)
+	{
+		if (phi_sign != 1.0 && phi_sign != -1.0)
+		{
+			Errors::fatal_error("Background::set_phi_sign: phi_sign is "
+				+ std::to_string(phi_sign) + ", but must be +1 or -1.");
+		}
+		m_phi_sign = phi_sign;
+	}
+	///@}
+
+	/**
 	* Stops the run with Errors::fatal_error if the background does not
 	* have exactly one zone.
 	*
@@ -1451,6 +1473,7 @@ namespace Background
 		// Species masses
 		MPI_Bcast(&m_elec_mass_amu, 1, MPI_DOUBLE, 0, comm);
 		MPI_Bcast(&m_ion_mass_amu, 1, MPI_DOUBLE, 0, comm);
+		MPI_Bcast(&m_phi_sign, 1, MPI_DOUBLE, 0, comm);
 
 		// Broadcast the times and the zones, which hold the computational
 		// grids

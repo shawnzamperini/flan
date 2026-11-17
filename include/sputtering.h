@@ -199,6 +199,7 @@ namespace Sputtering
 		double m_lambda {};				///< Largest energy fraction an ion
 										///< can give a target atom
 		double m_imp_mass_kg {};		///< Mass of the sputtered atoms
+		double m_phi_sign {1.0};		///< Background's toroidal handedness
 		std::vector<double> m_e_sheath {};	///< Sheath energy (eV), per idx
 		std::vector<double> m_ti {};		///< Ion temperature (eV), per idx
 		std::vector<std::array<double, 4>> m_cell_bounds {};	///< x and y

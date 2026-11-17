@@ -72,11 +72,16 @@ energy fluxes reaching the targets with the sources. Open: confirm with
 the JAX-Hermes3 developers that its conduction is the same as Hermes-3's
 (below).
 
-**Phase 1: refactor, no change in behavior.** Move the code that isn't
-specific to SOLEDGE3X out of `read_s3xe.cpp` into a shared module for
-axisymmetric multi-zone meshes, and make the toroidal handedness a
-property of the background instead of the constant `S3X::phi_sign`. The
-SOLEDGE3X tests and `s3x_example` must give the same results.
+**Phase 1: refactor, no change in behavior.** Done. The code that isn't
+specific to SOLEDGE3X (geometry, B and grad B, E and the flows, and the
+derivatives they use) is in `axisym_mesh.cpp`, working from an
+`Axisym::Mesh` in SI units, and the SOLEDGE3X reader converts its mesh to
+one (`S3X::to_axisym`). The toroidal handedness is a property of the
+background (`Background::get_phi_sign`, broadcast with it) instead of the
+constant `S3X::phi_sign`, and sputtering uses it. A SOLEDGE3X background
+read before and after the change was the same bit for bit, and
+`test_axisym_mesh_cpu` tests the shared code on a mesh where everything
+is known analytically, for both handednesses.
 
 **Phase 2: readers and options.**
 

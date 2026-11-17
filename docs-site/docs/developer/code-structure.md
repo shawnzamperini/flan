@@ -49,7 +49,11 @@ MPI must be initialized before `flan()` is called, and every rank calls it.
 2. **Read the background.** `Background::read_bkg` loads the plasma on rank 0,
    from a Gkeyll simulation (`Gkyl::read_gkyl`), a SOLEDGE3X simulation
    (`S3X::read_s3xe`) or the slab background set by the `slab_*` options
-   (`Slab::read_slab`). It's then broadcast to every rank.
+   (`Slab::read_slab`). It's then broadcast to every rank. Multi-zone
+   readers like SOLEDGE3X's only read their files into an `Axisym::Mesh`
+   (cell corners and B in SI units, and the toroidal handedness) and the
+   plasma; the geometry, B, grad B, E and the flows come from the shared
+   code in `axisym_mesh.cpp`.
 3. **Follow the impurities.** `ImpurityTransport::follow_impurities` follows
    this rank's share of the particles and records their statistics.
 4. **Combine the statistics.** `Impurity::reduce_stats` adds up the

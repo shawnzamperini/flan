@@ -186,7 +186,6 @@
 #include "errors.h"
 #include "hdf5_utils.h"
 #include "options.h"
-#include "read_s3xe.h"
 #include "sputtering.h"
 #include "zones.h"
 
@@ -843,7 +842,8 @@ namespace Sputtering
 		const Background::Background& bkg, const YieldTable& table,
 		const Options::Options& opts)
 		: m_surface {surface},
-		m_nframes {static_cast<int>(bkg.get_times().size())}
+		m_nframes {static_cast<int>(bkg.get_times().size())},
+		m_phi_sign {bkg.get_phi_sign()}
 	{
 		// The table has to be for the impurity being followed, sputtered by
 		// the background's singly charged ions
@@ -935,11 +935,11 @@ namespace Sputtering
 
 			// The element's normal in Cartesian coordinates, in the middle
 			// of its phi range. Positions are (R cos phi,
-			// phi_sign R sin phi, Z), so R_hat is (cos phi,
-			// phi_sign sin phi, 0).
+			// phi_sign R sin phi, Z), with the background's phi_sign, so
+			// R_hat is (cos phi, phi_sign sin phi, 0).
 			const double phi {0.5 * (el.phi_min + el.phi_max)};
 			const Vec3 n_wall {el.n_R * std::cos(phi),
-				el.n_R * S3X::phi_sign * std::sin(phi), el.n_Z};
+				el.n_R * m_phi_sign * std::sin(phi), el.n_Z};
 
 			// Plasma in the element's plasma cell
 			const double n_i {std::max(static_cast<double>(
@@ -1341,7 +1341,7 @@ namespace Sputtering
 
 		// 5. Direction: cosine about the normal at the atom's phi
 		const std::array<double, 3> n {el.n_R * std::cos(b.z),
-			el.n_R * S3X::phi_sign * std::sin(b.z), el.n_Z};
+			el.n_R * m_phi_sign * std::sin(b.z), el.n_Z};
 		const double u1 {rng.next_double()};
 		const double u2 {rng.next_double()};
 		const auto d {cosine_direction(n, u1, u2)};

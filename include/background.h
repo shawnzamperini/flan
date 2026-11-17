@@ -127,6 +127,11 @@ namespace Background
 		double m_elec_mass_amu {};
 		double m_ion_mass_amu {};
 
+		// Handedness of the toroidal angle of a multi-zone background: a
+		// point at major radius R and toroidal angle z is at
+		// (R cos z, phi_sign R sin z, Z). +1 if (R, z, Z) is right handed.
+		double m_phi_sign {1.0};
+
 		void check_single_zone(const std::string_view caller) const;
 
 	public:
@@ -231,6 +236,8 @@ namespace Background
 		double get_ion_mass_amu() const;
 		void set_elec_mass_amu(const double elec_mass_amu);
 		void set_ion_mass_amu(const double ion_mass_amu);
+		double get_phi_sign() const;
+		void set_phi_sign(const double phi_sign);
 		int get_dim1() const;
 		int get_dim2() const;
 		int get_dim3() const;

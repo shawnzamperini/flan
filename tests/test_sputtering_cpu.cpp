@@ -309,7 +309,8 @@ namespace
 		bkg.move_into_times(times);
 		bkg.move_into_zones(zones);
 
-		// Cell centers and corners, in Cartesian coordinates
+		// Cell centers and corners, in Cartesian coordinates, with
+		// (R, z, Z) right handed (the background's default phi_sign = +1)
 		Vectors::ZonedVector<BkgFPType> X(1, {n}, {n}, {nz}, 2);
 		Vectors::ZonedVector<BkgFPType> Y(1, {n}, {n}, {nz}, 2);
 		Vectors::ZonedVector<BkgFPType> Z(1, {n}, {n}, {nz}, 2);
@@ -369,7 +370,7 @@ namespace
 		bkg.move_into_times(times);
 		auto zones {mesh.zones};
 		bkg.move_into_zones(zones);
-		S3X::calc_geometry(mesh, bkg);
+		Axisym::calc_geometry(S3X::to_axisym(mesh), bkg);
 		S3X::load_chi(mesh, bkg);
 		bkg.set_walls(mesh.walls);
 		std::filesystem::remove(path);
@@ -608,12 +609,13 @@ namespace
 	}
 
 	// The element's normal in Cartesian coordinates at the middle of its
-	// phi range, the same way Source does it
+	// phi range, the same way Source does it, for a background with
+	// toroidal handedness phi_sign (Background::get_phi_sign)
 	std::array<double, 3> cartesian_normal(
-		const Sputtering::SurfaceElement& e)
+		const Sputtering::SurfaceElement& e, const double phi_sign)
 	{
 		const double phi {0.5 * (e.phi_min + e.phi_max)};
-		return {e.n_R * std::cos(phi), e.n_R * S3X::phi_sign * std::sin(phi),
+		return {e.n_R * std::cos(phi), e.n_R * phi_sign * std::sin(phi),
 			e.n_Z};
 	}
 
@@ -720,7 +722,7 @@ TEST_F(SputteringTable, SourceParallel)
 		{
 			const auto& el {surface.elements()[e]};
 			const std::size_t idx {t * source.size() + e};
-			const auto n {cartesian_normal(el)};
+			const auto n {cartesian_normal(el, bkg.get_phi_sign())};
 
 			// u_par = u_z, b_hat = Z_hat, so the parallel velocity into
 			// the wall is -u_z n_z
@@ -769,7 +771,8 @@ TEST_F(SputteringTable, SourceExB)
 
 	for (std::size_t e {}; e < source.size(); ++e)
 	{
-		const auto n {cartesian_normal(surface.elements()[e])};
+		const auto n {cartesian_normal(surface.elements()[e],
+			bkg.get_phi_sign())};
 		const double f_par {-p.n * p.u[2] * n[2]};
 		const double f_exb {-p.n * v_E * n[0]};
 		const double scale {p.n * p.u[2]};
@@ -788,7 +791,8 @@ TEST_F(SputteringTable, SourceExB)
 		table, source_options());
 	for (std::size_t e {}; e < none.size(); ++e)
 	{
-		const auto n {cartesian_normal(none.surface().elements()[e])};
+		const auto n {cartesian_normal(none.surface().elements()[e],
+			bkg_away.get_phi_sign())};
 		if (n[2] < 0.0) EXPECT_EQ(none.flux()[e], 0.0);
 	}
 }
@@ -811,7 +815,8 @@ TEST_F(SputteringTable, SourceBohmFloor)
 		/ (mi_amu * 1.661e-27))};
 	for (std::size_t e {}; e < source.size(); ++e)
 	{
-		const auto n {cartesian_normal(surface.elements()[e])};
+		const auto n {cartesian_normal(surface.elements()[e],
+			bkg.get_phi_sign())};
 		EXPECT_NEAR(source.flux_par()[e], p.n * std::max(-p.u[2] * n[2],
 			c_s * std::abs(n[2])), 1e-6 * p.n * c_s);
 	}
@@ -1012,7 +1017,7 @@ TEST_F(SputteringTable, SampleBirth)
 		EXPECT_NEAR(0.5 * m_w * v2 / 1.602e-19, b.e_atom,
 			1e-9 * b.e_atom + 1e-12);
 		const double n_x {el.n_R * std::cos(b.z)};
-		const double n_y {el.n_R * S3X::phi_sign * std::sin(b.z)};
+		const double n_y {el.n_R * bkg.get_phi_sign() * std::sin(b.z)};
 		EXPECT_GE(b.vX * n_x + b.vY * n_y + b.vZ * el.n_Z, 0.0);
 	}
 
