@@ -18,8 +18,8 @@ for ideas only: never copy their code.
 | `tests/` | Unit tests (GoogleTest), built with the library, run with `ctest`. |
 | `regression/` | Physics regression cases `reg_*.cpp` on the slab background, and the checkers `check_collisions.py`, `check_drifts.py`. See `regression/README.md`. |
 | `python/` | Plotting and analysis scripts. |
-| `docs-site/` | MkDocs documentation (most pages). |
-| `docs/source/` | Older Sphinx documentation (has the SOLEDGE3X page). Input options are listed in both trees. |
+| `docs-site/` | MkDocs documentation. All docs go here. |
+| `docs/` | Old Sphinx documentation, to be removed. Don't add to it. Its SOLEDGE3X page (`docs/source/soledge3x.rst`) still has to be moved to `docs-site/`. |
 | `install-deps/` | Dependency build scripts and `build-opts.cmake`. |
 
 ## Building and testing
@@ -44,8 +44,8 @@ for ideas only: never copy their code.
 - An input option touches many files that don't check each other; follow
   "Adding an input option" in `docs-site/docs/developer/code-structure.md`
   (options.h/.cpp, load_options.cpp, save_results.cpp, and for GPU use
-  options_device.h and cuda/options.cu), and document it in both docs
-  trees.
+  options_device.h and cuda/options.cu), and document it in
+  `docs-site/docs/input-options.md`.
 - New physics gets a regression case on the slab background (set entirely
   by `slab_*` input options, nothing hard-coded) with an analytic or fluid
   comparison in a checker script.
