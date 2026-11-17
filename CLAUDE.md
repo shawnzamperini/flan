@@ -19,7 +19,6 @@ for ideas only: never copy their code.
 | `regression/` | Physics regression cases `reg_*.cpp` on the slab background, and the checkers `check_collisions.py`, `check_drifts.py`. See `regression/README.md`. |
 | `python/` | Plotting and analysis scripts. |
 | `docs-site/` | MkDocs documentation. All docs go here. |
-| `docs/` | Old Sphinx documentation, to be removed. Don't add to it. Its SOLEDGE3X page (`docs/source/soledge3x.rst`) still has to be moved to `docs-site/`. |
 | `install-deps/` | Dependency build scripts and `build-opts.cmake`. |
 
 ## Building and testing

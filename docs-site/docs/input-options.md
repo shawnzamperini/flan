@@ -71,6 +71,19 @@ are grouped by what they control.
 | `gkyl_moment_type` | string | `"bimaxwellian"` | Type of moment files in the Gkeyll output. Collisions need `"bimaxwellian"`, which provides the ion parallel flow and perpendicular velocity used to calculate the background flow. Valid values: `"bimaxwellian"`, `"maxwellian"`, `"m0m1m2"`. |
 | `calc_grad_elec` | string | `"off"` | Whether to calculate the electric field gradient. This is not implemented yet, so turning it on only prints a warning. Valid values: `"off"`, `"on"`. |
 
+## SOLEDGE3X
+
+Used with `bkg_source = "soledge3x"`. See [SOLEDGE3X Backgrounds](running/soledge3x.md).
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `s3x_dir` | string | `"undefined"` | Full path to the directory containing the SOLEDGE3X files: the mesh (`s3x_mesh_file`), the reference file (`s3x_ref_file`) and the plasma files `plasma_00000.h5`, `plasma_00001.h5`, etc. Must be set when `bkg_source = "soledge3x"`. |
+| `s3x_mesh_file` | string | `"mesh_S3X.h5"` | Name of the SOLEDGE3X mesh file within `s3x_dir`. It must be the mesh the plasma was run on. |
+| `s3x_ref_file` | string | `"refParam_raptorX.h5"` | Name of the SOLEDGE3X reference file within `s3x_dir`, which holds the values SOLEDGE3X's output is normalized by (n0, T0, c0, tau0, phi0, ...). Its R0, a0 and B0 must agree with the mesh file. |
+| `s3x_frame_start` | int | `0` | First SOLEDGE3X plasma frame to load, i.e., the number in `plasma_%05d.h5`. |
+| `s3x_frame_end` | int | `1` | Last SOLEDGE3X plasma frame to load. The frames from `s3x_frame_start` to `s3x_frame_end` are loaded, which must be at least two, since the background is interpolated in time between frames. |
+| `s3x_chi_absorb` | string | `"on"` | SOLEDGE3X marks the cells inside the wall with chi = 1 (its penalization mask). With `"on"`, a particle that ends a time step in a cell with chi = 1 is absorbed, as if it hit the wall. With `"off"`, particles move through the wall cells, which hold SOLEDGE3X's penalized plasma. Valid values: `"on"`, `"off"`. |
+
 ## Geometry and boundaries
 
 | Option | Type | Default | Description |
@@ -127,6 +140,7 @@ are grouped by what they control.
 | `imp_zstart_val` | float | `0.0` | Starting z coordinate of every impurity when `imp_zstart_opt` is `"single_value"`. |
 | `imp_zrange_min` | float | `0.0` | Lower limit of the starting z range when `imp_zstart_opt` is `"range"`. |
 | `imp_zrange_max` | float | `0.0` | Upper limit of the starting z range when `imp_zstart_opt` is `"range"`. |
+| `imp_zone_start_val` | int | `1` | Zone particles start in, numbered from 1 like the SOLEDGE3X zones. The starting x, y and z (`imp_xstart_opt`, etc.) are in that zone's coordinates. Gkeyll and slab backgrounds have a single zone, so this must be 1 for them. |
 | `imp_temp_start_opt` | string | `"main_ion"` | How each impurity's starting temperature is chosen: a single value (`imp_temp_start_val`) or the local main ion temperature. Starting velocities are sampled from an isotropic Maxwellian at this temperature. Valid values: `"single_value"`, `"main_ion"`. |
 | `imp_temp_start_val` | float | `0.0` | Starting temperature of every impurity when `imp_temp_start_opt` is `"single_value"` (eV). |
 | `imp_vX_start_val` | float | `0.0` | Velocity in Cartesian X that every impurity starts with (m/s), added to the velocity sampled at the starting temperature. With `imp_temp_start_val = 0` every impurity starts with exactly this velocity. Not used for sputtered impurities. |
