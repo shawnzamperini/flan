@@ -410,10 +410,9 @@ bkg_source
 
 Where the background plasma comes from.
 
-  - **"test"**: A built-in test background, chosen with test_opt. Used by the test cases.
   - **"gkeyll"**: A Gkeyll simulation, see the gkyl_* options.
   - **"soledge3x"**: A SOLEDGE3X simulation, see the s3x_* options and :doc:`soledge3x`.
-  - **"slab"**: A box of uniform plasma in a uniform magnetic field along +X, set entirely by the slab_* options. Used by the regression cases (regression/reg_*.cpp) to check the physics against analytic results. The box is a 5 cm cube; make the boundaries periodic to keep particles in it. If both heat fluxes are 0 the background has none, and can be run on the GPU.
+  - **"slab"**: A box of uniform plasma in a simple magnetic field, set entirely by the slab_* options. By default the field is uniform along +X; an electric field, a field gradient and curvature (slab_major_radius) can be added. Used by the regression cases (regression/reg_*.cpp) to check the physics against analytic results, and by the unit tests. The box is a 5 cm cube; make the boundaries periodic to keep particles in it. If both heat fluxes are 0 the background has none, and can be run on the GPU.
 
 slab_ne
 -------
@@ -685,7 +684,7 @@ Maximum z value when :ref:`imp_zstart_opt <imp_zstart_opt>` = "range".
 imp_zone_start_val
 ------------------
 
-Zone particles start in, numbered from 1 like the SOLEDGE3X zones. The starting x, y and z (:ref:`imp_xstart_opt <imp_xstart_opt>`, etc.) are in that zone's coordinates. Gkeyll and test backgrounds have a single zone, so this must be 1 for them.
+Zone particles start in, numbered from 1 like the SOLEDGE3X zones. The starting x, y and z (:ref:`imp_xstart_opt <imp_xstart_opt>`, etc.) are in that zone's coordinates. Gkeyll and slab backgrounds have a single zone, so this must be 1 for them.
 
 imp_vX_start_val
 ----------------

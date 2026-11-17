@@ -383,9 +383,9 @@ TEST(ThermalForce, Checks)
 
 namespace
 {
-	// Tungsten at rest in the thermal_force test background (uniform
-	// ne = 1e20 m^-3, Te = Ti = 1 eV, B along +X, heat fluxes in +X with
-	// eps = 0.1 for both species), and what the collision model does to it
+	// Tungsten at rest in the slab background (uniform ne = 1e20 m^-3,
+	// Te = Ti = 1 eV, B along +X, heat fluxes in +X with eps = 0.1 for both
+	// species), and what the collision model does to it
 	struct ForceCase
 	{
 		Options::Options opts {};
@@ -396,8 +396,15 @@ namespace
 
 		ForceCase()
 		{
-			opts.set_bkg_source("test");
-			opts.set_test_opt("thermal_force");
+			// Uniform plasma with B along +X and ion and electron heat
+			// fluxes along it, each a skew of eps = 0.1
+			opts.set_bkg_source("slab");
+			opts.set_slab_ne(ne);
+			opts.set_slab_te(T);
+			opts.set_slab_ti(T);
+			opts.set_slab_bmag(1.0);
+			opts.set_slab_heat_flux_i(0.1);
+			opts.set_slab_heat_flux_e(0.1);
 
 			// No collision sub-cycling unless a test turns it on: most of
 			// these tests check the kick of a single Nanbu collision

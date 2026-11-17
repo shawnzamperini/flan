@@ -32,7 +32,7 @@ are grouped by what they control.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `bkg_source` | string | `"gkeyll"` | Source of the background plasma: a built-in test background, the slab background (a box of uniform plasma in a uniform magnetic field, set entirely by the `slab_*` options and used by the regression cases), a Gkeyll simulation or a SOLEDGE3X simulation. Valid values: `"test"`, `"slab"`, `"gkeyll"`, `"soledge3x"`. |
+| `bkg_source` | string | `"gkeyll"` | Source of the background plasma: the slab background (a box of plasma in simple fields, set entirely by the `slab_*` options and used by the regression cases and unit tests), a Gkeyll simulation or a SOLEDGE3X simulation. Valid values: `"slab"`, `"gkeyll"`, `"soledge3x"`. |
 | `slab_ne` | float | `1e19` | Electron (and ion) density of the slab background (m^-3). Only used with `bkg_source = "slab"`. |
 | `slab_te` | float | `10.0` | Electron temperature of the slab background (eV). Only used with `bkg_source = "slab"`. |
 | `slab_ti` | float | `10.0` | Ion temperature of the slab background (eV). Only used with `bkg_source = "slab"`. |
@@ -53,7 +53,6 @@ are grouped by what they control.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `test_opt` | string | `"gyrate"` | Which built-in test case to run when using the test background. Valid values: `"gyrate"`, `"exb"`, `"gradb"`, `"polarization"`, `"curvature"`, `"friction_force"`, `"thermal_force"`. |
 | `save_track` | string | `"off"` | Whether to save particle tracks to the output file. Valid values: `"off"`, `"on"`. |
 
 ## Gkeyll

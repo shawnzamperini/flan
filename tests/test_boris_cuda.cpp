@@ -17,17 +17,17 @@ TEST(UpdateVelocityGPU, UniformFieldBorisRotation)
     // -----------------------------
     Options::Options opts {};
 
-	// Slab geometry
+	// Slab background (see Slab::read_slab)
 	//    | cells | range
 	// t  |   128 | 0 - 50 us
-	// x  |    32 | 0 - 0.05 m
-	// y  |    32 | -0.025, 0.025 m
-	// z  |     9 | -0.015, 0.015 m
+	// x  |     8 | 0 - 0.05 m
+	// y  |     8 | -0.025, 0.025 m
+	// z  |     8 | -0.025, 0.025 m
 	//
 	// E  = 0 V/m
-	// BZ = 1 T   
-    opts.set_bkg_source("test");
-    opts.set_test_opt("gyrate");
+	// BX = 1 T
+    opts.set_bkg_source("slab");
+    opts.set_slab_bmag(1.0);
 
     Background::Background bkg = Background::read_bkg(opts);
 
@@ -42,11 +42,11 @@ TEST(UpdateVelocityGPU, UniformFieldBorisRotation)
     // Put particle in the center of the domain
     slots.set_x(0, 0.025);   // middle of 0–0.05 m
     slots.set_y(0, 0.0);     // middle of -0.025–0.025 m
-    slots.set_z(0, 0.0);     // middle of -0.015–0.015 m
+    slots.set_z(0, 0.0);     // middle of -0.025–0.025 m
 
-    // Initial velocity: purely along +x
-    slots.set_vX(0, 10000.0);
-    slots.set_vY(0, 0.0);
+    // Initial velocity: purely along +Y, across the field
+    slots.set_vX(0, 0.0);
+    slots.set_vY(0, 10000.0);
     slots.set_vZ(0, 0.0);
 
     // Charge/mass ratio: electron
@@ -55,8 +55,8 @@ TEST(UpdateVelocityGPU, UniformFieldBorisRotation)
 
     // Time index and coordinate indices
     slots.set_tidx(0, 0);
-    slots.set_xidx(0, 16);
-    slots.set_yidx(0, 16);
+    slots.set_xidx(0, 4);
+    slots.set_yidx(0, 4);
     slots.set_zidx(0, 4);
 
     // Actual physical time of particle
@@ -83,36 +83,33 @@ TEST(UpdateVelocityGPU, UniformFieldBorisRotation)
     // 4. Analytic Boris rotation
     // -----------------------------
     //
-    // Uniform B = (0,0,1) Tesla
+    // Uniform B = (1,0,0) Tesla
     // E = 0
     //
     // Boris rotation angle:
     //     theta = (q/m) * B * dt
     //
-    // In your code:
+    // In the code:
     //     q_m = q * -e / m
     //
-    // So q=1 → q_m = -e
+    // So q=1 -> q_m = -e
     //
     // Therefore:
     //     theta = -e * 1 * dt
     //
-    // The velocity rotates in the x–y plane:
-    //     v_x' = v_x cos(theta) - v_y sin(theta)
-    //     v_y' = v_x sin(theta) + v_y cos(theta)
+    // The velocity rotates in the Y-Z plane (dv/dt = q_m v x B, and
+    // Y x X = -Z):
+    //     v_Y' = v_Y cos(theta)
+    //     v_Z' = -v_Y sin(theta)
     //
-    // Initial v = (10000, 0, 0)
-    //
-    // Expected:
-    //     v_x' = 10000 * cos(theta)
-    //     v_y' = 10000 * sin(theta)
+    // Initial v = (0, 10000, 0)
     //
 
     double q_m = -Constants::charge_e;  // q=1, m=1
     double theta = q_m * dt;            // rad
 
-    double vx_expected = 10000 * std::cos(theta);
-    double vy_expected = -10000 * std::sin(theta);
+    double vy_expected = 10000 * std::cos(theta);
+    double vz_expected = -10000 * std::sin(theta);
 
     // -----------------------------
     // 5. Compare with computed
@@ -121,13 +118,13 @@ TEST(UpdateVelocityGPU, UniformFieldBorisRotation)
     double vy = slots.vY()[0];
     double vz = slots.vZ()[0];
 
-	std::cout << "vx = " << vx << "  expected = " << vx_expected << "\n";
+	std::cout << "vx = " << vx << "  expected = " << 0.0 << "\n";
 	std::cout << "vy = " << vy << "  expected = " << vy_expected << "\n";
-	std::cout << "vz = " << vz << "  expected = " << 0.0 << "\n";
+	std::cout << "vz = " << vz << "  expected = " << vz_expected << "\n";
 
-    EXPECT_NEAR(vx, vx_expected, 1e-6);
+    EXPECT_NEAR(vx, 0.0,        1e-12);
     EXPECT_NEAR(vy, vy_expected, 1e-6);
-    EXPECT_NEAR(vz, 0.0,        1e-12);
+    EXPECT_NEAR(vz, vz_expected, 1e-6);
 
     // -----------------------------
     // 6. Check reciprocal basis transform

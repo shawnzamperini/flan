@@ -15,7 +15,6 @@
 #include "read_gkyl.h"
 #include "read_s3xe.h"
 #include "read_slab.h"
-#include "read_test.h"
 #include "zones.h"
 
 namespace Background
@@ -24,8 +23,8 @@ namespace Background
 	* Reads in the plasma background from the source chosen by the
 	* bkg_source option.
 	*
-	* "test" loads a hardcoded test background with Test::read_test, "slab"
-	* makes a uniform plasma from the slab_* options with Slab::read_slab,
+	* "slab" makes a box of plasma in simple fields from the slab_* options
+	* with Slab::read_slab,
 	* "gkeyll" loads a Gkeyll simulation with Gkyl::read_gkyl and
 	* "soledge3x" loads a SOLEDGE3X simulation with S3X::read_s3xe. If the
 	* source is not recognized, the run is stopped with Errors::fatal_error.
@@ -43,10 +42,11 @@ namespace Background
 		// Background object to fill in
 		Background bkg {};
 
-		// Load in hardcoded plasma background for testing
+		// Make the slab background, plasma in simple fields set
+		// by the slab_* options
 		if (opts.bkg_source_int() == 0)
 		{
-			bkg = Test::read_test(opts);
+			bkg = Slab::read_slab(opts);
 		}
 
 		// Load in a Gkeyll background
@@ -59,13 +59,6 @@ namespace Background
 		else if (opts.bkg_source_int() == 2)
 		{
 			bkg = S3X::read_s3xe(opts);
-		}
-
-		// Make the slab background, a uniform plasma set by the slab_*
-		// options
-		else if (opts.bkg_source_int() == 3)
-		{
-			bkg = Slab::read_slab(opts);
 		}
 
 		// Unrecognized option
@@ -90,7 +83,7 @@ namespace Background
 
 	/**
 	* Builds the zones for a background made of a single zone, such as a
-	* Gkeyll or test background.
+	* Gkeyll or slab background.
 	*
 	* The grid vectors are moved in, so they are left empty. Each face of
 	* the zone comes from the matching *bound_type option with

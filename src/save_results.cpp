@@ -441,9 +441,6 @@ namespace SaveResults
 		save_scalar(input_group, opts.slab_major_radius(), "slab_major_radius", dim_scalar,
 			"slab background: major radius the box is bent to (0 = straight)", "(m)");
 
-		// Testing
-		save_string(input_group, opts.test_opt(), "test_opt", dim_str, 
-			"test background plasma option");
 		save_string(input_group, opts.save_track(), "save_track", dim_str, 
 			"save particle t,x,y,z track option");
 

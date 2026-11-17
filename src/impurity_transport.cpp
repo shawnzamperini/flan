@@ -225,16 +225,15 @@ namespace ImpurityTransport
 	* every particle in slots (CPU implementation).
 	*
 	* Particle velocities are updated in place with the Nanbu collision
-	* model. Collisions with the background ions are always applied.
-	* Collisions with the electrons are applied afterwards, except for the
-	* friction_force test case, which only considers ion collisions so the
-	* result can be compared against the expected flow.
+	* model: first collisions with the background ions, then with the
+	* electrons.
 	*
 	* @param slots Particle slots whose velocities are updated.
 	* @param bkg Background plasma that provides the ion and electron
 	*            properties.
 	* @param dt Time step (s).
-	* @param opts Simulation options, used to check the test_opt option.
+	* @param opts Simulation options, passed through to the collision
+	*             model.
 	* @param imp_stats Impurity statistics passed through to the collision
 	*                  model.
 	* @param rngs Random number generators, one per OpenMP thread.
@@ -248,12 +247,7 @@ namespace ImpurityTransport
 		// second call is for electrons (the true).
 		Collisions::nanbu_coll(slots, bkg, opts, false, dt, imp_stats, rngs);
 
-		// friction_force test case only considers ion collisions to compare
-		// against expected flow
-		if (opts.test_opt_int() != 5)
-		{
-			Collisions::nanbu_coll(slots, bkg, opts, true, dt, imp_stats, rngs);
-		}
+		Collisions::nanbu_coll(slots, bkg, opts, true, dt, imp_stats, rngs);
 	}
 
 
@@ -620,10 +614,9 @@ namespace ImpurityTransport
 	* choosing the CPU or GPU implementation.
 	*
 	* If GPU acceleration is on (use_gpu), Collisions::collision_gpu is
-	* called once for the ions and once for the electrons. The electron call
-	* is skipped for the friction_force test case, which only considers ion
-	* collisions. Otherwise collision_cpu is called, which makes the same
-	* ion/electron distinction. The GPU branch only exists in CUDA builds.
+	* called once for the ions and once for the electrons. Otherwise
+	* collision_cpu is called, which does the same on the CPU. The GPU
+	* branch only exists in CUDA builds.
 	*
 	* @param slots Host-side particle slots (used on the CPU path).
 	* @param slots_d Device-side particle slots (used on the GPU path).
@@ -658,14 +651,10 @@ namespace ImpurityTransport
 				rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(), 
 				opts_d);
 
-			// friction_force test case only considers ion collisions to compare
-			// against expected flow
-			if (opts.test_opt_int() != 5)
-			{
-				Collisions::collision_gpu(slots_d, bkg_d, true, dt, imp_stats_d,
-					rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(),
-					opts_d);
-			}
+			// and the second for electrons (the true)
+			Collisions::collision_gpu(slots_d, bkg_d, true, dt, imp_stats_d,
+				rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(),
+				opts_d);
 			return;
 		}
 #endif

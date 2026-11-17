@@ -13,10 +13,9 @@ TEST(FillSlotsCPU, RevivesDeadParticles)
     int rem = 3;
 	int alive {};
 
-	// Use just one of the test backgrounds, unimportant which
+	// The slab background, with its defaults
     Options::Options opts {};
-    opts.set_bkg_source("test");
-    opts.set_test_opt("gyrate");
+    opts.set_bkg_source("slab");
     Background::Background bkg = Background::read_bkg(opts);
 
 	// Create RNGs
@@ -47,8 +46,7 @@ TEST(FillSlotsCPU, RevivesDeadParticles)
 TEST(FillSlotsCPU, Weights)
 {
 	Options::Options opts {};
-	opts.set_bkg_source("test");
-	opts.set_test_opt("gyrate");
+	opts.set_bkg_source("slab");
 	opts.set_imp_num(4);
 	const Background::Background bkg {Background::read_bkg(opts)};
 	std::vector<pcg32> rngs {};

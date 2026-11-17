@@ -47,9 +47,11 @@ calculation be spread across many CPU cores, nodes and GPUs.
 - **Different boundaries.** Each boundary can absorb particles, wrap them
   around (periodic), or send them back in from a random spot along it, as
   for particles entering the core.
-- **Textbook test cases.** Built-in test backgrounds check that Flan
-  reproduces gyration, the ExB, grad-B, polarization and curvature drifts,
-  and the friction force from the collision model.
+- **Regression cases.** Simulations on the slab background, a box of
+  plasma set entirely by input options, check that Flan reproduces
+  gyration, the ExB, grad-B, polarization and curvature drifts, and the
+  friction and thermal forces from the collision model, against analytic
+  results.
 
 The output is a netCDF file with the impurity density, the average velocity
 (in both Cartesian and the simulation's coordinates), the average charge state

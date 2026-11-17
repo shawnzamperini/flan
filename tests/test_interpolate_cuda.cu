@@ -55,20 +55,19 @@ void test_interp_4d_kernel(Background::BackgroundDevice bkg_d,
 
 TEST(Interpolate3D, LinearField)
 {
-	// Use one of the test backgrounds, doesn't matter which
+	// The slab background, with its defaults
     Options::Options opts {};
 
-	// Slab geometry
+	// Slab background (see Slab::read_slab)
 	//    | cells | range
 	// t  |   128 | 0 - 50 us
-	// x  |    32 | 0 - 0.05 m
-	// y  |    32 | -0.025, 0.025 m
-	// z  |     9 | -0.015, 0.015 m
+	// x  |     8 | 0 - 0.05 m
+	// y  |     8 | -0.025, 0.025 m
+	// z  |     8 | -0.025, 0.025 m
 	//
 	// E  = 0 V/m
-	// BZ = 1 T   
-    opts.set_bkg_source("test");
-    opts.set_test_opt("gyrate");
+	// BX = 1 T
+    opts.set_bkg_source("slab");
     Background::Background bkg = Background::read_bkg(opts);
 
 	// We hijack a 3D field (dxdX) and overwrite it with f(x,y,z) = x + 2y + 3z
@@ -120,20 +119,19 @@ TEST(Interpolate3D, LinearField)
 
 TEST(Interpolate4D, LinearField)
 {
-	// Use one of the test backgrounds, doesn't matter which
+	// The slab background, with its defaults
     Options::Options opts {};
 
-	// Slab geometry
+	// Slab background (see Slab::read_slab)
 	//    | cells | range
 	// t  |   128 | 0 - 50 us
-	// x  |    32 | 0 - 0.05 m
-	// y  |    32 | -0.025, 0.025 m
-	// z  |     9 | -0.015, 0.015 m
+	// x  |     8 | 0 - 0.05 m
+	// y  |     8 | -0.025, 0.025 m
+	// z  |     8 | -0.025, 0.025 m
 	//
 	// E  = 0 V/m
-	// BZ = 1 T   
-    opts.set_bkg_source("test");
-    opts.set_test_opt("gyrate");
+	// BX = 1 T
+    opts.set_bkg_source("slab");
     Background::Background bkg = Background::read_bkg(opts);
 
 	// We hijack a 4D field (ne) and overwrite it with f(t,x,y,z) = t + x + 2y + 3z

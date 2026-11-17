@@ -206,8 +206,8 @@ namespace Collisions
 	/**
 	* Checks what the thermal force (imp_thermal_force = "on", the default)
 	* can do with this background and these options:
-	*   - A background with neither heat flux (Gkeyll, test backgrounds,
-	*     SOLEDGE3X files without face fluxes) has no skew to sample, so the
+	*   - A background with neither heat flux (Gkeyll, a slab without heat
+	*     fluxes, SOLEDGE3X files without face fluxes) has no skew to sample, so the
 	*     collisions use Maxwellians and a warning says the thermal force
 	*     isn't included. This keeps "on" a safe default.
 	*   - With only one of q_par_i and q_par_e, the run stops: half a

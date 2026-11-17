@@ -38,7 +38,6 @@ namespace Options
 		// return the pointer to it, which kernels take
 		OptionsDevice opts_h {};
 
-		opts_h.test_opt_int   = m_test_opt_int;
 		opts_h.bkg_source_int = m_bkg_source_int;
 
 		opts_h.min_ne         = m_min_ne;

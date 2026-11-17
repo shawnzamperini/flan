@@ -27,8 +27,7 @@ TEST(FillSlotsCUDA, RevivesDeadParticles)
 
 	// Create dummy options to pass in. Options not important for this test.
 	Options::Options opts {};
-    opts.set_bkg_source("test");
-    opts.set_test_opt("gyrate");
+    opts.set_bkg_source("slab");
 
 	Options::OptionsDevice* opts_d {opts.to_device()};
 

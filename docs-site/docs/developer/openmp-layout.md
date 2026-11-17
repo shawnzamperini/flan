@@ -115,8 +115,8 @@ launched, without a lock.
 ## Setup
 
 OpenMP is also used outside the main loop, mostly in reading the background:
-converting and checking the Gkeyll data in `read_gkyl.cpp`, filling the test
-backgrounds in `read_test.cpp`, and calculating the derived quantities in
+converting and checking the Gkeyll data in `read_gkyl.cpp` and calculating
+the derived quantities in
 `impurity_stats.cpp`. These are simple `parallel for` loops over grid cells.
 
 ## Things to know

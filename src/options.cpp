@@ -57,7 +57,6 @@ namespace Options
 		// been correctly initalized (by not including it here).
 		set_use_gpu(m_use_gpu);
 		set_bkg_source(m_bkg_source);
-		set_test_opt(m_test_opt);
 		set_save_track(m_save_track);
 		set_imp_tstart_opt(m_imp_tstart_opt);
 		set_imp_xstart_opt(m_imp_xstart_opt);
@@ -150,65 +149,30 @@ namespace Options
 	/**
 	* Sets the bkg_source option.
 	*
-	* Source of the background plasma: a built-in test background, the
-	* slab background (a uniform plasma set by the slab_* options), a
+	* Source of the background plasma: the slab background (a box of
+	* plasma in simple fields, set entirely by the slab_* options), a
 	* Gkeyll simulation or a SOLEDGE3X simulation.
 	*
-	* Valid values are "test", "slab", "gkeyll" and "soledge3x". An invalid
-	* value prints an error and leaves the option unchanged. Also sets the
-	* control integer returned by bkg_source_int() to 0 for "test", 1 for
-	* "gkeyll", 2 for "soledge3x", 3 for "slab". An invalid value leaves
-	* the control integer unchanged.
+	* Valid values are "slab", "gkeyll" and "soledge3x". An invalid value
+	* prints an error and leaves the option unchanged. Also sets the
+	* control integer returned by bkg_source_int() to 0 for "slab", 1 for
+	* "gkeyll", 2 for "soledge3x". An invalid value leaves the control
+	* integer unchanged.
 	*
 	* @param bkg_source New value of the bkg_source option.
 	*/
 	void Options::set_bkg_source(std::string bkg_source) 
 	{
 		if (check_input<std::string>("bkg_source", bkg_source,
-			{"test", "slab", "gkeyll", "soledge3x"}))
+			{"slab", "gkeyll", "soledge3x"}))
 		{
 			m_bkg_source = bkg_source;
 		}
 
 		// Assign control integers
-		if (bkg_source == "test") m_bkg_source_int = 0;
-		else if (bkg_source == "gkeyll") m_bkg_source_int = 1;
+		if (bkg_source == "gkeyll") m_bkg_source_int = 1;
 		else if (bkg_source == "soledge3x") m_bkg_source_int = 2;
-		else if (bkg_source == "slab") m_bkg_source_int = 3;
-	}
-
-	/**
-	* Sets the test_opt option.
-	*
-	* Which built-in test case to run when using the test background.
-	*
-	* Valid values are "gyrate", "exb", "gradb", "polarization", "curvature",
-	* "friction_force" and "thermal_force". An invalid value prints an
-	* error and leaves the option unchanged. Also sets the control integer
-	* returned by test_opt_int() to 0 for "gyrate", 1 for "exb", 2 for
-	* "gradb", 3 for "polarization", 4 for "curvature", 5 for
-	* "friction_force", 6 for "thermal_force". An invalid value leaves the
-	* control integer unchanged.
-	*
-	* @param test_opt New value of the test_opt option.
-	*/
-	void Options::set_test_opt(std::string test_opt) 
-	{
-		if (check_input<std::string>("test_opt", test_opt,
-			{"gyrate", "exb", "gradb", "polarization", "curvature", 
-			"friction_force", "thermal_force"}))
-		{
-			m_test_opt = test_opt;
-		}
-
-		// Assign control integers
-		if (test_opt == "gyrate") m_test_opt_int = 0;
-		else if (test_opt == "exb") m_test_opt_int = 1;
-		else if (test_opt == "gradb") m_test_opt_int = 2;
-		else if (test_opt == "polarization") m_test_opt_int = 3;
-		else if (test_opt == "curvature") m_test_opt_int = 4;
-		else if (test_opt == "friction_force") m_test_opt_int = 5;
-		else if (test_opt == "thermal_force") m_test_opt_int = 6;
+		else if (bkg_source == "slab") m_bkg_source_int = 0;
 	}
 
 	/**
@@ -1825,23 +1789,14 @@ namespace Options
 	/**
 	* Returns the bkg_source option.
 	*
-	* Source of the background plasma, either a built-in test background or
-	* a Gkeyll simulation.
+	* Source of the background plasma: "slab", "gkeyll" or "soledge3x" (see
+	* set_bkg_source).
 	*
 	* @return Value of the bkg_source option.
 	*/
 	const std::string& Options::bkg_source() const 
 		{return m_bkg_source;}
 
-	/**
-	* Returns the test_opt option.
-	*
-	* Which built-in test case to run when using the test background.
-	*
-	* @return Value of the test_opt option.
-	*/
-	const std::string& Options::test_opt() const 
-		{return m_test_opt;}
 
 	/**
 	* Returns the save_track option.
@@ -2859,18 +2814,6 @@ namespace Options
 	int Options::bkg_source_int() const
 		{return get_control_int("bkg_source", m_bkg_source_int);}
 
-	/**
-	* Returns the control integer for the test_opt option.
-	*
-	* The control integer is an integer version of test_opt that is faster
-	* to check than the string: 0 = "gyrate", 1 = "exb", 2 = "gradb", 3 =
-	* "polarization", 4 = "curvature", 5 = "friction_force", 6 =
-	* "thermal_force". It is fetched through get_control_int, which prints an error if it was never set.
-	*
-	* @return Control integer for test_opt, or -1 if it was never set.
-	*/
-	int Options::test_opt_int() const
-		{return get_control_int("test_opt", m_test_opt_int);}
 
 	/**
 	* Returns the control integer for the save_track option.

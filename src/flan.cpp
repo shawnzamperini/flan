@@ -28,7 +28,6 @@
 #include "options.h"
 #include "read_bkg.h"
 #include "read_gkyl.h"
-#include "read_test.h"
 #include "save_results.h"
 #include "sputtering.h"
 #include "timer.h"

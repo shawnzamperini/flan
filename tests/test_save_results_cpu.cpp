@@ -59,8 +59,7 @@ namespace
 TEST_F(SaveResultsTest, SingleZoneLayout)
 {
 	Options::Options opts {};
-	opts.set_bkg_source("test");
-	opts.set_test_opt("gradb");
+	opts.set_bkg_source("slab");
 	opts.set_case_name(case_name());
 	const auto bkg {Background::read_bkg(opts)};
 	Impurity::Statistics stats {bkg};

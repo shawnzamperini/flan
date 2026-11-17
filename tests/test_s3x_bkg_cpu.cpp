@@ -157,10 +157,10 @@ TEST_F(S3XBkg, StartZoneOutOfRange)
 		testing::ExitedWithCode(EXIT_FAILURE), "imp_zone_start_val = 0");
 
 	// A single-zone background only has zone 1
-	Options::Options test_opts {};
-	test_opts.set_bkg_source("test");
-	test_opts.set_imp_zone_start_val(2);
-	EXPECT_EXIT(Background::read_bkg(test_opts),
+	Options::Options slab_opts {};
+	slab_opts.set_bkg_source("slab");
+	slab_opts.set_imp_zone_start_val(2);
+	EXPECT_EXIT(Background::read_bkg(slab_opts),
 		testing::ExitedWithCode(EXIT_FAILURE), "numbered 1 to 1");
 }
 

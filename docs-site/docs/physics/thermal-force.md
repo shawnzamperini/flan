@@ -195,10 +195,12 @@ are in, and the thermal force there is only approximate.
 
 ## Tests
 
-The `thermal_force` test background (`test_opt = "thermal_force"`) is a
-uniform slab with the magnetic field along $x$ and ion and electron heat
-fluxes along the field with $\epsilon = 0.1$. The tests in
-`tests/test_thermal_force_cpu.cpp` use it or the same plasma.
+The tests in `tests/test_thermal_force_cpu.cpp` use the slab background
+(`bkg_source = "slab"`): a uniform plasma with the magnetic field along
+$x$ and ion and electron heat fluxes along the field with
+$\epsilon = 0.1$ (`slab_heat_flux_i` and `slab_heat_flux_e`). The
+regression case `regression/reg_thermal_force.cpp` checks the drift at
+force balance in a full run.
 
 - **The kick is the right size.** Tungsten at rest is collided millions
   of times, and its mean change in velocity along the field is compared

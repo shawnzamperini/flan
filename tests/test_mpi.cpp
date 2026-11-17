@@ -25,7 +25,7 @@
 #include "options.h"
 #include "read_bkg.h"
 #include "read_s3xe.h"
-#include "read_test.h"
+#include "read_slab.h"
 #include "s3x_test_files.h"
 #include "utilities.h"
 #include "vectors.h"
@@ -207,27 +207,38 @@ TEST_F(MPITest, BroadcastVector3D)
 // Broadcasting the background
 // -------------------------------------------------------------------------
 
-// Builds a test background with every broadcast array filled in. It starts
-// from read_test, then:
+// Builds a slab background with every broadcast array filled in. It starts
+// from read_slab with one of the cases below, then:
 // - Shifts the times and grids by 1 so that none of the simulation bounds
 //   are 0. A bound that's really 0 can't be told apart from one that was
 //   never broadcast, since the other ranks start at 0.
-// - Fills the arrays read_test leaves empty (vp, the B gradient, the
+// - Fills the arrays read_slab leaves empty (vp, the B gradient, the
 //   physical grid edges, the metric coefficients and the tangent basis
 //   vectors), each with its own pattern. Empty arrays would compare equal
 //   whether they were broadcast or not.
 // It's deterministic, so every rank builds exactly the same background.
-Background::Background make_full_background(const std::string& test_opt)
+//
+// The cases: "gradb", a field strength that varies across the field;
+// "polarization", an electric field that varies in time; "curvature", the
+// slab bent into part of a torus (cylindrical geometry). All three have a
+// flow and heat fluxes.
+Background::Background make_full_background(const std::string& variant)
 {
 	Options::Options opts {};
-	opts.set_bkg_source("test");
-	opts.set_test_opt(test_opt);
+	opts.set_bkg_source("slab");
+	opts.set_slab_flow(1000.0);
+	opts.set_slab_heat_flux_i(0.1);
+	opts.set_slab_heat_flux_e(0.05);
+	if (variant == "gradb") opts.set_slab_bgrad_y(2.0);
+	else if (variant == "polarization") opts.set_slab_efield_y_rate(1e8);
+	else if (variant == "curvature") opts.set_slab_major_radius(2.0);
+	else ADD_FAILURE() << "Unknown background case " << variant;
 
 	// Faces of every kind, so the zone's face codes are all different
 	opts.set_min_xbound_type("core");
 	opts.set_min_ybound_type("periodic");
 	opts.set_max_ybound_type("periodic");
-	Background::Background bkg {Test::read_test(opts)};
+	Background::Background bkg {Slab::read_slab(opts)};
 
 	auto shift = [](std::vector<BkgFPType> v)
 	{
@@ -295,13 +306,13 @@ Background::Background make_full_background(const std::string& test_opt)
 // Rank 0 builds the background and broadcasts it, the same as flan() does
 // with the one it reads. Every rank also builds the same background itself
 // to compare against.
-void check_background_broadcast(const std::string& test_opt)
+void check_background_broadcast(const std::string& variant)
 {
 	Background::Background bkg {};
-	if (mpi_rank() == 0) bkg = make_full_background(test_opt);
+	if (mpi_rank() == 0) bkg = make_full_background(variant);
 	bkg.broadcast(MPI_COMM_WORLD);
 
-	const Background::Background want {make_full_background(test_opt)};
+	const Background::Background want {make_full_background(variant)};
 
 	// Check the test itself: no bound is 0, so a missing broadcast of any
 	// of them is caught
@@ -367,6 +378,8 @@ void check_background_broadcast(const std::string& test_opt)
 	expect_same(bkg.get_uX(), want.get_uX(), "uX");
 	expect_same(bkg.get_uY(), want.get_uY(), "uY");
 	expect_same(bkg.get_uZ(), want.get_uZ(), "uZ");
+	expect_same(bkg.get_q_par_i(), want.get_q_par_i(), "q_par_i");
+	expect_same(bkg.get_q_par_e(), want.get_q_par_e(), "q_par_e");
 
 	// Geometry
 	expect_same(bkg.get_X(), want.get_X(), "X");
@@ -404,7 +417,7 @@ void check_background_broadcast(const std::string& test_opt)
 
 // The grad-B case has a magnetic field that varies in space, the
 // polarization case an electric field that varies in time, and the
-// curvature case cylindrical geometry, so between them every array read_test
+// curvature case cylindrical geometry, so between them every array read_slab
 // sets holds values that differ from cell to cell.
 TEST_F(MPITest, BroadcastBackgroundGradB)
 	{ check_background_broadcast("gradb"); }

@@ -93,12 +93,7 @@ namespace Slots
 	/**
 	* Picks the starting Cartesian velocity of a new particle.
 	*
-	* For the test backgrounds (bkg_source = "test") the velocity is fixed
-	* by the test case: 10,000 m/s in Y for the gyrate, ExB, grad-B and
-	* polarization tests, 30,000 m/s along the field line (in the X-Y plane,
-	* at angle z) for the curvature test, and at rest for the friction test.
-	*
-	* Otherwise each component is sampled from a Maxwellian with zero mean
+	* Each component is sampled from a Maxwellian with zero mean
 	* and sigma = sqrt(kT/m), giving an isotropic velocity distribution. The
 	* temperature is imp_temp_start_val if imp_temp_start_opt is
 	* "single_value", or the main ion temperature interpolated (trilinear
@@ -113,8 +108,7 @@ namespace Slots
 	* @param t Starting time of the particle (s).
 	* @param x Starting computational x coordinate.
 	* @param y Starting computational y coordinate.
-	* @param z Starting computational z coordinate. In the curvature test,
-	*        z is the toroidal angle.
+	* @param z Starting computational z coordinate.
 	* @param tidx Index of the nearest background time frame.
 	* @param xidx x index of the grid cell containing the particle.
 	* @param yidx y index of the grid cell containing the particle.
@@ -129,38 +123,6 @@ namespace Slots
 		const int tidx, const int xidx, const int yidx, const int zidx, 
 		pcg32& rng, const Options::OptionsDevice* opts_d)
 	{
-		// If we're running a test we will want to start at predetermined
-		// velocities to make sure things work correctly. Ideally there
-		// wouldn't be an if statement to favor vectorization, but seeing as
-		// this is only happens once per particle it's not a huge deal.
-		if (opts_d->bkg_source_int == 0)
-		{
-			// Give particles an initial Y velocity to kick off gyration
-			if (opts_d->test_opt_int == 0 || opts_d->test_opt_int == 1
-				|| opts_d->test_opt_int == 2 || opts_d->test_opt_int == 3)
-			{
-				return {0.0, 10000.0, 0.0};
-			}
-
-			// Curvature drift test requires an initial velocity parallel to
-			// the field line, we set that to be 30,000 m/s. In this geometry
-			// x = R, y = Z and z = phi
-			else if (opts_d->test_opt_int == 4)
-			{
-				constexpr double v_par = 30000;
-				double v_X {- v_par * sin(z)};
-				double v_Y {v_par * cos(z)};
-				return {v_X, v_Y, 0.0};
-			}
-
-			// Friction force test case we start at rest so it can accelerate 
-			// up to the background velocity
-			else if (opts_d->test_opt_int == 5)
-			{
-				return {0.0, 0.0, 0.0};
-			}
-		}
-
 		// Start at input temperature value
 		double start_temp {};
 		if (opts_d->imp_temp_start_opt_int == 0)

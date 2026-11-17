@@ -47,8 +47,9 @@ MPI must be initialized before `flan()` is called, and every rank calls it.
    overwrites them with the values in `inpts`. An unrecognized option name,
    a value of the wrong type or an invalid value stops the run.
 2. **Read the background.** `Background::read_bkg` loads the plasma on rank 0,
-   from a Gkeyll simulation (`Gkyl::read_gkyl`) or one of the built-in test
-   backgrounds (`Test::read_test`). It's then broadcast to every rank.
+   from a Gkeyll simulation (`Gkyl::read_gkyl`), a SOLEDGE3X simulation
+   (`S3X::read_s3xe`) or the slab background set by the `slab_*` options
+   (`Slab::read_slab`). It's then broadcast to every rank.
 3. **Follow the impurities.** `ImpurityTransport::follow_impurities` follows
    this rank's share of the particles and records their statistics.
 4. **Combine the statistics.** `Impurity::reduce_stats` adds up the
@@ -183,7 +184,8 @@ copied as is between them.
 | `Options` | The `Options` class holding every input option, and loading them from the input file. |
 | `Background` | The `Background` class holding the plasma and geometry, and `read_bkg`. |
 | `Gkyl` | Reading a Gkeyll background. |
-| `Test` | The built-in test backgrounds. |
+| `S3X` | Reading a SOLEDGE3X background. |
+| `Slab` | The slab background, set by the `slab_*` options. |
 | `Slots` | The particle slots, and creating new particles. |
 | `ImpurityTransport` | `follow_impurities`, the main loop and the CPU/GPU wrappers. |
 | `Boris` | The Boris push. |
@@ -217,9 +219,10 @@ they're ever called.
 
 The unit tests in `tests/` are built with the library. The `*_cpu` tests are
 always built, and the `*_cuda` tests only with CUDA. Run them with `ctest`
-from the build directory. The regression inputs in `regression/` are full
-simulations of the test backgrounds, compiled against the library like any
-other input file.
+from the build directory. The regression cases in `regression/`
+(`reg_*.cpp`) are full simulations on the slab background, compiled against
+the library like any other input file, and checked against analytic results
+by the scripts there (see `regression/README.md`).
 
 ## Adding an input option
 

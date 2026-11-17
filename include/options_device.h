@@ -18,11 +18,8 @@ namespace Options
 	*/
 	struct OptionsDevice
 	{
-		int test_opt_int;		///< test_opt: 0 gyrate, 1 exb, 2 gradb,
-								///< 3 polarization, 4 curvature,
-								///< 5 friction_force
-		int bkg_source_int;		///< bkg_source: 0 test, 1 gkeyll,
-								///< 2 soledge3x, 3 slab
+		int bkg_source_int;		///< bkg_source: 0 slab, 1 gkeyll,
+								///< 2 soledge3x
 
 		double imp_mass_amu;	///< Impurity mass (amu)
 		int imp_num;			///< Number of impurities to follow

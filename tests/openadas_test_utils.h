@@ -135,12 +135,11 @@ namespace OpenADASTest
 	inline double huge_rate(int, double, double) { return 1e-4; }
 	inline double tiny_rate(int, double, double) { return 1e-90; }
 
-	// Test background with ne and Te set to uniform values
+	// Slab background with ne and Te set to uniform values
 	inline Background::Background make_uniform_bkg(double ne, double te)
 	{
 		Options::Options opts {};
-		opts.set_bkg_source("test");
-		opts.set_test_opt("gyrate");
+		opts.set_bkg_source("slab");
 		Background::Background bkg {Background::read_bkg(opts)};
 
 		auto& ne_v = bkg.get_ne().get_data();
@@ -166,8 +165,8 @@ namespace OpenADASTest
 			slots.set_y(i, 0.0);
 			slots.set_z(i, 0.0);
 			slots.set_tidx(i, 0);
-			slots.set_xidx(i, 10);
-			slots.set_yidx(i, 10);
+			slots.set_xidx(i, 1);	// slab cells are 6.25 mm wide
+			slots.set_yidx(i, 4);
 			slots.set_zidx(i, 4);
 		}
 		return slots;
