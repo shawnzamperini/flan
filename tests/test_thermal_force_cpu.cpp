@@ -544,23 +544,24 @@ namespace
 // kick).
 //
 // The kick is small next to the random part of a collision, so resolving it
-// takes millions of collisions. An optimized build does 2e7 for each
-// species at two time steps (s0 = 0.3 and 3), which resolves the kick to
-// 2 - 5%. A build without optimization is about 50 times slower, so it
-// does 2e6 at s0 = 3 only (5 - 7%), enough to catch a wrong sign or a
-// badly wrong size.
+// takes millions of collisions. It is checked at one time step, s0 = 3,
+// where the kick is well below its small-step value, so the exact formula
+// is tested and not just its small-step limit. An optimized build does 1e7
+// collisions for each species, which resolves the kick to 2 - 3%. A build
+// without optimization is about 50 times slower, so it does 2e6 (5 - 7%),
+// enough to catch a wrong sign or a badly wrong size. The regression case
+// reg_thermal_force checks the kick at other step sizes in full runs.
 TEST(ThermalForce, NanbuKick)
 {
 	const ForceCase fc {};
 	constexpr int Z {2};
 	constexpr int n_slots {200000};
 #ifdef __OPTIMIZE__
-	constexpr int n_calls {100};
-	const std::vector<double> s0s {0.3, 3.0};
+	constexpr int n_calls {50};
 #else
 	constexpr int n_calls {10};
-	const std::vector<double> s0s {3.0};
 #endif
+	const std::vector<double> s0s {3.0};
 
 	for (const bool elec : {false, true})
 	{

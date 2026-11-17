@@ -103,8 +103,8 @@ void core_bc_test_kernel(double* out_a, double* out_b, double* out_c)
 }
 
 
-// Test asborbing boundary kills particle
-TEST(Boundary, Absorbing)
+// Test absorbing boundary kills particle
+TEST(BoundaryGPU, Absorbing)
 {
     int* d_out;
     int h_out[5];
@@ -124,7 +124,7 @@ TEST(Boundary, Absorbing)
     EXPECT_EQ(h_out[4], 1);  // dead due to buffer
 }
 
-TEST(PeriodicBCGPU, BasicCases)
+TEST(BoundaryGPU, Periodic)
 {
     double* d_out;
     double h_out[3];
@@ -142,7 +142,7 @@ TEST(PeriodicBCGPU, BasicCases)
     EXPECT_DOUBLE_EQ(h_out[2], 7.0);  // wrapped low
 }
 
-TEST(CoreBCGPU, BasicCases)
+TEST(BoundaryGPU, Core)
 {
     double *d_a, *d_b, *d_c;
     double h_a[2], h_b[2], h_c[2];

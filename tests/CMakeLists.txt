@@ -97,6 +97,10 @@ set_tests_properties(MPITest PROPERTIES TIMEOUT 120)
 # ------------------------------------------------------------
 # CUDA tests. Only built with ENABLE_CUDA, since they need nvcc and the CUDA
 # runtime (CUDA::cudart only exists once find_package(CUDAToolkit) has run).
+#
+# A test that defines its own kernels (__global__ functions, launched with
+# <<<...>>>) is a .cu file, compiled by nvcc. One that only calls the
+# library's GPU functions is a .cpp file, compiled by the host compiler.
 # ------------------------------------------------------------
 
 if(ENABLE_CUDA)

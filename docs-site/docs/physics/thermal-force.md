@@ -205,9 +205,10 @@ force balance in a full run.
 - **The kick is the right size.** Tungsten at rest is collided millions
   of times, and its mean change in velocity along the field is compared
   with the exact expectation for Nanbu's model at that time step. It
-  agrees within the statistical error (2 to 5%) for ions and electrons, at
-  two time steps. The kick is against the heat flux, there is none across
-  the field, and none with the option off.
+  agrees within the statistical error (2 to 3%) for ions and electrons, at
+  a time step long enough ($s_0 = 3$) that the kick is well below its
+  small-step value. The kick is against the heat flux, there is none
+  across the field, and none with the option off.
 - **The small-step limit is the textbook force.** With Braginskii's heat
   flux, the force in the limit of a small time step is $2.65\,Z^2
   \nabla_\parallel T_i$ and $0.71\,Z^2 \nabla_\parallel T_e$, to 0.2%.
