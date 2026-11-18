@@ -474,56 +474,231 @@ namespace Hermes
 	}
 
 	/**
-	* Reads the plasma of every snapshot and moves it into the background.
+	* The normalization of a JAX-Hermes3 run, which isn't in its snapshots:
+	* hermes_nnorm, hermes_tnorm, hermes_bnorm, hermes_ion_mass_amu and
+	* hermes_zperiod.
+	*
+	* @param opts Simulation options.
+	* @return The normalization.
+	*/
+	Norm norm_from_options(const Options::Options& opts)
+	{
+		return {opts.hermes_nnorm(), opts.hermes_tnorm(), opts.hermes_bnorm(),
+			opts.hermes_ion_mass_amu(), opts.hermes_zperiod()};
+	}
+
+	/**
+	* Stops the run if the normalization can't be right: zperiod below 1,
+	* or a normalization or ion mass that isn't positive.
+	*
+	* @param norm The normalization.
+	*/
+	void check_norm(const Norm& norm)
+	{
+		if (norm.zperiod < 1)
+		{
+			Errors::fatal_error("hermes_zperiod = "
+				+ std::to_string(norm.zperiod) + ", but must be at least 1.");
+		}
+		for (const double v : {norm.nnorm, norm.tnorm, norm.bnorm,
+			norm.ion_aa})
+		{
+			if (!(v > 0.0))
+			{
+				Errors::fatal_error("hermes_nnorm, hermes_tnorm, "
+					"hermes_bnorm and hermes_ion_mass_amu must all be "
+					"positive.");
+			}
+		}
+	}
+
+	/**
+	* Sets up the zoned arrays for nframes times on the background's zones,
+	* and the table from global (x, y) cells to zone cells.
+	*
+	* @param grid The grid.
+	* @param zones The background's zones (from make_zones).
+	* @param norm The run's normalization.
+	* @param nframes Number of times that will be stored.
+	*/
+	Frames::Frames(const Grid& grid, const Zones::Zones& zones,
+		const Norm& norm, const int nframes)
+		: m_norm {norm}, m_nframes {nframes}, m_ny {grid.ny},
+		m_cs0 {std::sqrt(qe * norm.tnorm / mp)},
+		m_t_unit {mp / (qe * norm.bnorm)}, m_sign {parallel_sign(grid)},
+		m_cells(static_cast<std::size_t>(grid.nx) * grid.ny),
+		m_ne {Axisym::zoned(zones, nframes)},
+		m_te {Axisym::zoned(zones, nframes)},
+		m_ti {Axisym::zoned(zones, nframes)},
+		m_vp {Axisym::zoned(zones, nframes)},
+		m_upar {Axisym::zoned(zones, nframes)},
+		m_times(nframes), m_labels(nframes)
+	{
+		const auto ranges {zone_ranges(grid)};
+		for (int zone {}; zone < static_cast<int>(ranges.size()); ++zone)
+		{
+			const ZoneRange& r {ranges[zone]};
+			for (int x {r.x0}; x < r.x1; ++x)
+			for (int y {r.y0}; y < r.y1; ++y)
+			{
+				m_cells[static_cast<std::size_t>(x) * grid.ny + y]
+					= {zone, x - r.x0, y - r.y0};
+			}
+		}
+	}
+
+	/**
+	* Stores one cell of one time from the normalized plasma, as BOUT++
+	* unnormalizes it: ne = Ne Nnorm, Te = Pe / Ne Tnorm, Ti = Pi / Ne
+	* Tnorm (one ion species of charge 1, so ni = ne), the potential
+	* phi Tnorm, and the parallel flow along B, V c_s0 times parallel_sign.
+	* A cell with Ne <= 0 gets zero temperatures and flow (V isn't used),
+	* and is counted.
+	*
+	* The reader works out V, the ion flow along +y in units of c_s0, from
+	* what its format has (NVi / (AA Ne) for JAX-Hermes3).
+	*
+	* @param t Index of the time (0 to nframes - 1).
+	* @param x, y Global cell indices (x counting the guard cells).
+	* @param k Toroidal cell index.
+	* @param Ne, Pe, Pi, V, phi The normalized plasma at the cell.
+	*/
+	void Frames::store(const int t, const int x, const int y, const int k,
+		const double Ne, const double Pe, const double Pi, const double V,
+		const double phi)
+	{
+		const Cell& c {m_cells[static_cast<std::size_t>(x) * m_ny + y]};
+		if (c.zone < 0) return;
+		const double tnorm {m_norm.tnorm};
+		m_ne(c.zone, t, c.i, c.j, k) = Ne * m_norm.nnorm;
+		m_vp(c.zone, t, c.i, c.j, k) = phi * tnorm;
+		if (Ne > 0.0)
+		{
+			m_te(c.zone, t, c.i, c.j, k) = Pe / Ne * tnorm;
+			m_ti(c.zone, t, c.i, c.j, k) = Pi / Ne * tnorm;
+			m_upar(c.zone, t, c.i, c.j, k) = m_sign * V * m_cs0;
+		}
+		else ++m_empty_cells;
+	}
+
+	/**
+	* Sets the time of one of the stored times.
+	*
+	* @param t Index of the time (0 to nframes - 1).
+	* @param t_norm The time, normalized (units of m_p / (e Bnorm)).
+	* @param label What the time came from (e.g. a snapshot path), for
+	*        messages.
+	*/
+	void Frames::set_time(const int t, const double t_norm,
+		const std::string& label)
+	{
+		m_times[t] = t_norm * m_t_unit;
+		m_labels[t] = label;
+	}
+
+	/**
+	* Moves the stored plasma into the background and calculates what
+	* follows from it, the same for every format.
 	*
 	* The background must already have its zones, geometry and magnetic
-	* field. Each snapshot's Ne, Pe, Pi, NVi, phi and t are unnormalized
-	* with hermes_nnorm, hermes_tnorm and hermes_bnorm, as in BOUT++:
-	* ne = Ne Nnorm, Te = Pe / Ne Tnorm, Ti = Pi / Ne Tnorm (one ion species
-	* of charge 1, so ni = ne), vp = phi Tnorm, the parallel flow along B is
-	* NVi / (AA Ne) c_s0 times parallel_sign, with c_s0 = sqrt(e Tnorm /
-	* m_p), and the time t m_p / (e Bnorm). Cells with Ne <= 0 get zero
-	* temperatures and flow, and how many there were is printed. Ghost
-	* cells are filled with Zones::fill_ghosts, and E and the flows come
-	* from Axisym::calc_efield_and_flows.
-	*
-	* Every snapshot must have the grid's nx and ny and the same nz as the
-	* zones, and the times must increase. The snapshots have no heat
+	* field. The times must increase. Ghost cells are filled with
+	* Zones::fill_ghosts, and E and the flows come from
+	* Axisym::calc_efield_and_flows. The runs' outputs have no heat
 	* fluxes, so with hermes_heat_flux = "conduction" they're calculated
 	* from the conduction (Axisym::calc_conductive_heat_fluxes), with the
 	* hermes_kappa_* options and one ion species of charge 1.
 	*
-	* @param paths Snapshot paths, in time order.
-	* @param grid The grid.
-	* @param opts Simulation options (the hermes_* normalization).
+	* @param frames The stored plasma, moved out of (left empty).
+	* @param opts Simulation options (hermes_heat_flux, hermes_kappa_*).
 	* @param bkg Background to move the plasma into.
 	*/
-	void read_snapshots(const std::vector<std::string>& paths,
-		const Grid& grid, const Options::Options& opts,
+	void finish_background(Frames& frames, const Options::Options& opts,
 		Background::Background& bkg)
 	{
 		const Zones::Zones& zones {bkg.get_zones()};
-		const int nframes {static_cast<int>(paths.size())};
-		const int nz {zones.get_nz(0)};
-		const auto ranges {zone_ranges(grid)};
-		auto ne {Axisym::zoned(zones, nframes)};
-		auto te {Axisym::zoned(zones, nframes)};
-		auto ti {Axisym::zoned(zones, nframes)};
-		auto vp {Axisym::zoned(zones, nframes)};
-		auto upar {Axisym::zoned(zones, nframes)};
-		std::vector<BkgFPType> times {};
+		const int nframes {frames.m_nframes};
+		const auto& times {frames.m_times};
+		std::cout << "Read " << nframes << " HERMES snapshots, t = "
+			<< times.front() << " to " << times.back() << " s\n";
+		if (frames.m_empty_cells > 0)
+		{
+			std::cout << "  " << frames.m_empty_cells << " cells (over all "
+				"snapshots) have Ne <= 0, and are given zero temperatures "
+				"and flow.\n";
+		}
 
-		const double nnorm {opts.hermes_nnorm()};
-		const double tnorm {opts.hermes_tnorm()};
-		const double cs0 {std::sqrt(qe * tnorm / mp)};
-		const double t_unit {mp / (qe * opts.hermes_bnorm())};
-		const double aa {opts.hermes_ion_mass_amu()};
-		const double sign {parallel_sign(grid)};
+		for (int t {1}; t < nframes; ++t)
+		{
+			if (!(times[t] > times[t - 1]))
+			{
+				Errors::fatal_error("The HERMES snapshots' times don't "
+					"increase: " + frames.m_labels[t] + " is at "
+					+ std::to_string(times[t]) + " s, but the snapshot before "
+					"it is at " + std::to_string(times[t - 1]) + " s.");
+			}
+		}
+
+		for (auto* v : {&frames.m_ne, &frames.m_te, &frames.m_ti,
+			&frames.m_vp, &frames.m_upar}) zones.fill_ghosts(*v);
+		bkg.move_into_times(frames.m_times);
+		bkg.move_into_ne(frames.m_ne);
+		bkg.move_into_te(frames.m_te);
+		bkg.move_into_ti(frames.m_ti);
+		Axisym::calc_efield_and_flows(bkg, frames.m_vp, frames.m_upar);
+		bkg.move_into_vp(frames.m_vp);
+
+		// The runs don't write the heat fluxes, so they're calculated from
+		// the conduction, as the run calculated them
+		if (opts.hermes_heat_flux_int() == 1)
+		{
+			Axisym::Conduction c {};
+			c.coef_e = opts.hermes_kappa_coef_e();
+			c.coef_i = opts.hermes_kappa_coef_i();
+			c.limit_alpha = opts.hermes_kappa_limit_alpha();
+			c.ion_z = 1.0;
+			c.ion_aa = frames.m_norm.ion_aa;
+			Axisym::calc_conductive_heat_fluxes(bkg, c);
+			std::cout << "  Parallel heat fluxes from Braginskii conduction: "
+				"kappa coefficients " << c.coef_e << " (electrons), "
+				<< c.coef_i << " (ions), ";
+			if (c.limit_alpha > 0.0)
+				std::cout << "flux limiter " << c.limit_alpha << '\n';
+			else std::cout << "no flux limiter\n";
+		}
+		else
+		{
+			std::cout << "  hermes_heat_flux = \"off\": no parallel heat "
+				"fluxes, so no thermal force.\n";
+		}
+	}
+
+	/**
+	* Reads JAX-Hermes3 snapshots into frames: each snapshot's Ne, Pe, Pi,
+	* NVi, phi and t, with the ion flow V = NVi / (AA Ne).
+	*
+	* Every snapshot must have the grid's nx and ny and the same nz as the
+	* frames' zones.
+	*
+	* @param paths Snapshot paths, in time order (frames.nframes() of them).
+	* @param grid The grid.
+	* @param frames Where the plasma goes.
+	*/
+	void read_snapshots(const std::vector<std::string>& paths,
+		const Grid& grid, Frames& frames)
+	{
+		const int nframes {static_cast<int>(paths.size())};
+		if (nframes != frames.nframes())
+		{
+			Errors::fatal_error("read_snapshots got "
+				+ std::to_string(nframes) + " snapshots for "
+				+ std::to_string(frames.nframes()) + " frames.");
+		}
+		const double aa {frames.norm().ion_aa};
 		const std::vector<std::size_t> want_shape {
 			static_cast<std::size_t>(grid.nx),
-			static_cast<std::size_t>(grid.ny), static_cast<std::size_t>(nz)};
+			static_cast<std::size_t>(grid.ny), 0};
+		std::size_t nz {};
 
-		long empty_cells {};
 		for (int t {}; t < nframes; ++t)
 		{
 			const std::string& path {paths[t]};
@@ -531,7 +706,9 @@ namespace Hermes
 			auto read = [&](const std::string& name)
 			{
 				auto a {file.read(name)};
-				if (a.shape != want_shape)
+				if (nz == 0 && a.shape.size() == 3) nz = a.shape[2];
+				if (a.shape.size() != 3 || a.shape[0] != want_shape[0]
+					|| a.shape[1] != want_shape[1] || a.shape[2] != nz)
 				{
 					Errors::fatal_error(name + " in " + path + " isn't ("
 						+ std::to_string(grid.nx) + ", "
@@ -546,81 +723,17 @@ namespace Hermes
 			const auto Pi {read("Pi")};
 			const auto NVi {read("NVi")};
 			const auto phi {read("phi")};
-			times.push_back(file.read("t").data.at(0) * t_unit);
+			frames.set_time(t, file.read("t").data.at(0), path);
 
-			for (int zone {}; zone < static_cast<int>(ranges.size()); ++zone)
+			std::size_t c {};
+			for (int x {}; x < grid.nx; ++x)
+			for (int y {}; y < grid.ny; ++y)
+			for (int k {}; k < static_cast<int>(nz); ++k, ++c)
 			{
-				const ZoneRange& r {ranges[zone]};
-				for (int i {}; i < r.x1 - r.x0; ++i)
-				for (int j {}; j < r.y1 - r.y0; ++j)
-				for (int k {}; k < nz; ++k)
-				{
-					const std::size_t c {(static_cast<std::size_t>(r.x0 + i)
-						* grid.ny + r.y0 + j) * nz + k};
-					const double n {Ne[c]};
-					ne(zone, t, i, j, k) = n * nnorm;
-					vp(zone, t, i, j, k) = phi[c] * tnorm;
-					if (n > 0.0)
-					{
-						te(zone, t, i, j, k) = Pe[c] / n * tnorm;
-						ti(zone, t, i, j, k) = Pi[c] / n * tnorm;
-						upar(zone, t, i, j, k) = sign * NVi[c] / (aa * n)
-							* cs0;
-					}
-					else ++empty_cells;
-				}
+				const double n {Ne[c]};
+				frames.store(t, x, y, k, n, Pe[c], Pi[c],
+					n > 0.0 ? NVi[c] / (aa * n) : 0.0, phi[c]);
 			}
-		}
-		std::cout << "Read " << nframes << " HERMES snapshots, t = "
-			<< times.front() << " to " << times.back() << " s\n";
-		if (empty_cells > 0)
-		{
-			std::cout << "  " << empty_cells << " cells (over all "
-				"snapshots) have Ne <= 0, and are given zero temperatures "
-				"and flow.\n";
-		}
-
-		for (int t {1}; t < nframes; ++t)
-		{
-			if (!(times[t] > times[t - 1]))
-			{
-				Errors::fatal_error("The HERMES snapshots' times don't "
-					"increase: " + paths[t] + " is at "
-					+ std::to_string(times[t]) + " s, but the snapshot before "
-					"it is at " + std::to_string(times[t - 1]) + " s.");
-			}
-		}
-
-		for (auto* v : {&ne, &te, &ti, &vp, &upar}) zones.fill_ghosts(*v);
-		bkg.move_into_times(times);
-		bkg.move_into_ne(ne);
-		bkg.move_into_te(te);
-		bkg.move_into_ti(ti);
-		Axisym::calc_efield_and_flows(bkg, vp, upar);
-		bkg.move_into_vp(vp);
-
-		// The snapshots don't have the heat fluxes, so they're calculated
-		// from the conduction, as the run calculated them
-		if (opts.hermes_heat_flux_int() == 1)
-		{
-			Axisym::Conduction c {};
-			c.coef_e = opts.hermes_kappa_coef_e();
-			c.coef_i = opts.hermes_kappa_coef_i();
-			c.limit_alpha = opts.hermes_kappa_limit_alpha();
-			c.ion_z = 1.0;
-			c.ion_aa = aa;
-			Axisym::calc_conductive_heat_fluxes(bkg, c);
-			std::cout << "  Parallel heat fluxes from Braginskii conduction: "
-				"kappa coefficients " << c.coef_e << " (electrons), "
-				<< c.coef_i << " (ions), ";
-			if (c.limit_alpha > 0.0)
-				std::cout << "flux limiter " << c.limit_alpha << '\n';
-			else std::cout << "no flux limiter\n";
-		}
-		else
-		{
-			std::cout << "  hermes_heat_flux = \"off\": no parallel heat "
-				"fluxes, so no thermal force.\n";
 		}
 	}
 
@@ -649,22 +762,9 @@ namespace Hermes
 			Errors::fatal_error("hermes_grid_file and hermes_snap_dir must "
 				"be set for a HERMES background.");
 		}
-		const int zperiod {opts.hermes_zperiod()};
-		if (zperiod < 1)
-		{
-			Errors::fatal_error("hermes_zperiod = " + std::to_string(zperiod)
-				+ ", but must be at least 1.");
-		}
-		for (const double v : {opts.hermes_nnorm(), opts.hermes_tnorm(),
-			opts.hermes_bnorm(), opts.hermes_ion_mass_amu()})
-		{
-			if (!(v > 0.0))
-			{
-				Errors::fatal_error("hermes_nnorm, hermes_tnorm, "
-					"hermes_bnorm and hermes_ion_mass_amu must all be "
-					"positive.");
-			}
-		}
+		const Norm norm {norm_from_options(opts)};
+		check_norm(norm);
+		const int zperiod {norm.zperiod};
 
 		const auto paths {select_snapshots(opts.hermes_snap_dir(),
 			opts.hermes_snap_start(), opts.hermes_snap_end(),
@@ -684,9 +784,9 @@ namespace Hermes
 			<< grid.ixseps1 << ", jyseps1_1 " << grid.jyseps1_1
 			<< ", jyseps2_2 " << grid.jyseps2_2 << "), nz = " << nz
 			<< ", 1/" << zperiod << " of the torus\n"
-			<< "  Nnorm = " << opts.hermes_nnorm() << " m-3, Tnorm = "
-			<< opts.hermes_tnorm() << " eV, Bnorm = " << opts.hermes_bnorm()
-			<< " T, ion AA = " << opts.hermes_ion_mass_amu() << '\n';
+			<< "  Nnorm = " << norm.nnorm << " m-3, Tnorm = "
+			<< norm.tnorm << " eV, Bnorm = " << norm.bnorm
+			<< " T, ion AA = " << norm.ion_aa << '\n';
 
 		Background::Background bkg {};
 		const bool aligned {opts.hermes_field_aligned_int() == 1};
@@ -702,9 +802,12 @@ namespace Hermes
 		Axisym::calc_geometry(mesh, bkg);
 		Axisym::calc_bfield(mesh, static_cast<int>(paths.size()), bkg);
 		bkg.set_elec_mass_amu(Constants::mass_e / Constants::amu_to_kg);
-		bkg.set_ion_mass_amu(opts.hermes_ion_mass_amu());
+		bkg.set_ion_mass_amu(norm.ion_aa);
 
-		read_snapshots(paths, grid, opts, bkg);
+		Frames frames(grid, bkg.get_zones(), norm,
+			static_cast<int>(paths.size()));
+		read_snapshots(paths, grid, frames);
+		finish_background(frames, opts, bkg);
 		return bkg;
 	}
 }

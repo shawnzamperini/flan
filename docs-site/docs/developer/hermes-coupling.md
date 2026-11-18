@@ -343,8 +343,8 @@ the checks of Phase 0 on a BOUT++ run, plus checks of the dumps
   fluctuations, and smaller in the toroidal average, so Phase B5 is
   worth doing as an option.
 
-**Phase B1: split the snapshot reader, no change in behavior.**
-`read_snapshots` does three things: reads one snapshot, converts it to SI
+**Phase B1: split the snapshot reader, no change in behavior.** Done.
+`read_snapshots` did three things: reads one snapshot, converts it to SI
 in the zoned arrays, and finishes the background (time check, ghost
 cells, E and the flows, heat fluxes). Split it so both formats share the
 conversion and the finish:
@@ -361,8 +361,9 @@ conversion and the finish:
 - The JAX reader becomes a loop over `.npz` files calling `store` with
   V = NVi / (AA Ne).
 - The normalization (Nnorm, Tnorm, Bnorm, AA, zperiod) moves into a small
-  `Hermes::Norm` struct filled per format, so the shared code doesn't
-  read the options directly.
+  `Hermes::Norm` struct filled per format (`norm_from_options` for
+  JAX-Hermes3) and checked by `check_norm`, so the shared code doesn't
+  read the options for it.
 
 Check: `test_read_hermes_cpu` passes unchanged, and a JAX background read
 before and after is the same bit for bit (a scratch dump driver, as for

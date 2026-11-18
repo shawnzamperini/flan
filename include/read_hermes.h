@@ -70,12 +70,84 @@ namespace Hermes
 
 	double parallel_sign(const Grid& grid);
 
+	/// The run's normalization and main ions. Each output format fills it
+	/// its own way (from the options for JAX-Hermes3), so the code shared
+	/// by the formats doesn't read the options for them.
+	struct Norm
+	{
+		double nnorm {};	///< Density Nnorm (m^-3)
+		double tnorm {};	///< Temperature Tnorm (eV)
+		double bnorm {};	///< Magnetic field Bnorm (T)
+		double ion_aa {};	///< Mass number AA of the main ions
+		int zperiod {};		///< The run covers 1 / zperiod of the torus
+	};
+
+	Norm norm_from_options(const Options::Options& opts);
+
+	void check_norm(const Norm& norm);
+
+	/**
+	* The plasma of the loaded times, in SI units in the zoned arrays,
+	* filled one cell at a time by a format's reader with store and
+	* set_time, then moved into the background by finish_background.
+	*
+	* This keeps the unnormalization, the direction of the parallel flow
+	* and the treatment of empty cells in one place for every format.
+	*/
+	class Frames
+	{
+	public:
+		Frames(const Grid& grid, const Zones::Zones& zones,
+			const Norm& norm, const int nframes);
+
+		void store(const int t, const int x, const int y, const int k,
+			const double Ne, const double Pe, const double Pi,
+			const double V, const double phi);
+
+		void set_time(const int t, const double t_norm,
+			const std::string& label);
+
+		int nframes() const {return m_nframes;}
+		const Norm& norm() const {return m_norm;}
+
+		friend void finish_background(Frames& frames,
+			const Options::Options& opts, Background::Background& bkg);
+
+	private:
+		/// Where a global (x, y) cell is: zone (-1 if none), and the cell's
+		/// index within the zone
+		struct Cell
+		{
+			int zone {-1};
+			int i {};
+			int j {};
+		};
+
+		Norm m_norm {};
+		int m_nframes {};
+		int m_ny {};
+		double m_cs0 {};	///< sqrt(e Tnorm / m_p) (m/s)
+		double m_t_unit {};	///< m_p / (e Bnorm) (s)
+		double m_sign {};	///< parallel_sign of the grid
+		std::vector<Cell> m_cells {};	///< By x * ny + y
+		Vectors::ZonedVector<BkgFPType> m_ne {};
+		Vectors::ZonedVector<BkgFPType> m_te {};
+		Vectors::ZonedVector<BkgFPType> m_ti {};
+		Vectors::ZonedVector<BkgFPType> m_vp {};
+		Vectors::ZonedVector<BkgFPType> m_upar {};
+		std::vector<BkgFPType> m_times {};
+		std::vector<std::string> m_labels {};
+		long m_empty_cells {};
+	};
+
+	void finish_background(Frames& frames, const Options::Options& opts,
+		Background::Background& bkg);
+
 	std::vector<std::string> select_snapshots(const std::string& dir,
 		int start, int end, const int stride);
 
 	void read_snapshots(const std::vector<std::string>& paths,
-		const Grid& grid, const Options::Options& opts,
-		Background::Background& bkg);
+		const Grid& grid, Frames& frames);
 
 	Background::Background read_hermes(const Options::Options& opts);
 }
