@@ -367,8 +367,42 @@ def movie_multizone(nc_path, out, phi=None, start=0, stop=None, step=1,
 		if not animation.writers.is_available("ffmpeg"):
 			raise RuntimeError("Writing {} needs ffmpeg, which wasn't "
 				"found. Install it, or write a .gif instead.".format(out))
-		writer = animation.FFMpegWriter(fps=fps)
+		codec, out = pick_codec(str(out))
+		writer = animation.FFMpegWriter(fps=fps, codec=codec)
 	anim.save(out, writer=writer, dpi=dpi)
+	print("Saved {}".format(out))
+
+
+def pick_codec(out):
+	"""
+	Picks a video encoder that this ffmpeg has. Some ffmpeg builds (e.g.,
+	the system one on some clusters) have no H.264 encoder, which
+	matplotlib uses by default, so fall back to VP9 in a .webm file, which
+	browsers and most players open.
+
+	Inputs
+	 - out (str) : Requested movie file name.
+
+	Returns (codec, file name), with the name's extension changed to .webm
+	if H.264 isn't available.
+	"""
+	import subprocess
+	try:
+		encoders = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"],
+			capture_output=True, text=True).stdout
+	except OSError:
+		encoders = ""
+	if out.lower().endswith(".webm"):
+		return "libvpx-vp9", out
+	if "libx264" in encoders or " h264" in encoders:
+		return "h264", out
+	if "libvpx-vp9" in encoders:
+		new = out.rsplit(".", 1)[0] + ".webm"
+		print("This ffmpeg has no H.264 encoder, so the movie is VP9: "
+			"{}".format(new))
+		return "libvpx-vp9", new
+	raise RuntimeError("This ffmpeg has neither an H.264 nor a VP9 encoder. "
+		"Write a .gif instead.")
 	print("Wrote {} ({} frames)".format(out, len(frames)))
 	return out
 
