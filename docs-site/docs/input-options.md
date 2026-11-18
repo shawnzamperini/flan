@@ -95,7 +95,10 @@ x = `ixseps1`) and z is the toroidal angle in radians. The normalization
 must be the run's: for JAX-Hermes3 it's in the case's input JSON
 (`pars.norm`, `average_atomic_mass`, `zperiod`). The plasma is
 interpolated, and differentiated in y, along the field line using the
-grid's `zShift`. See the [HERMES Coupling Plan](developer/hermes-coupling.md)
+grid's `zShift`. The parallel heat fluxes the thermal force needs are
+calculated from the conduction (`hermes_heat_flux`), with the run's
+conduction coefficients (`kappa_coefficient_e` and `_i` in the JSON
+`pars`). See the [HERMES Coupling Plan](developer/hermes-coupling.md)
 for what isn't included yet.
 
 | Option | Type | Default | Description |
@@ -111,6 +114,10 @@ for what isn't included yet.
 | `hermes_bnorm` | float | `1.0` | Magnetic field (T) the run is normalized by (Bnorm). Times are in units of m_p / (e Bnorm). |
 | `hermes_ion_mass_amu` | float | `2.0` | Mass number (AA) of the main ions. The parallel flow is NVi / (AA Ne), and this is also the ion mass the impurities collide with. |
 | `hermes_zperiod` | int | `1` | The run covers 1 / `hermes_zperiod` of the torus in the toroidal direction (zperiod in the HERMES input). |
+| `hermes_heat_flux` | string | `"conduction"` | Where the parallel heat fluxes for the thermal force come from. The snapshots don't have them, so `"conduction"` calculates them as Hermes-3 does, q_par = -kappa_par grad_par T with Braginskii's kappa_par and the species' collision times from all of their collisions (e-e and e-i for electrons, i-i and i-e for ions), with one ion species and n_i = n_e. `"off"` leaves them out, and then the thermal force isn't included. Valid values: `"conduction"`, `"off"`. |
+| `hermes_kappa_coef_e` | float | `2.2345` | Electron parallel conduction coefficient (`kappa_coefficient` of the electrons in the HERMES input). The default is Hermes-3's, 3.16 / sqrt(2). |
+| `hermes_kappa_coef_i` | float | `3.9` | Ion parallel conduction coefficient (`kappa_coefficient` of the ions in the HERMES input). |
+| `hermes_kappa_limit_alpha` | float | `-1.0` | Flux limiter of the parallel conduction (`kappa_limit_alpha` in the HERMES input): kappa is divided by 1 + \|q_SH / q_fl\|, with q_fl = alpha n T sqrt(T / m). Zero or negative means no limit. |
 
 ## Geometry and boundaries
 

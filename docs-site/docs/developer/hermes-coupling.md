@@ -183,10 +183,33 @@ vectors are Cartesian, so they have to turn with the toroidal angle.
   velocity is turned by the wedge's width, and the whole torus is
   unchanged.
 
-**Phase 5: thermal force.** q_par = -kappa_par grad_par T for each
-species, with kappa_par as in Hermes-3's `braginskii_conduction` and the
-field-aligned derivative of Phase 3. The heat fluxes are saved with the
-background like the SOLEDGE3X ones.
+**Phase 5: thermal force.** Done. The snapshots have no heat fluxes, so
+Flan calculates them the way the run did, for electrons and ions:
+q_par = -kappa_par grad_par T, positive along B like the SOLEDGE3X ones.
+
+- `Braginskii` (`braginskii.cpp`): the collision frequencies and Coulomb
+  logarithms of Hermes-3's `braginskii_collisions` and the conductivity
+  of `braginskii_conduction`, kappa = c n e^2 T tau / m (T in eV), in SI
+  units. tau = 1 / Σν uses Hermes-3's default "multispecies" set: e-e and
+  e-i for electrons, i-i and i-e for ions. The optional flux limiter is
+  included but off by default, as in Hermes-3.
+- `Axisym::calc_conductive_heat_fluxes` takes grad_par from the
+  field-aligned derivative of Phase 3 (not b·∇T, for the reason given
+  there). The plasma is one ion species with n_i = n_e / Z; a run with
+  several ion species would need their densities and collisions. The y
+  derivative is one sided in the last cell before a target, so q_par
+  there is approximate.
+- Options `hermes_heat_flux`, `hermes_kappa_coef_e`, `hermes_kappa_coef_i`
+  and `hermes_kappa_limit_alpha`. The heat fluxes are saved with the
+  background and used by the thermal force as for SOLEDGE3X.
+- Checks: `test_braginskii_cpu` (the frequencies against the NRL
+  Formulary's Braginskii collision times, Spitzer's kappa_e, the Coulomb
+  logarithm's ranges and floors, the limiter) and tests in
+  `test_field_aligned_cpu` (the heat flux for T rising along the field
+  line, none for T that only varies across it, the option). On HERMES
+  output, Flan's q_par was checked against a separate calculation with
+  BOUT++'s Grad_par from the grid's metric, and the conducted and
+  convected power into the legs against the input power.
 
 **Phase 6: validation and output.** `regression/hermes_example.cpp` like
 `s3x_example.cpp`, starting from a point source; a check that V/cs is
@@ -234,7 +257,8 @@ Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
   `braginskii_conduction`: q_par = -kappa grad_par T with
   kappa = c P tau / m and tau = 1 / Σν, where Σν is the sum of the
   species' Braginskii collision frequencies (e-e and e-i for electrons,
-  i-i and i-e for ions, as in `braginskii_collisions`). No flux limiter.
+  i-i and i-e for ions, as in `braginskii_collisions`). The flux limiter
+  (`kappa_limit_alpha`) is off unless it's set.
 - **Parallel derivatives and interpolation in y** follow the field line:
   going from plane y to y + 1, z changes by Δ`zShift`, plus `ShiftAngle`
   across the core branch cut. For derivatives the neighboring planes are

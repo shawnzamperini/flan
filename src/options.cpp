@@ -80,6 +80,7 @@ namespace Options
 		set_calc_grad_elec(m_calc_grad_elec);
 		set_s3x_chi_absorb(m_s3x_chi_absorb);
 		set_hermes_format(m_hermes_format);
+		set_hermes_heat_flux(m_hermes_heat_flux);
 		set_imp_source_opt(m_imp_source_opt);
 		set_sput_flux_opt(m_sput_flux_opt);
 		set_sput_bohm_floor(m_sput_bohm_floor);
@@ -768,6 +769,66 @@ namespace Options
 	*/
 	void Options::set_hermes_zperiod(int hermes_zperiod)
 		{m_hermes_zperiod = hermes_zperiod;}
+
+	/**
+	* Sets the hermes_heat_flux option.
+	*
+	* Where a HERMES background's parallel heat fluxes (for the thermal
+	* force) come from: "conduction" calculates them as -kappa_par grad_par
+	* T with Braginskii's kappa_par, as Hermes-3 does, and "off" leaves them
+	* out (no thermal force). Also sets the control integer returned by
+	* hermes_heat_flux_int() to 0 for "off", 1 for "conduction".
+	*
+	* @param hermes_heat_flux New value of the hermes_heat_flux option.
+	*/
+	void Options::set_hermes_heat_flux(std::string hermes_heat_flux)
+	{
+		if (check_input<std::string>("hermes_heat_flux", hermes_heat_flux,
+			{"conduction", "off"}))
+		{
+			m_hermes_heat_flux = hermes_heat_flux;
+		}
+
+		// Assign control integers
+		if (hermes_heat_flux == "off") m_hermes_heat_flux_int = 0;
+		else if (hermes_heat_flux == "conduction") m_hermes_heat_flux_int = 1;
+	}
+
+	/**
+	* Sets the hermes_kappa_coef_e option.
+	*
+	* Electron parallel conduction coefficient (kappa_coefficient of the
+	* electrons in the HERMES input). The default, 3.16 / sqrt(2), is
+	* Hermes-3's.
+	*
+	* @param hermes_kappa_coef_e New value of the hermes_kappa_coef_e option.
+	*/
+	void Options::set_hermes_kappa_coef_e(double hermes_kappa_coef_e)
+		{m_hermes_kappa_coef_e = hermes_kappa_coef_e;}
+
+	/**
+	* Sets the hermes_kappa_coef_i option.
+	*
+	* Ion parallel conduction coefficient (kappa_coefficient of the ions in
+	* the HERMES input). The default, 3.9, is Hermes-3's.
+	*
+	* @param hermes_kappa_coef_i New value of the hermes_kappa_coef_i option.
+	*/
+	void Options::set_hermes_kappa_coef_i(double hermes_kappa_coef_i)
+		{m_hermes_kappa_coef_i = hermes_kappa_coef_i;}
+
+	/**
+	* Sets the hermes_kappa_limit_alpha option.
+	*
+	* Flux limiter of the parallel conduction (kappa_limit_alpha in the
+	* HERMES input). Zero or negative, the default, means no limit.
+	*
+	* @param hermes_kappa_limit_alpha New value of the
+	*        hermes_kappa_limit_alpha option.
+	*/
+	void Options::set_hermes_kappa_limit_alpha(
+		double hermes_kappa_limit_alpha)
+		{m_hermes_kappa_limit_alpha = hermes_kappa_limit_alpha;}
 
 	/**
 	* Sets the imp_source_opt option.
@@ -2243,6 +2304,38 @@ namespace Options
 		{return m_hermes_zperiod;}
 
 	/**
+	* Returns the hermes_heat_flux option ("conduction" or "off").
+	*
+	* @return Value of the hermes_heat_flux option.
+	*/
+	const std::string& Options::hermes_heat_flux() const
+		{return m_hermes_heat_flux;}
+
+	/**
+	* Returns the hermes_kappa_coef_e option.
+	*
+	* @return Electron parallel conduction coefficient.
+	*/
+	double Options::hermes_kappa_coef_e() const
+		{return m_hermes_kappa_coef_e;}
+
+	/**
+	* Returns the hermes_kappa_coef_i option.
+	*
+	* @return Ion parallel conduction coefficient.
+	*/
+	double Options::hermes_kappa_coef_i() const
+		{return m_hermes_kappa_coef_i;}
+
+	/**
+	* Returns the hermes_kappa_limit_alpha option.
+	*
+	* @return Conduction flux limiter, zero or negative for none.
+	*/
+	double Options::hermes_kappa_limit_alpha() const
+		{return m_hermes_kappa_limit_alpha;}
+
+	/**
 	* @name Sputtering option getters
 	* See the setters for what each option means.
 	*/
@@ -3353,6 +3446,9 @@ namespace Options
 
 	int Options::hermes_format_int() const
 		{return get_control_int("hermes_format", m_hermes_format_int);}
+
+	int Options::hermes_heat_flux_int() const
+		{return get_control_int("hermes_heat_flux", m_hermes_heat_flux_int);}
 
 	int Options::imp_source_opt_int() const
 		{return get_control_int("imp_source_opt", m_imp_source_opt_int);}

@@ -15,6 +15,7 @@
 * satisfies by itself; here the twist is made the same in every column.
 */
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <filesystem>
@@ -26,6 +27,7 @@
 
 #include "axisym_mesh.h"
 #include "background.h"
+#include "braginskii.h"
 #include "hermes_test_files.h"
 #include "options.h"
 #include "read_hermes.h"
@@ -472,4 +474,126 @@ TEST_F(FieldAlignedTest, NoParallelE)
 	// its parallel part is, to rounding
 	EXPECT_GT(max_E, 10.0);
 	EXPECT_LT(max_par, 1e-12 * max_E);
+}
+
+namespace
+{
+	// Electron and ion q_par expected from kappa (Hermes-3's
+	// "multispecies" collision times, ni = ne) and a parallel gradient
+	std::array<double, 2> expected_q(double ne, double te, double ti,
+		double gpar_e, double gpar_i)
+	{
+		const double mi {2.0 * Braginskii::mp};
+		const double nu_ei {Braginskii::nu_ei(ne, ne, te, ti, 1.0, 2.0)};
+		const double nu_e {Braginskii::nu_ee(ne, te) + nu_ei};
+		const double nu_i {Braginskii::nu_ii(ne, ti, 1.0, 2.0, ne, ti, 1.0,
+			2.0) + nu_ei * Braginskii::me / mi};
+		return {-Braginskii::kappa_par(Braginskii::kappa_coef_e_default, ne,
+			te, nu_e, Braginskii::me) * gpar_e,
+			-Braginskii::kappa_par(Braginskii::kappa_coef_i_default, ne, ti,
+			nu_i, mi) * gpar_i};
+	}
+}
+
+// A HERMES background gets both heat fluxes by default, and none with
+// hermes_heat_flux = "off"
+TEST_F(FieldAlignedTest, HeatFluxOption)
+{
+	const auto bkg {read()};
+	EXPECT_FALSE(bkg.get_q_par_e().get_data().empty());
+	EXPECT_FALSE(bkg.get_q_par_i().get_data().empty());
+
+	Options::Options opts {};
+	opts.set_bkg_source("hermes");
+	opts.set_hermes_grid_file((m_dir / "grid.nc").string());
+	opts.set_hermes_snap_dir((m_dir / "snaps").string());
+	opts.set_hermes_snap_end(-1);
+	opts.set_hermes_tnorm(tnorm);
+	opts.set_hermes_zperiod(zperiod);
+	opts.set_hermes_heat_flux("off");
+	const auto off {Hermes::read_hermes(opts)};
+	EXPECT_TRUE(off.get_q_par_e().get_data().empty());
+	EXPECT_TRUE(off.get_q_par_i().get_data().empty());
+}
+
+// With T rising along the field line, q_par = -kappa grad_par T for both
+// species, so it points back down the gradient. Here T = T0 + y (1 +
+// p(zeta) / 2) for the electrons and twice that rise for the ions, whose
+// parallel gradient is (B . grad y / B) (1 + p / 2) (see GradPar).
+TEST_F(FieldAlignedTest, HeatFluxAlongField)
+{
+	auto bkg {read()};
+	const Zones::Zones& z {bkg.get_zones()};
+	const double dz {period / nz};
+	auto& te {bkg.get_te()};
+	auto& ti {bkg.get_ti()};
+	for (int zone {}; zone < 6; ++zone)
+	for (int t {}; t < 2; ++t)
+	for (int i {}; i < z.get_nx(zone); ++i)
+	for (int j {}; j < z.get_ny(zone); ++j)
+	for (int k {}; k < nz; ++k)
+	{
+		const double rise {z.get_y(zone)[j] * (1.0 + 0.5 * profile(k * dz
+			- z.z_shift(zone, i, j)))};
+		te(zone, t, i, j, k) = tnorm + rise;
+		ti(zone, t, i, j, k) = tnorm + 2.0 * rise;
+	}
+	z.fill_ghosts(te);
+	z.fill_ghosts(ti);
+	Axisym::calc_conductive_heat_fluxes(bkg, Axisym::Conduction {});
+
+	const auto& ne {bkg.get_ne()};
+	for (int zone : {1, 4})
+	for (int i {}; i < z.get_nx(zone); ++i)
+	for (int j {1}; j < z.get_ny(zone) - 1; ++j)
+	for (int k {}; k < nz; ++k)
+	{
+		const double p {profile(k * dz - z.z_shift(zone, i, j))};
+		const double Bt {m_grid.Bt_at(origin[zone][0] + i)};
+		const double G {m_grid.Bz / (m_grid.dZ * std::hypot(m_grid.Bz, Bt))
+			* (1.0 + 0.5 * p)};
+		const auto q {expected_q(ne(zone, 0, i, j, k), te(zone, 0, i, j, k),
+			ti(zone, 0, i, j, k), G, 2.0 * G)};
+		EXPECT_NEAR(bkg.get_q_par_e()(zone, 0, i, j, k), q[0],
+			1e-9 * std::abs(q[0]));
+		EXPECT_NEAR(bkg.get_q_par_i()(zone, 0, i, j, k), q[1],
+			1e-9 * std::abs(q[1]));
+
+		// Down the gradient: B . grad y > 0 here, so T rises along B
+		EXPECT_LT(bkg.get_q_par_e()(zone, 0, i, j, k), 0.0);
+	}
+}
+
+// T that varies only across the field (constant along field lines) has
+// no parallel heat flux, although its gradient is large. b . grad T
+// would pick up part of it (see grad_par).
+TEST_F(FieldAlignedTest, NoHeatFluxAcrossField)
+{
+	auto bkg {read()};
+	const Zones::Zones& z {bkg.get_zones()};
+	const double dz {period / nz};
+	auto& te {bkg.get_te()};
+	auto& ti {bkg.get_ti()};
+	for (int zone {}; zone < 6; ++zone)
+	for (int t {}; t < 2; ++t)
+	for (int i {}; i < z.get_nx(zone); ++i)
+	for (int j {}; j < z.get_ny(zone); ++j)
+	for (int k {}; k < nz; ++k)
+	{
+		const double p {profile(k * dz - z.z_shift(zone, i, j))};
+		te(zone, t, i, j, k) = tnorm * (1.0 + 0.3 * p);
+		ti(zone, t, i, j, k) = tnorm * (1.0 + 0.3 * p);
+	}
+	z.fill_ghosts(te);
+	z.fill_ghosts(ti);
+	Axisym::calc_conductive_heat_fluxes(bkg, Axisym::Conduction {});
+
+	// Scale: the heat flux if this T's toroidal gradient were along B
+	const double kappa_e {-expected_q(1e19, tnorm, tnorm, 1.0, 1.0)[0]};
+	const double grad {0.3 * tnorm * 2.0 * std::numbers::pi / period
+		/ m_grid.R0};
+	double max_q {};
+	for (const double q : bkg.get_q_par_e().get_data())
+		max_q = std::max(max_q, std::abs(q));
+	EXPECT_LT(max_q, 1e-9 * kappa_e * grad);
 }

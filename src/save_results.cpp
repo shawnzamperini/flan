@@ -507,6 +507,14 @@ namespace SaveResults
 			"HERMES main ion mass number", "(amu)");
 		save_scalar(input_group, opts.hermes_zperiod(), "hermes_zperiod", dim_scalar,
 			"HERMES toroidal periodicity", "");
+		save_string(input_group, opts.hermes_heat_flux(), "hermes_heat_flux", dim_str,
+			"source of the HERMES parallel heat fluxes");
+		save_scalar(input_group, opts.hermes_kappa_coef_e(), "hermes_kappa_coef_e", dim_scalar,
+			"HERMES electron parallel conduction coefficient", "");
+		save_scalar(input_group, opts.hermes_kappa_coef_i(), "hermes_kappa_coef_i", dim_scalar,
+			"HERMES ion parallel conduction coefficient", "");
+		save_scalar(input_group, opts.hermes_kappa_limit_alpha(), "hermes_kappa_limit_alpha", dim_scalar,
+			"HERMES conduction flux limiter", "");
 
 		// Sputtering
 		save_string(input_group, opts.imp_source_opt(), "imp_source_opt",

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "background.h"
+#include "braginskii.h"
 #include "flan_types.h"
 #include "vectors.h"
 #include "zones.h"
@@ -129,4 +130,18 @@ namespace Axisym
 	void calc_efield_and_flows(Background::Background& bkg,
 		const Vectors::ZonedVector<BkgFPType>& vp,
 		const Vectors::ZonedVector<BkgFPType>& upar);
+
+	/// Settings of the conductive heat flux (see calc_conductive_heat_fluxes)
+	struct Conduction
+	{
+		/// Electron and ion kappa coefficients
+		double coef_e {Braginskii::kappa_coef_e_default};
+		double coef_i {Braginskii::kappa_coef_i_default};
+		double limit_alpha {-1.0};	///< Flux limiter, <= 0 for none
+		double ion_z {1.0};			///< Main ion charge
+		double ion_aa {2.0};		///< Main ion mass (amu)
+	};
+
+	void calc_conductive_heat_fluxes(Background::Background& bkg,
+		const Conduction& c);
 }

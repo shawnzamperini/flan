@@ -242,7 +242,8 @@ namespace Collisions
 			warn("The background has no parallel heat fluxes, so the "
 				"thermal force isn't\nincluded (imp_thermal_force = \"on\" "
 				"needs SOLEDGE3X plasma files with\nthe fluxes on the phi "
-				"faces). The collisions use Maxwellians.");
+				"faces, or a HERMES background with hermes_heat_flux =\n"
+				"\"conduction\"). The collisions use Maxwellians.");
 			return;
 		}
 		if (have_i != have_e)

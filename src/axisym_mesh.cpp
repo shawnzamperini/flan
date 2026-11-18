@@ -26,6 +26,7 @@
 
 #include "axisym_mesh.h"
 #include "background.h"
+#include "braginskii.h"
 #include "errors.h"
 #include "flan_types.h"
 #include "vectors.h"
@@ -771,5 +772,104 @@ namespace Axisym
 		bkg.move_into_uX(uX);
 		bkg.move_into_uY(uY);
 		bkg.move_into_uZ(uZ);
+	}
+
+	/**
+	* Calculates the parallel conductive heat fluxes of the electrons and
+	* the main ions from the background's n and T, and moves them into
+	* the background (q_par_e and q_par_i), for backgrounds that don't store
+	* them (HERMES).
+	*
+	* For each species, q_par = -kappa_par grad_par T, with Braginskii's
+	* kappa_par = coef n e T tau / m in the form Hermes-3 uses (see
+	* Braginskii::kappa_par), and tau = 1 / nu from all of the species'
+	* collisions, as in Hermes-3's default ("multispecies") conduction:
+	* nu_ee + nu_ei for the electrons and nu_ii + nu_ie for the ions, with
+	* nu_ie = nu_ei (me / mi) (ne / ni) from momentum conservation. The
+	* optional flux limiter is applied if c.limit_alpha > 0.
+	*
+	* The plasma is taken to be one ion species with ni = ne / Z
+	* (quasineutral; for Z = 1, ni = ne), since the background only holds
+	* ne. A run with several ion species (or impurities that matter for
+	* the collisions) would need every species' density and would add
+	* their collisions to each tau.
+	*
+	* grad_par is the parallel gradient along the field line (aligned_dfdy
+	* and grad_par), not b . grad T, which picks up part of the much
+	* larger gradient across the field. So every zone must have a zShift
+	* table. q_par is positive along B, the same as the parallel flow and
+	* the SOLEDGE3X heat fluxes. At a wall face the y derivative is one
+	* sided, so q_par in the last cell before a target is approximate (the
+	* simulation sets the heat flux there with its sheath condition).
+	*
+	* @param bkg Background with zones, geometry, B, ne, te and ti (ghost
+	*        cells filled).
+	* @param c Conduction coefficients, flux limiter and main ion.
+	*/
+	void calc_conductive_heat_fluxes(Background::Background& bkg,
+		const Conduction& c)
+	{
+		const Zones::Zones& zones {bkg.get_zones()};
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			if (!zones.has_z_shift(zone))
+			{
+				Errors::fatal_error("calc_conductive_heat_fluxes needs a "
+					"zShift table in every zone, for the parallel "
+					"gradient along the field line, but zone "
+					+ std::to_string(zone) + " has none.");
+			}
+		}
+
+		const auto& ne {bkg.get_ne()};
+		const auto& te {bkg.get_te()};
+		const auto& ti {bkg.get_ti()};
+		const int nframes {ne.get_dim1()};
+		const auto dte_dy {aligned_dfdy(zones, te)};
+		const auto dti_dy {aligned_dfdy(zones, ti)};
+		auto q_e {zoned(zones, nframes)};
+		auto q_i {zoned(zones, nframes)};
+
+		const double mi {Braginskii::mp * c.ion_aa};
+		const double me {Braginskii::me};
+
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			#pragma omp parallel for
+			for (int i = 0; i < zones.get_nx(zone); ++i)
+			for (int t {}; t < nframes; ++t)
+			for (int j {}; j < zones.get_ny(zone); ++j)
+			for (int k {}; k < zones.get_nz(zone); ++k)
+			{
+				const double n_e {ne(zone, t, i, j, k)};
+				const double n_i {n_e / c.ion_z};	// quasineutral
+				const double t_e {te(zone, t, i, j, k)};
+				const double t_i {ti(zone, t, i, j, k)};
+
+				const double nu_ei {Braginskii::nu_ei(n_e, n_i, t_e, t_i,
+					c.ion_z, c.ion_aa)};
+				const double nu_e {Braginskii::nu_ee(n_e, t_e) + nu_ei};
+				const double nu_ie {n_i > 0.0
+					? nu_ei * (me / mi) * (n_e / n_i) : 0.0};
+				const double nu_i {Braginskii::nu_ii(n_i, t_i, c.ion_z,
+					c.ion_aa, n_i, t_i, c.ion_z, c.ion_aa) + nu_ie};
+
+				const double g_e {grad_par(bkg, dte_dy, zone, t, i, j, k)};
+				const double g_i {grad_par(bkg, dti_dy, zone, t, i, j, k)};
+				const double k_e {Braginskii::limit_kappa(
+					Braginskii::kappa_par(c.coef_e, n_e, t_e, nu_e, me),
+					g_e, n_e, t_e, me, c.limit_alpha)};
+				const double k_i {Braginskii::limit_kappa(
+					Braginskii::kappa_par(c.coef_i, n_i, t_i, nu_i, mi),
+					g_i, n_i, t_i, mi, c.limit_alpha)};
+
+				q_e(zone, t, i, j, k) = static_cast<BkgFPType>(-k_e * g_e);
+				q_i(zone, t, i, j, k) = static_cast<BkgFPType>(-k_i * g_i);
+			}
+		}
+		zones.fill_ghosts(q_e);
+		zones.fill_ghosts(q_i);
+		bkg.move_into_q_par_e(q_e);
+		bkg.move_into_q_par_i(q_i);
 	}
 }

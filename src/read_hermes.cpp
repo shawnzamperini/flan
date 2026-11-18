@@ -483,8 +483,10 @@ namespace Hermes
 	* from Axisym::calc_efield_and_flows.
 	*
 	* Every snapshot must have the grid's nx and ny and the same nz as the
-	* zones, and the times must increase. There's no heat flux, so the
-	* thermal force isn't included.
+	* zones, and the times must increase. The snapshots have no heat
+	* fluxes, so with hermes_heat_flux = "conduction" they're calculated
+	* from the conduction (Axisym::calc_conductive_heat_fluxes), with the
+	* hermes_kappa_* options and one ion species of charge 1.
 	*
 	* @param paths Snapshot paths, in time order.
 	* @param grid The grid.
@@ -591,8 +593,30 @@ namespace Hermes
 		bkg.move_into_ti(ti);
 		Axisym::calc_efield_and_flows(bkg, vp, upar);
 		bkg.move_into_vp(vp);
-		std::cout << "  No parallel heat fluxes are read from HERMES runs "
-			"yet (q_par_e and q_par_i are empty).\n";
+
+		// The snapshots don't have the heat fluxes, so they're calculated
+		// from the conduction, as the run calculated them
+		if (opts.hermes_heat_flux_int() == 1)
+		{
+			Axisym::Conduction c {};
+			c.coef_e = opts.hermes_kappa_coef_e();
+			c.coef_i = opts.hermes_kappa_coef_i();
+			c.limit_alpha = opts.hermes_kappa_limit_alpha();
+			c.ion_z = 1.0;
+			c.ion_aa = aa;
+			Axisym::calc_conductive_heat_fluxes(bkg, c);
+			std::cout << "  Parallel heat fluxes from Braginskii conduction: "
+				"kappa coefficients " << c.coef_e << " (electrons), "
+				<< c.coef_i << " (ions), ";
+			if (c.limit_alpha > 0.0)
+				std::cout << "flux limiter " << c.limit_alpha << '\n';
+			else std::cout << "no flux limiter\n";
+		}
+		else
+		{
+			std::cout << "  hermes_heat_flux = \"off\": no parallel heat "
+				"fluxes, so no thermal force.\n";
+		}
 	}
 
 	/**

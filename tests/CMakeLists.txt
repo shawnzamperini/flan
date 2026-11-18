@@ -84,6 +84,10 @@ target_link_libraries(test_read_hermes_cpu PRIVATE flan gtest_main
 	netcdf-cxx4 netcdf)
 add_test(NAME ReadHermesCPUTest COMMAND test_read_hermes_cpu)
 
+add_executable(test_braginskii_cpu test_braginskii_cpu.cpp)
+target_link_libraries(test_braginskii_cpu PRIVATE flan gtest_main)
+add_test(NAME BraginskiiCPUTest COMMAND test_braginskii_cpu)
+
 add_executable(test_field_aligned_cpu test_field_aligned_cpu.cpp)
 target_link_libraries(test_field_aligned_cpu PRIVATE flan gtest_main
 	netcdf-cxx4 netcdf)

@@ -321,6 +321,35 @@ namespace Options
 				assign_option<int>(set_func, var, key);
 			}
 
+			else if (key == "hermes_heat_flux")
+			{
+				auto set_func = std::bind(&Options::set_hermes_heat_flux,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "hermes_kappa_coef_e")
+			{
+				auto set_func = std::bind(&Options::set_hermes_kappa_coef_e,
+					&opts, std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "hermes_kappa_coef_i")
+			{
+				auto set_func = std::bind(&Options::set_hermes_kappa_coef_i,
+					&opts, std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "hermes_kappa_limit_alpha")
+			{
+				auto set_func = std::bind(
+					&Options::set_hermes_kappa_limit_alpha, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "imp_source_opt")
 			{
 				auto set_func = std::bind(&Options::set_imp_source_opt, &opts,
