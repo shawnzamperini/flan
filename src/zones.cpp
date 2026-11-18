@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <numbers>
 #include <string>
 #include <utility>
 #include <vector>
@@ -698,10 +699,12 @@ namespace Zones
 	*
 	* Each ghost cell gets the value (or average of values) of its sources
 	* from resolve_cell, for every entry of the leading dimension (e.g.,
-	* every time frame). Copying is correct for scalars, Cartesian vector
-	* components and the basis vectors, since crossing a face only shifts a
-	* computational coordinate by a constant. The sources are found the
-	* first time this is called and reused after that.
+	* every time frame). Copying is correct for scalars, and for Cartesian
+	* vectors as long as no zone is a toroidal wedge (see is_wedge), since
+	* crossing a face only shifts a computational coordinate by a
+	* constant. On a wedge, the (X, Y) parts of Cartesian vectors need the
+	* overload that rotates them. The sources are found the first time this
+	* is called and reused after that.
 	*
 	* v must have the same zones and ghost width as this, otherwise the
 	* run is stopped with Errors::fatal_error. Without ghost cells (e.g., a
@@ -748,6 +751,80 @@ namespace Zones
 					v(g.zone, t, g.i, g.j, g.k)
 						= static_cast<T>(sum / gc.sources.size());
 				}
+			}
+		}
+	}
+
+	/**
+	* Fills the ghost cells of the X and Y components of a Cartesian vector
+	* (e.g., B, E or the reciprocal basis vectors), rotating them on a
+	* toroidal wedge.
+	*
+	* On a zone whose z is the toroidal angle (see set_toroidal), a ghost
+	* cell's source can be at a different toroidal angle than the ghost
+	* itself: past a periodic z face of a wedge 2 pi / 5 wide, the ghost
+	* is the source moved a fifth of the way around the torus. The source's
+	* Cartesian vector is then rotated about Z by phi_sign (z_ghost -
+	* z_source) before it's copied, so the ghost holds the vector at its
+	* own position. Sources are rotated one at a time before averaging.
+	* The angles are the cell centers along z, continued across faces for
+	* the ghost (see center).
+	*
+	* Without a wedge (any_wedge), the rotation would be by 0 or a whole
+	* turn, so the components are copied as fill_ghosts(v) does, bit for
+	* bit. The Z component is a scalar under the rotation and uses
+	* fill_ghosts(v).
+	*
+	* @tparam T Type of the values.
+	* @param vX X component of the vector, ghost cells filled in place.
+	* @param vY Y component of the vector, ghost cells filled in place.
+	* @param phi_sign +1 if (R, z, Z) is right handed, -1 if not (see
+	*        Background::Background::get_phi_sign).
+	*/
+	template <typename T>
+	void Zones::fill_ghosts(Vectors::ZonedVector<T>& vX,
+		Vectors::ZonedVector<T>& vY, const double phi_sign) const
+	{
+		if (!any_wedge())
+		{
+			fill_ghosts(vX);
+			fill_ghosts(vY);
+			return;
+		}
+
+		// Checks the shapes
+		fill_ghosts(vX);
+		fill_ghosts(vY);
+
+		for (const auto& gc : m_ghost_cells)
+		{
+			const Cell& g {gc.ghost};
+			if (!is_wedge(g.zone)) continue;
+
+			// Rotation of each source, the same in every time frame
+			std::vector<double> cs {}, sn {};
+			const double zg {center(g.zone, 2, g.k)};
+			for (const auto& s : gc.sources)
+			{
+				const double ang {phi_sign * (zg - center(s.zone, 2, s.k))};
+				cs.push_back(std::cos(ang));
+				sn.push_back(std::sin(ang));
+			}
+
+			for (int t {}; t < vX.get_dim1(); ++t)
+			{
+				double sum_x {}, sum_y {};
+				for (std::size_t n {}; n < gc.sources.size(); ++n)
+				{
+					const Cell& s {gc.sources[n]};
+					const double x {vX(s.zone, t, s.i, s.j, s.k)};
+					const double y {vY(s.zone, t, s.i, s.j, s.k)};
+					sum_x += cs[n] * x - sn[n] * y;
+					sum_y += sn[n] * x + cs[n] * y;
+				}
+				const double ns {static_cast<double>(gc.sources.size())};
+				vX(g.zone, t, g.i, g.j, g.k) = static_cast<T>(sum_x / ns);
+				vY(g.zone, t, g.i, g.j, g.k) = static_cast<T>(sum_y / ns);
 			}
 		}
 	}
@@ -848,6 +925,68 @@ namespace Zones
 	}
 
 	/**
+	* Marks a zone's z as the toroidal angle in radians, as on SOLEDGE3X
+	* and HERMES grids (not Gkeyll or the slab, where z is a length).
+	*
+	* Cartesian vectors then turn with z: a vector at angle z moved to
+	* angle z' is rotated about Z by phi_sign (z' - z). This matters when
+	* the zone is a wedge (is_wedge), whose periodic z faces join points
+	* that are a wedge's width apart around the torus, so ghost cells
+	* (fill_ghosts(vX, vY, phi_sign)) and particles that wrap in z
+	* (Boundary::check_bounds_cpu) rotate their vectors.
+	*
+	* @param zone Zone whose z is the toroidal angle.
+	*/
+	void Zones::set_toroidal(const int zone)
+	{
+		if (zone < 0 || zone >= get_nzones())
+		{
+			Errors::fatal_error("Zones::set_toroidal: there is no zone "
+				+ std::to_string(zone) + ".");
+		}
+		if (std::ssize(m_toroidal) < get_nzones())
+			m_toroidal.resize(get_nzones());
+		m_toroidal[zone] = 1;
+	}
+
+	/**
+	* @param zone Zone to check.
+	* @return True if the zone's z is the toroidal angle (set_toroidal).
+	*/
+	bool Zones::is_toroidal(const int zone) const
+	{
+		return zone < std::ssize(m_toroidal) && m_toroidal[zone] == 1;
+	}
+
+	/**
+	* Whether a zone is a toroidal wedge: its z is the toroidal angle, it's
+	* periodic in z, and its period isn't a whole turn (to within 1e-9 of
+	* 2 pi). Only then do vectors need rotating across its z faces, since
+	* on a whole torus the rotation is by 2 pi.
+	*
+	* @param zone Zone to check.
+	* @return True if the zone is a wedge of the torus.
+	*/
+	bool Zones::is_wedge(const int zone) const
+	{
+		if (!is_toroidal(zone)) return false;
+		if (get_face(zone, zmin) != zone || get_face(zone, zmax) != zone)
+			return false;
+		const double two_pi {2.0 * std::numbers::pi};
+		return std::abs(z_period(zone) - two_pi) > 1e-9 * two_pi;
+	}
+
+	/**
+	* @return True if any zone is a toroidal wedge (is_wedge).
+	*/
+	bool Zones::any_wedge() const
+	{
+		for (int zone {}; zone < get_nzones(); ++zone)
+			if (is_wedge(zone)) return true;
+		return false;
+	}
+
+	/**
 	* Broadcasts the zones from rank 0 to every other rank.
 	*
 	* Must be called by every rank in comm. The other ranks' zones are
@@ -876,6 +1015,7 @@ namespace Zones
 		MPI_Bcast(&ntables, 1, MPI_INT, 0, comm);
 		m_z_shift.resize(ntables);
 		for (auto& v : m_z_shift) Utilities::mpi_broadcast_vector(v, 0, comm);
+		Utilities::mpi_broadcast_vector(m_toroidal, 0, comm);
 		m_ghost_cells.clear();
 	}
 
@@ -911,3 +1051,9 @@ template void Zones::Zones::fill_ghosts<float>(
 	Vectors::ZonedVector<float>& v) const;
 template void Zones::Zones::fill_ghosts<double>(
 	Vectors::ZonedVector<double>& v) const;
+template void Zones::Zones::fill_ghosts<float>(
+	Vectors::ZonedVector<float>& vX, Vectors::ZonedVector<float>& vY,
+	const double phi_sign) const;
+template void Zones::Zones::fill_ghosts<double>(
+	Vectors::ZonedVector<double>& vX, Vectors::ZonedVector<double>& vY,
+	const double phi_sign) const;

@@ -482,8 +482,16 @@ namespace Axisym
 			}
 		}
 
-		for (auto* v : {&X, &Y, &Z, &J}) zones.fill_ghosts(*v);
-		for (auto& r : recp) zones.fill_ghosts(r);
+		// The cell centers and the reciprocal basis vectors are Cartesian
+		// vectors, which turn with the toroidal angle in the ghost cells of
+		// a wedge
+		zones.fill_ghosts(X, Y, phi_sign);
+		for (auto* v : {&Z, &J}) zones.fill_ghosts(*v);
+		for (int d {}; d < 3; ++d)
+		{
+			zones.fill_ghosts(recp[3 * d], recp[3 * d + 1], phi_sign);
+			zones.fill_ghosts(recp[3 * d + 2]);
+		}
 
 		bkg.move_into_X(X);
 		bkg.move_into_Y(Y);
@@ -564,7 +572,8 @@ namespace Axisym
 				}
 			}
 		}
-		for (auto* v : {&bX, &bY, &bZ, &bmag}) zones.fill_ghosts(*v);
+		zones.fill_ghosts(bX, bY, phi_sign);
+		for (auto* v : {&bZ, &bmag}) zones.fill_ghosts(*v);
 
 		// Gradient of |B|, the same in every time frame
 		for (int zone {}; zone < zones.get_nzones(); ++zone)
@@ -580,7 +589,8 @@ namespace Axisym
 				gradbZ(zone, t, i, j, k) = grad[2];
 			}
 		}
-		for (auto* v : {&gradbX, &gradbY, &gradbZ}) zones.fill_ghosts(*v);
+		zones.fill_ghosts(gradbX, gradbY, phi_sign);
+		zones.fill_ghosts(gradbZ);
 
 		bkg.move_into_bX(bX);
 		bkg.move_into_bY(bY);
@@ -749,8 +759,10 @@ namespace Axisym
 				uZ(zone, t, i, j, k) = u[2];
 			}
 		}
-		for (auto* v : {&eX, &eY, &eZ, &emag, &uX, &uY, &uZ})
-			zones.fill_ghosts(*v);
+		const double phi_sign {bkg.get_phi_sign()};
+		zones.fill_ghosts(eX, eY, phi_sign);
+		zones.fill_ghosts(uX, uY, phi_sign);
+		for (auto* v : {&eZ, &emag, &uZ}) zones.fill_ghosts(*v);
 
 		bkg.move_into_eX(eX);
 		bkg.move_into_eY(eY);

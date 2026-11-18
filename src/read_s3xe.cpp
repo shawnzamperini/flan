@@ -315,6 +315,10 @@ namespace S3X
 			auto [y, gy] = Axisym::uniform_grid(ntheta, 0.0, ntheta);
 			auto [z, gz] = Axisym::uniform_grid(nphi, phic[0], phic[1]);
 			mesh.zones.add_zone(x, y, z, gx, gy, gz);
+
+			// z is the toroidal angle, so Cartesian vectors turn across
+			// the phi faces of a zone narrower than the whole torus
+			mesh.zones.set_toroidal(zone);
 		}
 
 		// Faces from the neighbors table, stored as (6, NZones). SOLEDGE3X

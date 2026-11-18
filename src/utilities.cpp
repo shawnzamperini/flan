@@ -502,10 +502,10 @@ namespace Utilities
 	* rotated about Z by phi_sign (z0 - zf), which carries it to the
 	* point's toroidal angle as if the field were rotated around the
 	* torus. Without this, a sample taken a radian away would point in
-	* the wrong direction by a radian. zf is the angle of the cell the
-	* value was copied from, wrapped into the zone, so a periodic ghost
-	* cell in z (which holds the other end's vector, in that end's frame)
-	* is rotated correctly too.
+	* the wrong direction by a radian. zf is the cell's own angle, past
+	* the zone's z range for a ghost cell, since on a toroidal wedge the
+	* ghost cells hold their vectors already rotated to that angle (see
+	* Zones::Zones::fill_ghosts(vX, vY, phi_sign)).
 	*
 	* @tparam T Data type stored in the fields.
 	* @tparam N Number of fields.
@@ -591,8 +591,7 @@ namespace Utilities
 					{
 						if (rotate)
 						{
-							const double zf {zones.wrap_z(zone,
-								zones.center(zone, 2, iz))};
+							const double zf {zones.center(zone, 2, iz)};
 							const double ang {phi_sign * (z0 - zf)};
 							const double cs {std::cos(ang)};
 							const double sn {std::sin(ang)};

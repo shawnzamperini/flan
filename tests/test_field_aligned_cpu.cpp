@@ -334,7 +334,8 @@ TEST_F(FieldAlignedTest, UniformInZ)
 // A vector field that is the same in the (R, phi, Z) frame everywhere
 // comes back exactly, whatever the shift: each sample is rotated from
 // its cell's toroidal angle to the point's, including samples from the
-// periodic ghost cells at the ends of the wedge
+// periodic ghost cells at the ends of the wedge (whose vectors are at the
+// ghost's own angle)
 TEST_F(FieldAlignedTest, InterpolateVector)
 {
 	const auto bkg {read()};
@@ -354,7 +355,10 @@ TEST_F(FieldAlignedTest, InterpolateVector)
 		vY(zone, t, i, j, k) = vR * std::sin(phi) + vphi * std::cos(phi);
 		vZ(zone, t, i, j, k) = vz;
 	}
-	for (auto* v : {&vX, &vY, &vZ}) z.fill_ghosts(*v);
+	// Ghost cells past the wedge's z faces hold the vector rotated to
+	// their own angle, as the background's vectors do
+	z.fill_ghosts(vX, vY, bkg.get_phi_sign());
+	z.fill_ghosts(vZ);
 
 	for (int zone {}; zone < 6; ++zone)
 	for (double y : {0.05, 0.5, 0.95})

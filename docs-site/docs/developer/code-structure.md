@@ -60,7 +60,12 @@ MPI must be initialized before `flan()` is called, and every rank calls it.
    (`Utilities::interp_aligned`, through `Background::interp_4d` with
    `aligned` set and `Background::interp_vec3`) and y derivatives are
    taken along it (`Axisym::aligned_dfdy`, `Axisym::grad_par`). B and the
-   geometry are always interpolated at fixed z.
+   geometry are always interpolated at fixed z. Both readers mark their
+   zones' z as the toroidal angle (`Zones::set_toroidal`). On a wedge of
+   the torus (`Zones::is_wedge`), Cartesian vectors in the ghost cells
+   past the z faces are rotated to the ghost's angle
+   (`Zones::fill_ghosts(vX, vY, phi_sign)`), and `check_bounds_cpu`
+   rotates the velocity of a particle that wraps in z.
 3. **Follow the impurities.** `ImpurityTransport::follow_impurities` follows
    this rank's share of the particles and records their statistics.
 4. **Combine the statistics.** `Impurity::reduce_stats` adds up the

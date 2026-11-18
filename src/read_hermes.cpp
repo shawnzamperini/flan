@@ -216,7 +216,11 @@ namespace Hermes
 			auto [y, gy] = Axisym::uniform_grid(r.y1 - r.y0, r.y0, r.y1);
 			auto [z, gz] = Axisym::uniform_grid(nz, -0.5 * dz,
 				(nz - 0.5) * dz);
-			zones.add_zone(x, y, z, gx, gy, gz);
+			const int zone {zones.add_zone(x, y, z, gx, gy, gz)};
+
+			// z is the toroidal angle of a wedge 2 pi / zperiod wide, so
+			// Cartesian vectors turn across its z faces
+			zones.set_toroidal(zone);
 		}
 
 		using namespace Zones;
@@ -654,12 +658,6 @@ namespace Hermes
 			<< "  Nnorm = " << opts.hermes_nnorm() << " m-3, Tnorm = "
 			<< opts.hermes_tnorm() << " eV, Bnorm = " << opts.hermes_bnorm()
 			<< " T, ion AA = " << opts.hermes_ion_mass_amu() << '\n';
-		if (zperiod > 1)
-		{
-			std::cout << "  Warning: particles crossing the toroidal "
-				"boundary of the wedge don't have their velocity rotated "
-				"yet, so their direction is wrong after crossing.\n";
-		}
 
 		Background::Background bkg {};
 		auto zones {make_zones(grid, nz, zperiod)};

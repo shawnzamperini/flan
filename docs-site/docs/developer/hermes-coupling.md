@@ -128,8 +128,8 @@ differentiating in y at fixed z mixes unrelated turbulent structures.
 - Vectors (u, and E in the Boris push) are interpolated the same way,
   with each sample's (X, Y) part rotated from its cell's toroidal angle
   to the particle's. A sample taken a radian away would otherwise point a
-  radian off. This also handles the periodic ghost cells at the ends of
-  the wedge for these vectors.
+  radian off. The periodic ghost cells at the ends of the wedge hold
+  their vectors already rotated to their own angle (Phase 4).
 - y derivatives (`Axisym::aligned_dfdy`): the neighboring planes are
   shifted onto the field line spectrally (`shift_periodic`, as BOUT++'s
   shifted metric does), then differenced, giving df/dy along the field
@@ -152,17 +152,36 @@ differentiating in y at fixed z mixes unrelated turbulent structures.
   field lines and get their average, as before, so interpolation within a
   cell of the X-point is approximate.
 
-**Phase 4: toroidal period.** Each zone gets an optional toroidal period
-(2π / `zperiod` for HERMES, the span of `phicorners` for SOLEDGE3X). When
-a particle wraps in z on a zone with a period under 2π, its Cartesian
-velocity (and position, if stored) is rotated by the period, since the
-point it wraps to is rotated by that angle. Cartesian vectors in the
-periodic z ghost cells (B, the basis vectors, positions) need rotating by
-the period too: they hold the other end's values in that end's frame.
-The field-aligned vector interpolation of Phase 3 already accounts for
-this for u and E. Until then, the SOLEDGE3X
-reader stops if `phicorners` doesn't span 2π. Tested in
-`test_boundary_cpu` and with a SOLEDGE3X wedge test file.
+**Phase 4: toroidal wedge.** Done. On SOLEDGE3X and HERMES grids z is
+the toroidal angle, and the domain may be a wedge of the torus (2π /
+`zperiod` for HERMES, the span of `phicorners` for SOLEDGE3X). Its two z
+faces are then the same surface a wedge's width apart, while Flan's
+vectors are Cartesian, so they have to turn with the toroidal angle.
+
+- `Zones::set_toroidal` marks a zone's z as the toroidal angle (both
+  readers set it for every zone). `is_wedge` is true for a toroidal zone
+  that's periodic in z with a period other than 2π.
+- Ghost cells: `Zones::fill_ghosts(vX, vY, phi_sign)` rotates each
+  source's (X, Y) part about Z by phi_sign (z_ghost - z_source) before
+  copying, so a ghost past a z face holds the vector at its own angle.
+  It's used for the cell centers, the reciprocal basis vectors, B,
+  grad B, E and u. Without a wedge the rotation would be by 0 or 2π, so
+  the components are copied as before, bit for bit.
+- The field-aligned vector interpolation of Phase 3 rotates each sample
+  from its cell's own angle (past the zone's range for a ghost), now
+  that the ghosts hold rotated vectors.
+- Particles: when a particle wraps in z on a wedge,
+  `Boundary::check_bounds_cpu` rotates (vX, vY) by phi_sign times the
+  change in z. A particle put back in at the core keeps its velocity, as
+  before.
+- The GPU doesn't rotate yet, so a wedge background stops with an error
+  there (only single-zone backgrounds run on the GPU so far anyway).
+- Checks: `test_wedge_cpu`, on the SOLEDGE3X test case as a quarter
+  torus and as the whole torus: the ghost vectors match the
+  axisymmetric field at their own angle, B interpolated on the two z
+  faces differs by exactly the wedge's rotation, a wrapping particle's
+  velocity is turned by the wedge's width, and the whole torus is
+  unchanged.
 
 **Phase 5: thermal force.** q_par = -kappa_par grad_par T for each
 species, with kappa_par as in Hermes-3's `braginskii_conduction` and the

@@ -98,6 +98,11 @@ target_link_libraries(test_s3x_bkg_cpu PRIVATE flan gtest_main hdf5
 	OpenMP::OpenMP_CXX)
 add_test(NAME S3XBkgCPUTest COMMAND test_s3x_bkg_cpu)
 
+add_executable(test_wedge_cpu test_wedge_cpu.cpp)
+target_link_libraries(test_wedge_cpu PRIVATE flan gtest_main hdf5
+	OpenMP::OpenMP_CXX)
+add_test(NAME WedgeCPUTest COMMAND test_wedge_cpu)
+
 add_executable(test_stats_cpu test_stats_cpu.cpp)
 target_link_libraries(test_stats_cpu PRIVATE flan gtest_main
 	OpenMP::OpenMP_CXX)
