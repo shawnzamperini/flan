@@ -211,13 +211,28 @@ q_par = -kappa_par grad_par T, positive along B like the SOLEDGE3X ones.
   BOUT++'s Grad_par from the grid's metric, and the conducted and
   convected power into the legs against the input power.
 
-**Phase 6: validation and output.** `regression/hermes_example.cpp` like
-`s3x_example.cpp`, starting from a point source; a check that V/cs is
-about 1 or more at the targets and that the grad-B drift has the right
-direction for each field direction; agreement with and without field
-alignment for fields that don't vary in z; plotting through a
-generalized `plot_s3x_nz.py`; and a page in Running Flan plus the options
-in [Input Options](../input-options.md).
+**Phase 6: validation and output.** Done.
+
+- `regression/hermes_example.cpp`: tungsten from a point source just
+  outside the separatrix at the outer midplane, with the thermal force,
+  ionization and recombination, and each `hermes_*` option's source in
+  the case's JSON.
+- `hermes_field_aligned` ("on" by default) turns field-aligned
+  interpolation and derivatives off for comparison; then parallel
+  gradients are b·∇. For a plasma that doesn't vary in z the two give the
+  same background to rounding (`test_field_aligned_cpu`).
+  `hermes_snap_start` can count from the end, like `hermes_snap_end`.
+- `python/check_hermes_bkg.py` checks the background as Flan built it,
+  from an output file: the parallel ion flow into each target against
+  the sound speed, and the direction of the ion grad-B drift relative to
+  the X-point for each field direction, and prints where the impurities
+  are by zone. Both checks were run on forward and reversed field runs,
+  with and without field alignment.
+- `python/plot_multizone.py` (formerly `plot_s3x_nz.py`, which still
+  works) plots the impurity density or any background quantity of a
+  SOLEDGE3X or HERMES run.
+- [HERMES Backgrounds](../running/hermes.md) in Running Flan, and the
+  options in [Input Options](../input-options.md#hermes).
 
 **Later**: the GPU path, a time-averaged background, the BOUT++ Hermes-3
 reader, a sputtered source at the targets, and field-aligned

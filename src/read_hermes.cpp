@@ -203,10 +203,13 @@ namespace Hermes
 	* @param grid The grid.
 	* @param nz Number of toroidal cells (from the snapshots).
 	* @param zperiod The domain is 1 / zperiod of the torus.
-	* @return The zones, validated, with their zShift tables.
+	* @param aligned If true, give the zones their zShift tables, so the
+	*        plasma is interpolated and differentiated along the field
+	*        line (hermes_field_aligned = "on").
+	* @return The zones, validated, with their zShift tables if aligned.
 	*/
 	Zones::Zones make_zones(const Grid& grid, const int nz,
-		const int zperiod)
+		const int zperiod, const bool aligned)
 	{
 		const double dz {2.0 * Constants::pi / (zperiod * nz)};
 		Zones::Zones zones(ghost);
@@ -242,7 +245,7 @@ namespace Hermes
 		set(sol, {core, face_absorbing, in_leg, out_leg});
 		set(out_leg, {out_pfr, face_absorbing, sol, face_wall});
 		zones.validate();
-		set_z_shift_tables(grid, zones);
+		if (aligned) set_z_shift_tables(grid, zones);
 		return zones;
 	}
 
@@ -415,8 +418,9 @@ namespace Hermes
 	/**
 	* Picks the snapshots to load: the snap*.npz files in dir, sorted by
 	* name (JAX-Hermes3 names them by time, zero padded), from index start
-	* to end inclusive in steps of stride. A negative end counts from the
-	* end (-1 is the last). At least two must be picked.
+	* to end inclusive in steps of stride. A negative start or end counts
+	* from the end (-1 is the last), so start = -50 and end = -1 picks the
+	* last 50. At least two must be picked.
 	*
 	* @param dir Snapshot directory.
 	* @param start Index of the first snapshot, from 0.
@@ -441,6 +445,7 @@ namespace Hermes
 		}
 		std::sort(all.begin(), all.end());
 		const int n {static_cast<int>(all.size())};
+		if (start < 0) start += n;
 		if (end < 0) end += n;
 		if (stride < 1)
 		{
@@ -684,7 +689,14 @@ namespace Hermes
 			<< " T, ion AA = " << opts.hermes_ion_mass_amu() << '\n';
 
 		Background::Background bkg {};
-		auto zones {make_zones(grid, nz, zperiod)};
+		const bool aligned {opts.hermes_field_aligned_int() == 1};
+		if (!aligned)
+		{
+			std::cout << "  hermes_field_aligned = \"off\": the plasma is "
+				"interpolated and differentiated at fixed z, not along the "
+				"field line. This is only meant for comparison.\n";
+		}
+		auto zones {make_zones(grid, nz, zperiod, aligned)};
 		bkg.move_into_zones(zones);
 		const Axisym::Mesh mesh {make_mesh(grid)};
 		Axisym::calc_geometry(mesh, bkg);

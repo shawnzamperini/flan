@@ -29,6 +29,7 @@ nav:
   - Running Flan:
       - Overview: running/running-flan.md
       - SOLEDGE3X Backgrounds: running/soledge3x.md
+      - HERMES Backgrounds: running/hermes.md
       - Perlmutter: running/running-perlmutter.md
       - Omega: running/running-omega.md
   - Input Options: input-options.md

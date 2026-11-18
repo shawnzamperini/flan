@@ -794,10 +794,10 @@ namespace Axisym
 	* the collisions) would need every species' density and would add
 	* their collisions to each tau.
 	*
-	* grad_par is the parallel gradient along the field line (aligned_dfdy
-	* and grad_par), not b . grad T, which picks up part of the much
-	* larger gradient across the field. So every zone must have a zShift
-	* table. q_par is positive along B, the same as the parallel flow and
+	* On zones with a zShift table, grad_par is the parallel gradient along
+	* the field line (aligned_dfdy and grad_par), not b . grad T, which
+	* picks up part of the much larger gradient across the field. Zones
+	* without one (hermes_field_aligned = "off") use b . grad T. q_par is positive along B, the same as the parallel flow and
 	* the SOLEDGE3X heat fluxes. At a wall face the y derivative is one
 	* sided, so q_par in the last cell before a target is approximate (the
 	* simulation sets the heat flux there with its sheath condition).
@@ -810,16 +810,10 @@ namespace Axisym
 		const Conduction& c)
 	{
 		const Zones::Zones& zones {bkg.get_zones()};
-		for (int zone {}; zone < zones.get_nzones(); ++zone)
-		{
-			if (!zones.has_z_shift(zone))
-			{
-				Errors::fatal_error("calc_conductive_heat_fluxes needs a "
-					"zShift table in every zone, for the parallel "
-					"gradient along the field line, but zone "
-					+ std::to_string(zone) + " has none.");
-			}
-		}
+
+		// Make sure the ghost cell sources are found before the threads
+		// start, since that isn't thread safe
+		zones.get_ghost_cells();
 
 		const auto& ne {bkg.get_ne()};
 		const auto& te {bkg.get_te()};
@@ -854,8 +848,23 @@ namespace Axisym
 				const double nu_i {Braginskii::nu_ii(n_i, t_i, c.ion_z,
 					c.ion_aa, n_i, t_i, c.ion_z, c.ion_aa) + nu_ie};
 
-				const double g_e {grad_par(bkg, dte_dy, zone, t, i, j, k)};
-				const double g_i {grad_par(bkg, dti_dy, zone, t, i, j, k)};
+				// Along the field line on a shifted-metric zone, otherwise
+				// b . grad T
+				double g_e {}, g_i {};
+				if (zones.has_z_shift(zone))
+				{
+					g_e = grad_par(bkg, dte_dy, zone, t, i, j, k);
+					g_i = grad_par(bkg, dti_dy, zone, t, i, j, k);
+				}
+				else
+				{
+					const Vec3 B {bkg.get_bX()(zone, t, i, j, k),
+						bkg.get_bY()(zone, t, i, j, k),
+						bkg.get_bZ()(zone, t, i, j, k)};
+					const double Bm {std::sqrt(dot(B, B))};
+					g_e = dot(B, gradient(bkg, te, zone, t, i, j, k)) / Bm;
+					g_i = dot(B, gradient(bkg, ti, zone, t, i, j, k)) / Bm;
+				}
 				const double k_e {Braginskii::limit_kappa(
 					Braginskii::kappa_par(c.coef_e, n_e, t_e, nu_e, me),
 					g_e, n_e, t_e, me, c.limit_alpha)};

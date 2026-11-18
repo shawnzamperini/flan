@@ -328,6 +328,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "hermes_field_aligned")
+			{
+				auto set_func = std::bind(&Options::set_hermes_field_aligned,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "hermes_kappa_coef_e")
 			{
 				auto set_func = std::bind(&Options::set_hermes_kappa_coef_e,

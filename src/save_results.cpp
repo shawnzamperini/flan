@@ -509,6 +509,8 @@ namespace SaveResults
 			"HERMES toroidal periodicity", "");
 		save_string(input_group, opts.hermes_heat_flux(), "hermes_heat_flux", dim_str,
 			"source of the HERMES parallel heat fluxes");
+		save_string(input_group, opts.hermes_field_aligned(), "hermes_field_aligned", dim_str,
+			"HERMES field-aligned interpolation option");
 		save_scalar(input_group, opts.hermes_kappa_coef_e(), "hermes_kappa_coef_e", dim_scalar,
 			"HERMES electron parallel conduction coefficient", "");
 		save_scalar(input_group, opts.hermes_kappa_coef_i(), "hermes_kappa_coef_i", dim_scalar,

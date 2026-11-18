@@ -425,7 +425,7 @@ inventory per zone and above the X-point, checked against the source
 times the mean time followed. It plots the gross and net erosion along
 the wall, when the redeposited atoms landed (with the gyroperiod of a
 singly charged ion at the strongest source marked) and their charge.
-`python/plot_s3x_nz.py` shows the impurity density.
+`python/plot_multizone.py` shows the impurity density.
 
 ### What to expect
 

@@ -225,7 +225,7 @@ TEST_F(ReadHermesTest, ParallelSign)
 }
 
 // Snapshots are picked by index in name order, with a stride and an end
-// counted from the back
+// counted from the back (and a start, too)
 TEST_F(ReadHermesTest, SelectSnapshots)
 {
 	const std::string dir {(m_dir / "snaps").string()};
@@ -242,6 +242,10 @@ TEST_F(ReadHermesTest, SelectSnapshots)
 		"snap0000100.npz", "snap0000300.npz"}));
 	EXPECT_EQ(names(1, -1, 1), (std::vector<std::string> {
 		"snap0000200.npz", "snap0000300.npz"}));
+	EXPECT_EQ(names(-2, -1, 1), (std::vector<std::string> {
+		"snap0000200.npz", "snap0000300.npz"}));
+	EXPECT_EXIT(Hermes::select_snapshots(dir, -4, -1, 1),
+		testing::ExitedWithCode(EXIT_FAILURE), "has 3 snapshots");
 
 	EXPECT_EXIT(Hermes::select_snapshots(dir, 0, 1, 2),
 		testing::ExitedWithCode(EXIT_FAILURE), "at least two");

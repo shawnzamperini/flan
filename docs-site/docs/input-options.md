@@ -98,15 +98,15 @@ interpolated, and differentiated in y, along the field line using the
 grid's `zShift`. The parallel heat fluxes the thermal force needs are
 calculated from the conduction (`hermes_heat_flux`), with the run's
 conduction coefficients (`kappa_coefficient_e` and `_i` in the JSON
-`pars`). See the [HERMES Coupling Plan](developer/hermes-coupling.md)
-for what isn't included yet.
+`pars`). See [HERMES Backgrounds](running/hermes.md) for how HERMES
+backgrounds work and what isn't included.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `hermes_format` | string | `"jax"` | Output format of the HERMES run: `"jax"` for JAX-Hermes3 (one `.npz` snapshot per time) or `"bout"` for BOUT++ Hermes-3 dump files, which isn't implemented yet. Valid values: `"jax"`, `"bout"`. |
 | `hermes_grid_file` | string | `"undefined"` | Full path to the run's hypnotoad grid file (netCDF). Must be set. |
 | `hermes_snap_dir` | string | `"undefined"` | Full path to the directory with the snapshots (`snap*.npz` for JAX-Hermes3). Must be set. |
-| `hermes_snap_start` | int | `0` | First snapshot to load, as an index (from 0) into the snapshots in `hermes_snap_dir` sorted by name, which for JAX-Hermes3 is time order. |
+| `hermes_snap_start` | int | `0` | First snapshot to load, as an index (from 0) into the snapshots in `hermes_snap_dir` sorted by name, which for JAX-Hermes3 is time order. Negative values count from the end, so `-50` with `hermes_snap_end = -1` loads the last 50. |
 | `hermes_snap_end` | int | `1` | Last snapshot to load (inclusive), as an index like `hermes_snap_start`. Negative values count from the end: -1 is the last snapshot. At least two snapshots must be loaded, since the background is interpolated in time between them. |
 | `hermes_snap_stride` | int | `1` | Load every `hermes_snap_stride`-th snapshot from `hermes_snap_start` to `hermes_snap_end`. Each loaded snapshot holds many 3D fields, so this keeps long time windows within memory. |
 | `hermes_nnorm` | float | `1e19` | Density (m^-3) the run is normalized by (Nnorm). |
@@ -114,6 +114,7 @@ for what isn't included yet.
 | `hermes_bnorm` | float | `1.0` | Magnetic field (T) the run is normalized by (Bnorm). Times are in units of m_p / (e Bnorm). |
 | `hermes_ion_mass_amu` | float | `2.0` | Mass number (AA) of the main ions. The parallel flow is NVi / (AA Ne), and this is also the ion mass the impurities collide with. |
 | `hermes_zperiod` | int | `1` | The run covers 1 / `hermes_zperiod` of the torus in the toroidal direction (zperiod in the HERMES input). |
+| `hermes_field_aligned` | string | `"on"` | `"on"` interpolates and differentiates the plasma in y along the field line, using the grid's `zShift`, as the shifted metric intends. `"off"` does it at fixed z, and takes parallel gradients as b·∇. Only meant for comparison: on a turbulent background, `"off"` mixes unrelated structures between y cells. Valid values: `"on"`, `"off"`. |
 | `hermes_heat_flux` | string | `"conduction"` | Where the parallel heat fluxes for the thermal force come from. The snapshots don't have them, so `"conduction"` calculates them as Hermes-3 does, q_par = -kappa_par grad_par T with Braginskii's kappa_par and the species' collision times from all of their collisions (e-e and e-i for electrons, i-i and i-e for ions), with one ion species and n_i = n_e. `"off"` leaves them out, and then the thermal force isn't included. Valid values: `"conduction"`, `"off"`. |
 | `hermes_kappa_coef_e` | float | `2.2345` | Electron parallel conduction coefficient (`kappa_coefficient` of the electrons in the HERMES input). The default is Hermes-3's, 3.16 / sqrt(2). |
 | `hermes_kappa_coef_i` | float | `3.9` | Ion parallel conduction coefficient (`kappa_coefficient` of the ions in the HERMES input). |

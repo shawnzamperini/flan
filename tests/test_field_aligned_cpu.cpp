@@ -597,3 +597,77 @@ TEST_F(FieldAlignedTest, NoHeatFluxAcrossField)
 		max_q = std::max(max_q, std::abs(q));
 	EXPECT_LT(max_q, 1e-9 * kappa_e * grad);
 }
+
+// For a plasma that doesn't vary in z, following the field line changes
+// nothing, so hermes_field_aligned = "off" gives the same background: E,
+// the flow and the heat fluxes (where the y derivative at fixed z picks
+// up nothing from dzShift/dy df/dz, and b . grad T is grad_par T)
+TEST_F(FieldAlignedTest, AlignedOffMatchesUniformZ)
+{
+	const auto dir {m_dir / "flat"};
+	std::filesystem::create_directories(dir);
+	auto fn = [](int f, int i, int j, int)
+	{
+		const double n {1.0 + 0.1 * i + 0.05 * j};
+		switch (f)
+		{
+			case 0: return n;
+			case 1: return n * (1.0 + 0.02 * j);
+			case 2: return n * (1.5 - 0.01 * j);
+			case 3: return 0.1 * n;
+			default: return 0.1 * j + 0.05 * i;
+		}
+	};
+	for (int t {}; t < 2; ++t)
+		HermesTest::write_snapshot(dir.string(), m_grid, nz, t, t, 10.0 * t,
+			fn);
+
+	auto read_flat = [&](const std::string& aligned)
+	{
+		Options::Options opts {};
+		opts.set_bkg_source("hermes");
+		opts.set_hermes_grid_file((m_dir / "grid.nc").string());
+		opts.set_hermes_snap_dir(dir.string());
+		opts.set_hermes_snap_end(-1);
+		opts.set_hermes_tnorm(tnorm);
+		opts.set_hermes_zperiod(zperiod);
+		opts.set_hermes_field_aligned(aligned);
+		return Hermes::read_hermes(opts);
+	};
+	const auto on {read_flat("on")};
+	const auto off {read_flat("off")};
+	EXPECT_TRUE(on.get_zones().has_z_shift(1));
+	EXPECT_FALSE(off.get_zones().has_z_shift(1));
+
+	auto compare = [](const Vectors::ZonedVector<BkgFPType>& a,
+		const Vectors::ZonedVector<BkgFPType>& b, const std::string& name)
+	{
+		ASSERT_EQ(a.get_data().size(), b.get_data().size()) << name;
+		double scale {}, diff {};
+		for (std::size_t n {}; n < a.get_data().size(); ++n)
+		{
+			scale = std::max(scale, std::abs(a.get_data()[n]));
+			diff = std::max(diff, std::abs(a.get_data()[n]
+				- b.get_data()[n]));
+		}
+		EXPECT_GT(scale, 0.0) << name;
+		EXPECT_LT(diff, 1e-9 * scale) << name;
+	};
+	compare(on.get_te(), off.get_te(), "te");
+	compare(on.get_eX(), off.get_eX(), "eX");
+	compare(on.get_eY(), off.get_eY(), "eY");
+	compare(on.get_eZ(), off.get_eZ(), "eZ");
+	compare(on.get_uX(), off.get_uX(), "uX");
+	compare(on.get_q_par_e(), off.get_q_par_e(), "q_par_e");
+	compare(on.get_q_par_i(), off.get_q_par_i(), "q_par_i");
+
+	// And interpolation at a point
+	const double t {on.get_times()[0]};
+	const double xp {on.get_zones().get_x(4)[1] + 0.3};
+	const double yp {on.get_zones().get_y(4)[1] + 0.1};
+	for (const double zp : {0.1, 0.9 * period})
+	{
+		EXPECT_NEAR(on.interp_te(4, t, xp, yp, zp),
+			off.interp_te(4, t, xp, yp, zp), 1e-9 * tnorm);
+	}
+}

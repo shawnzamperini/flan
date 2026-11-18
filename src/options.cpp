@@ -81,6 +81,7 @@ namespace Options
 		set_s3x_chi_absorb(m_s3x_chi_absorb);
 		set_hermes_format(m_hermes_format);
 		set_hermes_heat_flux(m_hermes_heat_flux);
+		set_hermes_field_aligned(m_hermes_field_aligned);
 		set_imp_source_opt(m_imp_source_opt);
 		set_sput_flux_opt(m_sput_flux_opt);
 		set_sput_bohm_floor(m_sput_bohm_floor);
@@ -688,7 +689,8 @@ namespace Options
 	* Sets the hermes_snap_start option.
 	*
 	* First snapshot to load, as an index into the snapshots in
-	* hermes_snap_dir sorted by name (time), from 0.
+	* hermes_snap_dir sorted by name (time), from 0. Negative values count
+	* from the end, like hermes_snap_end.
 	*
 	* @param hermes_snap_start New value of the hermes_snap_start option.
 	*/
@@ -792,6 +794,34 @@ namespace Options
 		// Assign control integers
 		if (hermes_heat_flux == "off") m_hermes_heat_flux_int = 0;
 		else if (hermes_heat_flux == "conduction") m_hermes_heat_flux_int = 1;
+	}
+
+	/**
+	* Sets the hermes_field_aligned option.
+	*
+	* "on" (the default) interpolates and differentiates a HERMES
+	* background in y along the field line, using the grid's zShift, as
+	* the shifted metric intends. "off" does it at fixed z like any other
+	* background, and takes parallel gradients as b . grad. "off" is only
+	* for comparison (e.g., to see what field alignment changes): on a
+	* turbulent background it mixes unrelated structures between y planes.
+	* Also sets the control integer returned by hermes_field_aligned_int()
+	* to 0 for "off", 1 for "on".
+	*
+	* @param hermes_field_aligned New value of the hermes_field_aligned
+	*        option.
+	*/
+	void Options::set_hermes_field_aligned(std::string hermes_field_aligned)
+	{
+		if (check_input<std::string>("hermes_field_aligned",
+			hermes_field_aligned, {"on", "off"}))
+		{
+			m_hermes_field_aligned = hermes_field_aligned;
+		}
+
+		// Assign control integers
+		if (hermes_field_aligned == "off") m_hermes_field_aligned_int = 0;
+		else if (hermes_field_aligned == "on") m_hermes_field_aligned_int = 1;
 	}
 
 	/**
@@ -2312,6 +2342,14 @@ namespace Options
 		{return m_hermes_heat_flux;}
 
 	/**
+	* Returns the hermes_field_aligned option ("on" or "off").
+	*
+	* @return Value of the hermes_field_aligned option.
+	*/
+	const std::string& Options::hermes_field_aligned() const
+		{return m_hermes_field_aligned;}
+
+	/**
 	* Returns the hermes_kappa_coef_e option.
 	*
 	* @return Electron parallel conduction coefficient.
@@ -3449,6 +3487,12 @@ namespace Options
 
 	int Options::hermes_heat_flux_int() const
 		{return get_control_int("hermes_heat_flux", m_hermes_heat_flux_int);}
+
+	int Options::hermes_field_aligned_int() const
+	{
+		return get_control_int("hermes_field_aligned",
+			m_hermes_field_aligned_int);
+	}
 
 	int Options::imp_source_opt_int() const
 		{return get_control_int("imp_source_opt", m_imp_source_opt_int);}

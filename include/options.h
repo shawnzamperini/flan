@@ -74,6 +74,7 @@ namespace Options
 		double m_hermes_ion_mass_amu {2.0};
 		int m_hermes_zperiod {1};
 		std::string m_hermes_heat_flux {"conduction"};
+		std::string m_hermes_field_aligned {"on"};
 		double m_hermes_kappa_coef_e {3.16 / 1.4142135623730951};
 		double m_hermes_kappa_coef_i {3.9};
 		double m_hermes_kappa_limit_alpha {-1.0};
@@ -205,6 +206,7 @@ namespace Options
 		int m_s3x_chi_absorb_int                      {-1};
 		int m_hermes_format_int                       {-1};
 		int m_hermes_heat_flux_int                    {-1};
+		int m_hermes_field_aligned_int                {-1};
 		int m_imp_source_opt_int                      {-1};
 		int m_sput_flux_opt_int                       {-1};
 		int m_sput_bohm_floor_int                     {-1};
@@ -257,6 +259,7 @@ namespace Options
 		void set_hermes_ion_mass_amu(double hermes_ion_mass_amu);
 		void set_hermes_zperiod(int hermes_zperiod);
 		void set_hermes_heat_flux(std::string hermes_heat_flux);
+		void set_hermes_field_aligned(std::string hermes_field_aligned);
 		void set_hermes_kappa_coef_e(double hermes_kappa_coef_e);
 		void set_hermes_kappa_coef_i(double hermes_kappa_coef_i);
 		void set_hermes_kappa_limit_alpha(double hermes_kappa_limit_alpha);
@@ -379,6 +382,7 @@ namespace Options
 		double hermes_ion_mass_amu() const;
 		int hermes_zperiod() const;
 		const std::string& hermes_heat_flux() const;
+		const std::string& hermes_field_aligned() const;
 		double hermes_kappa_coef_e() const;
 		double hermes_kappa_coef_i() const;
 		double hermes_kappa_limit_alpha() const;
@@ -497,6 +501,7 @@ namespace Options
 		int s3x_chi_absorb_int() const;
 		int hermes_format_int() const;
 		int hermes_heat_flux_int() const;
+		int hermes_field_aligned_int() const;
 		int imp_source_opt_int() const;
 		int sput_flux_opt_int() const;
 		int sput_bohm_floor_int() const;

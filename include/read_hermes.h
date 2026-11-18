@@ -62,7 +62,7 @@ namespace Hermes
 	std::array<ZoneRange, 6> zone_ranges(const Grid& grid);
 
 	Zones::Zones make_zones(const Grid& grid, const int nz,
-		const int zperiod);
+		const int zperiod, const bool aligned = true);
 
 	void set_z_shift_tables(const Grid& grid, Zones::Zones& zones);
 
