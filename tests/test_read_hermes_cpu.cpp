@@ -1,8 +1,10 @@
 /*
-* Tests for reading a HERMES (JAX-Hermes3) background (read_hermes.cpp) on
-* a small single-null grid and snapshots written by the test (see
+* Tests for reading a HERMES background (read_hermes.cpp,
+* read_hermes_bout.cpp) on a small single-null grid with JAX-Hermes3
+* snapshots and BOUT++ Hermes-3 dump files written by the test (see
 * hermes_test_files.h): the six zones and their faces, the geometry and
-* field, the unnormalized plasma, picking snapshots, and the errors.
+* field, the unnormalized plasma, picking snapshots, the BOUT++ reader
+* against the JAX one on the same plasma, and the errors.
 */
 
 #include <array>
@@ -83,7 +85,77 @@ namespace
 			opts.set_hermes_zperiod(zperiod);
 			return opts;
 		}
+
+		std::string run_dir() const {return (m_dir / "run").string();}
+
+		// Writes BOUT++ dump files of the snapshots' plasma in run_dir,
+		// replacing any there
+		void write_dumps(const HermesTest::DumpSpec& spec = {}) const
+		{
+			std::filesystem::remove_all(run_dir());
+			std::filesystem::create_directories(run_dir());
+			HermesTest::write_bout_dumps(run_dir(), m_grid, spec);
+		}
+
+		// Options for reading the dumps. The normalization and zperiod
+		// options are left at their defaults, which differ from the
+		// dumps', since they must come from the dumps.
+		Options::Options bout_options() const
+		{
+			Options::Options opts {};
+			opts.set_bkg_source("hermes");
+			opts.set_hermes_format("bout");
+			opts.set_hermes_grid_file(grid_path());
+			opts.set_hermes_snap_dir(run_dir());
+			opts.set_hermes_snap_start(0);
+			opts.set_hermes_snap_end(-1);
+			opts.set_hermes_ion_mass_amu(aa);
+			return opts;
+		}
 	};
+
+	// Largest |a / b - 1| over two fields (0 where both are 0), and
+	// whether they have the same size
+	double max_rel_diff(const Vectors::ZonedVector<BkgFPType>& a,
+		const Vectors::ZonedVector<BkgFPType>& b)
+	{
+		const auto& x {a.get_data()};
+		const auto& y {b.get_data()};
+		if (x.size() != y.size()) return INFINITY;
+		double m {};
+		for (std::size_t i {}; i < x.size(); ++i)
+		{
+			if (x[i] == y[i]) continue;
+			const double d {std::abs(x[i] - y[i])
+				/ std::max(std::abs(x[i]), std::abs(y[i]))};
+			m = std::isnan(d) ? INFINITY : std::max(m, d);
+		}
+		return m;
+	}
+
+	// Checks that two backgrounds have the same plasma, fields and flows:
+	// exactly, except the flows (and what depends on them) to within tol
+	void expect_same(const Background::Background& a,
+		const Background::Background& b, const double tol)
+	{
+		EXPECT_EQ(a.get_times(), b.get_times());
+		EXPECT_EQ(a.get_ion_mass_amu(), b.get_ion_mass_amu());
+		EXPECT_EQ(a.get_zones().get_nz(0), b.get_zones().get_nz(0));
+		EXPECT_EQ(max_rel_diff(a.get_ne(), b.get_ne()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_te(), b.get_te()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_ti(), b.get_ti()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_vp(), b.get_vp()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_eX(), b.get_eX()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_eY(), b.get_eY()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_eZ(), b.get_eZ()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_X(), b.get_X()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_bmag(), b.get_bmag()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_q_par_e(), b.get_q_par_e()), 0.0);
+		EXPECT_EQ(max_rel_diff(a.get_q_par_i(), b.get_q_par_i()), 0.0);
+		EXPECT_LE(max_rel_diff(a.get_uX(), b.get_uX()), tol);
+		EXPECT_LE(max_rel_diff(a.get_uY(), b.get_uY()), tol);
+		EXPECT_LE(max_rel_diff(a.get_uZ(), b.get_uZ()), tol);
+	}
 }
 
 // Six zones with global grid indices as x and y, the toroidal wedge in z,
@@ -293,4 +365,153 @@ TEST_F(ReadHermesTest, Errors)
 		400, 3, 50.0);
 	EXPECT_EXIT(Hermes::read_hermes(options()),
 		testing::ExitedWithCode(EXIT_FAILURE), "times don't increase");
+}
+
+// ---------------------------------------------------------------------------
+// BOUT++ Hermes-3 dump files
+// ---------------------------------------------------------------------------
+
+// The same plasma written as BOUT++ dumps (split over 2 x 4 processes,
+// NaN in the guard cells the reader must skip, an electromagnetic run with
+// V written) and as JAX snapshots gives the same background, with the
+// normalization and zperiod taken from the dumps
+TEST_F(ReadHermesTest, BoutMatchesJax)
+{
+	const Options::Options defaults {};
+	ASSERT_NE(defaults.hermes_nnorm(), nnorm);
+	ASSERT_NE(defaults.hermes_tnorm(), tnorm);
+	ASSERT_NE(defaults.hermes_bnorm(), bnorm);
+	ASSERT_NE(defaults.hermes_zperiod(), zperiod);
+
+	write_dumps();
+	const auto jax {Hermes::read_hermes(options())};
+	const auto bout {Hermes::read_hermes(bout_options())};
+	expect_same(bout, jax, 0.0);
+}
+
+// Without V in the dumps the flow comes from NV: (NV - N Apar) / (AA N) in
+// an electromagnetic run (NV is the canonical momentum there), NV / (AA N)
+// without Apar. Rounding in the subtraction allows a tiny difference.
+TEST_F(ReadHermesTest, BoutFlowFromNV)
+{
+	const auto jax {Hermes::read_hermes(options())};
+	for (const bool apar : {true, false})
+	{
+		SCOPED_TRACE(apar ? "with Apar" : "without Apar");
+		HermesTest::DumpSpec spec {};
+		spec.write_v = false;
+		spec.write_apar = apar;
+		write_dumps(spec);
+		expect_same(Hermes::read_hermes(bout_options()), jax, 1e-13);
+	}
+}
+
+// Output times are picked like snapshots: by index, with a stride and
+// negative indices counting from the end
+TEST_F(ReadHermesTest, BoutTimeSelection)
+{
+	HermesTest::DumpSpec spec {};
+	spec.ntimes = 5;
+	write_dumps(spec);
+	const double t_unit {Hermes::mp / (Hermes::qe * bnorm)};
+	auto check = [&](int start, int end, int stride,
+		const std::vector<int>& want)
+	{
+		SCOPED_TRACE(std::to_string(start) + ", " + std::to_string(end)
+			+ ", " + std::to_string(stride));
+		auto opts {bout_options()};
+		opts.set_hermes_snap_start(start);
+		opts.set_hermes_snap_end(end);
+		opts.set_hermes_snap_stride(stride);
+		const auto bkg {Hermes::read_hermes(opts)};
+		const auto& times {bkg.get_times()};
+		ASSERT_EQ(times.size(), want.size());
+		for (std::size_t t {}; t < want.size(); ++t)
+		{
+			EXPECT_NEAR(times[t], 100.0 * (want[t] + 1) * t_unit, 1e-20);
+			// Main SOL (zone 4), its first cell
+			const double Ne {HermesTest::field_value(0, want[t],
+				origin[4][0], origin[4][1], 0)};
+			EXPECT_DOUBLE_EQ(bkg.get_ne()(4, t, 0, 0, 0), Ne * nnorm);
+		}
+	};
+	check(0, -1, 2, {0, 2, 4});
+	check(-2, -1, 1, {3, 4});
+	check(1, 3, 1, {1, 2, 3});
+}
+
+// The normalization options aren't used for BOUT++ dumps, even if set
+TEST_F(ReadHermesTest, BoutIgnoresNormOptions)
+{
+	write_dumps();
+	auto opts {bout_options()};
+	opts.set_hermes_nnorm(5e19);
+	opts.set_hermes_tnorm(10.0);
+	opts.set_hermes_bnorm(2.5);
+	opts.set_hermes_zperiod(7);
+	expect_same(Hermes::read_hermes(opts),
+		Hermes::read_hermes(bout_options()), 0.0);
+}
+
+// Dumps the reader can't use stop the run with a message saying why
+TEST_F(ReadHermesTest, BoutErrors)
+{
+	auto expect_error = [&](const HermesTest::DumpSpec& spec,
+		const std::string& message, const Options::Options& opts)
+	{
+		SCOPED_TRACE(message);
+		write_dumps(spec);
+		EXPECT_EXIT(Hermes::read_hermes(opts),
+			testing::ExitedWithCode(EXIT_FAILURE), message);
+	};
+	const auto opts {bout_options()};
+	HermesTest::DumpSpec spec {};
+
+	// A missing file
+	write_dumps();
+	std::filesystem::remove(std::filesystem::path(run_dir())
+		/ "BOUT.dmp.3.nc");
+	EXPECT_EXIT(Hermes::read_hermes(opts),
+		testing::ExitedWithCode(EXIT_FAILURE), "are missing");
+
+	spec = {};
+	spec.nzpe = 2;
+	expect_error(spec, "splits z", opts);
+
+	spec = {};
+	spec.bad_times_file = 2;
+	expect_error(spec, "different output times", opts);
+
+	spec = {};
+	spec.ixseps1_shift = 1;
+	expect_error(spec, "aren't on the grid", opts);
+
+	spec = {};
+	spec.duplicate_place = true;
+	expect_error(spec, "unfilled", opts);
+
+	spec = {};
+	spec.ion = "d+";
+	expect_error(spec, "hermes_ion_species", opts);
+
+	spec = {};
+	spec.write_v = false;
+	spec.write_nv = false;
+	expect_error(spec, "neither", opts);
+
+	auto late {bout_options()};
+	late.set_hermes_snap_end(3);
+	expect_error({}, "has 3 output times", late);
+}
+
+// With hermes_ion_species, the ion variables can have another name
+TEST_F(ReadHermesTest, BoutIonSpecies)
+{
+	HermesTest::DumpSpec spec {};
+	spec.ion = "d+";
+	write_dumps(spec);
+	auto opts {bout_options()};
+	opts.set_hermes_ion_species("d+");
+	expect_same(Hermes::read_hermes(opts), Hermes::read_hermes(options()),
+		0.0);
 }

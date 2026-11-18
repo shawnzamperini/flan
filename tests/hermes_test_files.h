@@ -20,6 +20,10 @@
 * The snapshot fields are simple functions of the global indices (see
 * field_value), so a test can check which grid cell each Flan cell came
 * from, or any function given to write_snapshot.
+*
+* write_bout_dumps writes the same plasma as BOUT++ Hermes-3 dump files,
+* split over processes with guard cells, so the two readers can be
+* compared on the same plasma.
 */
 
 #pragma once
@@ -335,4 +339,148 @@ namespace HermesTest
 		std::snprintf(name, sizeof(name), "/snap%07d.npz", number);
 		write_npz(dir + name, arrays);
 	}
+
+	// ---------------------------------------------------------------------
+	// BOUT++ Hermes-3 dump files
+	// ---------------------------------------------------------------------
+
+	/// How write_bout_dumps lays out and fills the dump files
+	struct DumpSpec
+	{
+		int nxpe {2};		///< Processes in x; nx - 2 mxg must divide
+		int nype {4};		///< Processes in y; ny must divide
+		int mxg {2};
+		int myg {2};
+		int nz {4};
+		int ntimes {3};		///< Output times, t = 100 (n + 1)
+		int zperiod {2};
+		double nnorm {2e19};
+		double tnorm {40.0};
+		double bnorm {1.5};
+		double aa {2.0};		///< Ion mass number, for V and NV
+		std::string ion {"i"};	///< Ion species name
+		bool write_v {true};	///< Write V<ion>
+		bool write_nv {true};	///< Write NV<ion>
+		bool write_apar {true};	///< Write Apar (NV is then canonical)
+		int nzpe {1};			///< NZPE written (the reader needs 1)
+		int ixseps1_shift {0};	///< Added to the ixseps1 written
+		int bad_times_file {-1};	///< File whose t_array is changed
+		bool duplicate_place {false};	///< File 1 says it's at file 0's place
+	};
+
+	/// Apar (normalized) at global cell (i, j, k), time index t
+	inline double apar_value(int t, int i, int j, int k)
+	{
+		return 0.3 + 0.02 * i - 0.01 * j + 0.005 * k + 0.001 * t;
+	}
+
+	/**
+	* Writes BOUT.dmp.N.nc files in dir with the plasma of field_value:
+	* Ne, Pe, P<ion> and phi are fields 0, 1, 2 and 4, and the ion flow is
+	* V = field 3 / (AA Ne), written as V<ion> and/or as NV<ion> = AA Ne V
+	* + Ne Apar (the canonical momentum, or AA Ne V without Apar). So the
+	* plasma is that of write_snapshot, whose NVi is field 3.
+	*
+	* File N is the process at PE_XIND = N % nxpe, PE_YIND = N / nxpe, as
+	* in BOUT++. Each block has its guard cells; the y guards, and the x
+	* guards between blocks, are NaN, so a reader that uses them gives NaN.
+	* The x guards at the domain's edges are the grid's guard cells and get
+	* plasma.
+	*/
+	inline void write_bout_dumps(const std::string& dir, const TestGrid& g,
+		const DumpSpec& s)
+	{
+		const int mxsub {(g.nx - 2 * s.mxg) / s.nxpe};
+		const int mysub {g.ny / s.nype};
+		const int lx {mxsub + 2 * s.mxg};
+		const int ly {mysub + 2 * s.myg};
+		const double nan {std::numeric_limits<double>::quiet_NaN()};
+		for (int n {}; n < s.nxpe * s.nype; ++n)
+		{
+			const int px {n % s.nxpe};
+			const int py {n / s.nxpe};
+			netCDF::NcFile f(dir + "/BOUT.dmp." + std::to_string(n) + ".nc",
+				netCDF::NcFile::replace);
+			const auto dt {f.addDim("t", s.ntimes)};
+			const auto dx {f.addDim("x", lx)};
+			const auto dy {f.addDim("y", ly)};
+			const auto dz {f.addDim("z", s.nz)};
+			auto iscalar = [&](const std::string& name, int v)
+				{f.addVar(name, netCDF::ncInt).putVar(&v);};
+			auto dscalar = [&](const std::string& name, double v)
+				{f.addVar(name, netCDF::ncDouble).putVar(&v);};
+			iscalar("NXPE", s.nxpe);
+			iscalar("NYPE", s.nype);
+			iscalar("NZPE", s.nzpe);
+			iscalar("MXSUB", mxsub);
+			iscalar("MYSUB", mysub);
+			iscalar("MXG", s.mxg);
+			iscalar("MYG", s.myg);
+			iscalar("MZ", s.nz);
+			iscalar("zperiod", s.zperiod);
+			iscalar("nx", g.nx);
+			iscalar("ny", g.ny);
+			iscalar("ixseps1", g.ixseps1 + s.ixseps1_shift);
+			iscalar("jyseps1_1", g.jyseps1_1);
+			iscalar("jyseps2_2", g.jyseps2_2);
+			iscalar("PE_XIND", s.duplicate_place && n == 1 ? 0 : px);
+			iscalar("PE_YIND", s.duplicate_place && n == 1 ? 0 : py);
+			dscalar("Nnorm", s.nnorm);
+			dscalar("Tnorm", s.tnorm);
+			dscalar("Bnorm", s.bnorm);
+
+			std::vector<double> t(s.ntimes);
+			for (int i {}; i < s.ntimes; ++i)
+				t[i] = 100.0 * (i + 1) + (n == s.bad_times_file ? 1.0 : 0.0);
+			f.addVar("t_array", netCDF::ncDouble, {dt}).putVar(t.data());
+
+			// Values of one variable from the global-cell plasma
+			auto var = [&](const std::string& name, auto fn)
+			{
+				std::vector<double> v {};
+				for (int it {}; it < s.ntimes; ++it)
+				for (int x {}; x < lx; ++x)
+				for (int y {}; y < ly; ++y)
+				for (int k {}; k < s.nz; ++k)
+				{
+					const bool yguard {y < s.myg || y >= s.myg + mysub};
+					const bool inner_xguard {(px > 0 && x < s.mxg)
+						|| (px < s.nxpe - 1 && x >= s.mxg + mxsub)};
+					if (yguard || inner_xguard) v.push_back(nan);
+					else
+					{
+						v.push_back(fn(it, px * mxsub + x,
+							py * mysub + y - s.myg, k));
+					}
+				}
+				f.addVar(name, netCDF::ncDouble, {dt, dx, dy, dz})
+					.putVar(v.data());
+			};
+			auto ne = [](int it, int i, int j, int k)
+				{return field_value(0, it, i, j, k);};
+			auto v_par = [&](int it, int i, int j, int k)
+				{return field_value(3, it, i, j, k) / (s.aa * ne(it, i, j, k));};
+			auto apar = [&](int it, int i, int j, int k)
+				{return s.write_apar ? apar_value(it, i, j, k) : 0.0;};
+			var("Ne", ne);
+			var("Pe", [](int it, int i, int j, int k)
+				{return field_value(1, it, i, j, k);});
+			var("P" + s.ion, [](int it, int i, int j, int k)
+				{return field_value(2, it, i, j, k);});
+			var("phi", [](int it, int i, int j, int k)
+				{return field_value(4, it, i, j, k);});
+			if (s.write_v) var("V" + s.ion, v_par);
+			if (s.write_nv)
+			{
+				var("NV" + s.ion, [&](int it, int i, int j, int k)
+				{
+					const double n0 {ne(it, i, j, k)};
+					return s.aa * n0 * v_par(it, i, j, k)
+						+ n0 * apar(it, i, j, k);
+				});
+			}
+			if (s.write_apar) var("Apar", apar);
+		}
+	}
 }
+

@@ -409,20 +409,26 @@ exactly for n, T and phi, and to the difference in proton mass between
 CODATA versions (about 1e-8) for the flow. A JAX background is the same
 bit for bit as before.
 
-**Phase B3: unit tests.** Extend `tests/hermes_test_files.h` to write a
-set of small dump files from the same test plasma it writes as `.npz`,
-split over a 2 × 2 (or 3 × 2) process layout, with:
+**Phase B3: unit tests.** Done. `HermesTest::write_bout_dumps`
+(`tests/hermes_test_files.h`) writes the test plasma of the `.npz`
+snapshots as dump files over 2 × 4 processes, with NaN in the y guard
+cells and in the x guard cells between blocks, NV written as the
+canonical momentum when Apar is written, and switches for each kind of
+bad dump. Tests in `test_read_hermes_cpu`:
 
-- guard cells filled with values that must not be read (e.g., NaN in the
-  y guards and in x guards between blocks), so a wrong assembly fails;
-- a nonzero `Apar` with NVi written as the canonical momentum, and `Vi`
-  written or left out, so both ways of getting the flow are tested;
-- several times, read with a stride and with negative indices.
+- `BoutMatchesJax`: the dumps and the snapshots give the same background
+  bit for bit, with the normalization and `zperiod` from the dumps (the
+  options are left at defaults that differ).
+- `BoutFlowFromNV`: without V, the flow from (NV - N Apar) / (AA N) and,
+  without Apar, from NV / (AA N), to rounding.
+- `BoutTimeSelection`: strides and negative indices pick the right times.
+- `BoutIgnoresNormOptions`, `BoutIonSpecies`.
+- `BoutErrors`: a missing file, NZPE > 1, a file with other times, dumps
+  of another grid, two files at the same place, a wrong ion species name,
+  no flow variable, and times out of range each stop with a message.
 
-Tests in `test_read_hermes_cpu`: the BOUT++ and JAX readers give the same
-background from the same plasma; layout mismatches (wrong `nx`, missing
-file, NZPE > 1, different `t_array`) stop with a message; the
-normalization comes from the files.
+Making the reader ignore Apar, or read the x guards between blocks, makes
+these tests fail.
 
 **Phase B4: validation on a BOUT++ run.**
 

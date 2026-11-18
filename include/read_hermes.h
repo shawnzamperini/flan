@@ -21,8 +21,11 @@ namespace Hermes
 	/// guard cells (MXG), which the grid and snapshots include.
 	inline constexpr int ghost {2};
 
-	/// Constants BOUT++ normalizes with (SI::qe, SI::Mp), so unnormalizing
-	/// gives back exactly what the run used
+	/// Elementary charge and proton mass for unnormalizing (CODATA 2018,
+	/// BOUT++'s current SI::qe and SI::Mp). Runs built with an older
+	/// BOUT++ may have used an older proton mass, which changes c_s0 and
+	/// the time unit by about 1e-8 relative: far below anything that
+	/// matters here.
 	inline constexpr double qe {1.602176634e-19};
 	inline constexpr double mp {1.67262192369e-27};
 
