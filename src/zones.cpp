@@ -753,6 +753,101 @@ namespace Zones
 	}
 
 	/**
+	* Sets a zone's field-line shift table, for field-aligned interpolation
+	* and derivatives on a shifted-metric grid (e.g., BOUT++/HERMES).
+	*
+	* On such a grid z is the toroidal angle, and the field line through
+	* cell (i, j) at angle z passes through cell (i, j + 1) at angle
+	* z + zShift(i, j + 1) - zShift(i, j). Turbulence is stretched along
+	* the field, so a quantity at (i, j + 1) is far better matched by its
+	* value along the field line than at the same z, which may be many
+	* toroidal cells (or several turns of a toroidal wedge) away.
+	*
+	* The table covers the zone's cells including the ghost cells, as
+	* (nx + 2 ghost) x (ny + 2 ghost) values in C order with ghost index
+	* -ghost first. A ghost cell's value must continue the field line from
+	* the zone's own cells (e.g., include the core's twist across the
+	* branch cut), since the ghost cells' plasma values are copied at the
+	* same z from the zone they come from. The zone's z faces must be
+	* periodic to itself, since shifted points are wrapped in z.
+	*
+	* @param zone Zone to set the table for.
+	* @param table zShift (radians of z) on the zone's cells and ghosts.
+	*/
+	void Zones::set_z_shift(const int zone, std::vector<double> table)
+	{
+		const std::size_t want {static_cast<std::size_t>(
+			(get_nx(zone) + 2 * m_ghost) * (get_ny(zone) + 2 * m_ghost))};
+		if (table.size() != want)
+		{
+			Errors::fatal_error("The zShift table of zone "
+				+ std::to_string(zone) + " has " + std::to_string(
+				table.size()) + " values, but the zone has "
+				+ std::to_string(want) + " cells including ghost cells.");
+		}
+		if (m_faces[zmin][zone] != zone || m_faces[zmax][zone] != zone)
+		{
+			Errors::fatal_error("Zone " + std::to_string(zone) + " was "
+				"given a zShift table, but it isn't periodic in z.");
+		}
+		if (std::ssize(m_z_shift) < get_nzones())
+			m_z_shift.resize(get_nzones());
+		m_z_shift[zone] = std::move(table);
+	}
+
+	/**
+	* @param zone Zone to check.
+	* @return True if the zone has a zShift table (see set_z_shift).
+	*/
+	bool Zones::has_z_shift(const int zone) const
+	{
+		return zone < std::ssize(m_z_shift) && !m_z_shift[zone].empty();
+	}
+
+	/**
+	* A zone's zShift at a cell (see set_z_shift). The zone must have a
+	* table.
+	*
+	* @param zone Zone of the cell.
+	* @param i x index of the cell, which may be a ghost index.
+	* @param j y index of the cell, which may be a ghost index.
+	* @return zShift (radians of z).
+	*/
+	double Zones::z_shift(const int zone, const int i, const int j) const
+	{
+		const int ny {get_ny(zone) + 2 * m_ghost};
+		return m_z_shift[zone][static_cast<std::size_t>(i + m_ghost) * ny
+			+ j + m_ghost];
+	}
+
+	/**
+	* @param zone Zone to get the period of.
+	* @return The zone's extent in z, which is its period in z when its z
+	*         faces are periodic.
+	*/
+	double Zones::z_period(const int zone) const
+	{
+		return m_grid_z[zone].back() - m_grid_z[zone].front();
+	}
+
+	/**
+	* Wraps a z coordinate into a zone's z range, for a zone that is
+	* periodic in z.
+	*
+	* @param zone Zone whose range to wrap into.
+	* @param z Coordinate to wrap, any number of periods away.
+	* @return z plus a whole number of periods, in [z_min, z_min + period).
+	*/
+	double Zones::wrap_z(const int zone, const double z) const
+	{
+		const double lo {m_grid_z[zone].front()};
+		const double period {z_period(zone)};
+		double w {std::fmod(z - lo, period)};
+		if (w < 0.0) w += period;
+		return lo + w;
+	}
+
+	/**
 	* Broadcasts the zones from rank 0 to every other rank.
 	*
 	* Must be called by every rank in comm. The other ranks' zones are
@@ -775,6 +870,12 @@ namespace Zones
 		}
 		for (auto& faces : m_faces)
 			Utilities::mpi_broadcast_vector(faces, 0, comm);
+
+		// zShift tables, sized on rank 0 (empty if no zone has one)
+		int ntables {static_cast<int>(m_z_shift.size())};
+		MPI_Bcast(&ntables, 1, MPI_INT, 0, comm);
+		m_z_shift.resize(ntables);
+		for (auto& v : m_z_shift) Utilities::mpi_broadcast_vector(v, 0, comm);
 		m_ghost_cells.clear();
 	}
 

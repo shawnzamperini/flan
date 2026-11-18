@@ -10,9 +10,16 @@
 * single null; the geometry doesn't have to look like a tokamak for the
 * reader.
 *
+* zShift is what the field gives on this grid: along a field line,
+* dz/dy = (B . grad z) / (B . grad y) = Bt dZ / (R Bz) (see twist_per_cell),
+* integrated in y from 0 through the inner leg, core and outer leg in the
+* SOL, and from one PFR leg straight into the other (skipping the core
+* rows, as hypnotoad does). The core's ShiftAngle is its twist over the
+* core rows; it's NaN in the SOL as in hypnotoad files.
+*
 * The snapshot fields are simple functions of the global indices (see
 * field_value), so a test can check which grid cell each Flan cell came
-* from.
+* from, or any function given to write_snapshot.
 */
 
 #pragma once
@@ -20,6 +27,8 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <functional>
+#include <limits>
 #include <map>
 #include <netcdf>
 #include <string>
@@ -203,6 +212,36 @@ namespace HermesTest
 		double Bz {0.3};	///< > 0, so +y is along the poloidal field
 		double Bt {-1.5};
 		int bz_flip_row {-1};	///< y row with Bz reversed (-1: none)
+
+		/// If nonzero, Bt is set in each column so the field line twists
+		/// by this much per y cell everywhere (Bt then grows with R)
+		double twist {0.0};
+
+		/// Center R of x column i
+		double R_center(int i) const {return R0 + (i + 0.5) * dR;}
+
+		/// Bt in column i
+		double Bt_at(int i) const
+			{return twist != 0.0 ? twist * Bz * R_center(i) / dZ : Bt;}
+
+		/// Toroidal twist of the field line per y cell in column i
+		double twist_per_cell(int i) const
+			{return Bt_at(i) * dZ / (R_center(i) * Bz);}
+
+		/// zShift of cell (i, j) (see the file comment)
+		double z_shift(int i, int j) const
+		{
+			const bool pfr_out {i < ixseps1 && j > jyseps2_2};
+			return twist_per_cell(i) * (pfr_out ? j - (jyseps2_2
+				- jyseps1_1) : j);
+		}
+
+		/// ShiftAngle of column i
+		double shift_angle(int i) const
+		{
+			return i < ixseps1 ? twist_per_cell(i) * (jyseps2_2 - jyseps1_1)
+				: std::numeric_limits<double>::quiet_NaN();
+		}
 	};
 
 	/**
@@ -247,9 +286,10 @@ namespace HermesTest
 		field("Brxy", [&](int, int) {return g.Br;});
 		field("Bzxy", [&](int, int j)
 			{return j == g.bz_flip_row ? -g.Bz : g.Bz;});
-		field("Btxy", [&](int, int) {return g.Bt;});
-		field("zShift", [&](int, int j) {return 0.1 * j;});
-		std::vector<double> shift(g.nx, 0.5);
+		field("Btxy", [&](int i, int) {return g.Bt_at(i);});
+		field("zShift", [&](int i, int j) {return g.z_shift(i, j);});
+		std::vector<double> shift(g.nx);
+		for (int i {}; i < g.nx; ++i) shift[i] = g.shift_angle(i);
 		f.addVar("ShiftAngle", netCDF::ncDouble, {dx}).putVar(shift.data());
 	}
 
@@ -260,13 +300,18 @@ namespace HermesTest
 		return 1.0 + f + 0.1 * i + 0.01 * j + 0.001 * k + 0.0001 * t;
 	}
 
+	/// A normalized snapshot field's value from (field, i, j, k), with
+	/// fields 0 to 4 being Ne, Pe, Pi, NVi and phi
+	using FieldFn = std::function<double(int, int, int, int)>;
+
 	/**
 	* Writes snapshot snap<number>.npz in dir: Ne, Pe, Pi, NVi and phi
-	* (fields 0 to 4 of field_value) on (nx, ny, nz), Vort (unused), and the
-	* normalized time t.
+	* (fields 0 to 4 of field_value, or of fn if given) on (nx, ny, nz),
+	* Vort (unused), and the normalized time t.
 	*/
 	inline void write_snapshot(const std::string& dir, const TestGrid& g,
-		const int nz, const int number, const int t_index, const double t)
+		const int nz, const int number, const int t_index, const double t,
+		const FieldFn& fn = {})
 	{
 		const std::vector<std::string> names {"Ne", "Pe", "Pi", "NVi",
 			"phi"};
@@ -280,7 +325,8 @@ namespace HermesTest
 			for (int i {}; i < g.nx; ++i)
 			for (int j {}; j < g.ny; ++j)
 			for (int k {}; k < nz; ++k)
-				v.push_back(field_value(static_cast<int>(f), t_index, i, j, k));
+				v.push_back(fn ? fn(static_cast<int>(f), i, j, k)
+					: field_value(static_cast<int>(f), t_index, i, j, k));
 			arrays[names[f]] = f8(shape, v);
 		}
 		arrays["Vort"] = arrays["phi"];

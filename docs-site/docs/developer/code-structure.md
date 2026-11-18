@@ -48,12 +48,19 @@ MPI must be initialized before `flan()` is called, and every rank calls it.
    a value of the wrong type or an invalid value stops the run.
 2. **Read the background.** `Background::read_bkg` loads the plasma on rank 0,
    from a Gkeyll simulation (`Gkyl::read_gkyl`), a SOLEDGE3X simulation
-   (`S3X::read_s3xe`) or the slab background set by the `slab_*` options
-   (`Slab::read_slab`). It's then broadcast to every rank. Multi-zone
-   readers like SOLEDGE3X's only read their files into an `Axisym::Mesh`
-   (cell corners and B in SI units, and the toroidal handedness) and the
-   plasma; the geometry, B, grad B, E and the flows come from the shared
-   code in `axisym_mesh.cpp`.
+   (`S3X::read_s3xe`), a HERMES simulation (`Hermes::read_hermes`) or the
+   slab background set by the `slab_*` options (`Slab::read_slab`). It's
+   then broadcast to every rank. Multi-zone readers like SOLEDGE3X's and
+   HERMES's only read their files into an `Axisym::Mesh` (cell corners and
+   B in SI units, and the toroidal handedness) and the plasma; the
+   geometry, B, grad B, E and the flows come from the shared code in
+   `axisym_mesh.cpp`. A reader for a shifted-metric grid (HERMES) also
+   gives each zone a `zShift` table (`Zones::set_z_shift`). With it,
+   plasma quantities are interpolated along the field line
+   (`Utilities::interp_aligned`, through `Background::interp_4d` with
+   `aligned` set and `Background::interp_vec3`) and y derivatives are
+   taken along it (`Axisym::aligned_dfdy`, `Axisym::grad_par`). B and the
+   geometry are always interpolated at fixed z.
 3. **Follow the impurities.** `ImpurityTransport::follow_impurities` follows
    this rank's share of the particles and records their statistics.
 4. **Combine the statistics.** `Impurity::reduce_stats` adds up the

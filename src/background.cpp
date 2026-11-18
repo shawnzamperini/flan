@@ -1361,44 +1361,95 @@ namespace Background
 	* @param x0 x-coordinate at which to evaluate the data.
 	* @param y0 y-coordinate at which to evaluate the data.
 	* @param z0 z-coordinate at which to evaluate the data.
+	* @param aligned If true, interpolate along the field line in zones
+	*        with a zShift table (see Utilities::interp_aligned). True for
+	*        plasma quantities, false (the default) for the geometry and B.
 	* @return Interpolated value at (t0, x0, y0, z0).
 	*/
 	BkgFPType Background::interp_4d(
 		const Vectors::ZonedVector<BkgFPType>& vec, const int zone,
 		const double t0, const double x0, const double y0,
-		const double z0) const
+		const double z0, const bool aligned) const
 	{
 		// This is really just a convenient wrapper to handle passing in
 		// times and the x, y, z vectors.
 		return Utilities::interp_vec4d(vec, zone, m_zones, m_times, t0, x0,
-			y0, z0);
+			y0, z0, aligned);
+	}
+
+	/**
+	* Interpolates a Cartesian vector field of the plasma (e.g., the flow
+	* or E) at a point.
+	*
+	* In a zone with a zShift table, the vector is interpolated along the
+	* field line, with each sample rotated to the point's toroidal angle
+	* (see Utilities::interp_aligned). Otherwise each component is
+	* interpolated with interp_4d, as before.
+	*
+	* @param vX X component, as (zone, t, x, y, z).
+	* @param vY Y component.
+	* @param vZ Z component.
+	* @param zone Zone the point is in.
+	* @param t0 Time at which to evaluate the vector.
+	* @param x0 x-coordinate of the point.
+	* @param y0 y-coordinate of the point.
+	* @param z0 z-coordinate of the point.
+	* @return {vX, vY, vZ} at the point.
+	*/
+	std::array<double, 3> Background::interp_vec3(
+		const Vectors::ZonedVector<BkgFPType>& vX,
+		const Vectors::ZonedVector<BkgFPType>& vY,
+		const Vectors::ZonedVector<BkgFPType>& vZ, const int zone,
+		const double t0, const double x0, const double y0,
+		const double z0) const
+	{
+		if (m_zones.has_z_shift(zone))
+		{
+			return Utilities::interp_aligned<BkgFPType, 3>({&vX, &vY, &vZ},
+				zone, m_zones, m_times, t0, x0, y0, z0, m_phi_sign);
+		}
+		return {interp_4d(vX, zone, t0, x0, y0, z0),
+			interp_4d(vY, zone, t0, x0, y0, z0),
+			interp_4d(vZ, zone, t0, x0, y0, z0)};
+	}
+
+	/**
+	* Interpolates the background flow (uX, uY, uZ) at a point with
+	* interp_vec3.
+	*/
+	std::array<double, 3> Background::interp_u(const int zone,
+		const double t0, const double x0, const double y0,
+		const double z0) const
+	{
+		return interp_vec3(m_uX, m_uY, m_uZ, zone, t0, x0, y0, z0);
 	}
 
 	/**
 	* @name Interpolation at a point
 	*
 	* Interpolate one plasma quantity at the time and position (t0, x0,
-	* y0, z0) in a zone using interp_4d. The quantities are the electron
-	* temperature (te), ion temperature (ti), electron density (ne) and the
-	* background flow components (uX, uY, uZ).
+	* y0, z0) in a zone using interp_4d, along the field line in zones
+	* with a zShift table. The quantities are the electron temperature
+	* (te), ion temperature (ti) and electron density (ne). The flow is a
+	* vector, see interp_u.
 	*/
 	///@{
 	BkgFPType Background::interp_te(const int zone, const double t0,
 		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_te, zone, t0, x0, y0, z0);
+		return interp_4d(m_te, zone, t0, x0, y0, z0, true);
 	}
 
 	BkgFPType Background::interp_ti(const int zone, const double t0,
 		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_ti, zone, t0, x0, y0, z0);
+		return interp_4d(m_ti, zone, t0, x0, y0, z0, true);
 	}
 
 	BkgFPType Background::interp_ne(const int zone, const double t0,
 		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_ne, zone, t0, x0, y0, z0);
+		return interp_4d(m_ne, zone, t0, x0, y0, z0, true);
 	}
 
 	/**
@@ -1411,7 +1462,7 @@ namespace Background
 		const double x0, const double y0, const double z0) const
 	{
 		if (m_q_par_i.get_data().empty()) return 0.0;
-		return interp_4d(m_q_par_i, zone, t0, x0, y0, z0);
+		return interp_4d(m_q_par_i, zone, t0, x0, y0, z0, true);
 	}
 
 	/**
@@ -1422,26 +1473,9 @@ namespace Background
 		const double x0, const double y0, const double z0) const
 	{
 		if (m_q_par_e.get_data().empty()) return 0.0;
-		return interp_4d(m_q_par_e, zone, t0, x0, y0, z0);
+		return interp_4d(m_q_par_e, zone, t0, x0, y0, z0, true);
 	}
 
-	BkgFPType Background::interp_uX(const int zone, const double t0,
-		const double x0, const double y0, const double z0) const
-	{
-		return interp_4d(m_uX, zone, t0, x0, y0, z0);
-	}
-
-	BkgFPType Background::interp_uY(const int zone, const double t0,
-		const double x0, const double y0, const double z0) const
-	{
-		return interp_4d(m_uY, zone, t0, x0, y0, z0);
-	}
-
-	BkgFPType Background::interp_uZ(const int zone, const double t0,
-		const double x0, const double y0, const double z0) const
-	{
-		return interp_4d(m_uZ, zone, t0, x0, y0, z0);
-	}
 	///@}
 
 	/**

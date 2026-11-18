@@ -64,6 +64,8 @@ namespace Hermes
 	Zones::Zones make_zones(const Grid& grid, const int nz,
 		const int zperiod);
 
+	void set_z_shift_tables(const Grid& grid, Zones::Zones& zones);
+
 	Axisym::Mesh make_mesh(const Grid& grid);
 
 	double parallel_sign(const Grid& grid);

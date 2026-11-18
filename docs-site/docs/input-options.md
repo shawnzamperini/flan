@@ -93,9 +93,10 @@ zones: 1 inner PFR, 2 core, 3 outer PFR, 4 inner leg, 5 main SOL and
 (x counting the 2 guard cells on each side, so the separatrix is at
 x = `ixseps1`) and z is the toroidal angle in radians. The normalization
 must be the run's: for JAX-Hermes3 it's in the case's input JSON
-(`pars.norm`, `average_atomic_mass`, `zperiod`). See the
-[HERMES Coupling Plan](developer/hermes-coupling.md) for what isn't
-included yet.
+(`pars.norm`, `average_atomic_mass`, `zperiod`). The plasma is
+interpolated, and differentiated in y, along the field line using the
+grid's `zShift`. See the [HERMES Coupling Plan](developer/hermes-coupling.md)
+for what isn't included yet.
 
 | Option | Type | Default | Description |
 |---|---|---|---|

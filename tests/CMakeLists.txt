@@ -84,6 +84,11 @@ target_link_libraries(test_read_hermes_cpu PRIVATE flan gtest_main
 	netcdf-cxx4 netcdf)
 add_test(NAME ReadHermesCPUTest COMMAND test_read_hermes_cpu)
 
+add_executable(test_field_aligned_cpu test_field_aligned_cpu.cpp)
+target_link_libraries(test_field_aligned_cpu PRIVATE flan gtest_main
+	netcdf-cxx4 netcdf)
+add_test(NAME FieldAlignedCPUTest COMMAND test_field_aligned_cpu)
+
 add_executable(test_axisym_mesh_cpu test_axisym_mesh_cpu.cpp)
 target_link_libraries(test_axisym_mesh_cpu PRIVATE flan gtest_main)
 add_test(NAME AxisymMeshCPUTest COMMAND test_axisym_mesh_cpu)

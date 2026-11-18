@@ -17,7 +17,9 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <complex>
 #include <iostream>
+#include <numbers>
 #include <string>
 #include <utility>
 #include <vector>
@@ -63,6 +65,29 @@ namespace Axisym
 	}
 
 	/**
+	* The cells a derivative at index j of a zone uses in y: j - 1 and
+	* j + 1 where they exist (including ghost cells across a face shared
+	* with another zone), otherwise j itself on that side.
+	*
+	* @param zones The zones.
+	* @param zone Zone of the cell.
+	* @param j y index of the cell.
+	* @return {lo, hi}, equal if the zone is one cell wide with no
+	*         neighbors.
+	*/
+	std::pair<int, int> y_stencil(const Zones::Zones& zones, const int zone,
+		const int j)
+	{
+		const bool ghosts {zones.get_ghost() > 0};
+		const int ny {zones.get_ny(zone)};
+		const bool has_lo {j > 0 || (ghosts
+			&& zones.get_face(zone, Zones::ymin) >= 0)};
+		const bool has_hi {j < ny - 1 || (ghosts
+			&& zones.get_face(zone, Zones::ymax) >= 0)};
+		return {has_lo ? j - 1 : j, has_hi ? j + 1 : j};
+	}
+
+	/**
 	* Derivatives of a field with respect to the computational coordinates
 	* x, y and z at an interior cell.
 	*
@@ -80,11 +105,20 @@ namespace Axisym
 	* @param i Cell index in x.
 	* @param j Cell index in y.
 	* @param k Cell index in z.
+	* @param dfdy Optional df/dy along the field line from aligned_dfdy.
+	*        In zones with a zShift table, df/dy at fixed z is then
+	*        dfdy - (dzShift/dy) df/dz, with dzShift/dy over the same two
+	*        planes and df/dz the central difference here, instead of a
+	*        central difference in y at fixed z. So the gradient is
+	*        df/dx grad x + dfdy grad y + df/dz (grad z - dzShift/dy
+	*        grad y): the gradient in field-aligned coordinates, written
+	*        in the (x, y, z) basis the particle push uses.
 	* @return {df/dx, df/dy, df/dz}.
 	*/
 	std::array<double, 3> derivatives(const Zones::Zones& zones,
 		const Vectors::ZonedVector<BkgFPType>& f, const int zone,
-		const int t, const int i, const int j, const int k)
+		const int t, const int i, const int j, const int k,
+		const Vectors::ZonedVector<BkgFPType>* dfdy)
 	{
 		const std::array<int, 3> idx {i, j, k};
 		const bool ghosts {zones.get_ghost() > 0};
@@ -108,6 +142,19 @@ namespace Axisym
 			out[d] = (f(zone, t, b[0], b[1], b[2]) - f(zone, t, a[0], a[1],
 				a[2])) / (zones.center(zone, d, hi) - zones.center(zone, d, lo));
 		}
+
+		// Field-aligned df/dy, converted to fixed z
+		if (dfdy && zones.has_z_shift(zone))
+		{
+			const auto [lo, hi] = y_stencil(zones, zone, j);
+			if (lo != hi)
+			{
+				const double dzs_dy {(zones.z_shift(zone, i, hi)
+					- zones.z_shift(zone, i, lo)) / (zones.center(zone, 1, hi)
+					- zones.center(zone, 1, lo))};
+				out[1] = (*dfdy)(zone, t, i, j, k) - dzs_dy * out[2];
+			}
+		}
 		return out;
 	}
 
@@ -123,13 +170,16 @@ namespace Axisym
 	* @param i Cell index in x.
 	* @param j Cell index in y.
 	* @param k Cell index in z.
+	* @param dfdy Optional field-aligned df/dy (see derivatives).
 	* @return {df/dX, df/dY, df/dZ}.
 	*/
 	std::array<double, 3> gradient(const Background::Background& bkg,
 		const Vectors::ZonedVector<BkgFPType>& f, const int zone,
-		const int t, const int i, const int j, const int k)
+		const int t, const int i, const int j, const int k,
+		const Vectors::ZonedVector<BkgFPType>* dfdy)
 	{
-		const auto df {derivatives(bkg.get_zones(), f, zone, t, i, j, k)};
+		const auto df {derivatives(bkg.get_zones(), f, zone, t, i, j, k,
+			dfdy)};
 		const std::array<std::array<const Vectors::ZonedVector<BkgFPType>*,
 			3>, 3> recp {{
 			{&bkg.get_dxdX(), &bkg.get_dxdY(), &bkg.get_dxdZ()},
@@ -143,6 +193,179 @@ namespace Axisym
 			grad[c] += df[d] * (*recp[d][c])(zone, i, j, k);
 		}
 		return grad;
+	}
+
+	/**
+	* Parallel gradient b . grad f at a cell of a zone with a zShift table,
+	* from df/dy along the field line (aligned_dfdy):
+	* b . grad f = (B . grad y / B) df/dy|_zeta, since B . grad zeta = 0.
+	*
+	* This is HERMES's (BOUT++'s) own parallel gradient. b . grad of the
+	* full gradient would be the same if Flan's geometry matched zShift
+	* exactly, but it doesn't quite (cell centers and basis vectors from the
+	* corners, about 1% per cell on real grids), and then the leftover
+	* (B . grad z - dzShift/dy B . grad y) df/dz, from the much larger
+	* gradient across the field, swamps the parallel one.
+	*
+	* @param bkg Background with the field and reciprocal basis.
+	* @param dfdy df/dy along the field line, from aligned_dfdy.
+	* @param zone Zone of the cell.
+	* @param t Index along dfdy's leading dimension (and B's).
+	* @param i Cell index in x.
+	* @param j Cell index in y.
+	* @param k Cell index in z.
+	* @return b . grad f.
+	*/
+	double grad_par(const Background::Background& bkg,
+		const Vectors::ZonedVector<BkgFPType>& dfdy, const int zone,
+		const int t, const int i, const int j, const int k)
+	{
+		const Vec3 B {bkg.get_bX()(zone, t, i, j, k), bkg.get_bY()(zone, t,
+			i, j, k), bkg.get_bZ()(zone, t, i, j, k)};
+		const Vec3 grad_y {bkg.get_dydX()(zone, i, j, k),
+			bkg.get_dydY()(zone, i, j, k), bkg.get_dydZ()(zone, i, j, k)};
+		return dot(B, grad_y) / std::sqrt(dot(B, B))
+			* dfdy(zone, t, i, j, k);
+	}
+
+	/**
+	* Shifts a periodic row of values in z by a fraction of the row,
+	* spectrally: out[k] = f(k + shift), where f is the trigonometric
+	* interpolant of the row (period n = row.size()).
+	*
+	* This is exact for structure resolved by the row, so shifting a
+	* field-aligned quantity from one y plane onto the field line through
+	* the next doesn't smooth it, the way linear interpolation would. It
+	* is how BOUT++'s shifted metric moves data between planes. For an
+	* even n, the Nyquist mode is a cosine, which keeps the result real.
+	* A plain DFT is used (O(n^2)): rows are a few hundred long at most and
+	* this runs once when the background is read.
+	*
+	* @param row Values at n evenly spaced, periodic points.
+	* @param shift Shift in units of the point spacing (any real number).
+	* @return The shifted row.
+	*/
+	std::vector<double> shift_periodic(const std::vector<double>& row,
+		const double shift)
+	{
+		const int n {static_cast<int>(row.size())};
+		const double two_pi {2.0 * std::numbers::pi};
+
+		// e^(-2 pi i p / n) for p = 0 to n - 1, so the transforms below
+		// need only n sines and cosines instead of n^2
+		std::vector<std::complex<double>> w(n);
+		for (int p {}; p < n; ++p) w[p] = std::polar(1.0, -two_pi * p / n);
+
+		// Forward transform
+		std::vector<std::complex<double>> c(n);
+		for (int m {}; m < n; ++m)
+		{
+			std::complex<double> sum {};
+			for (int k {}; k < n; ++k) sum += row[k] * w[(m * k) % n];
+			c[m] = sum / static_cast<double>(n);
+		}
+
+		// Inverse at the shifted points, with signed frequencies ms so the
+		// interpolant is the smoothest one through the points:
+		// e^(2 pi i ms (k + shift) / n) = conj(w[ms k mod n]) times a
+		// phase for the shift
+		for (int m {}; m < n; ++m)
+		{
+			const int ms {2 * m <= n ? m : m - n};
+			c[m] *= std::polar(1.0, two_pi * ms * shift / n);
+		}
+		std::vector<double> out(n);
+		for (int k {}; k < n; ++k)
+		{
+			double sum {};
+			for (int m {}; m < n; ++m)
+				sum += (c[m] * std::conj(w[(m * k) % n])).real();
+			out[k] = sum;
+		}
+		return out;
+	}
+
+	/**
+	* df/dy along the field line, df/dy|_zeta with zeta = z - zShift(x, y)
+	* constant on a field line, for every interior cell of the zones with
+	* a zShift table (zero elsewhere).
+	*
+	* On a shifted-metric grid, a field-aligned structure in the y + 1
+	* plane is at z + dzShift, often many toroidal cells away, so a central
+	* difference in y at fixed z mostly measures unrelated structures.
+	* Here the neighboring planes are first shifted onto the field line
+	* through each cell (shift_periodic), then differenced centrally (or
+	* one-sided at a y face with nothing across it, as in derivatives).
+	*
+	* This gives both of the y derivatives Flan needs:
+	*
+	* - df/dy at fixed z, for the gradient, is
+	*   df/dy|_zeta - (dzShift/dy) df/dz (see derivatives).
+	* - The parallel gradient is (B . grad y / B) df/dy|_zeta (see
+	*   grad_par), which is how HERMES itself takes it.
+	*
+	* The zones' z grids must be evenly spaced and periodic (checked).
+	*
+	* @param zones The zones.
+	* @param f Field, with filled ghost cells.
+	* @return df/dy|_zeta, shaped like f.
+	*/
+	Vectors::ZonedVector<BkgFPType> aligned_dfdy(const Zones::Zones& zones,
+		const Vectors::ZonedVector<BkgFPType>& f)
+	{
+		const int nframes {f.get_dim1()};
+		auto out {zoned(zones, nframes)};
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			if (!zones.has_z_shift(zone)) continue;
+			const int nx {zones.get_nx(zone)};
+			const int ny {zones.get_ny(zone)};
+			const int nz {zones.get_nz(zone)};
+			const auto& zc {zones.get_z(zone)};
+			const double dz {zones.z_period(zone) / nz};
+			for (int k {}; k < nz; ++k)
+			{
+				if (std::abs(zc[k] - zc[0] - k * dz) > 1e-9 * dz * nz)
+				{
+					Errors::fatal_error("Zone " + std::to_string(zone)
+						+ " has a zShift table but its z cells aren't "
+						"evenly spaced, so it can't be shifted spectrally.");
+				}
+			}
+
+			#pragma omp parallel for collapse(2)
+			for (int i = 0; i < nx; ++i)
+			for (int t = 0; t < nframes; ++t)
+			{
+				std::vector<double> row(nz);
+				auto plane = [&](int j, double shift)
+				{
+					for (int k {}; k < nz; ++k) row[k] = f(zone, t, i, j, k);
+					return shift == 0.0 ? row : shift_periodic(row, shift);
+				};
+				for (int j {}; j < ny; ++j)
+				{
+					const auto [lo, hi] = y_stencil(zones, zone, j);
+					if (lo == hi) continue;
+					const double zs {zones.z_shift(zone, i, j)};
+
+					// The neighboring planes on the field line through
+					// each cell of plane j
+					const auto f_lo {plane(lo, (zones.z_shift(zone, i, lo)
+						- zs) / dz)};
+					const auto f_hi {plane(hi, (zones.z_shift(zone, i, hi)
+						- zs) / dz)};
+					const double dy {zones.center(zone, 1, hi)
+						- zones.center(zone, 1, lo)};
+					for (int k {}; k < nz; ++k)
+					{
+						out(zone, t, i, j, k) = static_cast<BkgFPType>(
+							(f_hi[k] - f_lo[k]) / dy);
+					}
+				}
+			}
+		}
+		return out;
 	}
 
 	/**
@@ -469,6 +692,15 @@ namespace Axisym
 		// start, since that isn't thread safe
 		zones.get_ghost_cells();
 
+		// On a shifted-metric grid, y derivatives of the potential are
+		// taken along the field line (see aligned_dfdy)
+		bool any_shift {};
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+			any_shift = any_shift || zones.has_z_shift(zone);
+		Vectors::ZonedVector<BkgFPType> dvp_dy {};
+		if (any_shift) dvp_dy = aligned_dfdy(zones, vp);
+		const auto* dfdy {any_shift ? &dvp_dy : nullptr};
+
 		for (int zone {}; zone < zones.get_nzones(); ++zone)
 		{
 			#pragma omp parallel for
@@ -477,10 +709,21 @@ namespace Axisym
 			for (int j {}; j < zones.get_ny(zone); ++j)
 			for (int k {}; k < zones.get_nz(zone); ++k)
 			{
-				const auto grad {gradient(bkg, vp, zone, t, i, j, k)};
-				const Vec3 E {-grad[0], -grad[1], -grad[2]};
+				const auto grad {gradient(bkg, vp, zone, t, i, j, k, dfdy)};
+				Vec3 E {-grad[0], -grad[1], -grad[2]};
 				const Vec3 B {bX(zone, t, i, j, k), bY(zone, t, i, j, k),
 					bZ(zone, t, i, j, k)};
+
+				// On a shifted-metric grid, E's parallel part is
+				// -grad_par phi taken purely along the field line (see
+				// grad_par), the way HERMES takes it
+				if (dfdy && zones.has_z_shift(zone))
+				{
+					const double Bm {std::sqrt(dot(B, B))};
+					const double dE {-grad_par(bkg, *dfdy, zone, t, i, j, k)
+						- dot(E, B) / Bm};
+					for (int c {}; c < 3; ++c) E[c] += dE * B[c] / Bm;
+				}
 				const Vec3 gradB {gX(zone, t, i, j, k), gY(zone, t, i, j, k),
 					gZ(zone, t, i, j, k)};
 				const double B2 {dot(B, B)};

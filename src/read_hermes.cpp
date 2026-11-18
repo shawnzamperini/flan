@@ -25,6 +25,11 @@
 * inner and the SOL's outer x faces absorb particles. The core is periodic
 * in y and the PFR connects its two legs.
 *
+* The grid is a shifted metric, so a field line moves toroidally by the
+* change in zShift between y planes. Each zone gets a zShift table (see
+* set_z_shift_tables), and plasma quantities are interpolated and
+* differentiated in y along the field line.
+*
 * JAX-Hermes3 writes one uncompressed .npz file per time with the
 * normalized Ne, Pe, Pi, NVi, phi and t on the (x, y, z) cell centers. The
 * geometry, B and E come from the code shared with other multi-zone
@@ -198,7 +203,7 @@ namespace Hermes
 	* @param grid The grid.
 	* @param nz Number of toroidal cells (from the snapshots).
 	* @param zperiod The domain is 1 / zperiod of the torus.
-	* @return The zones, validated.
+	* @return The zones, validated, with their zShift tables.
 	*/
 	Zones::Zones make_zones(const Grid& grid, const int nz,
 		const int zperiod)
@@ -233,7 +238,86 @@ namespace Hermes
 		set(sol, {core, face_absorbing, in_leg, out_leg});
 		set(out_leg, {out_pfr, face_absorbing, sol, face_wall});
 		zones.validate();
+		set_z_shift_tables(grid, zones);
 		return zones;
+	}
+
+	/**
+	* Gives every zone its zShift table (see Zones::set_z_shift), on its
+	* cells and ghost cells.
+	*
+	* A cell's value is the grid's zShift at that cell. A ghost cell takes
+	* the zShift of the cell its plasma values come from
+	* (Zones::resolve_cell), plus the core's twist where the field line
+	* crosses the branch cut at the X-point: zShift isn't continuous
+	* around the core, but jumps by ShiftAngle(x) there. hypnotoad's zShift
+	* is otherwise continuous along y, including from one leg of the PFR
+	* to the other. A ghost source is across the cut when the source is in
+	* the core rows (jyseps1_1 < y <= jyseps2_2) but the ghost's own row,
+	* continued from its zone, is below them (then -ShiftAngle) or above
+	* them (+ShiftAngle).
+	*
+	* A ghost at a corner of a zone can have several sources (at the
+	* X-point), and gets their average, as its plasma values do. Sources
+	* across the cut in the SOL, where ShiftAngle isn't defined (hypnotoad
+	* writes NaN), only come from such corners, and are left out when
+	* another source exists.
+	*
+	* @param grid The grid.
+	* @param zones The zones from make_zones, with their faces set.
+	*/
+	void set_z_shift_tables(const Grid& grid, Zones::Zones& zones)
+	{
+		const auto ranges {zone_ranges(grid)};
+		const int y1 {grid.jyseps1_1 + 1};
+		const int y2 {grid.jyseps2_2 + 1};
+		const int g {zones.get_ghost()};
+		auto at = [&](int i, int j) {return static_cast<std::size_t>(i)
+			* grid.ny + j;};
+
+		// ShiftAngle of the last core column, for a corner whose only
+		// source is across the cut in the SOL
+		const double edge_twist {grid.ShiftAngle[grid.ixseps1 - 1]};
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			const auto& r {ranges[zone]};
+			std::vector<double> table {};
+			for (int i {-g}; i < zones.get_nx(zone) + g; ++i)
+			for (int j {-g}; j < zones.get_ny(zone) + g; ++j)
+			{
+				const int row {r.y0 + j};
+				double sum {}, sum_fallback {};
+				int n {}, n_fallback {};
+				for (const auto& s : zones.resolve_cell({zone, i, j, 0}))
+				{
+					const int gx {ranges[s.zone].x0 + s.i};
+					const int gy {ranges[s.zone].y0 + s.j};
+					const double zs {grid.zShift[at(gx, gy)]};
+					const bool core_row {gy >= y1 && gy < y2};
+					const int cut {core_row && row < y1 ? -1
+						: core_row && row >= y2 ? 1 : 0};
+					if (cut == 0)
+					{
+						sum += zs;
+						++n;
+						continue;
+					}
+					const double twist {grid.ShiftAngle[gx]};
+					if (std::isfinite(twist))
+					{
+						sum += zs + cut * twist;
+						++n;
+					}
+					else
+					{
+						sum_fallback += zs + cut * edge_twist;
+						++n_fallback;
+					}
+				}
+				table.push_back(n > 0 ? sum / n : sum_fallback / n_fallback);
+			}
+			zones.set_z_shift(zone, std::move(table));
+		}
 	}
 
 	/**
@@ -576,9 +660,6 @@ namespace Hermes
 				"boundary of the wedge don't have their velocity rotated "
 				"yet, so their direction is wrong after crossing.\n";
 		}
-		std::cout << "  Warning: y derivatives (E = -grad phi) are taken "
-			"at fixed z, not along the field line, so E is wrong where "
-			"the plasma varies in z.\n";
 
 		Background::Background bkg {};
 		auto zones {make_zones(grid, nz, zperiod)};

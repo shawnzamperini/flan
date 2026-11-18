@@ -58,7 +58,15 @@ namespace Utilities
 	template <typename T>
 	double interp_vec4d(const Vectors::ZonedVector<T>& vec, const int zone,
 		const Zones::Zones& zones, const std::vector<double>& t,
-		const double t0, const double x0, const double y0, const double z0);
+		const double t0, const double x0, const double y0, const double z0,
+		const bool aligned = false);
+
+	template <typename T, std::size_t N>
+	std::array<double, N> interp_aligned(
+		const std::array<const Vectors::ZonedVector<T>*, N>& vecs,
+		const int zone, const Zones::Zones& zones,
+		const std::vector<double>& t, const double t0, const double x0,
+		const double y0, const double z0, const double phi_sign = 0.0);
 
 	std::pair<int, int> bracket_indices(const std::vector<double>& x, 
 		double x0);

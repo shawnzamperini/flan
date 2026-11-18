@@ -95,13 +95,28 @@ namespace Axisym
 	std::pair<std::vector<double>, std::vector<double>> uniform_grid(
 		const int n, const double lo, const double hi);
 
+	std::pair<int, int> y_stencil(const Zones::Zones& zones, const int zone,
+		const int j);
+
 	std::array<double, 3> derivatives(const Zones::Zones& zones,
 		const Vectors::ZonedVector<BkgFPType>& f, const int zone,
-		const int t, const int i, const int j, const int k);
+		const int t, const int i, const int j, const int k,
+		const Vectors::ZonedVector<BkgFPType>* dfdy = nullptr);
 
 	std::array<double, 3> gradient(const Background::Background& bkg,
 		const Vectors::ZonedVector<BkgFPType>& f, const int zone,
+		const int t, const int i, const int j, const int k,
+		const Vectors::ZonedVector<BkgFPType>* dfdy = nullptr);
+
+	double grad_par(const Background::Background& bkg,
+		const Vectors::ZonedVector<BkgFPType>& dfdy, const int zone,
 		const int t, const int i, const int j, const int k);
+
+	std::vector<double> shift_periodic(const std::vector<double>& row,
+		const double shift);
+
+	Vectors::ZonedVector<BkgFPType> aligned_dfdy(const Zones::Zones& zones,
+		const Vectors::ZonedVector<BkgFPType>& f);
 
 	void calc_geometry(const Mesh& mesh, Background::Background& bkg);
 

@@ -107,21 +107,60 @@ is known analytically, for both handednesses.
   percent of a cell typically, up to about a fifth of a cell in the
   largest outer SOL cells.
 
-**Phase 3: field-aligned interpolation and gradients.** On a shifted-metric
-grid a field line moves many toroidal cells between neighboring y planes,
-so interpolating or differentiating in y at fixed z mixes unrelated
-turbulent structures. Each zone gets an optional `zShift(x, y)` table.
-With it, `Utilities::interp_vec4d` takes the y + 1 plane at
-z + Δ`zShift` (interpolated in z, periodic), and y derivatives (for
-E = -grad phi and grad_par T) are taken the same way. Without the table
-nothing changes. Unit test: a field-aligned analytic function must
-interpolate and differentiate exactly.
+**Phase 3: field-aligned interpolation and gradients.** Done. On a
+shifted-metric grid a field line moves many toroidal cells between
+neighboring y planes (typically tens of cells, and several turns of a
+toroidal wedge near the X-point), so interpolating or
+differentiating in y at fixed z mixes unrelated turbulent structures.
+
+- `Zones` holds an optional `zShift(x, y)` table per zone, including the
+  ghost cells, with `z_period` and `wrap_z`. The HERMES reader fills it
+  from the grid: a ghost cell takes the zShift of the cell its plasma
+  comes from, plus `ShiftAngle` where the field line crosses the core's
+  branch cut. Zones without a table (slab, Gkeyll, SOLEDGE3X) are
+  unchanged.
+- Interpolation (`Utilities::interp_aligned`): in each of the two x
+  columns, the field line through the point is followed to the two
+  bracketing y planes, where the field is interpolated linearly in z
+  (wrapped into the wedge). x stays at fixed z, as the shifted metric
+  intends. n, T_e, T_i and q_par use it; B and the geometry don't, since
+  they don't vary along z the way the turbulence does.
+- Vectors (u, and E in the Boris push) are interpolated the same way,
+  with each sample's (X, Y) part rotated from its cell's toroidal angle
+  to the particle's. A sample taken a radian away would otherwise point a
+  radian off. This also handles the periodic ghost cells at the ends of
+  the wedge for these vectors.
+- y derivatives (`Axisym::aligned_dfdy`): the neighboring planes are
+  shifted onto the field line spectrally (`shift_periodic`, as BOUT++'s
+  shifted metric does), then differenced, giving df/dy along the field
+  line. The gradient uses df/dy at fixed z = df/dy|_ζ - (dzShift/dy) df/dz.
+  The parallel gradient is taken from df/dy|_ζ alone,
+  `grad_par` = (B·∇y / B) df/dy|_ζ, which is HERMES's own ∇∥. The
+  parallel part of E is replaced by it. Flan's geometry (from the cell
+  corners) and `zShift` agree to about 1% per cell, which is plenty for
+  E⊥. But b·∇ of the full gradient then picks up about 1% of the much
+  larger gradient across the field, which was as large as E∥ itself.
+- Checks: unit tests in `test_field_aligned_cpu` on the test grid with a
+  plasma constant along field lines (exact y derivative, no E∥, vectors
+  rotated exactly, zShift agreeing with B and the basis). On HERMES
+  output, E∥ is checked against a separate calculation of -∇∥φ along
+  the field lines and against the electron parallel force balance,
+  -∇∥p_e / (e n_e), which a nearly adiabatic edge plasma should follow
+  closely. The fixed-z gradient fails both badly. Following the field
+  line makes the particle loop roughly 20% slower on HERMES backgrounds.
+- Corner ghost cells at the X-point have several sources on different
+  field lines and get their average, as before, so interpolation within a
+  cell of the X-point is approximate.
 
 **Phase 4: toroidal period.** Each zone gets an optional toroidal period
 (2π / `zperiod` for HERMES, the span of `phicorners` for SOLEDGE3X). When
 a particle wraps in z on a zone with a period under 2π, its Cartesian
 velocity (and position, if stored) is rotated by the period, since the
-point it wraps to is rotated by that angle. Until then, the SOLEDGE3X
+point it wraps to is rotated by that angle. Cartesian vectors in the
+periodic z ghost cells (B, the basis vectors, positions) need rotating by
+the period too: they hold the other end's values in that end's frame.
+The field-aligned vector interpolation of Phase 3 already accounts for
+this for u and E. Until then, the SOLEDGE3X
 reader stops if `phicorners` doesn't span 2π. Tested in
 `test_boundary_cpu` and with a SOLEDGE3X wedge test file.
 
@@ -169,7 +208,8 @@ Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
 - **Plasma**: n_e = Ne Nnorm, T_e = (Pe / Ne) Tnorm, T_i = (Pi / Ne) Tnorm
   (so n_i = n_e), V_par = NVi / (AA Ne) times c_s0 = sqrt(e Tnorm / m_p),
   and the potential phi Tnorm.
-- **Fields**: B from `Brxy`, `Bzxy` and `Btxy`; E = -grad phi.
+- **Fields**: B from `Brxy`, `Bzxy` and `Btxy`; E = -grad phi, with its
+  parallel part -grad_par phi taken along the field line as below.
 - **Ion flow**: V_par b plus the E x B and grad-B drifts.
 - **Parallel heat fluxes** (for the thermal force), as in
   `braginskii_conduction`: q_par = -kappa grad_par T with
@@ -178,7 +218,10 @@ Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
   i-i and i-e for ions, as in `braginskii_collisions`). No flux limiter.
 - **Parallel derivatives and interpolation in y** follow the field line:
   going from plane y to y + 1, z changes by Δ`zShift`, plus `ShiftAngle`
-  across the core branch cut.
+  across the core branch cut. For derivatives the neighboring planes are
+  shifted in z with a Fourier transform, and
+  grad_par f = (B·∇y / B) ∂f/∂y in field-aligned coordinates, as in
+  BOUT++'s `Grad_par`. Interpolation at the particles is linear in z.
 - **Time**: Flan interpolates linearly in time between the loaded
   snapshots.
 
@@ -220,3 +263,6 @@ Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
 4. For BOUT++ Hermes-3 output: are there any differences in variable
    names, normalization or guard cells from the above that a reader would
    need to handle?
+5. Does JAX-Hermes3 shift between planes with FFTs (as BOUT++'s
+   `ShiftedMetric` does) and take grad_par as above? If it interpolates
+   differently, Flan's E∥ and q_par would differ slightly from the run's.
