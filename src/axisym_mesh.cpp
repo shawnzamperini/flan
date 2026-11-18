@@ -22,6 +22,7 @@
 #include <numbers>
 #include <string>
 #include <utility>
+#include <tuple>
 #include <vector>
 
 #include "axisym_mesh.h"
@@ -797,10 +798,18 @@ namespace Axisym
 	* On zones with a zShift table, grad_par is the parallel gradient along
 	* the field line (aligned_dfdy and grad_par), not b . grad T, which
 	* picks up part of the much larger gradient across the field. Zones
-	* without one (hermes_field_aligned = "off") use b . grad T. q_par is positive along B, the same as the parallel flow and
-	* the SOLEDGE3X heat fluxes. At a wall face the y derivative is one
-	* sided, so q_par in the last cell before a target is approximate (the
-	* simulation sets the heat flux there with its sheath condition).
+	* without one (hermes_field_aligned = "off") use b . grad T. q_par is
+	* positive along B, the same as the parallel flow and the SOLEDGE3X
+	* heat fluxes.
+	*
+	* At a target (a wall face in y) HERMES conducts nothing through the
+	* face: the sheath boundary condition carries the energy there instead.
+	* So, as in the run, the target cell's q_par is the average of its two
+	* y faces' conducted fluxes: zero at the target and, at the face to its
+	* neighbor, -kappa grad_par T with kappa the average of the two cells'
+	* and the gradient between them (the one-sided difference). This keeps
+	* the thermal force in the target cell from using a gradient that the
+	* run sets by its sheath condition, not by conduction.
 	*
 	* @param bkg Background with zones, geometry, B, ne, te and ti (ghost
 	*        cells filled).
@@ -823,6 +832,11 @@ namespace Axisym
 		const auto dti_dy {aligned_dfdy(zones, ti)};
 		auto q_e {zoned(zones, nframes)};
 		auto q_i {zoned(zones, nframes)};
+
+		// Each cell's (limited) kappa, kept for the target cells, which
+		// use the average of theirs and their neighbor's
+		auto kappa_e {zoned(zones, nframes)};
+		auto kappa_i {zoned(zones, nframes)};
 
 		const double mi {Braginskii::mp * c.ion_aa};
 		const double me {Braginskii::me};
@@ -874,6 +888,53 @@ namespace Axisym
 
 				q_e(zone, t, i, j, k) = static_cast<BkgFPType>(-k_e * g_e);
 				q_i(zone, t, i, j, k) = static_cast<BkgFPType>(-k_i * g_i);
+				kappa_e(zone, t, i, j, k) = static_cast<BkgFPType>(k_e);
+				kappa_i(zone, t, i, j, k) = static_cast<BkgFPType>(k_i);
+			}
+		}
+
+		// Target cells: no conduction through the wall face, so q_par is
+		// half the flux through the face to the neighbor. That flux uses
+		// the one-sided gradient already in q (= -kappa g there) with the
+		// average kappa of the two cells. A zone one cell long has no
+		// neighbor in y to average with: with walls at both ends it
+		// conducts nothing, with one it keeps the one-sided value.
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			const int ny {zones.get_ny(zone)};
+			const bool wall_lo {zones.get_face(zone, Zones::ymin)
+				== Zones::face_wall};
+			const bool wall_hi {zones.get_face(zone, Zones::ymax)
+				== Zones::face_wall};
+			for (const auto [j, nb, wall] : {std::tuple {0, 1, wall_lo},
+				std::tuple {ny - 1, ny - 2, wall_hi}})
+			{
+				if (!wall || (ny == 1 && !(wall_lo && wall_hi))) continue;
+				const bool both {ny == 1};
+				#pragma omp parallel for
+				for (int i = 0; i < zones.get_nx(zone); ++i)
+				for (int t {}; t < nframes; ++t)
+				for (int k {}; k < zones.get_nz(zone); ++k)
+				{
+					if (both)
+					{
+						q_e(zone, t, i, j, k) = 0;
+						q_i(zone, t, i, j, k) = 0;
+						continue;
+					}
+					auto face = [&](Vectors::ZonedVector<BkgFPType>& q,
+						const Vectors::ZonedVector<BkgFPType>& kap)
+					{
+						const double kc {kap(zone, t, i, j, k)};
+						const double kn {kap(zone, t, i, nb, k)};
+						if (kc == 0.0) return;
+						const double g {-q(zone, t, i, j, k) / kc};
+						q(zone, t, i, j, k) = static_cast<BkgFPType>(
+							-0.5 * 0.5 * (kc + kn) * g);
+					};
+					face(q_e, kappa_e);
+					face(q_i, kappa_i);
+				}
 			}
 		}
 		zones.fill_ghosts(q_e);

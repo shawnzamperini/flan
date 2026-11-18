@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 #include <numbers>
 #include <string>
+#include <tuple>
 #include <unistd.h>
 #include <vector>
 
@@ -562,6 +563,68 @@ TEST_F(FieldAlignedTest, HeatFluxAlongField)
 		// Down the gradient: B . grad y > 0 here, so T rises along B
 		EXPECT_LT(bkg.get_q_par_e()(zone, 0, i, j, k), 0.0);
 	}
+}
+
+// A target cell conducts nothing through its wall face, as in HERMES
+// (the sheath carries that energy), so its q_par is half the flux through
+// the face to its neighbor: -kappa grad_par T with kappa the average of
+// the two cells' and, for T linear along the field line as here, the same
+// gradient as in HeatFluxAlongField.
+TEST_F(FieldAlignedTest, HeatFluxAtTargets)
+{
+	auto bkg {read()};
+	const Zones::Zones& z {bkg.get_zones()};
+	const double dz {period / nz};
+	auto& te {bkg.get_te()};
+	auto& ti {bkg.get_ti()};
+	for (int zone {}; zone < 6; ++zone)
+	for (int t {}; t < 2; ++t)
+	for (int i {}; i < z.get_nx(zone); ++i)
+	for (int j {}; j < z.get_ny(zone); ++j)
+	for (int k {}; k < nz; ++k)
+	{
+		const double rise {z.get_y(zone)[j] * (1.0 + 0.5 * profile(k * dz
+			- z.z_shift(zone, i, j)))};
+		te(zone, t, i, j, k) = tnorm + rise;
+		ti(zone, t, i, j, k) = tnorm + 2.0 * rise;
+	}
+	z.fill_ghosts(te);
+	z.fill_ghosts(ti);
+	Axisym::calc_conductive_heat_fluxes(bkg, Axisym::Conduction {});
+
+	const auto& ne {bkg.get_ne()};
+	int checked {};
+	for (int zone {}; zone < 6; ++zone)
+	{
+		const int ny {z.get_ny(zone)};
+		for (const auto [face, j, nb] : {std::tuple {Zones::ymin, 0, 1},
+			std::tuple {Zones::ymax, ny - 1, ny - 2}})
+		{
+			if (z.get_face(zone, face) != Zones::face_wall) continue;
+			for (int i {}; i < z.get_nx(zone); ++i)
+			for (int k {}; k < nz; ++k)
+			{
+				const double p {profile(k * dz - z.z_shift(zone, i, j))};
+				const double Bt {m_grid.Bt_at(origin[zone][0] + i)};
+				const double G {m_grid.Bz / (m_grid.dZ * std::hypot(m_grid.Bz,
+					Bt)) * (1.0 + 0.5 * p)};
+
+				// kappa of each cell, as -q for a unit gradient
+				const auto kc {expected_q(ne(zone, 0, i, j, k), te(zone, 0, i,
+					j, k), ti(zone, 0, i, j, k), 1.0, 1.0)};
+				const auto kn {expected_q(ne(zone, 0, i, nb, k), te(zone, 0, i,
+					nb, k), ti(zone, 0, i, nb, k), 1.0, 1.0)};
+				const double qe {0.25 * (kc[0] + kn[0]) * G};
+				const double qi {0.25 * (kc[1] + kn[1]) * 2.0 * G};
+				EXPECT_NEAR(bkg.get_q_par_e()(zone, 0, i, j, k), qe,
+					1e-9 * std::abs(qe));
+				EXPECT_NEAR(bkg.get_q_par_i()(zone, 0, i, j, k), qi,
+					1e-9 * std::abs(qi));
+				++checked;
+			}
+		}
+	}
+	EXPECT_GT(checked, 0);
 }
 
 // T that varies only across the field (constant along field lines) has

@@ -200,9 +200,10 @@ q_par = -kappa_par grad_par T, positive along B like the SOLEDGE3X ones.
 - `Axisym::calc_conductive_heat_fluxes` takes grad_par from the
   field-aligned derivative of Phase 3 (not b·∇T, for the reason given
   there). The plasma is one ion species with n_i = n_e / Z; a run with
-  several ion species would need their densities and collisions. The y
-  derivative is one sided in the last cell before a target, so q_par
-  there is approximate.
+  several ion species would need their densities and collisions. As in
+  HERMES, nothing is conducted through a target face (the sheath carries
+  that energy), so a target cell's q_par is half the flux through the
+  face to its neighbor (decision 6 of the BOUT++ plan).
 - Options `hermes_heat_flux`, `hermes_kappa_coef_e`, `hermes_kappa_coef_i`
   and `hermes_kappa_limit_alpha`. The heat fluxes are saved with the
   background and used by the thermal force as for SOLEDGE3X.
@@ -498,7 +499,11 @@ the HERMES-3 developers.
    the interior one). For BOUT++ runs that write `efe/efi_cond_ylow`, the
    dumped face fluxes could also be used directly
    (`hermes_heat_flux = "dumped"`). Decided: follow the run (zero
-   conduction through the sheath face), for both formats.
+   conduction through the sheath face), for both formats. Done: the
+   conducted power through the face next to each target now agrees with
+   the run's to about 1-10%. The cells one and two in from a target still
+   use the central difference across the target cell, which can be
+   10-15% above the run's face fluxes there.
 7. **Ion heat-flux skew above 1** (from Phase B4): keep capping |eps| at
    1, or limit the ion heat flux in Flan (`hermes_kappa_limit_alpha`,
    which would then differ from an unlimited run). Decided: keep the
