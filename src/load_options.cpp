@@ -265,6 +265,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "hermes_ion_species")
+			{
+				auto set_func = std::bind(&Options::set_hermes_ion_species, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "hermes_snap_start")
 			{
 				auto set_func = std::bind(&Options::set_hermes_snap_start, &opts,

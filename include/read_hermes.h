@@ -143,8 +143,50 @@ namespace Hermes
 	void finish_background(Frames& frames, const Options::Options& opts,
 		Background::Background& bkg);
 
+	std::vector<int> select_indices(const int n, int start, int end,
+		const int stride, const std::string& what);
+
 	std::vector<std::string> select_snapshots(const std::string& dir,
 		int start, int end, const int stride);
+
+	/// What a BOUT++ Hermes-3 run's dump files say about the run, from
+	/// BOUT.dmp.0.nc
+	struct BoutLayout
+	{
+		std::string dir {};		///< Run directory
+		std::vector<std::string> paths {};	///< BOUT.dmp.N.nc, N from 0
+		int nxpe {};	///< Processes in x
+		int nype {};	///< Processes in y
+		int mxsub {};	///< Interior cells per process in x
+		int mysub {};	///< Interior cells per process in y
+		int mxg {};		///< x guard cells on each side
+		int myg {};		///< y guard cells on each side
+		int nz {};		///< Toroidal cells (MZ)
+		int nx {};		///< Global x cells, x guards included
+		int ny {};		///< Global y cells
+		int ixseps1 {};		///< As in the grid
+		int jyseps1_1 {};	///< As in the grid
+		int jyseps2_2 {};	///< As in the grid
+		int zperiod {};		///< The run covers 1 / zperiod of the torus
+		double nnorm {};	///< Nnorm (m^-3)
+		double tnorm {};	///< Tnorm (eV)
+		double bnorm {};	///< Bnorm (T)
+		std::vector<double> times {};	///< t_array (units of 1 / Omega_ci)
+		std::vector<std::string> vars {};	///< Variables in the dumps
+
+		bool has(const std::string& name) const;
+	};
+
+	BoutLayout read_bout_layout(const std::string& dir);
+
+	void check_bout_layout(const BoutLayout& layout, const Grid& grid);
+
+	Norm norm_from_bout(const BoutLayout& layout,
+		const Options::Options& opts);
+
+	void read_bout_dumps(const BoutLayout& layout,
+		const std::vector<int>& times, const std::string& ion,
+		Frames& frames);
 
 	void read_snapshots(const std::vector<std::string>& paths,
 		const Grid& grid, Frames& frames);

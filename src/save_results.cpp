@@ -491,6 +491,8 @@ namespace SaveResults
 			"HERMES hypnotoad grid file");
 		save_string(input_group, opts.hermes_snap_dir(), "hermes_snap_dir", dim_str,
 			"directory containing HERMES snapshots");
+		save_string(input_group, opts.hermes_ion_species(), "hermes_ion_species", dim_str,
+			"HERMES main ion species name");
 		save_scalar(input_group, opts.hermes_snap_start(), "hermes_snap_start", dim_scalar,
 			"first HERMES snapshot to load", "");
 		save_scalar(input_group, opts.hermes_snap_end(), "hermes_snap_end", dim_scalar,

@@ -261,7 +261,7 @@ TEST_F(ReadHermesTest, Errors)
 	auto opts {options()};
 	opts.set_hermes_format("bout");
 	EXPECT_EXIT(Hermes::read_hermes(opts),
-		testing::ExitedWithCode(EXIT_FAILURE), "isn't implemented yet");
+		testing::ExitedWithCode(EXIT_FAILURE), "has no BOUT.dmp.0.nc");
 
 	opts = options();
 	opts.set_hermes_grid_file("undefined");

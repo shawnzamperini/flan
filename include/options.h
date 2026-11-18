@@ -65,6 +65,7 @@ namespace Options
 		std::string m_hermes_format {"jax"};
 		std::string m_hermes_grid_file {"undefined"};
 		std::string m_hermes_snap_dir {"undefined"};
+		std::string m_hermes_ion_species {"i"};
 		int m_hermes_snap_start {0};
 		int m_hermes_snap_end {1};
 		int m_hermes_snap_stride {1};
@@ -250,6 +251,7 @@ namespace Options
 		void set_hermes_format(std::string hermes_format);
 		void set_hermes_grid_file(std::string hermes_grid_file);
 		void set_hermes_snap_dir(std::string hermes_snap_dir);
+		void set_hermes_ion_species(std::string hermes_ion_species);
 		void set_hermes_snap_start(int hermes_snap_start);
 		void set_hermes_snap_end(int hermes_snap_end);
 		void set_hermes_snap_stride(int hermes_snap_stride);
@@ -373,6 +375,7 @@ namespace Options
 		const std::string& hermes_format() const;
 		const std::string& hermes_grid_file() const;
 		const std::string& hermes_snap_dir() const;
+		const std::string& hermes_ion_species() const;
 		int hermes_snap_start() const;
 		int hermes_snap_end() const;
 		int hermes_snap_stride() const;

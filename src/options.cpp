@@ -647,7 +647,7 @@ namespace Options
 	*
 	* Output format of the HERMES run: "jax" for JAX-Hermes3 (a hypnotoad grid
 	* plus one .npz snapshot per time) or "bout" for BOUT++ Hermes-3 dump
-	* files (not implemented yet). Also sets the control integer returned by
+	* files (one per MPI process). Also sets the control integer returned by
 	* hermes_format_int() to 0 for "jax", 1 for "bout".
 	*
 	* @param hermes_format New value of the hermes_format option.
@@ -678,12 +678,25 @@ namespace Options
 	/**
 	* Sets the hermes_snap_dir option.
 	*
-	* Directory with the HERMES snapshots (snap*.npz for JAX-Hermes3).
+	* Directory with the HERMES snapshots (snap*.npz for JAX-Hermes3), or
+	* the BOUT++ run directory with BOUT.dmp.*.nc (BOUT++ Hermes-3).
 	*
 	* @param hermes_snap_dir New value of the hermes_snap_dir option.
 	*/
 	void Options::set_hermes_snap_dir(std::string hermes_snap_dir)
 		{m_hermes_snap_dir = hermes_snap_dir;}
+
+	/**
+	* Sets the hermes_ion_species option.
+	*
+	* Name of the main ion species in the Hermes-3 input, which names the
+	* ions' variables in BOUT++ dump files (P<name>, V<name>, NV<name>).
+	* Only used with hermes_format = "bout".
+	*
+	* @param hermes_ion_species New value of the hermes_ion_species option.
+	*/
+	void Options::set_hermes_ion_species(std::string hermes_ion_species)
+		{m_hermes_ion_species = hermes_ion_species;}
 
 	/**
 	* Sets the hermes_snap_start option.
@@ -2220,7 +2233,7 @@ namespace Options
 	*
 	* Output format of the HERMES run: "jax" for JAX-Hermes3 (a hypnotoad grid
 	* plus one .npz snapshot per time) or "bout" for BOUT++ Hermes-3 dump
-	* files (not implemented yet).
+	* files (one per MPI process).
 	*
 	* @return Value of the hermes_format option.
 	*/
@@ -2240,12 +2253,23 @@ namespace Options
 	/**
 	* Returns the hermes_snap_dir option.
 	*
-	* Directory with the HERMES snapshots (snap*.npz for JAX-Hermes3).
+	* Directory with the HERMES snapshots (snap*.npz for JAX-Hermes3), or
+	* the BOUT++ run directory with BOUT.dmp.*.nc (BOUT++ Hermes-3).
 	*
 	* @return Value of the hermes_snap_dir option.
 	*/
 	const std::string& Options::hermes_snap_dir() const
 		{return m_hermes_snap_dir;}
+
+	/**
+	* Returns the hermes_ion_species option.
+	*
+	* Name of the main ion species in the Hermes-3 input (BOUT++ dumps).
+	*
+	* @return Value of the hermes_ion_species option.
+	*/
+	const std::string& Options::hermes_ion_species() const
+		{return m_hermes_ion_species;}
 
 	/**
 	* Returns the hermes_snap_start option.

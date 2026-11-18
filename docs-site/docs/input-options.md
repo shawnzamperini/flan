@@ -87,33 +87,38 @@ Used with `bkg_source = "soledge3x"`. See [SOLEDGE3X Backgrounds](running/soledg
 ## HERMES
 
 Used with `bkg_source = "hermes"`. The background is read from a
-single-null hypnotoad grid and the run's snapshots, and split into 6
+single-null hypnotoad grid and the run's output, and split into 6
 zones: 1 inner PFR, 2 core, 3 outer PFR, 4 inner leg, 5 main SOL and
 6 outer leg. In every zone, x and y are the grid's global cell indices
 (x counting the 2 guard cells on each side, so the separatrix is at
 x = `ixseps1`) and z is the toroidal angle in radians. The normalization
 must be the run's: for JAX-Hermes3 it's in the case's input JSON
-(`pars.norm`, `average_atomic_mass`, `zperiod`). The plasma is
+(`pars.norm`, `average_atomic_mass`, `zperiod`); for BOUT++ Hermes-3 the
+normalization and `zperiod` are read from the dump files, and the ion
+mass and conduction coefficients are in the run's `BOUT.settings` (`AA`,
+`kappa_coefficient` and `kappa_limit_alpha` of each species), which
+`python/check_hermes_conventions.py --format bout` prints. The plasma is
 interpolated, and differentiated in y, along the field line using the
 grid's `zShift`. The parallel heat fluxes the thermal force needs are
 calculated from the conduction (`hermes_heat_flux`), with the run's
 conduction coefficients (`kappa_coefficient_e` and `_i` in the JSON
-`pars`). See [HERMES Backgrounds](running/hermes.md) for how HERMES
+`pars`, or `BOUT.settings`). See [HERMES Backgrounds](running/hermes.md) for how HERMES
 backgrounds work and what isn't included.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `hermes_format` | string | `"jax"` | Output format of the HERMES run: `"jax"` for JAX-Hermes3 (one `.npz` snapshot per time) or `"bout"` for BOUT++ Hermes-3 dump files, which isn't implemented yet. Valid values: `"jax"`, `"bout"`. |
+| `hermes_format` | string | `"jax"` | Output format of the HERMES run: `"jax"` for JAX-Hermes3 (one `.npz` snapshot per time) or `"bout"` for BOUT++ Hermes-3 (one `BOUT.dmp.N.nc` file per MPI process, each with every output time). Valid values: `"jax"`, `"bout"`. |
 | `hermes_grid_file` | string | `"undefined"` | Full path to the run's hypnotoad grid file (netCDF). Must be set. |
-| `hermes_snap_dir` | string | `"undefined"` | Full path to the directory with the snapshots (`snap*.npz` for JAX-Hermes3). Must be set. |
-| `hermes_snap_start` | int | `0` | First snapshot to load, as an index (from 0) into the snapshots in `hermes_snap_dir` sorted by name, which for JAX-Hermes3 is time order. Negative values count from the end, so `-50` with `hermes_snap_end = -1` loads the last 50. |
+| `hermes_snap_dir` | string | `"undefined"` | Full path to the directory with the snapshots (`snap*.npz`) for JAX-Hermes3, or to the run directory with the dump files (`BOUT.dmp.*.nc`) for BOUT++ Hermes-3. Must be set. |
+| `hermes_ion_species` | string | `"i"` | Name of the main ion species in the Hermes-3 input, which names the ions' variables in BOUT++ dump files (`Pi`, `Vi`, `NVi` for `"i"`; `Pd+`, `Vd+`, `NVd+` for `"d+"`). Only used with `hermes_format = "bout"`. |
+| `hermes_snap_start` | int | `0` | First snapshot to load, as an index (from 0) into the snapshots in `hermes_snap_dir` sorted by name, which for JAX-Hermes3 is time order, or for BOUT++ Hermes-3 into the dumps' output times. Negative values count from the end, so `-50` with `hermes_snap_end = -1` loads the last 50. |
 | `hermes_snap_end` | int | `1` | Last snapshot to load (inclusive), as an index like `hermes_snap_start`. Negative values count from the end: -1 is the last snapshot. At least two snapshots must be loaded, since the background is interpolated in time between them. |
 | `hermes_snap_stride` | int | `1` | Load every `hermes_snap_stride`-th snapshot from `hermes_snap_start` to `hermes_snap_end`. Each loaded snapshot holds many 3D fields, so this keeps long time windows within memory. |
-| `hermes_nnorm` | float | `1e19` | Density (m^-3) the run is normalized by (Nnorm). |
-| `hermes_tnorm` | float | `100.0` | Temperature (eV) the run is normalized by (Tnorm). Potentials are in units of Tnorm too, and velocities in units of sqrt(e Tnorm / m_p). |
-| `hermes_bnorm` | float | `1.0` | Magnetic field (T) the run is normalized by (Bnorm). Times are in units of m_p / (e Bnorm). |
+| `hermes_nnorm` | float | `1e19` | Density (m^-3) the run is normalized by (Nnorm). Not used for BOUT++ Hermes-3, where it's read from the dumps. |
+| `hermes_tnorm` | float | `100.0` | Temperature (eV) the run is normalized by (Tnorm). Potentials are in units of Tnorm too, and velocities in units of sqrt(e Tnorm / m_p). Not used for BOUT++ Hermes-3, where it's read from the dumps. |
+| `hermes_bnorm` | float | `1.0` | Magnetic field (T) the run is normalized by (Bnorm). Times are in units of m_p / (e Bnorm). Not used for BOUT++ Hermes-3, where it's read from the dumps. |
 | `hermes_ion_mass_amu` | float | `2.0` | Mass number (AA) of the main ions. The parallel flow is NVi / (AA Ne), and this is also the ion mass the impurities collide with. |
-| `hermes_zperiod` | int | `1` | The run covers 1 / `hermes_zperiod` of the torus in the toroidal direction (zperiod in the HERMES input). |
+| `hermes_zperiod` | int | `1` | The run covers 1 / `hermes_zperiod` of the torus in the toroidal direction (zperiod in the HERMES input). Not used for BOUT++ Hermes-3, where it's read from the dumps. |
 | `hermes_field_aligned` | string | `"on"` | `"on"` interpolates and differentiates the plasma in y along the field line, using the grid's `zShift`, as the shifted metric intends. `"off"` does it at fixed z, and takes parallel gradients as b·∇. Only meant for comparison: on a turbulent background, `"off"` mixes unrelated structures between y cells. Valid values: `"on"`, `"off"`. |
 | `hermes_heat_flux` | string | `"conduction"` | Where the parallel heat fluxes for the thermal force come from. The snapshots don't have them, so `"conduction"` calculates them as Hermes-3 does, q_par = -kappa_par grad_par T with Braginskii's kappa_par and the species' collision times from all of their collisions (e-e and e-i for electrons, i-i and i-e for ions), with one ion species and n_i = n_e. `"off"` leaves them out, and then the thermal force isn't included. Valid values: `"conduction"`, `"off"`. |
 | `hermes_kappa_coef_e` | float | `2.2345` | Electron parallel conduction coefficient (`kappa_coefficient` of the electrons in the HERMES input). The default is Hermes-3's, 3.16 / sqrt(2). |

@@ -1,7 +1,8 @@
 /**
 * @file read_hermes.cpp
 *
-* @brief Reads a HERMES (JAX-Hermes3) simulation into a Background.
+* @brief Reads a HERMES (JAX-Hermes3 or BOUT++ Hermes-3) simulation into a
+* Background.
 *
 * A HERMES run is on a BOUT++ grid made by hypnotoad: a logically
 * rectangular (x, y) grid in the poloidal plane, x across the flux surfaces
@@ -31,9 +32,10 @@
 * differentiated in y along the field line.
 *
 * JAX-Hermes3 writes one uncompressed .npz file per time with the
-* normalized Ne, Pe, Pi, NVi, phi and t on the (x, y, z) cell centers. The
-* geometry, B and E come from the code shared with other multi-zone
-* backgrounds (axisym_mesh.cpp).
+* normalized Ne, Pe, Pi, NVi, phi and t on the (x, y, z) cell centers.
+* BOUT++ Hermes-3 dump files are read by read_hermes_bout.cpp. Both go
+* through Frames and finish_background here. The geometry, B and E come
+* from the code shared with other multi-zone backgrounds (axisym_mesh.cpp).
 */
 
 #include <algorithm>
@@ -416,11 +418,53 @@ namespace Hermes
 	}
 
 	/**
-	* Picks the snapshots to load: the snap*.npz files in dir, sorted by
-	* name (JAX-Hermes3 names them by time, zero padded), from index start
-	* to end inclusive in steps of stride. A negative start or end counts
-	* from the end (-1 is the last), so start = -50 and end = -1 picks the
-	* last 50. At least two must be picked.
+	* Picks which of n times to load: indices start to end inclusive in
+	* steps of stride. A negative start or end counts from the end (-1 is
+	* the last), so start = -50 and end = -1 picks the last 50. At least
+	* two must be picked.
+	*
+	* @param n Number of times there are.
+	* @param start Index of the first, from 0.
+	* @param end Index of the last.
+	* @param stride Step between them (>= 1).
+	* @param what What the times are, for messages, e.g. "dir has 3
+	*        snapshots (snap*.npz)".
+	* @return The indices, increasing.
+	*/
+	std::vector<int> select_indices(const int n, int start, int end,
+		const int stride, const std::string& what)
+	{
+		if (start < 0) start += n;
+		if (end < 0) end += n;
+		if (stride < 1)
+		{
+			Errors::fatal_error("hermes_snap_stride = "
+				+ std::to_string(stride) + ", but must be at least 1.");
+		}
+		if (start < 0 || end >= n || start > end)
+		{
+			Errors::fatal_error(what + ", so hermes_snap_start and "
+				"hermes_snap_end must be within 0 to " + std::to_string(n - 1)
+				+ " with start <= end, but they're " + std::to_string(start)
+				+ " and " + std::to_string(end) + ".");
+		}
+		std::vector<int> out {};
+		for (int s {start}; s <= end; s += stride) out.push_back(s);
+		if (out.size() < 2)
+		{
+			Errors::fatal_error("A HERMES background needs at least two "
+				"snapshots, but hermes_snap_start = " + std::to_string(start)
+				+ ", hermes_snap_end = " + std::to_string(end) + " and "
+				"hermes_snap_stride = " + std::to_string(stride)
+				+ " pick " + std::to_string(out.size()) + ".");
+		}
+		return out;
+	}
+
+	/**
+	* Picks the JAX-Hermes3 snapshots to load: the snap*.npz files in dir,
+	* sorted by name (JAX-Hermes3 names them by time, zero padded), picked
+	* by index with select_indices.
 	*
 	* @param dir Snapshot directory.
 	* @param start Index of the first snapshot, from 0.
@@ -445,31 +489,10 @@ namespace Hermes
 		}
 		std::sort(all.begin(), all.end());
 		const int n {static_cast<int>(all.size())};
-		if (start < 0) start += n;
-		if (end < 0) end += n;
-		if (stride < 1)
-		{
-			Errors::fatal_error("hermes_snap_stride = "
-				+ std::to_string(stride) + ", but must be at least 1.");
-		}
-		if (start < 0 || end >= n || start > end)
-		{
-			Errors::fatal_error(dir + " has " + std::to_string(n)
-				+ " snapshots (snap*.npz), so hermes_snap_start and "
-				"hermes_snap_end must be within 0 to " + std::to_string(n - 1)
-				+ " with start <= end, but they're " + std::to_string(start)
-				+ " and " + std::to_string(end) + ".");
-		}
 		std::vector<std::string> out {};
-		for (int s {start}; s <= end; s += stride) out.push_back(all[s]);
-		if (out.size() < 2)
-		{
-			Errors::fatal_error("A HERMES background needs at least two "
-				"snapshots, but hermes_snap_start = " + std::to_string(start)
-				+ ", hermes_snap_end = " + std::to_string(end) + " and "
-				"hermes_snap_stride = " + std::to_string(stride)
-				+ " pick " + std::to_string(out.size()) + ".");
-		}
+		for (const int i : select_indices(n, start, end, stride, dir
+			+ " has " + std::to_string(n) + " snapshots (snap*.npz)"))
+			out.push_back(all[i]);
 		return out;
 	}
 
@@ -740,44 +763,69 @@ namespace Hermes
 	/**
 	* Reads a HERMES simulation into a Background.
 	*
-	* Only JAX-Hermes3 output (hermes_format = "jax") is read so far. The
-	* grid is hermes_grid_file and the snapshots are picked from
-	* hermes_snap_dir with select_snapshots. The number of toroidal cells
-	* comes from the first snapshot.
+	* The grid is hermes_grid_file. For JAX-Hermes3 (hermes_format = "jax")
+	* the snapshots are picked from hermes_snap_dir with select_snapshots,
+	* the normalization comes from the options and the number of toroidal
+	* cells from the first snapshot. For BOUT++ Hermes-3 ("bout")
+	* hermes_snap_dir is the run directory, the output times are picked
+	* with select_indices, and the normalization, zperiod and nz come from
+	* the dumps (read_bout_layout, norm_from_bout).
 	*
 	* @param opts Simulation options.
 	* @return The background.
 	*/
 	Background::Background read_hermes(const Options::Options& opts)
 	{
-		if (opts.hermes_format_int() == 1)
-		{
-			Errors::fatal_error("hermes_format = \"bout\" (BOUT++ Hermes-3 "
-				"dump files) isn't implemented yet. Only \"jax\" "
-				"(JAX-Hermes3) is.");
-		}
 		if (opts.hermes_grid_file() == "undefined"
 			|| opts.hermes_snap_dir() == "undefined")
 		{
 			Errors::fatal_error("hermes_grid_file and hermes_snap_dir must "
 				"be set for a HERMES background.");
 		}
-		const Norm norm {norm_from_options(opts)};
-		check_norm(norm);
-		const int zperiod {norm.zperiod};
+		const bool bout {opts.hermes_format_int() == 1};
 
-		const auto paths {select_snapshots(opts.hermes_snap_dir(),
-			opts.hermes_snap_start(), opts.hermes_snap_end(),
-			opts.hermes_snap_stride())};
-		const Grid grid {read_grid(opts.hermes_grid_file())};
-
-		// nz from the first snapshot's density
-		const auto first {Npz::File(paths[0]).read("Ne")};
-		if (first.shape.size() != 3)
+		// What to read, the normalization and nz, per format
+		std::vector<std::string> paths {};
+		std::vector<int> times {};
+		BoutLayout layout {};
+		Norm norm {};
+		int nz {};
+		if (bout)
 		{
-			Errors::fatal_error("Ne in " + paths[0] + " isn't 3D (x, y, z).");
+			layout = read_bout_layout(opts.hermes_snap_dir());
+			norm = norm_from_bout(layout, opts);
+			check_norm(norm);
+			times = select_indices(static_cast<int>(layout.times.size()),
+				opts.hermes_snap_start(), opts.hermes_snap_end(),
+				opts.hermes_snap_stride(), opts.hermes_snap_dir() + " has "
+				+ std::to_string(layout.times.size()) + " output times "
+				"(t_array)");
+			nz = layout.nz;
 		}
-		const int nz {static_cast<int>(first.shape[2])};
+		else
+		{
+			norm = norm_from_options(opts);
+			check_norm(norm);
+			paths = select_snapshots(opts.hermes_snap_dir(),
+				opts.hermes_snap_start(), opts.hermes_snap_end(),
+				opts.hermes_snap_stride());
+		}
+		const int nframes {static_cast<int>(bout ? times.size()
+			: paths.size())};
+		const int zperiod {norm.zperiod};
+		const Grid grid {read_grid(opts.hermes_grid_file())};
+		if (bout) check_bout_layout(layout, grid);
+		else
+		{
+			// nz from the first snapshot's density
+			const auto first {Npz::File(paths[0]).read("Ne")};
+			if (first.shape.size() != 3)
+			{
+				Errors::fatal_error("Ne in " + paths[0]
+					+ " isn't 3D (x, y, z).");
+			}
+			nz = static_cast<int>(first.shape[2]);
+		}
 
 		std::cout << "HERMES background: grid " << opts.hermes_grid_file()
 			<< " (" << grid.nx << " x " << grid.ny << ", ixseps1 "
@@ -786,7 +834,22 @@ namespace Hermes
 			<< ", 1/" << zperiod << " of the torus\n"
 			<< "  Nnorm = " << norm.nnorm << " m-3, Tnorm = "
 			<< norm.tnorm << " eV, Bnorm = " << norm.bnorm
-			<< " T, ion AA = " << norm.ion_aa << '\n';
+			<< " T, ion AA = " << norm.ion_aa
+			<< (bout ? " (normalization from the dumps)" : "") << '\n';
+		if (bout)
+		{
+			const double t_unit {mp / (qe * norm.bnorm)};
+			const double gb {5.0 * nframes * grid.nx * grid.ny * nz
+				* sizeof(BkgFPType) / 1e9};
+			std::cout << "  BOUT++ dumps in " << layout.dir << ": "
+				<< layout.paths.size() << " files (" << layout.nxpe << " x "
+				<< layout.nype << " processes), " << layout.times.size()
+				<< " output times; reading " << nframes << " of them, "
+				<< times.front() << " to " << times.back() << " (t = "
+				<< layout.times[times.front()] * t_unit << " to "
+				<< layout.times[times.back()] * t_unit << " s), "
+				<< gb << " GB of plasma before derived fields\n";
+		}
 
 		Background::Background bkg {};
 		const bool aligned {opts.hermes_field_aligned_int() == 1};
@@ -800,13 +863,17 @@ namespace Hermes
 		bkg.move_into_zones(zones);
 		const Axisym::Mesh mesh {make_mesh(grid)};
 		Axisym::calc_geometry(mesh, bkg);
-		Axisym::calc_bfield(mesh, static_cast<int>(paths.size()), bkg);
+		Axisym::calc_bfield(mesh, nframes, bkg);
 		bkg.set_elec_mass_amu(Constants::mass_e / Constants::amu_to_kg);
 		bkg.set_ion_mass_amu(norm.ion_aa);
 
-		Frames frames(grid, bkg.get_zones(), norm,
-			static_cast<int>(paths.size()));
-		read_snapshots(paths, grid, frames);
+		Frames frames(grid, bkg.get_zones(), norm, nframes);
+		if (bout)
+		{
+			read_bout_dumps(layout, times, opts.hermes_ion_species(),
+				frames);
+		}
+		else read_snapshots(paths, grid, frames);
 		finish_background(frames, opts, bkg);
 		return bkg;
 	}

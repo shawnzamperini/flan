@@ -369,43 +369,45 @@ Check: `test_read_hermes_cpu` passes unchanged, and a JAX background read
 before and after is the same bit for bit (a scratch dump driver, as for
 the SOLEDGE3X refactor).
 
-**Phase B2: the dump reader.** New `bout_dumps.h/.cpp` (or a section of
-`read_hermes.cpp` if it stays small):
+**Phase B2: the dump reader.** Done. `read_hermes_bout.cpp`:
 
-- `Hermes::BoutLayout read_layout(dir)`: from `BOUT.dmp.0.nc`, NXPE,
-  NYPE, NZPE, MXSUB, MYSUB, MXG, MYG, MZ, `t_array`, the normalization,
-  `zperiod` and the separatrix indices. Stops if NZPE > 1 (z split over
-  processes isn't handled), if a file is missing, or if the global size,
-  MZ or separatrix indices don't match the grid file and each other.
+- `read_bout_layout(dir)`: from `BOUT.dmp.0.nc`, NXPE, NYPE, MXSUB,
+  MYSUB, MXG, MYG, MZ, `t_array`, Nnorm, Tnorm, Bnorm, `zperiod`, the
+  separatrix indices and the variable names. Stops if `dir` has no
+  `BOUT.dmp.0.nc`, NZPE > 1 (z split over processes isn't handled), the
+  dumps' `nx`, `ny` don't follow from the layout, or a file is missing.
+  `check_bout_layout` stops if the size or separatrix indices differ from
+  the grid file's.
+- `norm_from_bout`: Nnorm, Tnorm, Bnorm and `zperiod` from the dumps, the
+  ion mass from `hermes_ion_mass_amu`. `hermes_nnorm`, `_tnorm`, `_bnorm`
+  and `_zperiod` aren't used; a note is printed if one was changed from
+  its default to a different value.
 - Time selection: `hermes_snap_start`, `_end` and `_stride` index the
-  dump times, with the same rules as for `.npz` snapshots (negative from
-  the end, at least two). `hermes_snap_dir` is the run directory.
-- `read_bout_dumps(dir, layout, selection, frames)`: for each file, open
-  it once, check its `t_array` matches the first file's, and read every
-  selected time of each variable as one strided hyperslab
-  (`NcVar::getVar(start, count, stride, ...)`) of its interior cells (and
-  x guards at the domain edges), then `store` them. Variables read: Ne,
-  Pe, Pi (the ion species' names, see below), phi, and the ion flow as in
-  [the parallel flow in electromagnetic runs](#the-parallel-flow-in-electromagnetic-runs).
-- Print the run directory, layout, normalization, the times picked and
-  the memory the selected times need, before reading, since a full run
-  can be many GB.
-- Read on rank 0 and broadcast, as for every background now. Reading
-  files on several ranks and gathering is a later speed-up if the time is
-  a problem.
+  dump times with the same rules as for `.npz` snapshots
+  (`select_indices`, shared with `select_snapshots`). `hermes_snap_dir`
+  is the run directory.
+- `read_bout_dumps`: for each file, opened once, checks its place
+  (`PE_XIND`, `PE_YIND`) and `t_array`, and reads every selected time of
+  each variable as one strided hyperslab of its interior cells (and x
+  guards at the domain edges), then `store`s them. It reads Ne, Pe,
+  P<ion>, phi and the ion flow: V<ion> if dumped, else
+  (NV<ion> - N Apar) / (AA N) in an electromagnetic run, else
+  NV<ion> / (AA N). It stops if the files don't fill every global cell
+  exactly once, and prints its progress.
+- Before reading, the run directory, layout, normalization, the times
+  picked and the memory of the plasma arrays are printed.
+- Read on rank 0 and broadcast, as for every background. Reading files
+  on several ranks and gathering is a later speed-up if needed.
+- New option `hermes_ion_species` (default `"i"`), the ion species'
+  name, giving the variable names `P<name>`, `NV<name>`, `V<name>`.
+  Electrons are always `e`. `hermes_ion_mass_amu` and the
+  `hermes_kappa_*` options are still needed, from `BOUT.settings`.
 
-Options (follow "Adding an input option" in
-[Code Structure](code-structure.md); these aren't used on the GPU):
-
-- `hermes_format = "bout"` now works.
-- New `hermes_ion_species` (string, default `"i"`): the ion species'
-  name in the HERMES input, giving the variable names `N<name>`,
-  `P<name>`, `NV<name>`, `V<name>`. Electrons are always `e`.
-- For `"bout"`, Nnorm, Tnorm, Bnorm and `zperiod` come from the dumps and
-  `hermes_nnorm`, `_tnorm`, `_bnorm` and `_zperiod` are ignored (with a
-  note in the output if they were changed from their defaults and
-  disagree). `hermes_ion_mass_amu` and the `hermes_kappa_*` options are
-  still needed, from `BOUT.settings`.
+Check: the plasma Flan reads from a BOUT++ run (with and without a time
+stride) equals the Python assembly in `check_hermes_conventions.py`
+exactly for n, T and phi, and to the difference in proton mass between
+CODATA versions (about 1e-8) for the flow. A JAX background is the same
+bit for bit as before.
 
 **Phase B3: unit tests.** Extend `tests/hermes_test_files.h` to write a
 set of small dump files from the same test plasma it writes as `.npz`,
