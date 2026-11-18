@@ -430,17 +430,33 @@ bad dump. Tests in `test_read_hermes_cpu`:
 Making the reader ignore Apar, or read the x guards between blocks, makes
 these tests fail.
 
-**Phase B4: validation on a BOUT++ run.**
+**Phase B4: validation on a BOUT++ run.** Done.
 
-- The plasma Flan reads, at a few times, against the Python assembler of
-  Phase B0 (should be exact).
-- Flan's kappa_par_e and kappa_par_i against the dumped `kappa_par_e`
-  and `kappa_par_i`, and Flan's conducted heat flux times the y-face area
-  against `efe_cond_ylow` and `efi_cond_ylow`. These are direct checks of
-  `braginskii.cpp` and the field-aligned gradient on a run that wrote
-  them, which the JAX snapshots couldn't give.
-- `python/check_hermes_bkg.py` (target Mach numbers, grad-B drift
-  direction) and a short tungsten run, as in Phase 6.
+- The plasma Flan reads equals the Python assembly of Phase B0 (Phase
+  B2).
+- Flan's q_par_e and q_par_i at the cell centers against
+  -kappa_par grad_par T with the run's dumped `kappa_par_e/i` and
+  BOUT++'s central `Grad_par` along the field line: they agree to about
+  1% rms, with correlation above 0.9999, in the core and the SOL. This
+  checks `braginskii.cpp` and the field-aligned gradient together.
+- Conducted power through y faces, against `efe/efi_cond_ylow`: upstream
+  it agrees to within a few percent. Next to the targets Flan's is
+  larger. Hermes-3 conducts nothing through the sheath face (the sheath
+  boundary carries that energy), while Flan takes a one-sided gradient in
+  the target cell, and its central difference in the next cell reaches
+  into the target cell. So in the two or three cells next to each target
+  Flan's q_par, and the thermal force there, can be well above what the
+  run conducts. This is the same for JAX-Hermes3 backgrounds. See
+  decision 6.
+- `python/check_hermes_bkg.py` on a short tungsten run passes: the flow
+  into every target is about sonic, and the ion grad-B drift direction is
+  as the field direction says.
+- In a hot, weakly collisional SOL the unlimited Braginskii ion heat flux
+  can exceed n T v_th, so the heat-flux skew |eps| of the ions is above 1
+  in many cells. Flan caps it at 1 (the skewed Maxwellian isn't valid
+  beyond that), which limits the ion thermal force there; the run's
+  output summary gives how often. Electrons stay well below 1. See
+  decision 7.
 
 **Phase B5: inductive E_par (option, off by default).** Add
 -dApar/dt to E_par. The derivative is taken when the dumps are read: for
@@ -476,6 +492,17 @@ the HERMES-3 developers.
 5. **Several restart segments** (dumps in different directories, one
    after another in time): not in the first version. One directory per
    background; a list of directories could come later.
+6. **q_par next to the targets** (from Phase B4): keep the one-sided
+   gradient, or follow the run there: zero conduction through the sheath
+   face, so the target cell gets the average of its two face fluxes (half
+   the interior one). For BOUT++ runs that write `efe/efi_cond_ylow`, the
+   dumped face fluxes could also be used directly
+   (`hermes_heat_flux = "dumped"`). Decided: follow the run (zero
+   conduction through the sheath face), for both formats.
+7. **Ion heat-flux skew above 1** (from Phase B4): keep capping |eps| at
+   1, or limit the ion heat flux in Flan (`hermes_kappa_limit_alpha`,
+   which would then differ from an unlimited run). Decided: keep the
+   cap, reported in the run summary.
 
 ---
 
