@@ -3,10 +3,11 @@
 This page is the development plan for reading HERMES plasma backgrounds
 into Flan, the same way SOLEDGE3X backgrounds are read
 (`bkg_source = "hermes"`). The first version reads output from
-JAX-Hermes3, a Python/JAX reimplementation of Hermes-3. A reader for
-BOUT++ Hermes-3 dump files is planned but not started. The last section
-is a short summary for the HERMES-3 developers of how the coupling works
-and what it assumes.
+JAX-Hermes3, a Python/JAX reimplementation of Hermes-3. The plan for a
+second reader, for BOUT++ Hermes-3 dump files, is in
+[BOUT++ Hermes-3 reader](#bout-hermes-3-reader). The last section is a
+short summary for the HERMES-3 developers of how the coupling works and
+what it assumes.
 
 ## The data
 
@@ -24,9 +25,12 @@ A JAX-Hermes3 run has two parts:
   torus.
 
 A BOUT++ Hermes-3 run instead writes one netCDF file per MPI process
-(`BOUT.dmp.N.nc`) holding every time, with the normalization in the file
-and the variables named per species (`Nd+`, `Pd+`, `NVd+`, ...). The grid
-file and the physics are the same, so only the snapshot reader differs.
+(`BOUT.dmp.N.nc`) holding every output time, with the normalization in
+each file. The variables are named after the species in the input
+(`Ne`, `Pe` for electrons `e`; `Ni`, `Pi`, `NVi`, `Vi` for ions `i`, or
+`Nd+`, `Pd+`, ... for `d+`). The grid file is the same, but the plasma
+needs more care than a change of file format (see
+[BOUT++ Hermes-3 reader](#bout-hermes-3-reader)).
 
 ## Zones
 
@@ -234,9 +238,235 @@ q_par = -kappa_par grad_par T, positive along B like the SOLEDGE3X ones.
 - [HERMES Backgrounds](../running/hermes.md) in Running Flan, and the
   options in [Input Options](../input-options.md#hermes).
 
-**Later**: the GPU path, a time-averaged background, the BOUT++ Hermes-3
-reader, a sputtered source at the targets, and field-aligned
-interpolation for turbulent SOLEDGE3X runs.
+**Later**: the GPU path, a time-averaged background, a sputtered source
+at the targets, and field-aligned interpolation for turbulent SOLEDGE3X
+runs. The BOUT++ Hermes-3 reader has its own plan, below.
+
+## BOUT++ Hermes-3 reader
+
+This is the plan for `hermes_format = "bout"`: reading the plasma from
+the dump files a BOUT++ Hermes-3 run writes, instead of JAX-Hermes3
+snapshots. The grid, the zones, the field-aligned interpolation, the
+toroidal wedge and the conduction all stay as they are. Only how the
+plasma gets from the files into the zoned arrays changes, plus two
+physics points that JAX-Hermes3 runs don't raise (the flow in
+electromagnetic runs, and the inductive parallel electric field).
+
+### The dump files
+
+- One file per MPI process, `BOUT.dmp.N.nc` for N = 0 to
+  NXPE·NYPE - 1 (netCDF-4/HDF5). Each holds that process's block of
+  MXSUB × MYSUB cells in (x, y) and all MZ z cells, **with** MXG x guard
+  cells and MYG y guard cells on each side, for every output time:
+  variables are (t, x, y, z).
+- `PE_XIND` and `PE_YIND` give the block's place: global x of the block's
+  first interior cell is MXG + PE_XIND·MXSUB, global y is PE_YIND·MYSUB.
+  The global grid is NXPE·MXSUB + 2·MXG by NYPE·MYSUB, which must equal
+  the grid file's `nx` (guards included) and `ny` (no y guards).
+- To assemble one global field: from each block take the interior cells,
+  plus its x guard cells on a side where the block is at the domain's x
+  boundary (they are the grid's x guards, which the zones use). The y
+  guards are always dropped, since the grid has none; at the targets they
+  hold sheath boundary values, not plasma cells.
+- `t_array` (in units of 1/Omega_ci = m_p / (e Bnorm)) holds the times.
+  Every file has the same times. A restarted run starts its `t_array`
+  where the previous run ended, and (with `append = false`) overwrites
+  the earlier dumps.
+- The normalization is in every file: `Nnorm`, `Tnorm`, `Bnorm`, `Cs0`,
+  `Omega_ci`, `rho_s0`, and also `zperiod`, `MZ`, and the grid's
+  separatrix indices. Each variable has `units` and `conversion`
+  attributes. The ion mass and the conduction coefficients are not in the
+  dumps; they are in `BOUT.settings` in the run directory.
+- With `diagnose = true` the dumps also hold the derived quantities
+  `Te`, `Ti`, `Vi`, `kappa_par_e`, `kappa_par_i`, and the conducted and
+  total energy flows through the lower y faces (`efe_cond_ylow`,
+  `efi_cond_ylow`, ...).
+- Variables are stored one time per chunk. Opening a file costs much more
+  than reading all of its times of one variable, so the reader has to
+  open each file once and read every wanted time from it, not loop over
+  times on the outside.
+
+### The parallel flow in electromagnetic runs
+
+With the `electromagnetic` component, Hermes-3 evolves the canonical
+momentum, and the `NV` it writes is that: NVi = AA·n·V_i + Z·n·Apar for
+each species (in normalized units, for electrons with Z = -1). So
+NVi / (AA·n) isn't the flow there. The reader takes the flow from the
+species' `V` (e.g., `Vi`) when it's in the dumps, and otherwise from
+(NV - Z·n·Apar) / (AA·n), which is the same thing. It stops if neither
+`V` nor `Apar` is there and the run is electromagnetic (the
+`electromagnetic` component in `BOUT.settings`, or an `Apar` variable).
+
+The parallel electric field in an electromagnetic run is
+E_par = -grad_par phi - dApar/dt. Flan uses only the first term. With
+`magnetic_flutter = false` the field lines (and so b and grad_par) are
+the unperturbed ones from the grid, so nothing else changes.
+
+### Phases
+
+**Phase B0: conventions and data checks.** Done.
+`python/check_hermes_conventions.py --format bout --run-dir <run>` runs
+the checks of Phase 0 on a BOUT++ run, plus checks of the dumps
+(section 6 of its output):
+
+- It assembles global fields from the dump blocks as above, opening
+  each file once (`--cache` keeps them in a `.npz`), and stops if a cell
+  isn't filled exactly once or a file's times differ. Field-aligned
+  differences across block boundaries are the same as inside blocks.
+- It prints the `hermes_*` options to set from `BOUT.settings` (ion
+  mass, conduction coefficients, flux limiter) and warns about settings
+  Flan doesn't follow (ion charge other than 1, conduction collisions
+  other than `multispecies`).
+- The sources for the balance come from the dumped external sources
+  (`Se_src`, and 3/2 `P_src` for each species) integrated over the
+  volume, so no input expressions have to be parsed. Without recycling
+  and before the density has settled, the particles reaching the
+  targets can be several times the source; the balance then closes with
+  the volume integral of `ddt(Ne)`.
+- It fits NV - AA·N·V against N·Apar, confirming the canonical momentum
+  in electromagnetic runs (slope Z to round-off).
+- kappa_par from the script's Braginskii formulas (the same as Flan's
+  `braginskii.cpp`) equals the dumped `kappa_par_e/i` to round-off. The
+  conducted power through a y face, with the neighboring plane shifted
+  spectrally onto the field line, matches `efe/efi_cond_ylow` upstream to
+  well under 1%, and is correlated with it cell by cell everywhere. Next
+  to the targets it is somewhat larger than the dumped power, for a
+  reason still to be found (probably how Hermes-3 takes kappa or the
+  face area next to the sheath). A linear shift in z, which the script
+  used before, smooths the plane and misses the upstream power by
+  several percent; the script now shifts spectrally, as BOUT++ and Flan
+  do.
+- It compares -dApar/dt (centered over neighboring output times, and
+  over twice that to see whether the output interval resolves it) with
+  -grad_par phi. In an electromagnetic turbulence run the inductive part
+  can be a noticeable fraction of the electrostatic one in the
+  fluctuations, and smaller in the toroidal average, so Phase B5 is
+  worth doing as an option.
+
+**Phase B1: split the snapshot reader, no change in behavior.**
+`read_snapshots` does three things: reads one snapshot, converts it to SI
+in the zoned arrays, and finishes the background (time check, ghost
+cells, E and the flows, heat fluxes). Split it so both formats share the
+conversion and the finish:
+
+- `Hermes::Frames`: the zoned ne, te, ti, upar and vp arrays and the
+  times, with `store(t, x, y, k, Ne, Pe, Pi, V, phi)` taking normalized
+  values at a global (x, y) cell (a lookup table from global (x, y) to
+  (zone, i, j) built from `zone_ranges`). V is the parallel flow in units
+  of c_s0 along +y, so each reader works out V its own way. `store`
+  applies the normalization, `parallel_sign` and the Ne <= 0 rule, so
+  they are in one place.
+- `finish_background(frames, opts, bkg)`: everything after the loop in
+  today's `read_snapshots`.
+- The JAX reader becomes a loop over `.npz` files calling `store` with
+  V = NVi / (AA Ne).
+- The normalization (Nnorm, Tnorm, Bnorm, AA, zperiod) moves into a small
+  `Hermes::Norm` struct filled per format, so the shared code doesn't
+  read the options directly.
+
+Check: `test_read_hermes_cpu` passes unchanged, and a JAX background read
+before and after is the same bit for bit (a scratch dump driver, as for
+the SOLEDGE3X refactor).
+
+**Phase B2: the dump reader.** New `bout_dumps.h/.cpp` (or a section of
+`read_hermes.cpp` if it stays small):
+
+- `Hermes::BoutLayout read_layout(dir)`: from `BOUT.dmp.0.nc`, NXPE,
+  NYPE, NZPE, MXSUB, MYSUB, MXG, MYG, MZ, `t_array`, the normalization,
+  `zperiod` and the separatrix indices. Stops if NZPE > 1 (z split over
+  processes isn't handled), if a file is missing, or if the global size,
+  MZ or separatrix indices don't match the grid file and each other.
+- Time selection: `hermes_snap_start`, `_end` and `_stride` index the
+  dump times, with the same rules as for `.npz` snapshots (negative from
+  the end, at least two). `hermes_snap_dir` is the run directory.
+- `read_bout_dumps(dir, layout, selection, frames)`: for each file, open
+  it once, check its `t_array` matches the first file's, and read every
+  selected time of each variable as one strided hyperslab
+  (`NcVar::getVar(start, count, stride, ...)`) of its interior cells (and
+  x guards at the domain edges), then `store` them. Variables read: Ne,
+  Pe, Pi (the ion species' names, see below), phi, and the ion flow as in
+  [the parallel flow in electromagnetic runs](#the-parallel-flow-in-electromagnetic-runs).
+- Print the run directory, layout, normalization, the times picked and
+  the memory the selected times need, before reading, since a full run
+  can be many GB.
+- Read on rank 0 and broadcast, as for every background now. Reading
+  files on several ranks and gathering is a later speed-up if the time is
+  a problem.
+
+Options (follow "Adding an input option" in
+[Code Structure](code-structure.md); these aren't used on the GPU):
+
+- `hermes_format = "bout"` now works.
+- New `hermes_ion_species` (string, default `"i"`): the ion species'
+  name in the HERMES input, giving the variable names `N<name>`,
+  `P<name>`, `NV<name>`, `V<name>`. Electrons are always `e`.
+- For `"bout"`, Nnorm, Tnorm, Bnorm and `zperiod` come from the dumps and
+  `hermes_nnorm`, `_tnorm`, `_bnorm` and `_zperiod` are ignored (with a
+  note in the output if they were changed from their defaults and
+  disagree). `hermes_ion_mass_amu` and the `hermes_kappa_*` options are
+  still needed, from `BOUT.settings`.
+
+**Phase B3: unit tests.** Extend `tests/hermes_test_files.h` to write a
+set of small dump files from the same test plasma it writes as `.npz`,
+split over a 2 × 2 (or 3 × 2) process layout, with:
+
+- guard cells filled with values that must not be read (e.g., NaN in the
+  y guards and in x guards between blocks), so a wrong assembly fails;
+- a nonzero `Apar` with NVi written as the canonical momentum, and `Vi`
+  written or left out, so both ways of getting the flow are tested;
+- several times, read with a stride and with negative indices.
+
+Tests in `test_read_hermes_cpu`: the BOUT++ and JAX readers give the same
+background from the same plasma; layout mismatches (wrong `nx`, missing
+file, NZPE > 1, different `t_array`) stop with a message; the
+normalization comes from the files.
+
+**Phase B4: validation on a BOUT++ run.**
+
+- The plasma Flan reads, at a few times, against the Python assembler of
+  Phase B0 (should be exact).
+- Flan's kappa_par_e and kappa_par_i against the dumped `kappa_par_e`
+  and `kappa_par_i`, and Flan's conducted heat flux times the y-face area
+  against `efe_cond_ylow` and `efi_cond_ylow`. These are direct checks of
+  `braginskii.cpp` and the field-aligned gradient on a run that wrote
+  them, which the JAX snapshots couldn't give.
+- `python/check_hermes_bkg.py` (target Mach numbers, grad-B drift
+  direction) and a short tungsten run, as in Phase 6.
+
+**Phase B5: inductive E_par (option, off by default).** Add
+-dApar/dt to E_par. The derivative is taken when the dumps are read: for
+each loaded time t_k, Apar is also read at the output times just before
+and after it, and only the centered difference is kept. That works for
+any `hermes_snap_stride`, needs no extra stored fields, and costs little
+extra reading since the files are open anyway. A new option (e.g.
+`hermes_inductive_epar = "off"/"on"`) turns it on; it stops if the run has
+no Apar. Test: a synthetic Apar linear in time gives the expected E_par.
+
+**Phase B6: docs.** `hermes_format`, `hermes_snap_dir`,
+`hermes_snap_start` and the normalization options in
+[Input Options](../input-options.md#hermes); a BOUT++ section in
+[HERMES Backgrounds](../running/hermes.md) (which files, which options
+come from `BOUT.settings`, memory and read time); this page's summary for
+the HERMES-3 developers.
+
+### Decisions to make
+
+1. **Normalization from the dumps, not the options.** Recommended: the
+   files are the authority, and taking them removes a way to get it wrong.
+2. **Ion mass and conduction coefficients**: options (as now) or parsed
+   from `BOUT.settings`. Recommended: options for now, with
+   `check_hermes_conventions.py` printing the values from
+   `BOUT.settings`, since the settings file is free-form text.
+3. **Heat flux**: keep calculating q_par from Flan's Braginskii kappa
+   (as for JAX), or add `hermes_heat_flux = "dumped_kappa"`, which uses
+   the dumped `kappa_par_e/i` with Flan's grad_par T. Recommended: keep
+   the calculation, use the dumped kappa to validate it (Phase B4), and
+   add the option only if they disagree for a reason Flan can't fix.
+4. **Inductive E_par**: Phase B0 found it large enough in an
+   electromagnetic run to be worth having as an option (Phase B5).
+5. **Several restart segments** (dumps in different directories, one
+   after another in time): not in the first version. One directory per
+   background; a list of directories could come later.
 
 ---
 
@@ -318,9 +548,11 @@ Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
    through the parallel fluxes alone. Is the rest the radial flux through
    the outer SOL and PFR boundaries, or something else that Flan should
    include (e.g., a sheath heat flux different from the bulk fluxes)?
-4. For BOUT++ Hermes-3 output: are there any differences in variable
-   names, normalization or guard cells from the above that a reader would
-   need to handle?
+4. For BOUT++ Hermes-3 output: is the plan in
+   [BOUT++ Hermes-3 reader](#bout-hermes-3-reader) right about the guard
+   cells, the canonical momentum written as `NV` in electromagnetic runs,
+   and `V` being the flow? Is dApar/dt usually small enough to leave out
+   of E_par for impurities?
 5. Does JAX-Hermes3 shift between planes with FFTs (as BOUT++'s
    `ShiftedMetric` does) and take grad_par as above? If it interpolates
    differently, Flan's E∥ and q_par would differ slightly from the run's.
