@@ -82,6 +82,7 @@ namespace Options
 		set_hermes_format(m_hermes_format);
 		set_hermes_heat_flux(m_hermes_heat_flux);
 		set_hermes_field_aligned(m_hermes_field_aligned);
+		set_hermes_inductive_epar(m_hermes_inductive_epar);
 		set_imp_source_opt(m_imp_source_opt);
 		set_sput_flux_opt(m_sput_flux_opt);
 		set_sput_bohm_floor(m_sput_bohm_floor);
@@ -807,6 +808,34 @@ namespace Options
 		// Assign control integers
 		if (hermes_heat_flux == "off") m_hermes_heat_flux_int = 0;
 		else if (hermes_heat_flux == "conduction") m_hermes_heat_flux_int = 1;
+	}
+
+	/**
+	* Sets the hermes_inductive_epar option.
+	*
+	* "on" (the default) adds the inductive parallel electric field
+	* -dApar/dt to E_par whenever the run has Apar, i.e. a BOUT++ Hermes-3
+	* background from an electromagnetic run (Apar is read at the output
+	* times on either side of each loaded one). Runs without Apar
+	* (electrostatic, or JAX-Hermes3) go on without it. "off" leaves
+	* E = -grad phi. Also sets the control integer
+	* returned by hermes_inductive_epar_int() to 0 for "off", 1 for "on".
+	*
+	* @param hermes_inductive_epar New value of the hermes_inductive_epar
+	*        option.
+	*/
+	void Options::set_hermes_inductive_epar(std::string hermes_inductive_epar)
+	{
+		if (check_input<std::string>("hermes_inductive_epar",
+			hermes_inductive_epar, {"off", "on"}))
+		{
+			m_hermes_inductive_epar = hermes_inductive_epar;
+		}
+
+		// Assign control integers
+		if (hermes_inductive_epar == "off") m_hermes_inductive_epar_int = 0;
+		else if (hermes_inductive_epar == "on")
+			m_hermes_inductive_epar_int = 1;
 	}
 
 	/**
@@ -2366,6 +2395,14 @@ namespace Options
 		{return m_hermes_heat_flux;}
 
 	/**
+	* Returns the hermes_inductive_epar option ("off" or "on").
+	*
+	* @return Value of the hermes_inductive_epar option.
+	*/
+	const std::string& Options::hermes_inductive_epar() const
+		{return m_hermes_inductive_epar;}
+
+	/**
 	* Returns the hermes_field_aligned option ("on" or "off").
 	*
 	* @return Value of the hermes_field_aligned option.
@@ -3511,6 +3548,12 @@ namespace Options
 
 	int Options::hermes_heat_flux_int() const
 		{return get_control_int("hermes_heat_flux", m_hermes_heat_flux_int);}
+
+	int Options::hermes_inductive_epar_int() const
+	{
+		return get_control_int("hermes_inductive_epar",
+			m_hermes_inductive_epar_int);
+	}
 
 	int Options::hermes_field_aligned_int() const
 	{

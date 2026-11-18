@@ -110,6 +110,11 @@ namespace Hermes
 		void set_time(const int t, const double t_norm,
 			const std::string& label);
 
+		void enable_inductive();
+		bool inductive() const {return !m_epar.get_data().empty();}
+		void store_dapar_dt(const int t, const int x, const int y,
+			const int k, const double dapar_dt);
+
 		int nframes() const {return m_nframes;}
 		const Norm& norm() const {return m_norm;}
 
@@ -138,6 +143,11 @@ namespace Hermes
 		Vectors::ZonedVector<BkgFPType> m_ti {};
 		Vectors::ZonedVector<BkgFPType> m_vp {};
 		Vectors::ZonedVector<BkgFPType> m_upar {};
+
+		/// Inductive E_par = -dApar/dt along B (V/m), only allocated if
+		/// enable_inductive was called
+		Vectors::ZonedVector<BkgFPType> m_epar {};
+		const Zones::Zones* m_zones {};
 		std::vector<BkgFPType> m_times {};
 		std::vector<std::string> m_labels {};
 		long m_empty_cells {};

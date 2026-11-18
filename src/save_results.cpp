@@ -513,6 +513,8 @@ namespace SaveResults
 			"source of the HERMES parallel heat fluxes");
 		save_string(input_group, opts.hermes_field_aligned(), "hermes_field_aligned", dim_str,
 			"HERMES field-aligned interpolation option");
+		save_string(input_group, opts.hermes_inductive_epar(), "hermes_inductive_epar", dim_str,
+			"inductive parallel electric field from a BOUT++ Hermes-3 run");
 		save_scalar(input_group, opts.hermes_kappa_coef_e(), "hermes_kappa_coef_e", dim_scalar,
 			"HERMES electron parallel conduction coefficient", "");
 		save_scalar(input_group, opts.hermes_kappa_coef_i(), "hermes_kappa_coef_i", dim_scalar,

@@ -7,12 +7,14 @@
 * against the JAX one on the same plasma, and the errors.
 */
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <string>
+#include <tuple>
 #include <unistd.h>
 #include <vector>
 
@@ -99,7 +101,9 @@ namespace
 
 		// Options for reading the dumps. The normalization and zperiod
 		// options are left at their defaults, which differ from the
-		// dumps', since they must come from the dumps.
+		// dumps', since they must come from the dumps. The inductive
+		// E_par is off, so the background matches the JAX-Hermes3 one
+		// (which has no Apar); BoutInductiveEpar tests it.
 		Options::Options bout_options() const
 		{
 			Options::Options opts {};
@@ -110,6 +114,7 @@ namespace
 			opts.set_hermes_snap_start(0);
 			opts.set_hermes_snap_end(-1);
 			opts.set_hermes_ion_mass_amu(aa);
+			opts.set_hermes_inductive_epar("off");
 			return opts;
 		}
 	};
@@ -454,6 +459,90 @@ TEST_F(ReadHermesTest, BoutIgnoresNormOptions)
 }
 
 // Dumps the reader can't use stop the run with a message saying why
+// hermes_inductive_epar = "on" adds -dApar/dt along B to E, with
+// dApar/dt the centered difference over the output times on either side
+// of each loaded one (one sided at the first and last), whatever the
+// stride. E x B, and so the flow, doesn't change.
+TEST_F(ReadHermesTest, BoutInductiveEpar)
+{
+	HermesTest::DumpSpec spec {};
+	spec.ntimes = 6;
+	write_dumps(spec);
+	const double cs0 {std::sqrt(Hermes::qe * tnorm / Hermes::mp)};
+	const double sign {Hermes::parallel_sign(Hermes::read_grid(
+		grid_path()))};
+	for (const auto& [start, stride, want] : {
+		std::tuple {0, 2, std::vector<int> {0, 2, 4}},
+		std::tuple {1, 2, std::vector<int> {1, 3, 5}},
+		std::tuple {0, 1, std::vector<int> {0, 1, 2, 3, 4, 5}}})
+	{
+		SCOPED_TRACE("start " + std::to_string(start) + ", stride "
+			+ std::to_string(stride));
+		auto opts {bout_options()};
+		opts.set_hermes_snap_start(start);
+		opts.set_hermes_snap_stride(stride);
+		const auto off {Hermes::read_hermes(opts)};
+		opts.set_hermes_inductive_epar("on");
+		const auto on {Hermes::read_hermes(opts)};
+		EXPECT_EQ(max_rel_diff(on.get_uX(), off.get_uX()), 0.0);
+		EXPECT_EQ(max_rel_diff(on.get_uZ(), off.get_uZ()), 0.0);
+
+		const Zones::Zones& z {on.get_zones()};
+		using Vec3 = std::array<double, 3>;
+		auto dot = [](const Vec3& a, const Vec3& b)
+			{return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];};
+		for (int zone {}; zone < 6; ++zone)
+		for (std::size_t t {}; t < want.size(); ++t)
+		for (int i {}; i < z.get_nx(zone); ++i)
+		for (int j {}; j < z.get_ny(zone); ++j)
+		for (int k {}; k < z.get_nz(zone); ++k)
+		{
+			const int gi {origin[zone][0] + i};
+			const int gj {origin[zone][1] + j};
+			const int lo {std::max(want[t] - 1, 0)};
+			const int hi {std::min(want[t] + 1, spec.ntimes - 1)};
+			const double dadt {(HermesTest::apar_value(hi, gi, gj, k)
+				- HermesTest::apar_value(lo, gi, gj, k)) / (100.0 * (hi
+				- lo))};
+			const double expected {-sign * dadt * bnorm * cs0};
+
+			const Vec3 B {on.get_bX()(zone, t, i, j, k),
+				on.get_bY()(zone, t, i, j, k), on.get_bZ()(zone, t, i, j, k)};
+			const double Bm {std::sqrt(dot(B, B))};
+			const Vec3 dE {on.get_eX()(zone, t, i, j, k)
+				- off.get_eX()(zone, t, i, j, k),
+				on.get_eY()(zone, t, i, j, k) - off.get_eY()(zone, t, i, j,
+				k), on.get_eZ()(zone, t, i, j, k) - off.get_eZ()(zone, t, i,
+				j, k)};
+			const double par {dot(dE, B) / Bm};
+			ASSERT_NEAR(par, expected, 1e-9 * std::abs(expected));
+			for (int c {}; c < 3; ++c)
+				ASSERT_NEAR(dE[c], par * B[c] / Bm, 1e-9 * std::abs(par));
+		}
+	}
+}
+
+// The inductive E_par is on by default, and a run without Apar (an
+// electrostatic BOUT++ run, or JAX-Hermes3) goes on without it
+TEST_F(ReadHermesTest, InductiveEparDefault)
+{
+	EXPECT_EQ(Options::Options {}.hermes_inductive_epar(), "on");
+
+	auto jax {options()};
+	jax.set_hermes_inductive_epar("on");
+	const auto jax_on {Hermes::read_hermes(jax)};
+	jax.set_hermes_inductive_epar("off");
+	expect_same(jax_on, Hermes::read_hermes(jax), 0.0);
+
+	HermesTest::DumpSpec spec {};
+	spec.write_apar = false;
+	write_dumps(spec);
+	auto bout {bout_options()};
+	const auto bout_off {Hermes::read_hermes(bout)};
+	bout.set_hermes_inductive_epar("on");
+	expect_same(Hermes::read_hermes(bout), bout_off, 0.0);
+}
+
 TEST_F(ReadHermesTest, BoutErrors)
 {
 	auto expect_error = [&](const HermesTest::DumpSpec& spec,

@@ -370,6 +370,45 @@ namespace Hermes
 				"found.");
 		}
 
+		// The inductive E_par needs Apar at each loaded time (if the flow
+		// doesn't already read it) and at the output times on either side.
+		// A background has at least two times (select_indices), so there's
+		// always a neighbor.
+		const bool inductive {frames.inductive()};
+		const std::size_t nt_all {layout.times.size()};
+		std::size_t i_apar {names.size()};
+		if (inductive)
+		{
+			if (!layout.has("Apar"))
+			{
+				// read_hermes only enables it if there's Apar
+				Errors::fatal_error("The inductive E_par was asked for, but "
+					"the dumps in " + layout.dir + " have no Apar.");
+			}
+			if (flow == FlowFrom::NV_Apar) i_apar = 5;
+			else names.push_back("Apar");
+		}
+
+		// The output times before and after each loaded one, for dApar/dt.
+		// At the first and last output times the difference is one sided,
+		// using Apar at the loaded time itself.
+		std::vector<int> lo(nt), hi(nt);
+		for (int t {}; t < nt; ++t)
+		{
+			lo[t] = std::max(times[t] - 1, 0);
+			hi[t] = std::min(times[t] + 1, static_cast<int>(nt_all) - 1);
+		}
+		const int lo_first {times[0] == 0 ? 1 : 0};	// first t with lo < t
+		const int hi_count {times[nt - 1] == static_cast<int>(nt_all) - 1
+			? nt - 1 : nt};	// t with hi > t
+		if (inductive)
+		{
+			std::cout << "  Inductive E_par: -dApar/dt from Apar at the "
+				"output times on either side of each loaded one ("
+				<< layout.times[1] - layout.times[0] << " / Omega_ci "
+				"apart)\n";
+		}
+
 		for (int t {}; t < nt; ++t)
 		{
 			frames.set_time(t, layout.times[times[t]], layout.dir
@@ -379,13 +418,13 @@ namespace Hermes
 		const double aa {frames.norm().ion_aa};
 		const std::size_t nz {static_cast<std::size_t>(layout.nz)};
 		const std::size_t mysub {static_cast<std::size_t>(layout.mysub)};
-		const std::size_t nt_all {layout.times.size()};
 		std::vector<int> count(static_cast<std::size_t>(layout.nx)
 			* layout.ny);
 		const int nfiles {static_cast<int>(layout.paths.size())};
 		const int every {std::max(1, nfiles / 10)};
 		const auto start_time {std::chrono::steady_clock::now()};
 		std::vector<std::vector<double>> data(names.size());
+		std::vector<double> apar_lo {}, apar_hi {};
 
 		for (int n {}; n < nfiles; ++n)
 		{
@@ -454,6 +493,28 @@ namespace Hermes
 						* mysub * nz);
 					var.getVar(first, cnt, stride, data[v].data());
 				}
+
+				// Apar on either side, for the times that have one
+				if (inductive)
+				{
+					const netCDF::NcVar var {file.getVar("Apar")};
+					const std::size_t per_t {static_cast<std::size_t>(nxl)
+						* mysub * nz};
+					auto read_side = [&](std::vector<double>& out,
+						const int t0, const int n, const int idx0)
+					{
+						out.assign(static_cast<std::size_t>(nt) * per_t, 0.0);
+						if (n <= 0) return;
+						auto f {first};
+						auto ct {cnt};
+						f[0] = static_cast<std::size_t>(idx0);
+						ct[0] = static_cast<std::size_t>(n);
+						var.getVar(f, ct, stride, out.data() + t0 * per_t);
+					};
+					read_side(apar_lo, lo_first, nt - lo_first,
+						lo[lo_first < nt ? lo_first : 0]);
+					read_side(apar_hi, 0, hi_count, hi[0]);
+				}
 			}
 			catch (const netCDF::exceptions::NcException& e)
 			{
@@ -492,6 +553,17 @@ namespace Hermes
 				}
 				frames.store(t, gx0 + i, gy0 + static_cast<int>(j),
 					static_cast<int>(k), ne, Pe[c], Pi[c], V, phi[c]);
+				if (inductive)
+				{
+					const double a {data[i_apar][c]};
+					const double a_lo {t >= lo_first ? apar_lo[c] : a};
+					const double a_hi {t < hi_count ? apar_hi[c] : a};
+					const double dt {layout.times[hi[t]]
+						- layout.times[lo[t]]};
+					frames.store_dapar_dt(t, gx0 + i, gy0
+						+ static_cast<int>(j), static_cast<int>(k),
+						(a_hi - a_lo) / dt);
+				}
 			}
 
 			if ((n + 1) % every == 0 || n + 1 == nfiles)

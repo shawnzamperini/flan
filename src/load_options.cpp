@@ -335,6 +335,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "hermes_inductive_epar")
+			{
+				auto set_func = std::bind(&Options::set_hermes_inductive_epar,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "hermes_field_aligned")
 			{
 				auto set_func = std::bind(&Options::set_hermes_field_aligned,

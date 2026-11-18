@@ -459,14 +459,31 @@ these tests fail.
   output summary gives how often. Electrons stay well below 1. See
   decision 7.
 
-**Phase B5: inductive E_par (option, off by default).** Add
+**Phase B5: inductive E_par (option, on by default).** Done. Add
 -dApar/dt to E_par. The derivative is taken when the dumps are read: for
 each loaded time t_k, Apar is also read at the output times just before
 and after it, and only the centered difference is kept. That works for
 any `hermes_snap_stride`, needs no extra stored fields, and costs little
-extra reading since the files are open anyway. A new option (e.g.
-`hermes_inductive_epar = "off"/"on"`) turns it on; it stops if the run has
-no Apar. Test: a synthetic Apar linear in time gives the expected E_par.
+extra reading since the files are open anyway.
+
+- Option `hermes_inductive_epar` ("on"/"off"), on by default since it's
+  part of the run's physics: it's used whenever the run has Apar, and
+  runs without it (electrostatic, JAX-Hermes3) go on with a note.
+  `Frames::enable_inductive`
+  and `store_dapar_dt` hold E = -dApar/dt Bnorm c_s0 times
+  parallel_sign (Apar is b . A in units of Bnorm rho_s0, b along +y);
+  `read_bout_dumps` reads Apar at the loaded times and two more strided
+  hyperslabs on either side, one sided at the first and last output
+  times. `Axisym::calc_efield_and_flows` takes the extra E_par as an
+  optional argument and adds it along B, which leaves E x B unchanged.
+- Test `BoutInductiveEpar`: Apar quadratic in time, with a rate that
+  depends on the cell, for several starts and strides; checked by
+  mutation (wrong neighbor times or a centered time step at the ends
+  fail). `InductiveEparDefault`: on by default, and no change for runs
+  without Apar.
+- On the BOUT++ run, Flan's inductive E_par equals -dApar/dt from the
+  raw dumps to 7e-8 (the proton mass difference). Its rms is about 0.2
+  of the electrostatic E_par in the core and in the SOL, as in Phase B0.
 
 **Phase B6: docs.** `hermes_format`, `hermes_snap_dir`,
 `hermes_snap_start` and the normalization options in
@@ -489,7 +506,8 @@ the HERMES-3 developers.
    the calculation, use the dumped kappa to validate it (Phase B4), and
    add the option only if they disagree for a reason Flan can't fix.
 4. **Inductive E_par**: Phase B0 found it large enough in an
-   electromagnetic run to be worth having as an option (Phase B5).
+   electromagnetic run to be worth having as an option (Phase B5), on by
+   default since it's part of the run's physics.
 5. **Several restart segments** (dumps in different directories, one
    after another in time): not in the first version. One directory per
    background; a list of directories could come later.

@@ -676,10 +676,14 @@ namespace Axisym
 	* @param bkg Background with zones, geometry and magnetic field.
 	* @param vp Plasma potential (V), with ghost cells filled.
 	* @param upar Parallel ion flow (m/s).
+	* @param epar Optional extra electric field along B (V/m), e.g. the
+	*        inductive -dApar/dt of an electromagnetic run, added to E's
+	*        parallel part. It doesn't change the E x B drift.
 	*/
 	void calc_efield_and_flows(Background::Background& bkg,
 		const Vectors::ZonedVector<BkgFPType>& vp,
-		const Vectors::ZonedVector<BkgFPType>& upar)
+		const Vectors::ZonedVector<BkgFPType>& upar,
+		const Vectors::ZonedVector<BkgFPType>* epar)
 	{
 		const Zones::Zones& zones {bkg.get_zones()};
 		const int nframes {vp.get_dim1()};
@@ -735,6 +739,12 @@ namespace Axisym
 					const double dE {-grad_par(bkg, *dfdy, zone, t, i, j, k)
 						- dot(E, B) / Bm};
 					for (int c {}; c < 3; ++c) E[c] += dE * B[c] / Bm;
+				}
+				if (epar)
+				{
+					const double Bm {std::sqrt(dot(B, B))};
+					const double e {(*epar)(zone, t, i, j, k)};
+					for (int c {}; c < 3; ++c) E[c] += e * B[c] / Bm;
 				}
 				const Vec3 gradB {gX(zone, t, i, j, k), gY(zone, t, i, j, k),
 					gZ(zone, t, i, j, k)};

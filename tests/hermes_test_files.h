@@ -368,10 +368,13 @@ namespace HermesTest
 		bool duplicate_place {false};	///< File 1 says it's at file 0's place
 	};
 
-	/// Apar (normalized) at global cell (i, j, k), time index t
+	/// Apar (normalized) at global cell (i, j, k), time index t. Not
+	/// linear in t, and its rate of change depends on the cell, so
+	/// dApar/dt shows which output times and cells were used.
 	inline double apar_value(int t, int i, int j, int k)
 	{
-		return 0.3 + 0.02 * i - 0.01 * j + 0.005 * k + 0.001 * t;
+		return 0.3 + 0.02 * i - 0.01 * j + 0.005 * k + 0.001 * t
+			+ 0.0002 * t * t + 0.0001 * t * (i + 2 * j + 3 * k);
 	}
 
 	/**

@@ -554,7 +554,7 @@ namespace Hermes
 		m_te {Axisym::zoned(zones, nframes)},
 		m_ti {Axisym::zoned(zones, nframes)},
 		m_vp {Axisym::zoned(zones, nframes)},
-		m_upar {Axisym::zoned(zones, nframes)},
+		m_upar {Axisym::zoned(zones, nframes)}, m_zones {&zones},
 		m_times(nframes), m_labels(nframes)
 	{
 		const auto ranges {zone_ranges(grid)};
@@ -605,6 +605,37 @@ namespace Hermes
 	}
 
 	/**
+	* Makes room for the inductive parallel electric field, -dApar/dt,
+	* which the reader then fills with store_dapar_dt. finish_background
+	* adds it to E_par.
+	*/
+	void Frames::enable_inductive()
+	{
+		m_epar = Axisym::zoned(*m_zones, m_nframes);
+	}
+
+	/**
+	* Stores one cell of one time of the inductive parallel electric field
+	* from dApar/dt, as BOUT++ unnormalizes it: Apar is b . A in units of
+	* Bnorm rho_s0 and time in units of 1 / Omega_ci, so E = -dApar/dt
+	* Bnorm c_s0 (V/m), along b. b is along +y in HERMES, so as for the
+	* flow, E along B is that times parallel_sign.
+	*
+	* @param t Index of the time (0 to nframes - 1).
+	* @param x, y Global cell indices (x counting the guard cells).
+	* @param k Toroidal cell index.
+	* @param dapar_dt dApar/dt, normalized.
+	*/
+	void Frames::store_dapar_dt(const int t, const int x, const int y,
+		const int k, const double dapar_dt)
+	{
+		const Cell& c {m_cells[static_cast<std::size_t>(x) * m_ny + y]};
+		if (c.zone < 0) return;
+		m_epar(c.zone, t, c.i, c.j, k) = static_cast<BkgFPType>(-m_sign
+			* dapar_dt * m_norm.bnorm * m_cs0);
+	}
+
+	/**
 	* Sets the time of one of the stored times.
 	*
 	* @param t Index of the time (0 to nframes - 1).
@@ -626,7 +657,8 @@ namespace Hermes
 	* The background must already have its zones, geometry and magnetic
 	* field. The times must increase. Ghost cells are filled with
 	* Zones::fill_ghosts, and E and the flows come from
-	* Axisym::calc_efield_and_flows. The runs' outputs have no heat
+	* Axisym::calc_efield_and_flows, with the inductive E_par added if the
+	* reader stored it (hermes_inductive_epar = "on"). The runs' outputs have no heat
 	* fluxes, so with hermes_heat_flux = "conduction" they're calculated
 	* from the conduction (Axisym::calc_conductive_heat_fluxes), with the
 	* hermes_kappa_* options and one ion species of charge 1.
@@ -667,7 +699,24 @@ namespace Hermes
 		bkg.move_into_ne(frames.m_ne);
 		bkg.move_into_te(frames.m_te);
 		bkg.move_into_ti(frames.m_ti);
-		Axisym::calc_efield_and_flows(bkg, frames.m_vp, frames.m_upar);
+		const bool inductive {frames.inductive()};
+		if (inductive)
+		{
+			zones.fill_ghosts(frames.m_epar);
+			double sum2 {};
+			std::size_t n {};
+			for (const double e : frames.m_epar.get_data())
+			{
+				sum2 += e * e;
+				++n;
+			}
+			std::cout << "  Inductive E_par = -dApar/dt added to E (rms "
+				<< std::sqrt(sum2 / std::max<std::size_t>(n, 1))
+				<< " V/m)\n";
+		}
+		Axisym::calc_efield_and_flows(bkg, frames.m_vp, frames.m_upar,
+			inductive ? &frames.m_epar : nullptr);
+		frames.m_epar = {};
 		bkg.move_into_vp(frames.m_vp);
 
 		// The runs don't write the heat fluxes, so they're calculated from
@@ -868,6 +917,18 @@ namespace Hermes
 		bkg.set_ion_mass_amu(norm.ion_aa);
 
 		Frames frames(grid, bkg.get_zones(), norm, nframes);
+		// The inductive E_par, -dApar/dt, needs Apar, which only BOUT++
+		// dumps of an electromagnetic run have
+		if (opts.hermes_inductive_epar_int() == 1)
+		{
+			if (bout && layout.has("Apar")) frames.enable_inductive();
+			else
+			{
+				std::cout << "  No Apar in the " << (bout ? "dumps "
+					"(electrostatic run)" : "JAX-Hermes3 snapshots")
+					<< ", so E_par is -grad_par phi only.\n";
+			}
+		}
 		if (bout)
 		{
 			read_bout_dumps(layout, times, opts.hermes_ion_species(),

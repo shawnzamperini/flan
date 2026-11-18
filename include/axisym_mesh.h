@@ -129,7 +129,8 @@ namespace Axisym
 
 	void calc_efield_and_flows(Background::Background& bkg,
 		const Vectors::ZonedVector<BkgFPType>& vp,
-		const Vectors::ZonedVector<BkgFPType>& upar);
+		const Vectors::ZonedVector<BkgFPType>& upar,
+		const Vectors::ZonedVector<BkgFPType>* epar = nullptr);
 
 	/// Settings of the conductive heat flux (see calc_conductive_heat_fluxes)
 	struct Conduction
