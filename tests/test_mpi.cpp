@@ -486,6 +486,11 @@ TEST_F(MPITest, BroadcastS3XBackground)
 	EXPECT_EQ(bkg.get_elec_mass_amu(), want.get_elec_mass_amu());
 	EXPECT_EQ(bkg.get_ion_mass_amu(), want.get_ion_mass_amu());
 
+	// Toroidal handedness. SOLEDGE3X's isn't the default, so a missing
+	// broadcast is caught.
+	EXPECT_EQ(want.get_phi_sign(), S3X::phi_sign);
+	EXPECT_EQ(bkg.get_phi_sign(), want.get_phi_sign());
+
 	// Plasma, fields and geometry
 	expect_same(bkg.get_ne(), want.get_ne(), "ne");
 	expect_same(bkg.get_te(), want.get_te(), "te");

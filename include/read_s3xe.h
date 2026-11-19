@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "axisym_mesh.h"
 #include "background.h"
 #include "flan_types.h"
 #include "hdf5_utils.h"
@@ -24,7 +25,8 @@ namespace S3X
 	* frame. SOLEDGE3X's (R, Z, phi) is right-handed, so phi increases
 	* clockwise seen from above, the opposite of the usual (R, phi, Z), and
 	* a point is at (X, Y, Z) = (R cos phi, phi_sign R sin phi, Z) with
-	* phi_sign = -1.
+	* phi_sign = -1. read_s3xe puts it in the background (see
+	* Background::get_phi_sign), which other code should use instead.
 	*/
 	inline constexpr double phi_sign {-1.0};
 
@@ -84,23 +86,9 @@ namespace S3X
 
 	Mesh read_mesh(const std::string& mesh_path, const int nphi);
 
-	std::array<double, 3> derivatives(const Zones::Zones& zones,
-		const Vectors::ZonedVector<BkgFPType>& f, const int zone,
-		const int t, const int i, const int j, const int k);
-
-	std::array<double, 3> gradient(const Background::Background& bkg,
-		const Vectors::ZonedVector<BkgFPType>& f, const int zone,
-		const int t, const int i, const int j, const int k);
-
-	void calc_geometry(const Mesh& mesh, Background::Background& bkg);
-
-	void calc_bfield(const Mesh& mesh, const int nframes,
-		Background::Background& bkg);
+	Axisym::Mesh to_axisym(const Mesh& mesh);
 
 	void load_chi(const Mesh& mesh, Background::Background& bkg);
-
-	void report_ghosts(const Zones::Zones& zones,
-		const Vectors::ZonedVector<BkgFPType>& v, const std::string& name);
 
 	bool has_phi_face_fluxes(const Hdf5::File& file,
 		const std::string& species);
@@ -113,10 +101,6 @@ namespace S3X
 	void read_frames(const std::vector<std::string>& frame_paths,
 		const Reference& ref, const Mesh& mesh,
 		Background::Background& bkg, const bool strict = false);
-
-	void calc_efield_and_flows(Background::Background& bkg,
-		const Vectors::ZonedVector<BkgFPType>& vp,
-		const Vectors::ZonedVector<BkgFPType>& upar);
 
 	Background::Background read_s3xe(const Options::Options& opts);
 }

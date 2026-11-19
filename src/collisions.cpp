@@ -242,7 +242,8 @@ namespace Collisions
 			warn("The background has no parallel heat fluxes, so the "
 				"thermal force isn't\nincluded (imp_thermal_force = \"on\" "
 				"needs SOLEDGE3X plasma files with\nthe fluxes on the phi "
-				"faces). The collisions use Maxwellians.");
+				"faces, or a HERMES background with hermes_heat_flux =\n"
+				"\"conduction\"). The collisions use Maxwellians.");
 			return;
 		}
 		if (have_i != have_e)
@@ -802,9 +803,7 @@ namespace Collisions
 			// they are calculated once, before the sub-steps.
 			const double s_coeff {nanbu_s_coeff(q, T, Te, ne, slots.mass(),
 				mass_kg)};
-			const double uX {bkg.interp_uX(zone, t, x, y, z)}; 
-			const double uY {bkg.interp_uY(zone, t, x, y, z)}; 
-			const double uZ {bkg.interp_uZ(zone, t, x, y, z)}; 
+			const auto [uX, uY, uZ] = bkg.interp_u(zone, t, x, y, z);
 
 			// Sub-cycling. Nanbu's model collides the impurity with ONE
 			// background particle per call. The friction and the thermal

@@ -3,8 +3,8 @@
 *
 * @brief Sputtering of wall surfaces by the background plasma.
 *
-* There are two parts so far: the sputtering yield, and the wall surfaces
-* that get sputtered.
+* The parts: the sputtering yield, the wall surfaces that get sputtered,
+* the sputtered source and its atoms, and where they land again.
 *
 * Yield (YieldTable)
 * ------------------
@@ -80,6 +80,15 @@
 *
 * Everything is done per toroidal cell, so each face appears once in
 * every toroidal cell of its zone, with that cell's range of phi.
+*
+* Grids fitted to the targets (HERMES) are simpler. A hypnotoad grid ends
+* at the divertor targets, so the targets are the zone faces marked as wall
+* faces (Zones::face_wall), there's no wall mask, and the plasma cells
+* along a target are the ones whose plasma hits it. Every cell face on a
+* wall face is an element with its own normal and area, which are the
+* target's, so nothing falls back and no outline is needed. The ion flux
+* onto it is then the flow along the field through the target face,
+* n u_par b . n, the same as for a staircase face with the true normal.
 *
 * Sputtered source (Source)
 * -------------------------
@@ -163,8 +172,11 @@
 * landing on an element gives the rate atoms are redeposited there, and
 * subtracting it from the element's source gives its net erosion. How
 * long after being sputtered each atom landed, and its charge then, are
-* tallied too. Atoms absorbed at a wall face (the end of a zone) are only
-* counted in total, since they aren't on a surface element.
+* tallied too. On a grid fitted to the targets, an atom absorbed at a wall
+* face is put on the element at the cell of the face it crossed. On a
+* SOLEDGE3X background the wall faces (the ends of the zones) are inside
+* the material, with no elements on them, so atoms absorbed there are only
+* counted in total.
 */
 
 #include <algorithm>
@@ -185,8 +197,8 @@
 #include "constants.h"
 #include "errors.h"
 #include "hdf5_utils.h"
+#include "indices.h"
 #include "options.h"
-#include "read_s3xe.h"
 #include "sputtering.h"
 #include "zones.h"
 
@@ -467,7 +479,142 @@ namespace Sputtering
 	}
 
 	/**
-	* Finds the wall surfaces of a SOLEDGE3X background.
+	* Finds the wall surfaces of a background.
+	*
+	* A background with a wall mask (SOLEDGE3X) has its mesh run past the
+	* wall, so the surface is the staircase of faces between plasma and
+	* wall cells (find_staircase). Its wall faces (the ends of the zones)
+	* are inside the material and aren't used. A background without one
+	* whose grid is fitted to the targets (HERMES) has the targets at the
+	* wall faces of its zones (find_wall_faces).
+	*
+	* The run stops if neither gives any surface, e.g., for a Gkeyll or
+	* slab background, whose z isn't the toroidal angle.
+	*
+	* @param bkg The background, with its geometry.
+	* @param max_wall_dist How far, in cell widths, the nearest wall
+	*        outline segment can be from a staircase face before the
+	*        element falls back to the face's own normal and area. Only
+	*        used with a wall mask. Defaults to 2.
+	*/
+	Surface::Surface(const Background::Background& bkg,
+		const double max_wall_dist)
+	{
+		if (!bkg.get_chi().get_data().empty())
+			find_staircase(bkg, max_wall_dist);
+		else
+			find_wall_faces(bkg);
+
+		if (m_elements.empty())
+		{
+			Errors::fatal_error("Sputtering surfaces need a background with "
+				"a wall mask (chi), as SOLEDGE3X backgrounds have, or with "
+				"wall faces on a toroidal grid fitted to the targets, as "
+				"HERMES backgrounds have. This background has neither.");
+		}
+	}
+
+	/**
+	* Finds the wall surfaces of a grid fitted to the targets (HERMES).
+	*
+	* Hypnotoad grids end at the divertor targets, so the targets are the
+	* zone faces with the code Zones::face_wall, and every plasma cell on
+	* one has a face that is part of the target. Each becomes a
+	* SurfaceElement with that face's own corners, area and normal (pointed
+	* into the plasma), exactly as find_staircase works them out before
+	* looking for a wall outline: the face is the wall here, so there's
+	* nothing to correct and no element falls back. There's no wall cell
+	* across the face (wall_zone = -1), so redeposited atoms are put on the
+	* element by where they cross the face (Deposition::add_at_wall_face).
+	*
+	* Only zones whose z is the toroidal angle (Zones::is_toroidal) are
+	* used, since the area and the normal's direction need phi. Wall faces
+	* in z are skipped, as they aren't in the poloidal plane.
+	*
+	* @param bkg Background whose zones have wall faces.
+	*/
+	void Surface::find_wall_faces(const Background::Background& bkg)
+	{
+		m_wall_faces = true;
+		const Zones::Zones& zones {bkg.get_zones()};
+		const auto& grid_X {bkg.get_grid_X()};
+		const auto& grid_Y {bkg.get_grid_Y()};
+		const auto& grid_Z {bkg.get_grid_Z()};
+		const auto& X {bkg.get_X()};
+		const auto& Y {bkg.get_Y()};
+		const auto& Z {bkg.get_Z()};
+
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			if (!zones.is_toroidal(zone)) continue;
+			const int nx {zones.get_nx(zone)};
+			const int ny {zones.get_ny(zone)};
+			const auto& grid_z {zones.get_grid_z(zone)};
+
+			auto corner = [&](int ci, int cj, int k) -> RZ
+			{
+				return {std::hypot(grid_X(zone, ci, cj, k),
+					grid_Y(zone, ci, cj, k)), grid_Z(zone, ci, cj, k)};
+			};
+
+			for (const FaceStencil& s : stencils)
+			{
+				if (zones.get_face(zone, s.face) != Zones::face_wall)
+					continue;
+
+				// The cells along the face: one row or column of the zone
+				const bool x_face {s.face == Zones::xmin
+					|| s.face == Zones::xmax};
+				const int i_lo {s.face == Zones::xmax ? nx - 1 : 0};
+				const int i_hi {s.face == Zones::xmin ? 1 : nx};
+				const int j_lo {s.face == Zones::ymax ? ny - 1 : 0};
+				const int j_hi {s.face == Zones::ymin ? 1 : ny};
+				for (int i {x_face ? i_lo : 0}; i < (x_face ? i_hi : nx); ++i)
+				for (int j {x_face ? 0 : j_lo}; j < (x_face ? ny : j_hi); ++j)
+				for (int k {}; k < zones.get_nz(zone); ++k)
+				{
+					SurfaceElement e {};
+					e.zone = zone;
+					e.i = i;
+					e.j = j;
+					e.k = k;
+					e.face = s.face;
+					e.wall_zone = -1;
+					e.wall_i = -1;
+					e.wall_j = -1;
+					e.phi_min = grid_z[k];
+					e.phi_max = grid_z[k + 1];
+
+					const RZ c0 {corner(i + s.c0i, j + s.c0j, k)};
+					const RZ c1 {corner(i + s.c1i, j + s.c1j, k)};
+					const RZ mid {0.5 * (c0 + c1)};
+					e.R0 = c0.R;
+					e.Z0 = c0.Z;
+					e.R1 = c1.R;
+					e.Z1 = c1.Z;
+					e.R_mid = mid.R;
+					e.Z_mid = mid.Z;
+					e.area_face = norm(c1 - c0) * mid.R
+						* (e.phi_max - e.phi_min);
+					e.area = e.area_face;
+
+					const RZ center {std::hypot(X(zone, i, j, k),
+						Y(zone, i, j, k)), Z(zone, i, j, k)};
+					const RZ n_face {orient_like(unit_normal(c0, c1),
+						center - mid)};
+					e.n_R = n_face.R;
+					e.n_Z = n_face.Z;
+
+					m_total_area += e.area;
+					m_elements.push_back(e);
+				}
+			}
+		}
+	}
+
+	/**
+	* Finds the staircase of wall surfaces of a background with a wall
+	* mask (SOLEDGE3X).
 	*
 	* See the top of this file for the idea. For every cell of every zone
 	* that is in the plasma (chi < 0.5), each of its four faces in the
@@ -501,17 +648,12 @@ namespace Sputtering
 	*        Its wall outlines (Background::get_walls) give the normals.
 	* @param max_wall_dist How far, in cell widths, the nearest wall
 	*        segment can be from a face before the element falls back to
-	*        the face's own normal and area. Defaults to 2.
+	*        the face's own normal and area.
 	*/
-	Surface::Surface(const Background::Background& bkg,
+	void Surface::find_staircase(const Background::Background& bkg,
 		const double max_wall_dist)
 	{
 		const auto& chi {bkg.get_chi()};
-		if (chi.get_data().empty())
-		{
-			Errors::fatal_error("Sputtering surfaces need a background with "
-				"a wall mask (chi), which only SOLEDGE3X backgrounds have.");
-		}
 
 		const Zones::Zones& zones {bkg.get_zones()};
 		const auto& grid_X {bkg.get_grid_X()};
@@ -656,7 +798,8 @@ namespace Sputtering
 	/**
 	* @name Accessors
 	* The surface elements, how many there are, how many fell back to their
-	* face's own normal and area, and the sum of their areas (m^2).
+	* face's own normal and area, the sum of their areas (m^2), and whether
+	* they are the zones' wall faces (targets) rather than a staircase.
 	*/
 	///@{
 	const std::vector<SurfaceElement>& Surface::elements() const
@@ -664,6 +807,7 @@ namespace Sputtering
 	std::size_t Surface::size() const {return m_elements.size();}
 	int Surface::num_fallback() const {return m_num_fallback;}
 	double Surface::total_area() const {return m_total_area;}
+	bool Surface::from_wall_faces() const {return m_wall_faces;}
 	///@}
 
 	/**
@@ -693,6 +837,21 @@ namespace Sputtering
 				t->area += e.area;
 				t->area_face += e.area_face;
 			}
+		}
+
+		// Target faces are the wall itself, so there's no outline to fall
+		// back from
+		if (m_wall_faces)
+		{
+			os << "Sputtering surface (target faces): " << all.n
+				<< " elements, area " << all.area << " m^2\n";
+			for (const auto& [zone, t] : per_zone)
+			{
+				os << "  zone " << std::setw(3) << zone + 1 << ": "
+					<< std::setw(7) << t.n << " elements, area " << t.area
+					<< " m^2\n";
+			}
+			return;
 		}
 
 		os << "Sputtering surface: " << all.n << " elements, area "
@@ -843,7 +1002,8 @@ namespace Sputtering
 		const Background::Background& bkg, const YieldTable& table,
 		const Options::Options& opts)
 		: m_surface {surface},
-		m_nframes {static_cast<int>(bkg.get_times().size())}
+		m_nframes {static_cast<int>(bkg.get_times().size())},
+		m_phi_sign {bkg.get_phi_sign()}
 	{
 		// The table has to be for the impurity being followed, sputtered by
 		// the background's singly charged ions
@@ -935,11 +1095,11 @@ namespace Sputtering
 
 			// The element's normal in Cartesian coordinates, in the middle
 			// of its phi range. Positions are (R cos phi,
-			// phi_sign R sin phi, Z), so R_hat is (cos phi,
-			// phi_sign sin phi, 0).
+			// phi_sign R sin phi, Z), with the background's phi_sign, so
+			// R_hat is (cos phi, phi_sign sin phi, 0).
 			const double phi {0.5 * (el.phi_min + el.phi_max)};
 			const Vec3 n_wall {el.n_R * std::cos(phi),
-				el.n_R * S3X::phi_sign * std::sin(phi), el.n_Z};
+				el.n_R * m_phi_sign * std::sin(phi), el.n_Z};
 
 			// Plasma in the element's plasma cell
 			const double n_i {std::max(static_cast<double>(
@@ -1341,7 +1501,7 @@ namespace Sputtering
 
 		// 5. Direction: cosine about the normal at the atom's phi
 		const std::array<double, 3> n {el.n_R * std::cos(b.z),
-			el.n_R * S3X::phi_sign * std::sin(b.z), el.n_Z};
+			el.n_R * m_phi_sign * std::sin(b.z), el.n_Z};
 		const double u1 {rng.next_double()};
 		const double u2 {rng.next_double()};
 		const auto d {cosine_direction(n, u1, u2)};
@@ -1361,6 +1521,19 @@ namespace Sputtering
 			auto u = [](int v) {return static_cast<std::uint64_t>(v) & 0xffff;};
 			return (u(zone) << 48) | (u(i) << 32) | (u(j) << 16) | u(k);
 		}
+
+		/**
+		* Packs the cell of a zone's wall face an element is on into one
+		* key: the zone, the face, the cell's index along the face (j for
+		* an x face, i for a y face) and its toroidal cell. Its own map, so
+		* it can't clash with cell_key.
+		*/
+		std::uint64_t wall_face_key(const int zone, const Zones::Face face,
+			const int i, const int j, const int k)
+		{
+			const bool x_face {face == Zones::xmin || face == Zones::xmax};
+			return cell_key(zone, static_cast<int>(face), x_face ? j : i, k);
+		}
 	}
 
 	/**
@@ -1368,7 +1541,10 @@ namespace Sputtering
 	*
 	* Each wall cell that borders the plasma gets a list of the surface
 	* elements on it (usually one, or two at a corner of the staircase), so
-	* an atom absorbed in that wall cell can be put on one of them. The time
+	* an atom absorbed in that wall cell can be put on one of them. Each
+	* element on a wall face of its zone (a target) is found instead by its
+	* zone, face, cell along the face and toroidal cell, so an atom
+	* absorbed at that face can be put on it (add_at_wall_face). The time
 	* since birth is binned in 10 bins per decade from 1e-10 s to 1e-1 s
 	* (shorter and longer times go in the first and last bins), and the
 	* charge from 0 to the atomic number.
@@ -1384,6 +1560,12 @@ namespace Sputtering
 		for (std::size_t e {}; e < surface.size(); ++e)
 		{
 			const SurfaceElement& el {surface.elements()[e]};
+			if (el.on_wall_face())
+			{
+				m_wall_faces[wall_face_key(el.zone, el.face, el.i, el.j,
+					el.k)] = e;
+				continue;
+			}
 			m_wall_cells[cell_key(el.wall_zone, el.wall_i, el.wall_j, el.k)]
 				.push_back(e);
 		}
@@ -1473,17 +1655,57 @@ namespace Sputtering
 
 	/**
 	* Adds an atom absorbed at a wall face (e.g., a divertor target at the
-	* end of a zone). Called from inside OpenMP loops, so the adds are
-	* atomic.
+	* end of a zone).
 	*
+	* If the surface has elements on wall faces (a grid fitted to the
+	* targets), the atom is put on the one at the cell of the face it
+	* crossed: its position along the face and in z picks the cell. z is
+	* wrapped first if the zone is periodic in z, since the z faces are
+	* checked after the y faces, so z can still be just past the zone's
+	* end. Otherwise (SOLEDGE3X, whose wall faces are inside the material,
+	* or a face with no element) it's only counted in wall_face. Called from
+	* inside OpenMP loops, so the adds are atomic.
+	*
+	* @param zones The background's zones.
+	* @param zone Zone whose face the atom crossed.
+	* @param face The face it crossed.
+	* @param pos Its computational position (x, y, z) in that zone, past
+	*        the face.
 	* @param pt Time since the atom was born (s).
 	* @param q Its charge.
 	* @param weight Its weight (atoms/s).
 	*/
-	void Deposition::add_at_wall_face(const double pt, const int q,
+	void Deposition::add_at_wall_face(const Zones::Zones& zones,
+		const int zone, const Zones::Face face,
+		const std::array<double, 3>& pos, const double pt, const int q,
 		const double weight)
 	{
 		add_lifetime_and_charge(pt, q, weight);
+
+		if (!m_wall_faces.empty())
+		{
+			// Cell along the face (clamped to the zone by
+			// get_nearest_cell_index_cpu) and toroidal cell
+			const bool x_face {face == Zones::xmin || face == Zones::xmax};
+			const int along {x_face
+				? Indices::get_nearest_cell_index_cpu(zones.get_grid_y(zone),
+					pos[1])
+				: Indices::get_nearest_cell_index_cpu(zones.get_grid_x(zone),
+					pos[0])};
+			const double z {zones.get_face(zone, Zones::zmin) == zone
+				? zones.wrap_z(zone, pos[2]) : pos[2]};
+			const int k {Indices::get_nearest_cell_index_cpu(
+				zones.get_grid_z(zone), z)};
+			const auto it {m_wall_faces.find(wall_face_key(zone, face,
+				along, along, k))};
+			if (it != m_wall_faces.end())
+			{
+				#pragma omp atomic
+				m_redeposited[it->second] += weight;
+				return;
+			}
+		}
+
 		#pragma omp atomic
 		m_wall_face += weight;
 	}

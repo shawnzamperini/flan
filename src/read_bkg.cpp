@@ -13,6 +13,7 @@
 #include "errors.h"
 #include "options.h"
 #include "read_gkyl.h"
+#include "read_hermes.h"
 #include "read_s3xe.h"
 #include "read_slab.h"
 #include "zones.h"
@@ -26,7 +27,8 @@ namespace Background
 	* "slab" makes a box of plasma in simple fields from the slab_* options
 	* with Slab::read_slab,
 	* "gkeyll" loads a Gkeyll simulation with Gkyl::read_gkyl and
-	* "soledge3x" loads a SOLEDGE3X simulation with S3X::read_s3xe. If the
+	* "soledge3x" loads a SOLEDGE3X simulation with S3X::read_s3xe and
+	* "hermes" a HERMES simulation with Hermes::read_hermes. If the
 	* source is not recognized, the run is stopped with Errors::fatal_error.
 	* Options::set_bkg_source already rejects any other value, so this is
 	* only a safeguard.
@@ -59,6 +61,12 @@ namespace Background
 		else if (opts.bkg_source_int() == 2)
 		{
 			bkg = S3X::read_s3xe(opts);
+		}
+
+		// Load in a HERMES (JAX-Hermes3) background
+		else if (opts.bkg_source_int() == 3)
+		{
+			bkg = Hermes::read_hermes(opts);
 		}
 
 		// Unrecognized option

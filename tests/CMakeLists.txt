@@ -61,16 +61,51 @@ add_test(NAME SputteringCPUTest COMMAND test_sputtering_cpu)
 add_executable(test_thermal_force_cpu test_thermal_force_cpu.cpp)
 target_link_libraries(test_thermal_force_cpu PRIVATE flan gtest_main
 	OpenMP::OpenMP_CXX)
-add_test(NAME ThermalForceCPUTest COMMAND test_thermal_force_cpu)
+# The Monte Carlo sampling and kick tests take most of the time, so they
+# are separate CTest entries that can run in parallel with ctest -j
+add_test(NAME ThermalForceSamplerCPUTest COMMAND test_thermal_force_cpu
+	--gtest_filter=ThermalForce.SkewedSampler)
+add_test(NAME ThermalForceKickCPUTest COMMAND test_thermal_force_cpu
+	--gtest_filter=ThermalForce.NanbuKick:ThermalForce.SubCycledKick)
+add_test(NAME ThermalForceCPUTest COMMAND test_thermal_force_cpu
+	--gtest_filter=-ThermalForce.SkewedSampler:ThermalForce.NanbuKick:ThermalForce.SubCycledKick)
 
 add_executable(test_read_s3xe_cpu test_read_s3xe_cpu.cpp)
 target_link_libraries(test_read_s3xe_cpu PRIVATE flan gtest_main hdf5)
 add_test(NAME ReadS3XECPUTest COMMAND test_read_s3xe_cpu)
 
+add_executable(test_npz_cpu test_npz_cpu.cpp)
+target_link_libraries(test_npz_cpu PRIVATE flan gtest_main netcdf-cxx4
+	netcdf)
+add_test(NAME NpzCPUTest COMMAND test_npz_cpu)
+
+add_executable(test_read_hermes_cpu test_read_hermes_cpu.cpp)
+target_link_libraries(test_read_hermes_cpu PRIVATE flan gtest_main
+	netcdf-cxx4 netcdf)
+add_test(NAME ReadHermesCPUTest COMMAND test_read_hermes_cpu)
+
+add_executable(test_braginskii_cpu test_braginskii_cpu.cpp)
+target_link_libraries(test_braginskii_cpu PRIVATE flan gtest_main)
+add_test(NAME BraginskiiCPUTest COMMAND test_braginskii_cpu)
+
+add_executable(test_field_aligned_cpu test_field_aligned_cpu.cpp)
+target_link_libraries(test_field_aligned_cpu PRIVATE flan gtest_main
+	netcdf-cxx4 netcdf)
+add_test(NAME FieldAlignedCPUTest COMMAND test_field_aligned_cpu)
+
+add_executable(test_axisym_mesh_cpu test_axisym_mesh_cpu.cpp)
+target_link_libraries(test_axisym_mesh_cpu PRIVATE flan gtest_main)
+add_test(NAME AxisymMeshCPUTest COMMAND test_axisym_mesh_cpu)
+
 add_executable(test_s3x_bkg_cpu test_s3x_bkg_cpu.cpp)
 target_link_libraries(test_s3x_bkg_cpu PRIVATE flan gtest_main hdf5
 	OpenMP::OpenMP_CXX)
 add_test(NAME S3XBkgCPUTest COMMAND test_s3x_bkg_cpu)
+
+add_executable(test_wedge_cpu test_wedge_cpu.cpp)
+target_link_libraries(test_wedge_cpu PRIVATE flan gtest_main hdf5
+	OpenMP::OpenMP_CXX)
+add_test(NAME WedgeCPUTest COMMAND test_wedge_cpu)
 
 add_executable(test_stats_cpu test_stats_cpu.cpp)
 target_link_libraries(test_stats_cpu PRIVATE flan gtest_main
@@ -169,3 +204,14 @@ if(ENABLE_CUDA)
 	add_test(NAME InterpolateCUDATest COMMAND test_interpolate_cuda)
 
 endif()
+
+# ------------------------------------------------------------
+# OpenMP threads per test. Without a limit every test starts one thread
+# per hardware thread, so ctest -j N oversubscribes the machine (badly on
+# a shared login node) and runs several times slower. Set
+# FLAN_TEST_THREADS (e.g., cmake -DFLAN_TEST_THREADS=16 .) to change it.
+# ------------------------------------------------------------
+set(FLAN_TEST_THREADS 4 CACHE STRING "OpenMP threads for each test")
+get_property(flan_tests DIRECTORY PROPERTY TESTS)
+set_tests_properties(${flan_tests} PROPERTIES
+	ENVIRONMENT "OMP_NUM_THREADS=${FLAN_TEST_THREADS}")

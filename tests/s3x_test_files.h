@@ -47,6 +47,8 @@ namespace S3XTest
 		int npsi_sol {8};		// Cells in psi, zone 3
 		int ntheta {40};		// Cells in theta, every zone
 		int nphi {6};			// Toroidal planes, in the plasma file
+		double phi_span {2.0 * pi};	// Width of phicorners (a wedge if
+									// under 2 pi)
 
 		// Things the tests can break
 		int nzones_written {3};		// Zones written to NZones
@@ -245,7 +247,7 @@ namespace S3XTest
 			write(file, g + "/Nphi", {1},
 				std::vector<int64_t> {m.mesh_nphi});
 			write(file, g + "/phicorners", {2},
-				std::vector<double> {0.0, 2.0 * pi});
+				std::vector<double> {0.0, m.phi_span});
 
 			const int extra {zone == 0 ? m.corner_extra : 0};
 			std::vector<double> Rc {}, Zc {};

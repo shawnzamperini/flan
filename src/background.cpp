@@ -341,6 +341,28 @@ namespace Background
 	///@}
 
 	/**
+	* Get or set the handedness of a multi-zone background's toroidal angle
+	* z: a point at major radius R is at (R cos z, phi_sign R sin z, Z) in
+	* Cartesian coordinates, so phi_sign is +1 if (R, z, Z) is right handed
+	* and -1 if it's left handed (e.g., SOLEDGE3X). It's set with the
+	* geometry (Axisym::calc_geometry) and used wherever Cartesian vectors
+	* are built from (R, z, Z) ones, e.g., the wall normals for sputtering.
+	*/
+	///@{
+	double Background::get_phi_sign() const {return m_phi_sign;}
+
+	void Background::set_phi_sign(const double phi_sign)
+	{
+		if (phi_sign != 1.0 && phi_sign != -1.0)
+		{
+			Errors::fatal_error("Background::set_phi_sign: phi_sign is "
+				+ std::to_string(phi_sign) + ", but must be +1 or -1.");
+		}
+		m_phi_sign = phi_sign;
+	}
+	///@}
+
+	/**
 	* Stops the run with Errors::fatal_error if the background does not
 	* have exactly one zone.
 	*
@@ -1339,44 +1361,95 @@ namespace Background
 	* @param x0 x-coordinate at which to evaluate the data.
 	* @param y0 y-coordinate at which to evaluate the data.
 	* @param z0 z-coordinate at which to evaluate the data.
+	* @param aligned If true, interpolate along the field line in zones
+	*        with a zShift table (see Utilities::interp_aligned). True for
+	*        plasma quantities, false (the default) for the geometry and B.
 	* @return Interpolated value at (t0, x0, y0, z0).
 	*/
 	BkgFPType Background::interp_4d(
 		const Vectors::ZonedVector<BkgFPType>& vec, const int zone,
 		const double t0, const double x0, const double y0,
-		const double z0) const
+		const double z0, const bool aligned) const
 	{
 		// This is really just a convenient wrapper to handle passing in
 		// times and the x, y, z vectors.
 		return Utilities::interp_vec4d(vec, zone, m_zones, m_times, t0, x0,
-			y0, z0);
+			y0, z0, aligned);
+	}
+
+	/**
+	* Interpolates a Cartesian vector field of the plasma (e.g., the flow
+	* or E) at a point.
+	*
+	* In a zone with a zShift table, the vector is interpolated along the
+	* field line, with each sample rotated to the point's toroidal angle
+	* (see Utilities::interp_aligned). Otherwise each component is
+	* interpolated with interp_4d, as before.
+	*
+	* @param vX X component, as (zone, t, x, y, z).
+	* @param vY Y component.
+	* @param vZ Z component.
+	* @param zone Zone the point is in.
+	* @param t0 Time at which to evaluate the vector.
+	* @param x0 x-coordinate of the point.
+	* @param y0 y-coordinate of the point.
+	* @param z0 z-coordinate of the point.
+	* @return {vX, vY, vZ} at the point.
+	*/
+	std::array<double, 3> Background::interp_vec3(
+		const Vectors::ZonedVector<BkgFPType>& vX,
+		const Vectors::ZonedVector<BkgFPType>& vY,
+		const Vectors::ZonedVector<BkgFPType>& vZ, const int zone,
+		const double t0, const double x0, const double y0,
+		const double z0) const
+	{
+		if (m_zones.has_z_shift(zone))
+		{
+			return Utilities::interp_aligned<BkgFPType, 3>({&vX, &vY, &vZ},
+				zone, m_zones, m_times, t0, x0, y0, z0, m_phi_sign);
+		}
+		return {interp_4d(vX, zone, t0, x0, y0, z0),
+			interp_4d(vY, zone, t0, x0, y0, z0),
+			interp_4d(vZ, zone, t0, x0, y0, z0)};
+	}
+
+	/**
+	* Interpolates the background flow (uX, uY, uZ) at a point with
+	* interp_vec3.
+	*/
+	std::array<double, 3> Background::interp_u(const int zone,
+		const double t0, const double x0, const double y0,
+		const double z0) const
+	{
+		return interp_vec3(m_uX, m_uY, m_uZ, zone, t0, x0, y0, z0);
 	}
 
 	/**
 	* @name Interpolation at a point
 	*
 	* Interpolate one plasma quantity at the time and position (t0, x0,
-	* y0, z0) in a zone using interp_4d. The quantities are the electron
-	* temperature (te), ion temperature (ti), electron density (ne) and the
-	* background flow components (uX, uY, uZ).
+	* y0, z0) in a zone using interp_4d, along the field line in zones
+	* with a zShift table. The quantities are the electron temperature
+	* (te), ion temperature (ti) and electron density (ne). The flow is a
+	* vector, see interp_u.
 	*/
 	///@{
 	BkgFPType Background::interp_te(const int zone, const double t0,
 		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_te, zone, t0, x0, y0, z0);
+		return interp_4d(m_te, zone, t0, x0, y0, z0, true);
 	}
 
 	BkgFPType Background::interp_ti(const int zone, const double t0,
 		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_ti, zone, t0, x0, y0, z0);
+		return interp_4d(m_ti, zone, t0, x0, y0, z0, true);
 	}
 
 	BkgFPType Background::interp_ne(const int zone, const double t0,
 		const double x0, const double y0, const double z0) const
 	{
-		return interp_4d(m_ne, zone, t0, x0, y0, z0);
+		return interp_4d(m_ne, zone, t0, x0, y0, z0, true);
 	}
 
 	/**
@@ -1389,7 +1462,7 @@ namespace Background
 		const double x0, const double y0, const double z0) const
 	{
 		if (m_q_par_i.get_data().empty()) return 0.0;
-		return interp_4d(m_q_par_i, zone, t0, x0, y0, z0);
+		return interp_4d(m_q_par_i, zone, t0, x0, y0, z0, true);
 	}
 
 	/**
@@ -1400,26 +1473,9 @@ namespace Background
 		const double x0, const double y0, const double z0) const
 	{
 		if (m_q_par_e.get_data().empty()) return 0.0;
-		return interp_4d(m_q_par_e, zone, t0, x0, y0, z0);
+		return interp_4d(m_q_par_e, zone, t0, x0, y0, z0, true);
 	}
 
-	BkgFPType Background::interp_uX(const int zone, const double t0,
-		const double x0, const double y0, const double z0) const
-	{
-		return interp_4d(m_uX, zone, t0, x0, y0, z0);
-	}
-
-	BkgFPType Background::interp_uY(const int zone, const double t0,
-		const double x0, const double y0, const double z0) const
-	{
-		return interp_4d(m_uY, zone, t0, x0, y0, z0);
-	}
-
-	BkgFPType Background::interp_uZ(const int zone, const double t0,
-		const double x0, const double y0, const double z0) const
-	{
-		return interp_4d(m_uZ, zone, t0, x0, y0, z0);
-	}
 	///@}
 
 	/**
@@ -1451,6 +1507,7 @@ namespace Background
 		// Species masses
 		MPI_Bcast(&m_elec_mass_amu, 1, MPI_DOUBLE, 0, comm);
 		MPI_Bcast(&m_ion_mass_amu, 1, MPI_DOUBLE, 0, comm);
+		MPI_Bcast(&m_phi_sign, 1, MPI_DOUBLE, 0, comm);
 
 		// Broadcast the times and the zones, which hold the computational
 		// grids

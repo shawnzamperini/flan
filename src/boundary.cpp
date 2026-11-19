@@ -14,6 +14,7 @@
 * zone.
 */
 #include <array>
+#include <cmath>
 #include <iostream>
 #include <omp.h>
 #include <vector>
@@ -383,7 +384,11 @@ namespace Boundary
 	* - face_lcfs (z faces of a single-zone background only): lcfs_bc,
 	*   periodic in z (with the twist-shift in y) for particles inside
 	*   lcfs_x and absorbing, with imp_zbound_buffer, outside it.
-	* - The zone itself (periodic): periodic_bc.
+	* - The zone itself (periodic): periodic_bc. If the zone is a toroidal
+	*   wedge (Zones::Zones::is_wedge), wrapping in z moves the particle a
+	*   wedge's width around the torus, so its Cartesian velocity (vX, vY)
+	*   is rotated about Z by phi_sign times the change in z. The same is
+	*   done for a z face between two toroidal zones.
 	* - Another zone: if the particle is past the face, it moves into that
 	*   zone. Its coordinate normal to the face is shifted from this zone's
 	*   frame to the other's, and the other two are unchanged since the
@@ -413,10 +418,11 @@ namespace Boundary
 	*        added to.
 	* @param deposition If given, particles absorbed in a wall cell or at a
 	*        wall face are added to it (where on the wall, how long after
-	*        they were born, and their charge). The cell a particle was in
-	*        before this step, which it came into the wall from, is still in
-	*        its slot's cell indices, since they're only updated after the
-	*        boundary check.
+	*        they were born, and their charge). At a wall face, where on it
+	*        comes from the particle's position as it crosses. The cell a
+	*        particle was in before this step, which it came into the wall
+	*        from, is still in its slot's cell indices, since they're only
+	*        updated after the boundary check.
 	*/
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
@@ -433,6 +439,9 @@ namespace Boundary
 		{
 			core_zones[f] = zones.get_core_zones(static_cast<Zones::Face>(f));
 		}
+
+		// Handedness of (R, z, Z), for turning velocities on a wedge
+		const double phi_sign {bkg.get_phi_sign()};
 
 		// Far more crossings in one step than should ever happen
 		constexpr int max_crossings {8};
@@ -502,6 +511,10 @@ namespace Boundary
 			int state {};
 			int crossings {};
 
+			// How far the particle was moved in toroidal angle by wrapping
+			// across z faces, which its velocity is turned by at the end
+			double turn {};
+
 			// Check each face in turn. Crossing into another zone starts
 			// over at the first face of the new zone.
 			int f {};
@@ -524,8 +537,9 @@ namespace Boundary
 							: local.absorbed);
 						if (deposition != nullptr && code == Zones::face_wall)
 						{
-							deposition->add_at_wall_face(slots.pt()[i],
-								slots.q()[i], slots.weight()[i]);
+							deposition->add_at_wall_face(zones, zone, face,
+								pos, slots.pt()[i], slots.q()[i],
+								slots.weight()[i]);
 						}
 						break;
 					}
@@ -552,10 +566,14 @@ namespace Boundary
 					}
 				}
 
-				// Periodic
+				// Periodic. Wrapping in z around a toroidal wedge moves the
+				// particle a wedge's width around the torus.
 				else if (code == zone)
 				{
+					const double before {pos[a]};
 					pos[a] = periodic_bc(pos[a], lo, hi);
+					if (a == 2 && zones.is_wedge(zone))
+						turn += pos[a] - before;
 				}
 
 				// Another zone, entered if past the face
@@ -576,9 +594,15 @@ namespace Boundary
 					}
 
 					++local.crossings;
+					const double before {pos[a]};
 					pos[a] = max_bound 
 						? pos[a] - hi + zones.get_min(code, a)
 						: pos[a] - lo + zones.get_max(code, a);
+					if (a == 2 && zones.is_toroidal(zone)
+						&& zones.is_toroidal(code))
+					{
+						turn += pos[a] - before;
+					}
 					zone = code;
 					f = 0;
 					continue;
@@ -608,6 +632,19 @@ namespace Boundary
 							slots.weight()[i]);
 					}
 				}
+			}
+
+			// The velocity is Cartesian, so it turns with the particle
+			// around the torus
+			if (turn != 0.0)
+			{
+				const double ang {phi_sign * turn};
+				const double cs {std::cos(ang)};
+				const double sn {std::sin(ang)};
+				const double vX {slots.vX()[i]};
+				const double vY {slots.vY()[i]};
+				slots.set_vX(i, cs * vX - sn * vY);
+				slots.set_vY(i, sn * vX + cs * vY);
 			}
 
 			// Write back

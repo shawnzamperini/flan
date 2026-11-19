@@ -60,8 +60,9 @@ namespace
 			bkg.move_into_times(times);
 			auto zones {mesh.zones};
 			bkg.move_into_zones(zones);
-			S3X::calc_geometry(mesh, bkg);
-			S3X::calc_bfield(mesh, nframes, bkg);
+			const auto geom {S3X::to_axisym(mesh)};
+			Axisym::calc_geometry(geom, bkg);
+			Axisym::calc_bfield(geom, nframes, bkg);
 			S3X::load_chi(mesh, bkg);
 			return bkg;
 		}

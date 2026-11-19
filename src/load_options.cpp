@@ -244,6 +244,133 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "hermes_format")
+			{
+				auto set_func = std::bind(&Options::set_hermes_format, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "hermes_grid_file")
+			{
+				auto set_func = std::bind(&Options::set_hermes_grid_file, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "hermes_snap_dir")
+			{
+				auto set_func = std::bind(&Options::set_hermes_snap_dir, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "hermes_ion_species")
+			{
+				auto set_func = std::bind(&Options::set_hermes_ion_species, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "hermes_snap_start")
+			{
+				auto set_func = std::bind(&Options::set_hermes_snap_start, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
+			else if (key == "hermes_snap_end")
+			{
+				auto set_func = std::bind(&Options::set_hermes_snap_end, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
+			else if (key == "hermes_snap_stride")
+			{
+				auto set_func = std::bind(&Options::set_hermes_snap_stride, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
+			else if (key == "hermes_nnorm")
+			{
+				auto set_func = std::bind(&Options::set_hermes_nnorm, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "hermes_tnorm")
+			{
+				auto set_func = std::bind(&Options::set_hermes_tnorm, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "hermes_bnorm")
+			{
+				auto set_func = std::bind(&Options::set_hermes_bnorm, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "hermes_ion_mass_amu")
+			{
+				auto set_func = std::bind(&Options::set_hermes_ion_mass_amu, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "hermes_zperiod")
+			{
+				auto set_func = std::bind(&Options::set_hermes_zperiod, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
+			else if (key == "hermes_heat_flux")
+			{
+				auto set_func = std::bind(&Options::set_hermes_heat_flux,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "hermes_inductive_epar")
+			{
+				auto set_func = std::bind(&Options::set_hermes_inductive_epar,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "hermes_field_aligned")
+			{
+				auto set_func = std::bind(&Options::set_hermes_field_aligned,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "hermes_kappa_coef_e")
+			{
+				auto set_func = std::bind(&Options::set_hermes_kappa_coef_e,
+					&opts, std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "hermes_kappa_coef_i")
+			{
+				auto set_func = std::bind(&Options::set_hermes_kappa_coef_i,
+					&opts, std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "hermes_kappa_limit_alpha")
+			{
+				auto set_func = std::bind(
+					&Options::set_hermes_kappa_limit_alpha, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "imp_source_opt")
 			{
 				auto set_func = std::bind(&Options::set_imp_source_opt, &opts,

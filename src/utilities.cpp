@@ -2,7 +2,9 @@
 * @file utilities.cpp
 * @brief Contains generic utilities used in Flan
 */
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <string>
 #include <vector>
 #include <sstream>
@@ -403,13 +405,24 @@ namespace Utilities
 	* @param x0 X coordinate at which to evaluate the field.
 	* @param y0 Y coordinate at which to evaluate the field.
 	* @param z0 Z coordinate at which to evaluate the field.
+	* @param aligned If true and the zone has a zShift table, interpolate
+	*        along the field line instead (see interp_aligned). Use it for
+	*        plasma quantities that are stretched along the field, not for
+	*        the geometry or B.
 	* @return Interpolated field value.
 	*/
 	template <typename T>
 	double interp_vec4d(const Vectors::ZonedVector<T>& vec, const int zone,
 		const Zones::Zones& zones, const std::vector<double>& t,
-		const double t0, const double x0, const double y0, const double z0)
+		const double t0, const double x0, const double y0, const double z0,
+		const bool aligned)
 	{
+		if (aligned && zones.has_z_shift(zone))
+		{
+			return interp_aligned<T, 1>({&vec}, zone, zones, t, t0, x0, y0,
+				z0)[0];
+		}
+
 		// Shorthand for the field in this zone
 		auto vec4d = [&](int it, int ix, int iy, int iz)
 			{return vec(zone, it, ix, iy, iz);};
@@ -460,6 +473,140 @@ namespace Utilities
 		return m * (tc - t[it1]) + interp_val1; 
 	}
 
+
+	/**
+	* Field-aligned interpolation of one or more 4D fields at a point, for
+	* a zone with a zShift table (see Zones::set_z_shift).
+	*
+	* On a shifted-metric grid, neighboring y planes see the same
+	* turbulent structure at toroidal angles that differ by the change in
+	* zShift, which can be a large part of the toroidal domain (or more).
+	* Interpolating between y planes at a fixed z would therefore blend
+	* unrelated structures. Instead, the field line through the point is
+	* followed to each of the two bracketing y planes:
+	*
+	* - x is interpolated at fixed z, as the shifted metric intends, so
+	*   each of the two bracketing x columns is handled separately. In
+	*   column ix, zShift at the point's y is interpolated linearly
+	*   between the two y planes, zs_p.
+	* - In plane iy of that column, the field line is at
+	*   z0 + zShift(ix, iy) - zs_p, wrapped into the zone's period, and
+	*   the field is interpolated linearly in z there.
+	* - The four (x, y) samples are combined bilinearly, with the weights
+	*   clamped to [0, 1] like trilinear_interpolate, then linearly in
+	*   time.
+	*
+	* With phi_sign nonzero, the fields are the X, Y and Z components of
+	* a Cartesian vector (N = 3). Each stored value is the vector at its
+	* cell's toroidal angle zf, so before blending, its (X, Y) part is
+	* rotated about Z by phi_sign (z0 - zf), which carries it to the
+	* point's toroidal angle as if the field were rotated around the
+	* torus. Without this, a sample taken a radian away would point in
+	* the wrong direction by a radian. zf is the cell's own angle, past
+	* the zone's z range for a ghost cell, since on a toroidal wedge the
+	* ghost cells hold their vectors already rotated to that angle (see
+	* Zones::Zones::fill_ghosts(vX, vY, phi_sign)).
+	*
+	* @tparam T Data type stored in the fields.
+	* @tparam N Number of fields.
+	* @param vecs Fields to sample, indexed as (zone, t, x, y, z).
+	* @param zone Zone to sample in. It must have a zShift table.
+	* @param zones The zones, with the cell centers and zShift tables.
+	* @param t Times of the fields.
+	* @param t0 Time at which to evaluate the fields.
+	* @param x0 x coordinate of the point.
+	* @param y0 y coordinate of the point.
+	* @param z0 z coordinate (toroidal angle) of the point.
+	* @param phi_sign 0 for scalars; for a vector, +1 if (R, phi, Z) is
+	*        right handed and -1 if not.
+	* @return Interpolated value of each field.
+	*/
+	template <typename T, std::size_t N>
+	std::array<double, N> interp_aligned(
+		const std::array<const Vectors::ZonedVector<T>*, N>& vecs,
+		const int zone, const Zones::Zones& zones,
+		const std::vector<double>& t, const double t0, const double x0,
+		const double y0, const double z0, const double phi_sign)
+	{
+		static_assert(N == 1 || N == 3);
+		const bool rotate {phi_sign != 0.0};
+
+		// Weight of the upper of two bracketing points, clamped so points
+		// past the last cell centers take the edge value
+		auto weight = [](double c, double c0, double c1)
+		{
+			return c1 == c0 ? 0.0 : std::clamp((c - c0) / (c1 - c0), 0.0,
+				1.0);
+		};
+
+		const double tc {std::clamp(t0, t.front(), t.back())};
+		const auto [it0, it1] = bracket_indices(t, tc);
+		const double wt {weight(tc, t[it0], t[it1])};
+		const auto [ix0, ix1] = zones.bracket(zone, 0, x0);
+		const double wx {weight(x0, zones.center(zone, 0, ix0),
+			zones.center(zone, 0, ix1))};
+		const auto [iy0, iy1] = zones.bracket(zone, 1, y0);
+		const double wy {weight(y0, zones.center(zone, 1, iy0),
+			zones.center(zone, 1, iy1))};
+
+		std::array<double, N> out {};
+		for (int a {}; a < 2; ++a)
+		{
+			const int ix {a ? ix1 : ix0};
+			const double w_x {a ? wx : 1.0 - wx};
+			if (w_x == 0.0) continue;
+
+			// zShift of the field line through the point, in this column
+			const double zs_p {(1.0 - wy) * zones.z_shift(zone, ix, iy0)
+				+ wy * zones.z_shift(zone, ix, iy1)};
+			for (int b {}; b < 2; ++b)
+			{
+				const int iy {b ? iy1 : iy0};
+				const double w_xy {w_x * (b ? wy : 1.0 - wy)};
+				if (w_xy == 0.0) continue;
+
+				// Where the field line crosses this plane, and the two
+				// cells around it in z (one may be a periodic ghost)
+				const double zc {zones.wrap_z(zone,
+					z0 + zones.z_shift(zone, ix, iy) - zs_p)};
+				const auto [iz0, iz1] = zones.bracket(zone, 2, zc);
+				const double wz {weight(zc, zones.center(zone, 2, iz0),
+					zones.center(zone, 2, iz1))};
+
+				// Each of the two z cells' values, blended in time, and
+				// for a vector rotated from its cell's frame to z0
+				std::array<double, N> sample {};
+				for (int c {}; c < 2; ++c)
+				{
+					const int iz {c ? iz1 : iz0};
+					const double w_z {c ? wz : 1.0 - wz};
+					std::array<double, N> v {};
+					for (std::size_t n {}; n < N; ++n)
+					{
+						const auto& f {*vecs[n]};
+						v[n] = (1.0 - wt) * f(zone, it0, ix, iy, iz)
+							+ wt * f(zone, it1, ix, iy, iz);
+					}
+					if constexpr (N == 3)
+					{
+						if (rotate)
+						{
+							const double zf {zones.center(zone, 2, iz)};
+							const double ang {phi_sign * (z0 - zf)};
+							const double cs {std::cos(ang)};
+							const double sn {std::sin(ang)};
+							const double vx {v[0]};
+							v[0] = cs * vx - sn * v[1];
+							v[1] = sn * vx + cs * v[1];
+						}
+					}
+					for (std::size_t n {}; n < N; ++n) sample[n] += w_z * v[n];
+				}
+				for (std::size_t n {}; n < N; ++n) out[n] += w_xy * sample[n];
+			}
+		}
+		return out;
+	}
 
 	/**
 	* Broadcasts a vector from a root MPI rank to all other ranks in
@@ -516,11 +663,24 @@ template int Utilities::get_neighbor_index<double>(
 template double Utilities::interp_vec4d<float>(
 	const Vectors::ZonedVector<float>& vec, const int zone,
 	const Zones::Zones& zones, const std::vector<double>& t,
-	const double t0, const double x0, const double y0, const double z0);
+	const double t0, const double x0, const double y0, const double z0,
+	const bool aligned);
 template double Utilities::interp_vec4d<double>(
 	const Vectors::ZonedVector<double>& vec, const int zone,
 	const Zones::Zones& zones, const std::vector<double>& t,
-	const double t0, const double x0, const double y0, const double z0);
+	const double t0, const double x0, const double y0, const double z0,
+	const bool aligned);
+
+#define FLAN_INTERP_ALIGNED(T, N) \
+	template std::array<double, N> Utilities::interp_aligned<T, N>( \
+		const std::array<const Vectors::ZonedVector<T>*, N>&, const int, \
+		const Zones::Zones&, const std::vector<double>&, const double, \
+		const double, const double, const double, const double);
+FLAN_INTERP_ALIGNED(float, 1)
+FLAN_INTERP_ALIGNED(float, 3)
+FLAN_INTERP_ALIGNED(double, 1)
+FLAN_INTERP_ALIGNED(double, 3)
+#undef FLAN_INTERP_ALIGNED
 
 template void Utilities::mpi_broadcast_vector(std::vector<int>&, int, 
 	MPI_Comm);

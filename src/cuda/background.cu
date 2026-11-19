@@ -59,6 +59,14 @@ namespace Background
 		// ghost cells has the same layout as a Vector4D, so its data is
 		// copied as-is.
 		check_single_zone("Background::to_device");
+
+		// The GPU boundary check doesn't turn velocities that wrap around
+		// a toroidal wedge (see Boundary::check_bounds_cpu)
+		if (m_zones.any_wedge())
+		{
+			Errors::fatal_error("The GPU doesn't handle backgrounds that "
+				"are a toroidal wedge yet. Turn use_gpu off.");
+		}
 		const int dim2 {m_zones.get_nx(0)};
 		const int dim3 {m_zones.get_ny(0)};
 		const int dim4 {m_zones.get_nz(0)};

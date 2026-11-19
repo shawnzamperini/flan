@@ -105,6 +105,15 @@ namespace Zones
 		std::vector<std::vector<double>> m_grid_z {};	///< z cell edges
 		std::array<std::vector<int>, num_faces> m_faces {};	///< Face codes
 
+		/// Each zone's toroidal shift of the field line, zShift(x, y), on
+		/// its cells including the ghost cells (see set_z_shift). Empty
+		/// for zones without one.
+		std::vector<std::vector<double>> m_z_shift {};
+
+		/// 1 for zones whose z is the toroidal angle in radians (see
+		/// set_toroidal), 0 otherwise. Empty if no zone is.
+		std::vector<int> m_toroidal {};
+
 		/// Every ghost cell and its sources, built by fill_ghosts the first
 		/// time it's needed and cleared whenever the zones change
 		mutable std::vector<GhostCell> m_ghost_cells {};
@@ -193,12 +202,34 @@ namespace Zones
 
 		void validate() const;
 
+		void set_z_shift(const int zone, std::vector<double> table);
+
+		bool has_z_shift(const int zone) const;
+
+		double z_shift(const int zone, const int i, const int j) const;
+
+		double z_period(const int zone) const;
+
+		double wrap_z(const int zone, const double z) const;
+
+		void set_toroidal(const int zone);
+
+		bool is_toroidal(const int zone) const;
+
+		bool is_wedge(const int zone) const;
+
+		bool any_wedge() const;
+
 		std::vector<Cell> resolve_cell(const Cell& cell) const;
 
 		const std::vector<GhostCell>& get_ghost_cells() const;
 
 		template <typename T>
 		void fill_ghosts(Vectors::ZonedVector<T>& v) const;
+
+		template <typename T>
+		void fill_ghosts(Vectors::ZonedVector<T>& vX,
+			Vectors::ZonedVector<T>& vY, const double phi_sign) const;
 
 #ifndef __CUDACC__
 		void broadcast(MPI_Comm comm);

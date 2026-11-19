@@ -55,7 +55,10 @@ coordinates are:
 
 - x: the psi cell index, from 0 to the zone's number of psi cells.
 - y: the theta cell index, from 0 to the zone's number of theta cells.
-- z: the toroidal angle phi, in radians.
+- z: the toroidal angle phi, in radians, between the zone's
+  `phicorners`. If they span less than the whole torus, the run is a
+  toroidal wedge: a particle that leaves through one end comes back in
+  at the other, with its velocity rotated by the wedge's width.
 
 So x = 5.5, for instance, is the middle of the sixth psi cell of the zone.
 The starting position of particles (`imp_xstart_opt`, etc.) is given in

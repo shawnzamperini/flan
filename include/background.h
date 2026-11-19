@@ -4,6 +4,7 @@
 */
 #pragma once
 
+#include <array>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -127,6 +128,11 @@ namespace Background
 		double m_elec_mass_amu {};
 		double m_ion_mass_amu {};
 
+		// Handedness of the toroidal angle of a multi-zone background: a
+		// point at major radius R and toroidal angle z is at
+		// (R cos z, phi_sign R sin z, Z). +1 if (R, z, Z) is right handed.
+		double m_phi_sign {1.0};
+
 		void check_single_zone(const std::string_view caller) const;
 
 	public:
@@ -231,6 +237,8 @@ namespace Background
 		double get_ion_mass_amu() const;
 		void set_elec_mass_amu(const double elec_mass_amu);
 		void set_ion_mass_amu(const double ion_mass_amu);
+		double get_phi_sign() const;
+		void set_phi_sign(const double phi_sign);
 		int get_dim1() const;
 		int get_dim2() const;
 		int get_dim3() const;
@@ -372,7 +380,17 @@ namespace Background
 
 		BkgFPType interp_4d(const Vectors::ZonedVector<BkgFPType>& vec,
 			const int zone, const double t0, const double x0, const double y0,
+			const double z0, const bool aligned = false) const;
+
+		std::array<double, 3> interp_vec3(
+			const Vectors::ZonedVector<BkgFPType>& vX,
+			const Vectors::ZonedVector<BkgFPType>& vY,
+			const Vectors::ZonedVector<BkgFPType>& vZ, const int zone,
+			const double t0, const double x0, const double y0,
 			const double z0) const;
+
+		std::array<double, 3> interp_u(const int zone, const double t0,
+			const double x0, const double y0, const double z0) const;
 
 		BkgFPType interp_te(const int zone, const double t0, const double x0,
 			const double y0, const double z0) const;
@@ -389,14 +407,6 @@ namespace Background
 		BkgFPType interp_q_par_e(const int zone, const double t0,
 			const double x0, const double y0, const double z0) const;
 
-		BkgFPType interp_uX(const int zone, const double t0, const double x0,
-			const double y0, const double z0) const;
-
-		BkgFPType interp_uY(const int zone, const double t0, const double x0,
-			const double y0, const double z0) const;
-
-		BkgFPType interp_uZ(const int zone, const double t0, const double x0,
-			const double y0, const double z0) const;
 
 		std::string check_dim(const int m_dim, const int in_dim, 
 			const int dim_num);

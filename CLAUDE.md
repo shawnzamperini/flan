@@ -25,7 +25,9 @@ for ideas only: never copy their code.
 
 - Two build directories in the repo root: `build_cpu` (CPU only) and
   `build_gpu` (`-DENABLE_CUDA=ON`, Release). Build with `make -j10`, test
-  with `ctest` in each.
+  with `ctest -j8` in each. Each test runs with `FLAN_TEST_THREADS` (CMake
+  cache, default 4) OpenMP threads, so `-j` doesn't oversubscribe the
+  node. `MPITest` needs `srun`, so it only runs on a compute node.
 - Sources are globbed (`file(GLOB ...)`): after adding a `.cpp` or `.cu`
   file, re-run `cmake .` in the build directory.
 - `make install` updates `lib/libflan.so`, which installed inputs link

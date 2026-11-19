@@ -18,7 +18,7 @@ source code.
 | `include/cuda/` | Headers for `src/cuda/`, and the small inline helpers used inside kernels (interpolation, indexing, ...). |
 | `tests/` | Unit tests (GoogleTest), run with `ctest`. |
 | `regression/` | Input files for the test cases (drifts, friction force) and a blank input file to start from. |
-| `python/` | Helper scripts: reading Gkeyll data with postgkyl (`read_gkyl.py`), generating the Nanbu table (`calc_nanbu_A.py`), making sputtering yield tables with RustBCA (`rustbca_yields.py`) and plotting (`flan_plots.py`, `plot_s3x_nz.py` for multi-zone runs, `plot_sputtering.py` for sputtering runs). |
+| `python/` | Helper scripts: reading Gkeyll data with postgkyl (`read_gkyl.py`), generating the Nanbu table (`calc_nanbu_A.py`), making sputtering yield tables with RustBCA (`rustbca_yields.py`) and plotting (`flan_plots.py`, `plot_multizone.py` for multi-zone runs, `plot_sputtering.py` for sputtering runs) and checking backgrounds (`check_hermes_conventions.py` for a HERMES run's files, `check_hermes_bkg.py` for the HERMES background Flan built). |
 | `data/sputtering/` | Sputtering yield tables made by `python/rustbca_yields.py`, e.g., `D_on_W.h5`. |
 | `scripts/` | Case setup (`flan_setup.sh`) and job submission scripts. |
 | `docs-site/` | This website. |
@@ -48,8 +48,27 @@ MPI must be initialized before `flan()` is called, and every rank calls it.
    a value of the wrong type or an invalid value stops the run.
 2. **Read the background.** `Background::read_bkg` loads the plasma on rank 0,
    from a Gkeyll simulation (`Gkyl::read_gkyl`), a SOLEDGE3X simulation
-   (`S3X::read_s3xe`) or the slab background set by the `slab_*` options
-   (`Slab::read_slab`). It's then broadcast to every rank.
+   (`S3X::read_s3xe`), a HERMES simulation (`Hermes::read_hermes`) or the
+   slab background set by the `slab_*` options (`Slab::read_slab`). It's
+   then broadcast to every rank. Multi-zone readers like SOLEDGE3X's and
+   HERMES's only read their files into an `Axisym::Mesh` (cell corners and
+   B in SI units, and the toroidal handedness) and the plasma; the
+   geometry, B, grad B, E and the flows come from the shared code in
+   `axisym_mesh.cpp`. A reader for a shifted-metric grid (HERMES) also
+   gives each zone a `zShift` table (`Zones::set_z_shift`). With it,
+   plasma quantities are interpolated along the field line
+   (`Utilities::interp_aligned`, through `Background::interp_4d` with
+   `aligned` set and `Background::interp_vec3`) and y derivatives are
+   taken along it (`Axisym::aligned_dfdy`, `Axisym::grad_par`). B and the
+   geometry are always interpolated at fixed z. Both readers mark their
+   zones' z as the toroidal angle (`Zones::set_toroidal`). On a wedge of
+   the torus (`Zones::is_wedge`), Cartesian vectors in the ghost cells
+   past the z faces are rotated to the ghost's angle
+   (`Zones::fill_ghosts(vX, vY, phi_sign)`), and `check_bounds_cpu`
+   rotates the velocity of a particle that wraps in z. HERMES snapshots
+   have no heat fluxes, so the reader calculates them from Braginskii
+   conduction (`Axisym::calc_conductive_heat_fluxes`, with the
+   frequencies in `braginskii.cpp`).
 3. **Follow the impurities.** `ImpurityTransport::follow_impurities` follows
    this rank's share of the particles and records their statistics.
 4. **Combine the statistics.** `Impurity::reduce_stats` adds up the

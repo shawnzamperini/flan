@@ -309,9 +309,15 @@ namespace Boris
 			const double z0 {bkg.get_zones().center(zone, 2, zidx)};
 			const double z1 {bkg.get_zones().center(zone, 2, zidx_neighbor)};
 
+			// In a zone with a zShift table (a shifted-metric grid), E is
+			// stretched along the field line like the rest of the plasma,
+			// so it is interpolated along the field line below instead.
+			// B is axisymmetric and is still interpolated here.
+			const bool aligned {bkg.get_zones().has_z_shift(zone)};
+
 			// Loop through each B/E component, performing a trilinear interpolation
 			// to get the local value of each. First loop is to choose B or E.
-			for (int j = 0; j < 2; ++j) 
+			for (int j = 0; j < (aligned ? 1 : 2); ++j) 
 			{ 
 				// Index out (B or E), dereference and assign to comps. This is 
 				// an object the same as B and E above.
@@ -402,6 +408,25 @@ namespace Boris
 				}  // k loop
 
 			}  // j loop
+
+			// Field-aligned E, rescaled to the interpolated |E| for the
+			// same reason as above
+			if (aligned)
+			{
+				const double t0 {slots.t()[i]};
+				const double xp {slots.x()[i]};
+				const double yp {slots.y()[i]};
+				const double zp {slots.z()[i]};
+				const auto e {bkg.interp_vec3(bkg.get_eX(), bkg.get_eY(),
+					bkg.get_eZ(), zone, t0, xp, yp, zp)};
+				const double emag {bkg.interp_4d(bkg.get_emag(), zone, t0,
+					xp, yp, zp, true)};
+				const double e_len {std::sqrt(e[0] * e[0] + e[1] * e[1]
+					+ e[2] * e[2])};
+				const double scale {e_len > 0.0 ? emag / e_len : 0.0};
+				for (int k {}; k < 3; ++k) E_local[k] = e[k] * scale;
+				E_local[3] = emag;
+			}
 
 			// Normal Boris algorithm continues
 
