@@ -9,8 +9,10 @@ material, and the ion's energy and angle of incidence.
 !!! note "Work in progress"
     With `imp_source_opt = "sputter"`, Flan follows the atoms the
     background plasma sputters off the wall of a SOLEDGE3X background, or
-    off the targets of a HERMES background, as this page describes. Sputtering by the impurities themselves, and the
-    sheath's effect on where they redeposit, are planned next.
+    off the targets of a HERMES background, as this page describes.
+    Sputtering by the impurities themselves, and the sheath's effect on
+    where they redeposit, are planned next (see the
+    [Sheath and Self-Sputtering Plan](../developer/sheath-plan.md)).
 
 ## Where the yields come from
 
