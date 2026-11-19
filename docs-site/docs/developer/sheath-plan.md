@@ -75,12 +75,14 @@ the wall, which pulls positive ions in. L_DS ∝ λ_D and L_MPS ∝ ρ_s.
 The shape is written once, and how the drop is split between the two
 layers (and the two scale lengths) is a separate, swappable piece:
 
-- **`"brooks"`** (default). Brooks' form, with the Debye fraction
-  f_D(α) of the drop from his fit to kinetic results:
+- **`"brooks"`** (default). Brooks' form,
   φ(d) = f_D φ₀ exp(−d / 2λ_D) + (1 − f_D) φ₀ exp(−d / ρ_i), with φ₀ the
-  floating drop. f_D is near 1 for a field near normal to the wall and
-  falls toward 0 at grazing angles. GITR and ERO use this form, so
-  Flan's results compare directly with theirs.
+  floating drop and f_D the fraction of it in the Debye sheath. f_D is
+  near 1 for a field near normal to the wall and falls toward 0 at grazing
+  angles. Brooks himself used a constant f_D; GITR uses an f_D(α) curve
+  (see [S0 findings](#phase-s0-findings) for where f_D(α) comes from).
+  GITR and ERO use this form, so Flan's results compare directly with
+  theirs.
 - **`"stangeby"`**, for testing how sensitive results are to the split.
   The same shape, with the magnetic presheath drop from fluid theory,
   (Te / e) |ln sin α|, capped at the whole drop, and the rest in the Debye
@@ -157,7 +159,9 @@ an atom with the reflected energy. It's left for after the first version
 
 ## Phases
 
-**Phase S0: literature and conventions.** No code. Write down, with
+**Phase S0: literature and conventions.** Mostly done; see
+[Phase S0 findings](#phase-s0-findings) for what was found and what's
+left. No code apart from `regression/fussmann.py`. Write down, with
 sources, in a draft section of [Sputtering](../physics/sputtering.md):
 
 - Fussmann's model: its assumptions (field angle, emission), the
@@ -278,9 +282,122 @@ shows the net erosion along the targets.
 moving the sputtered source to the GPU), reflection, and a sheath for D+
 impact energies from the same model.
 
+## Phase S0 findings
+
+### Fussmann's model
+
+- **Source.** The derivation isn't in an accessible copy of Fussmann et
+  al. (1995). Reimold (2011, IPP 17/27, sections 2.1.1.3 and 3.3.1.2)
+  gives the model in full, attributes the derivation to R. Dux (private
+  communication), and implements it in EIRENE. Later papers cite Fussmann
+  et al. (1995) for it.
+- **Assumptions.** The field is parallel to the wall, sputtered atoms leave
+  with a cosine distribution, and there's no electric field. Motion along B
+  and further ionization during the first gyration are left out. An ion is
+  promptly redeposited if its first gyro-orbit reaches the wall.
+- **Parameter.** p = λ_iz / ρ = q B / (m n_e S), with S the ionization
+  rate coefficient of the atom and ρ the gyroradius of the singly charged
+  ion at the atom's full speed. p doesn't depend on the emission energy.
+- **Result.** For a fixed ionization length x ρ, r(x) = 1 / (1 + x²).
+  Averaged over the exponential distribution of ionization lengths (what
+  Flan samples), ⟨r⟩(p) = p⁻¹ ∫₀^∞ e^(−x/p) / (1 + x²) dx. At p = 1 that's
+  0.62, not the 0.50 of 1 / (1 + p²). The S2 checker uses ⟨r⟩.
+- **Checked.** A Monte Carlo of the geometry reproduces 1 / (1 + x²) to
+  the statistics (`regression/fussmann.py`, `geometry_check`), and ⟨r⟩
+  reproduces Reimold's analytic value (37% at p = 2.55).
+- **For S2.** Flan follows ionization beyond W⁺. The model leaves that out,
+  so the regression needs n_e and Te where W⁺ rarely ionizes again within
+  one gyration. The checker estimates that fraction and flags the variants
+  where it isn't small. It also takes S at the run's Te; the repo has no
+  Python OpenADAS reader, so S2 adds one or saves S in the output.
+- **Self-sputtering.** Reimold (eq. 2.18) gives the net yield summed over
+  the chain, Y_eff = (1 − ⟨r⟩) Y_D / (1 − ⟨r⟩ Y_W), which runs away when
+  ⟨r⟩ Y_W ≥ 1. It goes into the S6 checks (`fussmann.y_eff`).
+
+### Brooks (1990)
+
+Read from the ANL report version (ANL/FPP/TM-244, 1989), which is the
+same paper as Phys. Fluids B 2, 1858 (1990).
+
+- **Potential.** φ(z) = φ₁ exp(−z / 2λ_D) + φ₂ exp(−z / R_DT), with
+  φ₁ + φ₂ = φ₀, λ_D the Debye length at the sheath entrance, and R_DT the
+  D-T ion gyroradius (eq. 11). E has only a normal component, E_z = −dφ/dz.
+  Electrons are Boltzmann, Ti = Te, and the flow before the sheath is
+  sonic.
+- **Split.** f_D = 1 − φ(6λ_D) / φ₀ is the fraction of the drop in the
+  Debye sheath, whose width is taken as 6 λ_D (eq. 12). f_D is a constant
+  input: 0.25 in the reference case, "typical of results for highly
+  oblique field angles" (from Chodura). Brooks has no f_D(angle) fit.
+- **Angles.** The field angle ψ is measured from the surface normal; the
+  reference case has ψ = 87°.
+- **Gyroradius.** R_DT = √(kT / m_DT) / Ω_DT. This reproduces his
+  "3 R_DT = 0.84 mm at Te = 75 eV, B = 5 T".
+- **Reference case for S5.** B = 5 T, ψ = 87°, eφ₀ = −3 kTe, f_D = 0.25,
+  Te = Ti = 75 eV, n_e = 10²⁰ m⁻³, D-T, collisions on (Table 1). For
+  redeposited W he gets:
+
+  | Quantity | Value |
+  |---|---|
+  | Mean ionization height | 0.40 mm |
+  | Transit time | 0.60 μs |
+  | Elevation angle | 18° |
+  | Charge | 2.6 |
+  | Impact energy | 553 eV |
+
+  Figs. 4 to 8 give the mean charge, energy and self-sputtering yield for
+  Te from 25 to 150 eV and n_e from 0.25 to 4 × 10²⁰ m⁻³, and how they
+  change with f_D and φ₀. His ionization rates and charge limit (K ≤ 11)
+  differ from Flan's OpenADAS, so expect trends, not exact numbers.
+
+### GITR's form and f_D(α)
+
+- **Form.** GITR (Kumar et al., arXiv:2609.09408, sec. 4.3 and app. B)
+  uses E_n = f_D φ₀ / (2λ_D) e^(−d/2λ_D) + (1 − f_D) φ₀ / ρ_i e^(−d/ρ_i),
+  with θ_B measured from the normal.
+- **Gyroradius.** Its ρ is √(2 kTi / m_i) / Ω_i, √2 larger than Brooks'
+  R_DT. This reproduces their λ_D = 1.919e-5 m and ρ = 2.229e-4 m at
+  Te = Ti = 20 eV, n_e = 3 × 10¹⁸ m⁻³, B = 4.1 T.
+- **f_D(θ_B).** Their Fig. B1 inset reads about 1 at 0°, 0.8 at 60°,
+  0.45 at 80° and 0.1 at 89°. The paper gives no formula or source for
+  it, beyond citing Brooks (1990), who has none. They benchmark the field
+  against Borodkina et al. (2015, 2016): close for θ_B ≤ 60°, small
+  differences at 80° and above.
+
+### Stangeby's critical angle and the kinetic results
+
+- **Fluid result.** Stangeby (Nucl. Fusion 52, 083012, 2012) finds that
+  below a critical angle there is no Debye sheath: the flow normal to the
+  wall stays subsonic, and the whole drop is in the Chodura layer. With α
+  measured from the wall, sin α_c = c_s / ⟨v∥e⟩_W, which is
+  √(2π (m_e / m_i)(1 + Ti / Te)) for half-Maxwellian electrons. That's
+  3.4° for D at Ti = Te, and around 5° for ITER-like conditions.
+- **Kinetic simulations.** Coulette and Manfredi (arXiv:1509.04479,
+  2016) confirm this with kinetic simulations: the space charge at the wall
+  fades below about 5°, and the field spreads over several ion Larmor
+  radii. They also find no sharp critical angle; the change is smooth, and
+  the total drop barely depends on α.
+- **The Stangeby split.** The magnetic presheath drop is
+  (Te / e) |ln sin α|, and f_D = 1 − |ln sin α| / (e φ_fl / Te). This
+  reaches 0 exactly at α_c, since the presheath drop then equals the
+  floating drop, so the `"stangeby"` option has the critical angle built
+  in.
+- **Against GITR's curve.** At θ_B = 30°, 60°, 80° and 85° the Stangeby
+  split gives 0.95, 0.76, 0.38 and 0.14, close to GITR's curve. Below α_c
+  it gives 0, where GITR's stays at about 0.1, nearer the smooth kinetic
+  behaviour.
+
+### Still to do in S0
+
+- **Where to get the `"brooks"` f_D(α) from.** Decision 7 below.
+- **Borodkina et al.** Their analytic field model (2015, 2016) is a
+  possible third option and a check on the shape. Not read yet.
+- **Reference curves with a sheath.** Published prompt-redeposition
+  results (ERO, GITR, Chankin et al. 2014) for S5. Brooks' reference case
+  above is the first one.
+
 ## Decisions to make
 
-All decided as recommended.
+1 to 6 decided as recommended. 7 is open.
 
 1. **Sheath model.** Decided: Brooks' two-layer model (Debye sheath plus
    magnetic presheath, with the drop split by his fit to the field angle)
@@ -304,6 +421,22 @@ All decided as recommended.
    assumptions can't be met with the normal cosine/Thompson birth, by
    folding those distributions into the analytic result instead.
 
+7. **Where `"brooks"` gets f_D(α).** Brooks used a constant, and GITR's
+   curve has no published formula. Options:
+   (a) use the Stangeby split for f_D(α) in Brooks' form, which tracks
+   GITR's curve down to about α_c, then hold f_D at a small floor below
+   it, as the kinetic results suggest;
+   (b) digitize GITR's published curve (Kumar et al., Fig. B1) and fit it;
+   (c) take f_D(α) from Borodkina et al. or another published source, once
+   read.
+   Recommended: (a). Its physics is stated, it matches the kinetic
+   behaviour, and it can be checked analytically. The floor is set from
+   Coulette and Manfredi. Then `"brooks"` and `"stangeby"` differ only in
+   the scale lengths and the floor, so they collapse into one model with a
+   sensitivity option for the gyroradius definition (Brooks' √(kT / m)
+   against GITR's √(2kT / m)).
+
+
 ## References
 
 - G. Fussmann et al., "High-Z elements as target materials in fusion
@@ -315,3 +448,16 @@ All decided as recommended.
   *Phys. Fluids* **25**, 1628 (1982).
 - P. C. Stangeby, *The Plasma Boundary of Magnetic Fusion Devices*, IOP
   Publishing (2000).
+- P. C. Stangeby, "The Chodura sheath for angles of a few degrees between
+  the magnetic field and the surface of divertor targets and limiters",
+  *Nucl. Fusion* **52**, 083012 (2012).
+- D. Coulette and G. Manfredi, "Kinetic simulations of the Chodura and
+  Debye sheaths for magnetic fields with grazing incidence", *Plasma Phys.
+  Control. Fusion* (2016), arXiv:1509.04479.
+- F. Reimold, "Numerical simulations of tungsten impurity transport in
+  ASDEX-Upgrade with EIRENE", IPP Report 17/27 (2011).
+- J. N. Brooks, ANL/FPP/TM-244 (1989), the report version of Brooks (1990).
+- A. Kumar et al., "RF-specific tungsten erosion and global transport in
+  ITER under neon seeding", arXiv:2609.09408 (2026).
+- I. E. Borodkina, M. Komm, I. V. Tsvetkov, *Russ. Phys. J.* **58**, 438
+  (2015); I. Borodkina et al., *Contrib. Plasma Phys.* **56**, 640 (2016).

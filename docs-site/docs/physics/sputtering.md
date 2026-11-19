@@ -454,9 +454,15 @@ For deuterium sputtering tungsten near threshold:
   eV), so they ionize a fraction of a millimeter from the wall, much
   closer than their gyroradius (millimeters). Most land back on the wall
   within their first gyration, in a microsecond or so, after one or two
-  more ionizations. The ratio of the ionization length to the gyroradius,
-  $p = \lambda_\text{iz}/\rho$, sets this: the share that comes back
-  promptly is about $1/(1 + p^2)$ (Fussmann et al., 1995).
+  more ionizations. The ratio of the mean ionization length to the
+  gyroradius, $p = \lambda_\text{iz}/\rho = \Omega/(n_e S)$, sets this
+  (Fussmann et al., 1995). For a field parallel to the wall and no
+  electric field, an atom that ionizes after a path $x\rho$ comes back
+  within its first gyration with probability $1/(1 + x^2)$, and averaged
+  over the exponential distribution of ionization lengths the share that
+  comes back promptly is
+  $\langle r\rangle = p^{-1}\int_0^\infty e^{-x/p}/(1 + x^2)\,dx$
+  (0.62 at $p = 1$; `regression/fussmann.py`).
 - **The ones that get away set the leakage.** The few percent that
   escape prompt redeposition carry the impurity along the field lines,
   and where they go is decided by the parallel forces on them.
