@@ -239,9 +239,18 @@ q_par = -kappa_par grad_par T, positive along B like the SOLEDGE3X ones.
 - [HERMES Backgrounds](../running/hermes.md) in Running Flan, and the
   options in [Input Options](../input-options.md#hermes).
 
-**Later**: the GPU path, a time-averaged background, a sputtered source
-at the targets, and field-aligned interpolation for turbulent SOLEDGE3X
-runs. The BOUT++ Hermes-3 reader has its own plan, below.
+**Sputtered source at the targets.** Done. With no wall mask,
+`Sputtering::Surface` takes the cell faces on the zones' wall faces (the
+targets) as the surface elements, with their own normals and areas, and
+`Sputtering::Deposition` puts atoms absorbed at a target on the element
+of the face they crossed. The source, the births and the output are the
+same as for SOLEDGE3X. Tests: `SputteringSurface.TargetFaces`,
+`SputteringTable.SourceOnTargets`, `SputteringDeposition.WallFaces` and
+`ReadHermesTest.SputteringTargets`.
+
+**Later**: the GPU path, a time-averaged background, and field-aligned
+interpolation for turbulent SOLEDGE3X runs. The BOUT++ Hermes-3 reader
+has its own plan, below.
 
 ## BOUT++ Hermes-3 reader
 

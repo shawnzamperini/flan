@@ -201,17 +201,17 @@ backgrounds work and what isn't included.
 
 ## Sputtering
 
-Impurities sputtered off the walls of a SOLEDGE3X background by the
-background plasma. See [Sputtering](physics/sputtering.md).
+Impurities sputtered off the walls of a SOLEDGE3X background, or the
+targets of a HERMES background, by the background plasma. See [Sputtering](physics/sputtering.md).
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `imp_source_opt` | string | `"manual"` | Where impurities come from. `"manual"` starts them where the `imp_*start_opt` options say. `"sputter"` makes them the atoms the background plasma sputters off the wall of a SOLEDGE3X background (CPU only): the rate off each part of the wall is calculated and saved to the output file, particles start from it neutral, and its total rate replaces `imp_source_scale_fact` (each particle stands for that rate / `imp_num` atoms/s). The `imp_*start_opt`, `imp_zone_start_val`, `imp_temp_start_opt` and `imp_init_charge` options aren't used then. Valid values: `"manual"`, `"sputter"`. |
+| `imp_source_opt` | string | `"manual"` | Where impurities come from. `"manual"` starts them where the `imp_*start_opt` options say. `"sputter"` makes them the atoms the background plasma sputters off the wall of a SOLEDGE3X background or the targets of a HERMES background (CPU only): the rate off each part of the wall is calculated and saved to the output file, particles start from it neutral, and its total rate replaces `imp_source_scale_fact` (each particle stands for that rate / `imp_num` atoms/s). The `imp_*start_opt`, `imp_zone_start_val`, `imp_temp_start_opt` and `imp_init_charge` options aren't used then. Valid values: `"manual"`, `"sputter"`. |
 | `sput_table_file` | string | `"undefined"` | Path to the sputtering yield table, e.g., `data/sputtering/D_on_W.h5`. Needed with `imp_source_opt = "sputter"`. |
 | `sput_flux_opt` | string | `"parallel_exb"` | Which part of the background ion flow carries ions onto the wall. `"parallel_exb"` is the parallel flow plus the E x B drift, `"parallel"` the parallel flow only. Valid values: `"parallel_exb"`, `"parallel"`. |
 | `sput_bohm_floor` | string | `"off"` | Whether the parallel flow onto the wall is at least the ion sound speed (the Bohm criterion), for backgrounds whose flow next to the wall is too slow. Valid values: `"off"`, `"on"`. |
 | `sput_angle_val` | float | `60` | Angle at which the background ions hit the wall, in degrees from the surface normal. Used to look up the sputtering yield. |
-| `sput_max_wall_dist` | float | `2` | How far, in cell widths, the wall outline can be from a wall face before the face uses its own normal and area instead of the outline's. |
+| `sput_max_wall_dist` | float | `2` | How far, in cell widths, the wall outline can be from a wall face before the face uses its own normal and area instead of the outline's. SOLEDGE3X only: HERMES targets always use their faces' own. |
 
 ## Variance reduction (temporarily removed)
 

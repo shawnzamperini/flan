@@ -61,13 +61,17 @@ namespace Sputtering
 	};
 
 	/**
-	* One piece of the wall surface that the plasma can sputter.
+	* One piece of the wall surface that the plasma can sputter, in one
+	* toroidal cell.
 	*
-	* It is a face of a plasma cell (chi = 0) whose neighbor across that
-	* face is a wall cell (chi = 1), in one toroidal cell. Its position is
-	* that face's, but its normal and area come from the nearest segment of
-	* the wall outline, unless there isn't one close enough (fallback). See
-	* sputtering.cpp for why.
+	* On a SOLEDGE3X background it is a face of a plasma cell (chi = 0)
+	* whose neighbor across that face is a wall cell (chi = 1). Its
+	* position is that face's, but its normal and area come from the
+	* nearest segment of the wall outline, unless there isn't one close
+	* enough (fallback). On a grid fitted to the targets (HERMES) it is a
+	* cell face on a wall face of its zone, with the face's own normal and
+	* area, and there is no wall cell (wall_zone = -1). See sputtering.cpp
+	* for why.
 	*/
 	struct SurfaceElement
 	{
@@ -93,16 +97,22 @@ namespace Sputtering
 		double wall_dist {};	///< Distance to the wall outline (m)
 		bool fallback {};		///< No wall segment close enough was found
 
-		int wall_zone {};		///< Zone of the wall cell across the face
+		int wall_zone {};		///< Zone of the wall cell across the face,
+								///< or -1 if the face is a wall face of
+								///< its zone (a target), with no wall cell
 		int wall_i {};			///< x index of the wall cell
 		int wall_j {};			///< y index of the wall cell (its z index
 								///< is k, the same as the plasma cell's)
+
+		/// True if the element is on a wall face of its zone (a target)
+		bool on_wall_face() const {return wall_zone < 0;}
 	};
 
 	/**
-	* The wall surfaces of a SOLEDGE3X background that the plasma can
-	* sputter, as a list of SurfaceElements. See sputtering.cpp for the
-	* member function docs.
+	* The wall surfaces of a background that the plasma can sputter, as a
+	* list of SurfaceElements: the staircase between plasma and wall cells
+	* of a SOLEDGE3X background, or the target faces of a grid fitted to
+	* them (HERMES). See sputtering.cpp for the member function docs.
 	*/
 	class Surface
 	{
@@ -110,6 +120,11 @@ namespace Sputtering
 		std::vector<SurfaceElement> m_elements {};	///< The elements
 		int m_num_fallback {};		///< Elements that fell back
 		double m_total_area {};		///< Sum of the elements' areas (m^2)
+		bool m_wall_faces {};		///< Elements are zone wall faces
+
+		void find_staircase(const Background::Background& bkg,
+			double max_wall_dist);
+		void find_wall_faces(const Background::Background& bkg);
 
 	public:
 
@@ -122,6 +137,7 @@ namespace Sputtering
 		std::size_t size() const;
 		int num_fallback() const;
 		double total_area() const;
+		bool from_wall_faces() const;
 
 		void print_summary(std::ostream& os) const;
 	};
@@ -254,9 +270,11 @@ namespace Sputtering
 		const Surface* m_surface {nullptr};	///< The surface elements
 		std::unordered_map<std::uint64_t, std::vector<std::size_t>>
 			m_wall_cells {};		///< Elements bordering each wall cell
+		std::unordered_map<std::uint64_t, std::size_t>
+			m_wall_faces {};		///< Element on each cell of a wall face
 		std::vector<double> m_redeposited {};	///< Rate onto each element
 		double m_unassigned {};		///< Into wall cells with no element
-		double m_wall_face {};		///< At wall faces
+		double m_wall_face {};		///< At wall faces with no element
 		std::vector<double> m_lifetime_edges {};	///< Time since birth
 													///< bin edges (s)
 		std::vector<double> m_lifetime {};	///< Rate in each time bin
@@ -273,7 +291,9 @@ namespace Sputtering
 		void add_into_wall_cell(int zone, int i, int j, int k,
 			int prev_zone, int prev_i, int prev_j, double pt, int q,
 			double weight);
-		void add_at_wall_face(double pt, int q, double weight);
+		void add_at_wall_face(const Zones::Zones& zones, int zone,
+			Zones::Face face, const std::array<double, 3>& pos, double pt,
+			int q, double weight);
 
 		void reduce(int root);
 

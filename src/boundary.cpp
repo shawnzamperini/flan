@@ -418,10 +418,11 @@ namespace Boundary
 	*        added to.
 	* @param deposition If given, particles absorbed in a wall cell or at a
 	*        wall face are added to it (where on the wall, how long after
-	*        they were born, and their charge). The cell a particle was in
-	*        before this step, which it came into the wall from, is still in
-	*        its slot's cell indices, since they're only updated after the
-	*        boundary check.
+	*        they were born, and their charge). At a wall face, where on it
+	*        comes from the particle's position as it crosses. The cell a
+	*        particle was in before this step, which it came into the wall
+	*        from, is still in its slot's cell indices, since they're only
+	*        updated after the boundary check.
 	*/
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
@@ -536,8 +537,9 @@ namespace Boundary
 							: local.absorbed);
 						if (deposition != nullptr && code == Zones::face_wall)
 						{
-							deposition->add_at_wall_face(slots.pt()[i],
-								slots.q()[i], slots.weight()[i]);
+							deposition->add_at_wall_face(zones, zone, face,
+								pos, slots.pt()[i], slots.q()[i],
+								slots.weight()[i]);
 						}
 						break;
 					}

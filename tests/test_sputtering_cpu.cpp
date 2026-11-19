@@ -292,7 +292,12 @@ namespace
 	double diag_R(double x) {return 1.0 + 0.01 * x;}
 	double diag_Z(double y) {return 0.01 * y;}
 
-	Background::Background diagonal_background(bool walls = true)
+	// With chi = false there's no wall mask, and with wall_faces = true
+	// the zone's ymin and xmax faces are wall faces (as targets are on a
+	// grid fitted to them) and its z faces periodic, with z the toroidal
+	// angle.
+	Background::Background diagonal_background(bool walls = true,
+		bool chi_mask = true, bool wall_faces = false)
 	{
 		const int n {diag_n};
 		const int nz {diag_nz};
@@ -304,6 +309,14 @@ namespace
 
 		Zones::Zones zones(2);
 		zones.add_zone(x, x, z, gx, gx, gz);
+		if (wall_faces)
+		{
+			zones.set_face(0, Zones::ymin, Zones::face_wall);
+			zones.set_face(0, Zones::xmax, Zones::face_wall);
+			zones.set_face(0, Zones::zmin, 0);
+			zones.set_face(0, Zones::zmax, 0);
+			zones.set_toroidal(0);
+		}
 		Background::Background bkg {};
 		std::vector<BkgFPType> times {0.0, 1.0};
 		bkg.move_into_times(times);
@@ -345,7 +358,7 @@ namespace
 		bkg.move_into_grid_X(gX);
 		bkg.move_into_grid_Y(gY);
 		bkg.move_into_grid_Z(gZ);
-		bkg.move_into_chi(chi);
+		if (chi_mask) bkg.move_into_chi(chi);
 
 		// The outline x + y = 10.5, from the R axis to the Z axis
 		if (walls)
@@ -476,11 +489,86 @@ TEST(SputteringSurface, MaxWallDist)
 	EXPECT_EQ(Sputtering::Surface(bkg, 100.0).num_fallback(), 0);
 }
 
-// Without a wall mask (e.g., a Gkeyll background) there are no surfaces
+// Without a wall mask or wall faces on a toroidal grid (e.g., a Gkeyll
+// background) there are no surfaces
 TEST(SputteringSurface, NeedsChi)
 {
 	EXPECT_EXIT(Sputtering::Surface {Background::Background {}},
 		testing::ExitedWithCode(EXIT_FAILURE), "wall mask");
+}
+
+// On a grid fitted to the targets (no wall mask), every cell face on a
+// wall face of a zone is an element, with the face's own normal (into the
+// plasma) and area. Here those are the bottom row (ymin, normal +Z) and
+// the right column (xmax, normal -R) of the 45 degree wall's grid.
+TEST(SputteringSurface, TargetFaces)
+{
+	const auto bkg {diagonal_background(true, false, true)};
+	const Sputtering::Surface surface(bkg);
+	EXPECT_TRUE(surface.from_wall_faces());
+	ASSERT_EQ(surface.size(), static_cast<std::size_t>(2 * diag_n
+		* diag_nz));
+	EXPECT_EQ(surface.num_fallback(), 0);
+
+	double expected_total {};
+	for (const auto& e : surface.elements())
+	{
+		EXPECT_TRUE(e.on_wall_face());
+		EXPECT_EQ(e.zone, 0);
+		EXPECT_FALSE(e.fallback);
+		EXPECT_DOUBLE_EQ(e.area, e.area_face);
+		EXPECT_DOUBLE_EQ(e.phi_min, e.k * diag_dphi);
+		EXPECT_DOUBLE_EQ(e.phi_max - e.phi_min, diag_dphi);
+		ASSERT_TRUE(e.face == Zones::ymin || e.face == Zones::xmax);
+		if (e.face == Zones::ymin)
+		{
+			EXPECT_EQ(e.j, 0);
+			EXPECT_NEAR(e.n_R, 0.0, 1e-12);
+			EXPECT_NEAR(e.n_Z, 1.0, 1e-12);
+			EXPECT_NEAR(e.Z_mid, 0.0, 1e-14);
+			EXPECT_NEAR(e.R_mid, diag_R(e.i + 0.5), 1e-12);
+		}
+		else
+		{
+			EXPECT_EQ(e.i, diag_n - 1);
+			EXPECT_NEAR(e.n_R, -1.0, 1e-12);
+			EXPECT_NEAR(e.n_Z, 0.0, 1e-12);
+			EXPECT_NEAR(e.R_mid, diag_R(diag_n), 1e-12);
+			EXPECT_NEAR(e.Z_mid, diag_Z(e.j + 0.5), 1e-14);
+		}
+		const double area {0.01 * e.R_mid * diag_dphi};
+		EXPECT_NEAR(e.area, area, 1e-14);
+		expected_total += area;
+	}
+	EXPECT_NEAR(surface.total_area(), expected_total, 1e-12);
+
+	// Only toroidal zones: without z being phi there's no surface
+	auto flat {diagonal_background(true, false, true)};
+	Zones::Zones zones(2);
+	const auto& z0 {flat.get_zones()};
+	zones.add_zone(z0.get_x(0), z0.get_y(0), z0.get_z(0), z0.get_grid_x(0),
+		z0.get_grid_y(0), z0.get_grid_z(0));
+	zones.set_face(0, Zones::ymin, Zones::face_wall);
+	flat.move_into_zones(zones);
+	EXPECT_EXIT(Sputtering::Surface {flat},
+		testing::ExitedWithCode(EXIT_FAILURE), "wall mask");
+}
+
+// With a wall mask the wall faces are inside the material, so they're not
+// elements: the staircase is the same with or without them
+TEST(SputteringSurface, StaircaseIgnoresWallFaces)
+{
+	const Sputtering::Surface plain(diagonal_background());
+	const Sputtering::Surface with(diagonal_background(true, true, true));
+	EXPECT_FALSE(with.from_wall_faces());
+	ASSERT_EQ(with.size(), plain.size());
+	for (std::size_t e {}; e < plain.size(); ++e)
+	{
+		EXPECT_FALSE(with.elements()[e].on_wall_face());
+		EXPECT_EQ(with.elements()[e].i, plain.elements()[e].i);
+		EXPECT_EQ(with.elements()[e].j, plain.elements()[e].j);
+		EXPECT_EQ(with.elements()[e].face, plain.elements()[e].face);
+	}
 }
 
 // On the SOLEDGE3X test mesh, the wall is zone 3's last psi row, and the
@@ -577,9 +665,9 @@ namespace
 	// The 45 degree wall background with a uniform plasma. B is along Z by
 	// default and the flow is up, toward the wall (which is up and to the
 	// right of the plasma), with no electric field.
-	Background::Background diagonal_with_plasma(const Plasma& p)
+	Background::Background diagonal_with_plasma(const Plasma& p,
+		Background::Background bkg = diagonal_background())
 	{
-		Background::Background bkg {diagonal_background()};
 		bkg.set_elec_mass_amu(me_amu);
 		bkg.set_ion_mass_amu(mi_amu);
 		auto field = [&](double value)
@@ -1042,6 +1130,47 @@ TEST_F(SputteringTable, SampleBirth)
 		<< bins << " bins";
 }
 
+// On target faces, with B along Z and the flow down onto the bottom
+// target: the bottom row gets n u (b . n = 1) and the right column, which
+// the field runs along, nothing. Births start just above the bottom
+// faces, moving up into the plasma.
+TEST_F(SputteringTable, SourceOnTargets)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	Plasma p {};
+	p.u = {0.0, 0.0, -1e4};
+	const auto bkg {diagonal_with_plasma(p, diagonal_background(true, false,
+		true))};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg, table, source_options());
+
+	double total {};
+	for (std::size_t e {}; e < source.size(); ++e)
+	{
+		const auto& el {surface.elements()[e]};
+		const double flux {el.face == Zones::ymin ? p.n * 1e4 : 0.0};
+		EXPECT_NEAR(source.flux()[e], flux, 1e-6 * p.n * 1e4);
+		EXPECT_NEAR(source.rate()[e], flux * 0.02 * el.area,
+			1e-6 * p.n * 1e4 * 0.02 * el.area);
+		if (el.face == Zones::ymin) total += el.area;
+	}
+	EXPECT_NEAR(source.total_rate()[0], p.n * 1e4 * 0.02 * total,
+		1e-9 * source.total_rate()[0]);
+
+	pcg32 rng(5, 3);
+	for (int n {}; n < 2000; ++n)
+	{
+		const auto b {source.sample_birth(rng)};
+		const auto& el {surface.elements()[b.element]};
+		ASSERT_EQ(el.face, Zones::ymin);
+		EXPECT_NEAR(b.y, 0.001, 1e-12);
+		EXPECT_GE(b.x, el.i);
+		EXPECT_LE(b.x, el.i + 1);
+		EXPECT_GE(b.vZ, 0.0);
+	}
+}
+
 // Filling the slots from a source gives neutral particles where the source
 // put them, each standing for source_rate / imp_num atoms/s
 TEST_F(SputteringTable, FillSlots)
@@ -1091,7 +1220,8 @@ TEST_F(SputteringTable, SampleBirthNoSource)
 // cell and the cell it came from. A wall cell on the 45 degree staircase
 // borders two plasma cells, so which element depends on where it came
 // from. A wall cell with no element is unassigned. The time since birth
-// and charge are binned, and wall faces counted on their own.
+// and charge are binned, and wall faces (with no elements on them here)
+// counted on their own.
 TEST(SputteringDeposition, Tallies)
 {
 	const auto bkg {diagonal_background()};
@@ -1118,7 +1248,8 @@ TEST(SputteringDeposition, Tallies)
 	dep.add_into_wall_cell(0, 5, 5, 1, 0, 4, 5, 2e-6, 3, 10.0);
 	dep.add_into_wall_cell(0, 5, 5, 1, 0, 5, 4, 2e-6, 3, 20.0);
 	dep.add_into_wall_cell(0, 9, 9, 1, 0, 8, 9, 5e-4, 0, 40.0);
-	dep.add_at_wall_face(3e-12, 74, 80.0);
+	dep.add_at_wall_face(bkg.get_zones(), 0, Zones::ymin,
+		{1.5, -0.01, 0.15}, 3e-12, 74, 80.0);
 
 	EXPECT_DOUBLE_EQ(dep.redeposited()[from_left], 10.0);
 	EXPECT_DOUBLE_EQ(dep.redeposited()[from_below], 20.0);
@@ -1145,4 +1276,48 @@ TEST(SputteringDeposition, Tallies)
 	std::ostringstream out {};
 	dep.print_summary(out, 300.0);
 	EXPECT_NE(out.str().find("50% of the source"), std::string::npos);
+}
+
+// On target faces, an atom absorbed at a wall face goes on the element at
+// the cell it crossed, found from its position along the face and in z
+// (wrapped if it's just past the end of the periodic z range). A wall face
+// with no elements, or no wall face at all, isn't on an element.
+TEST(SputteringDeposition, WallFaces)
+{
+	const auto bkg {diagonal_background(true, false, true)};
+	const Zones::Zones& zones {bkg.get_zones()};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+
+	auto find = [&](int i, int j, int k, Zones::Face face)
+	{
+		for (std::size_t e {}; e < surface.size(); ++e)
+		{
+			const auto& el {surface.elements()[e]};
+			if (el.i == i && el.j == j && el.k == k && el.face == face)
+				return e;
+		}
+		return surface.size();
+	};
+	const std::size_t bottom {find(3, 0, 2, Zones::ymin)};
+	const std::size_t wrapped {find(7, 0, 0, Zones::ymin)};
+	const std::size_t right {find(diag_n - 1, 6, 1, Zones::xmax)};
+	ASSERT_LT(bottom, surface.size());
+	ASSERT_LT(wrapped, surface.size());
+	ASSERT_LT(right, surface.size());
+
+	dep.add_at_wall_face(zones, 0, Zones::ymin, {3.4, -0.01, 0.25}, 1e-6, 1,
+		1.0);
+	dep.add_at_wall_face(zones, 0, Zones::ymin,
+		{7.2, -0.02, diag_nz * diag_dphi + 0.01}, 1e-6, 1, 2.0);
+	dep.add_at_wall_face(zones, 0, Zones::xmax, {diag_n + 0.01, 6.5, 0.15},
+		1e-6, 1, 4.0);
+	dep.add_at_wall_face(zones, 0, Zones::ymax, {3.5, diag_n + 0.01, 0.15},
+		1e-6, 1, 8.0);
+
+	EXPECT_DOUBLE_EQ(dep.redeposited()[bottom], 1.0);
+	EXPECT_DOUBLE_EQ(dep.redeposited()[wrapped], 2.0);
+	EXPECT_DOUBLE_EQ(dep.redeposited()[right], 4.0);
+	EXPECT_DOUBLE_EQ(dep.wall_face(), 8.0);
+	EXPECT_DOUBLE_EQ(dep.total(), 15.0);
 }

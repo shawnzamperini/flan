@@ -907,8 +907,8 @@ namespace Options
 	*
 	* Where impurities come from: "manual" starts them where the
 	* imp_*start_opt options say, and "sputter" makes them the atoms the
-	* background plasma sputters off the walls of a SOLEDGE3X background
-	* (see Sputtering::Source).
+	* background plasma sputters off the walls of a SOLEDGE3X background or
+	* the targets of a HERMES background (see Sputtering::Source).
 	*
 	* Valid values are "manual" and "sputter". An invalid value prints an
 	* error and leaves the option unchanged. Also sets the control integer
@@ -1010,7 +1010,8 @@ namespace Options
 	*
 	* How far, in cell widths, the nearest segment of the wall outline can
 	* be from a wall face before that face falls back to its own normal and
-	* area (see Sputtering::Surface).
+	* area (see Sputtering::Surface). Only used with a wall mask
+	* (SOLEDGE3X): HERMES targets always use their faces' own.
 	*
 	* @param sput_max_wall_dist New value of the sput_max_wall_dist option.
 	*/

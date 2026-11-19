@@ -4,7 +4,8 @@
 * snapshots and BOUT++ Hermes-3 dump files written by the test (see
 * hermes_test_files.h): the six zones and their faces, the geometry and
 * field, the unnormalized plasma, picking snapshots, the BOUT++ reader
-* against the JAX one on the same plasma, and the errors.
+* against the JAX one on the same plasma, the sputtering surface at the
+* targets, and the errors.
 */
 
 #include <algorithm>
@@ -24,6 +25,7 @@
 #include "options.h"
 #include "read_bkg.h"
 #include "read_hermes.h"
+#include "sputtering.h"
 #include "zones.h"
 
 namespace
@@ -201,6 +203,48 @@ TEST_F(ReadHermesTest, Zones)
 	EXPECT_EQ(faces(4), (std::array<int, 4> {1, face_absorbing, 3, 5}));
 	EXPECT_EQ(faces(5), (std::array<int, 4> {2, face_absorbing, 4,
 		face_wall}));
+}
+
+// The sputtering surface of a HERMES background is its four target faces
+// (the ymin faces of the inner PFR and leg, the ymax faces of the outer
+// ones), one element per cell along them and toroidal cell. The test
+// grid's cells are rectangles in (R, Z), so the normals point along Z into
+// the plasma and each element's area is dR x R x dphi.
+TEST_F(ReadHermesTest, SputteringTargets)
+{
+	const auto bkg {Hermes::read_hermes(options())};
+	const Sputtering::Surface surface(bkg);
+	ASSERT_TRUE(surface.from_wall_faces());
+
+	const std::array<std::array<int, 2>, 4> targets {{
+		{0, Zones::ymin}, {2, Zones::ymax}, {3, Zones::ymin},
+		{5, Zones::ymax}}};
+	ASSERT_EQ(surface.size(), static_cast<std::size_t>(4 * 3 * nz));
+
+	const double dphi {2.0 * Constants::pi / (zperiod * nz)};
+	const HermesTest::TestGrid& g {m_grid};
+	double total {};
+	for (const auto& e : surface.elements())
+	{
+		const bool listed {std::find(targets.begin(), targets.end(),
+			std::array<int, 2> {e.zone, static_cast<int>(e.face)})
+			!= targets.end()};
+		EXPECT_TRUE(listed) << "zone " << e.zone << " face " << e.face;
+		const bool lower {e.face == Zones::ymin};
+		EXPECT_EQ(e.j, lower ? 0 : bkg.get_zones().get_ny(e.zone) - 1);
+
+		// Global x index of the cell, and the target's Z: the bottom of
+		// global row 0 or the top of the last row
+		const int gi {origin[e.zone][0] + e.i};
+		const double R_mid {g.R0 + (gi + 0.5) * g.dR};
+		EXPECT_NEAR(e.R_mid, R_mid, 1e-12);
+		EXPECT_NEAR(e.Z_mid, lower ? g.Z0 : g.Z0 + g.ny * g.dZ, 1e-12);
+		EXPECT_NEAR(e.n_R, 0.0, 1e-12);
+		EXPECT_NEAR(e.n_Z, lower ? 1.0 : -1.0, 1e-12);
+		EXPECT_NEAR(e.area, g.dR * R_mid * dphi, 1e-12);
+		total += e.area;
+	}
+	EXPECT_NEAR(surface.total_area(), total, 1e-12);
 }
 
 // Cell centers from the grid's corners in a right-handed (R, z, Z), and

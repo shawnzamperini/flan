@@ -179,6 +179,25 @@ as for SOLEDGE3X. At the X-point, a corner ghost cell takes the average
 of the cells around it, which lie on different field lines, so
 interpolation in the cells touching the X-point is approximate.
 
+## Sputtered source
+
+With `imp_source_opt = "sputter"` the particles are the atoms the
+background ions sputter off the divertor targets (see
+[Sputtering](../physics/sputtering.md)). The grid ends at the targets, so
+the cell faces on them are the sputtering surface, each with its own
+normal and area. There's no wall mask or wall outline to correct them
+with, and `sput_max_wall_dist` isn't used. The ion flux onto a target face
+is the parallel flow through it, n u∥ b·n, plus the E×B drift into it,
+from the plasma in the cell next to it. An atom that comes back to a target
+is put on the face element it crossed, so the output has the gross and net
+erosion along each target. Only the targets sputter: the outer edges of
+the SOL and the PFRs are absorbing faces, not walls.
+
+The domain is the run's toroidal wedge, so the sputtered rate, and the
+weight of each particle, is for that wedge: 1 / `hermes_zperiod` of the
+whole torus's. Densities don't change, since the wedge's volume shrinks
+in proportion.
+
 ## Checking a background
 
 `python/check_hermes_conventions.py` checks a run's files before they

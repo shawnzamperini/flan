@@ -8,8 +8,8 @@ material, and the ion's energy and angle of incidence.
 
 !!! note "Work in progress"
     With `imp_source_opt = "sputter"`, Flan follows the atoms the
-    background plasma sputters off the wall of a SOLEDGE3X background, as
-    this page describes. Sputtering by the impurities themselves, and the
+    background plasma sputters off the wall of a SOLEDGE3X background, or
+    off the targets of a HERMES background, as this page describes. Sputtering by the impurities themselves, and the
     sheath's effect on where they redeposit, are planned next.
 
 ## Where the yields come from
@@ -179,7 +179,20 @@ than $\log Y$, because $Y = 0$ below threshold. Outside the table:
 ## Wall surfaces
 
 The surfaces the plasma sputters are found by `Sputtering::Surface`
-(`src/sputtering.cpp`), for SOLEDGE3X backgrounds.
+(`src/sputtering.cpp`). How depends on whether the mesh is fitted to the
+wall.
+
+### HERMES: grids fitted to the targets
+
+A hypnotoad grid ends at the divertor targets, so the targets are the
+zone faces Flan marks as wall faces (the y ends of the legs and PFRs).
+Every cell face on a target is a surface element with its own normal,
+pointing into the plasma, and its own area, which are the target's. There
+is no wall mask and nothing to correct, so the rest of this section,
+about SOLEDGE3X, doesn't apply. The outer edges of the SOL and the PFRs
+are absorbing faces, not walls, and aren't sputtered.
+
+### SOLEDGE3X: a wall mask
 
 SOLEDGE3X doesn't fit its mesh to the wall. The mesh runs past the wall,
 and a mask, chi, marks the cells inside the wall (chi = 1) and in the
@@ -359,9 +372,11 @@ run stops.
 ## Redeposition
 
 With `imp_source_opt = "sputter"`, Flan also tallies where the sputtered
-atoms land back on the wall (`Sputtering::Deposition`). An atom that moves
-into a wall cell (chi = 1) is absorbed and put on the surface element
-between that wall cell and the plasma cell it came from. Since every
+atoms land back on the wall (`Sputtering::Deposition`). On a SOLEDGE3X
+background, an atom that moves into a wall cell (chi = 1) is absorbed and
+put on the surface element between that wall cell and the plasma cell it
+came from. On a HERMES background, an atom absorbed at a target is put on
+the element of the target face it crossed. Since every
 atom's weight is the atoms/s it stands for, adding up the weights landing
 on an element gives the rate atoms are redeposited there, and subtracting
 that from the element's source (averaged over the run) gives its net
@@ -383,7 +398,8 @@ and the mean charge when they land. The tallies are saved in the
 | `redeposited_charge` | (charge) | atoms/s | Redeposited rate by charge when they landed (0 to Z) |
 
 and the attributes `redeposited_total`, `redeposited_wall_face` (atoms
-absorbed at the end of a zone, not on an element) and
+absorbed at a wall face with no element on it: the ends of the zones of a
+SOLEDGE3X background, which are inside the material) and
 `redeposited_unassigned` (atoms that went more than a cell into the wall
 in one step, so their element isn't known).
 
@@ -419,7 +435,8 @@ sheath is resolved.
 python python/plot_sputtering.py case.nc --mesh /path/to/mesh_S3X.h5 --save case
 ```
 
-It prints the source, the share redeposited, what happened to the
+`--mesh` (a SOLEDGE3X mesh file) only draws the wall outline, so leave it
+out for a HERMES run. It prints the source, the share redeposited, what happened to the
 particles, the mean time a particle was followed and the impurity
 inventory per zone and above the X-point, checked against the source
 times the mean time followed. It plots the gross and net erosion along
