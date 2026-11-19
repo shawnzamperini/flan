@@ -72,21 +72,28 @@ the potential is a sum of two exponentials, as in Brooks (1990):
 with n the unit normal into the plasma. The signs make E point toward
 the wall, which pulls positive ions in. L_DS ∝ λ_D and L_MPS ∝ ρ_s.
 
-The shape is written once, and how the drop is split between the two
-layers (and the two scale lengths) is a separate, swappable piece:
+Both models split the floating drop the same way, with the Debye
+fraction f_D = 1 − ln cos θ / λ_w (θ the field angle from the normal,
+λ_w = eφ_fl / Te; Stangeby 2012, Borodkina and Tsvetkov 2015). Past
+Stangeby's critical angle this would be negative, so f_D is held at a
+small floor there, set from Coulette and Manfredi's kinetic results,
+which show a smooth change rather than a sharp cut-off. The models differ
+in the shape of φ(d), behind one interface that gives φ and E at a
+distance d from an element:
 
 - **`"brooks"`** (default). Brooks' form,
   φ(d) = f_D φ₀ exp(−d / 2λ_D) + (1 − f_D) φ₀ exp(−d / ρ_i), with φ₀ the
-  floating drop and f_D the fraction of it in the Debye sheath. f_D is
-  near 1 for a field near normal to the wall and falls toward 0 at grazing
-  angles. Brooks himself used a constant f_D; GITR uses an f_D(α) curve
-  (see [S0 findings](#phase-s0-findings) for where f_D(α) comes from).
-  GITR and ERO use this form, so Flan's results compare directly with
-  theirs.
-- **`"stangeby"`**, for testing how sensitive results are to the split.
-  The same shape, with the magnetic presheath drop from fluid theory,
-  (Te / e) |ln sin α|, capped at the whole drop, and the rest in the Debye
-  sheath. It depends on Ti / Te where the Brooks fit doesn't.
+  floating drop. GITR and ERO use this form, so Flan's results compare
+  directly with theirs. Brooks used a constant f_D and GITR an f_D curve
+  with no published source; Flan uses the split above
+  ([S0 findings](#phase-s0-findings)). The gyroradius definition (Brooks'
+  √(kT / m) / Ω or GITR's √(2kT / m) / Ω) is fixed in S3.
+- **`"borodkina"`**, for testing how sensitive results are to the shape
+  of the profile. Borodkina and Tsvetkov's analytic profile: a Debye layer
+  solved from Poisson's equation next to the wall, then an exponential
+  magnetic presheath with decay length ρ_s sin θ. Past the critical angle
+  it is presheath only, anchored at the wall. It has been checked against
+  PIC (SPICE2), and GITR benchmarks against it.
 
 The interface (drops and scale lengths per element and frame) leaves room
 for tabulated kinetic (PIC) profiles later, without changing the rest.
@@ -216,11 +223,13 @@ the current code before changing it.
   normal/face mismatch is the same artifact the source already has).
 - The extra E added in `update_velocity_cpu` for particles within a few
   L_MPS of a wall.
-- Option `sheath_model` (`"off"`, `"brooks"`, `"stangeby"`; `"off"`
+- Option `sheath_model` (`"off"`, `"brooks"`, `"borodkina"`; `"off"`
   by default until S5 validates it), in all the files listed in "Adding an
   input option".
-- Unit tests: ∫E · n dd equals the total drop for both splits; each
-  split against its S0 formula over α and Ti / Te; the field points to the wall; zero far
+- Unit tests: ∫E · n dd equals the total drop for both models; f_D
+  against its S0 formula over θ and Ti / Te, with the floor past the
+  critical angle; `"borodkina"` continuous in φ and E at ξ_mps and against
+  values from its equations; the field points to the wall and is zero far
   from it; the lookup finds the right element across zone faces.
 
 **Phase S4: sub-stepping near the wall.**
@@ -236,9 +245,12 @@ the current code before changing it.
 **Phase S5: prompt redeposition with the sheath.**
 
 - `reg_prompt_redep` variants with the sheath on, same p sweep and a scan
-  of field angle and Te, for both `"brooks"` and `"stangeby"`. How much
+  of field angle and Te, for both `"brooks"` and `"borodkina"`. How much
   the prompt fraction changes between them is the sensitivity to the
-  split.
+  shape of the profile.
+- D⁺ test ions pushed through the `"borodkina"` field reproduce
+  Borodkina and Tsvetkov's impact-angle distributions (Fig. 2a; 45° and
+  60°), as a check on the field and the near-wall push.
 - Once these pass, `sheath_model` defaults to `"brooks"` (the physics is
   then on by default, as for the inductive E∥).
 - `check_redeposition.py`: exact checks (ion impact energy against
@@ -379,30 +391,66 @@ same paper as Phys. Fluids B 2, 1858 (1990).
 - **The Stangeby split.** The magnetic presheath drop is
   (Te / e) |ln sin α|, and f_D = 1 − |ln sin α| / (e φ_fl / Te). This
   reaches 0 exactly at α_c, since the presheath drop then equals the
-  floating drop, so the `"stangeby"` option has the critical angle built
-  in.
+  floating drop, so the split has the critical angle built in.
 - **Against GITR's curve.** At θ_B = 30°, 60°, 80° and 85° the Stangeby
   split gives 0.95, 0.76, 0.38 and 0.14, close to GITR's curve. Below α_c
   it gives 0, where GITR's stays at about 0.1, nearer the smooth kinetic
   behaviour.
 
+### Borodkina and Tsvetkov (2015)
+
+Physics Procedia 71, 25 (2015), the conference version of the analytic
+model that GITR benchmarks against. α is measured from the surface
+normal, and distances ξ are in Debye lengths r_d. ρ_s is the Larmor
+radius at the ion acoustic speed, c_s / Ω_i with c_s = √(e(Te + Ti) / m_i).
+Potentials λ are e(φ − φ₀)/kTe.
+
+- **Wall potential.** λ_w = ½ ln(2π (m_e / M_i)(Te + Ti) / Te). This is
+  the floating drop, with no presheath term.
+- **Split.** λ_mps = ln cos α, Stangeby's magnetic presheath drop. So
+  f_D = 1 − λ_mps / λ_w, the same split as Stangeby's.
+- **Magnetic presheath** (eq. 5). The potential is an exponential,
+  λ = λ_mps exp(−(ξ − ξ_mps) / L), with
+  L = √(−λ_mps / Δn_mps) = ρ_s sin α / r_d. That is, the decay length is
+  ρ_s sin α, which grows with the angle. Brooks and GITR use a constant
+  gyroradius instead.
+- **Debye sheath** (eqs. 6, 8). λ = λ_w + Q (1 − e^(−aξ)), with a and Q
+  closed-form functions of λ_w, λ_mps and α.
+- **Boundary** (eq. 9). ξ_mps comes from continuity of the potential.
+- **Checked.** I evaluated the model for D at Te = Ti = 30 eV,
+  n = 10²⁰ m⁻³ and B = 3.2 T (their Fig. 1 case), at 30° to 85°. The
+  field is continuous at ξ_mps, which also checks the transcription of
+  the scanned equations. The Debye layer is 8 to 13 λ_D wide.
+- **Where it stops.** At α = 0 there is no presheath and the formulas
+  divide by zero; use the Debye part alone. Past Stangeby's critical
+  angle (86.6° here), λ_mps < λ_w and a, Q and ξ_mps go negative. The
+  natural extension is no Debye sheath, with the presheath exponential
+  anchored at the wall and capped at λ_w.
+- **Benchmarks.** The profile agrees with Chodura's and Stangeby's
+  solutions and with SPICE2 PIC at 80° (Fig. 1). The impact-angle
+  distribution of D⁺ agrees with SPICE2 at 60° and with Kawamura et al.
+  PIC at 45° (Fig. 2a). Those are D⁺ test ions, not W, but Flan can
+  reproduce them in S5 by pushing D⁺ test ions through the sheath field.
+- **GITR's curve.** GITR's f_D stays near 0.1 at 89°, where this model has
+  no Debye sheath. So GITR isn't simply 1 − λ_mps / λ_w, and its low-angle
+  values come from somewhere unpublished.
+
 ### Still to do in S0
 
 - **Where to get the `"brooks"` f_D(α) from.** Decision 7 below.
-- **Borodkina et al.** Their analytic field model (2015, 2016) is a
-  possible third option and a check on the shape. Not read yet.
+- **Borodkina et al. (2016)**, Contrib. Plasma Phys. 56, 640. It may give
+  more benchmarks, but the model is in the 2015 paper.
 - **Reference curves with a sheath.** Published prompt-redeposition
   results (ERO, GITR, Chankin et al. 2014) for S5. Brooks' reference case
   above is the first one.
 
 ## Decisions to make
 
-1 to 6 decided as recommended. 7 is open.
+All decided. 1 to 7 as recommended.
 
 1. **Sheath model.** Decided: Brooks' two-layer model (Debye sheath plus
-   magnetic presheath, with the drop split by his fit to the field angle)
-   as the default, as in ERO and GITR, and the Stangeby/Chodura fluid
-   split as a second option for sensitivity. Debye sheath only was
+   magnetic presheath) as the default, as in ERO and GITR, and a second
+   model for sensitivity (settled in decision 7). Debye sheath only was
    rejected: at grazing angles, where divertor targets are, it puts the
    drop within tens of microns of the wall, where few W atoms ionize, so
    it would barely change prompt redeposition. Tabulated PIC profiles can
@@ -421,20 +469,24 @@ same paper as Phys. Fluids B 2, 1858 (1990).
    assumptions can't be met with the normal cosine/Thompson birth, by
    folding those distributions into the analytic result instead.
 
-7. **Where `"brooks"` gets f_D(α).** Brooks used a constant, and GITR's
-   curve has no published formula. Options:
-   (a) use the Stangeby split for f_D(α) in Brooks' form, which tracks
-   GITR's curve down to about α_c, then hold f_D at a small floor below
-   it, as the kinetic results suggest;
-   (b) digitize GITR's published curve (Kumar et al., Fig. B1) and fit it;
-   (c) take f_D(α) from Borodkina et al. or another published source, once
-   read.
-   Recommended: (a). Its physics is stated, it matches the kinetic
-   behaviour, and it can be checked analytically. The floor is set from
-   Coulette and Manfredi. Then `"brooks"` and `"stangeby"` differ only in
-   the scale lengths and the floor, so they collapse into one model with a
-   sensitivity option for the gyroradius definition (Brooks' √(kT / m)
-   against GITR's √(2kT / m)).
+7. **Where `"brooks"` gets f_D(α), and what the sensitivity option is.**
+   Decided: (a). Brooks used a constant, and GITR's curve has no published
+   formula.
+   Stangeby and Borodkina split the drop the same way,
+   f_D = 1 − ln cos α / λ_w (α from the normal). Options:
+   (a) `"brooks"`: Brooks' two-exponential shape with that f_D, held at a
+   small floor past the critical angle (the kinetic results show no sharp
+   cut-off). Replace the planned `"stangeby"` option with `"borodkina"`:
+   the same split, but with the Poisson-shaped Debye layer and the
+   ρ_s sin α presheath scale. The two then differ only in the shape of the
+   profile, which is the uncertainty worth testing;
+   (b) as (a), but `"borodkina"` is the default and `"brooks"` the
+   comparison with GITR and ERO;
+   (c) digitize GITR's curve (Kumar et al., Fig. B1) for f_D.
+   Recommended: (a). It is Brooks' form, which GITR and ERO use, with an
+   f_D that has published physics behind it. `"borodkina"` is a published,
+   PIC-benchmarked alternative with its own S5 test (the D⁺ impact
+   angles). (c) copies a curve whose source we can't name.
 
 
 ## References
@@ -459,5 +511,8 @@ same paper as Phys. Fluids B 2, 1858 (1990).
 - J. N. Brooks, ANL/FPP/TM-244 (1989), the report version of Brooks (1990).
 - A. Kumar et al., "RF-specific tungsten erosion and global transport in
   ITER under neon seeding", arXiv:2609.09408 (2026).
+- I. E. Borodkina and I. V. Tsvetkov, "Modelling of charged particle
+  dynamics in the sheath and plasma-facing surface sputtering", *Physics
+  Procedia* **71**, 25 (2015).
 - I. E. Borodkina, M. Komm, I. V. Tsvetkov, *Russ. Phys. J.* **58**, 438
   (2015); I. Borodkina et al., *Contrib. Plasma Phys.* **56**, 640 (2016).
