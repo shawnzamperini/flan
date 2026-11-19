@@ -206,7 +206,27 @@ the atom, and the option checks. Wall faces on the slab are CPU only.
 - Tests: the surface of the slab wall (normals, areas), the field angle.
 
 **Phase S2: prompt redeposition without a sheath (Fussmann).** Checks
-the current code before changing it.
+the current code before changing it. Done:
+
+- `Slots::prompt_by`: when an atom first ionizes,
+  `OpenADAS::ioniz_recomb` sets it to that time plus 2π m / (eB) at the
+  local field. `Deposition` counts a return before then as prompt
+  (`prompt`, `prompt_charge`, `prompt_total` in the output).
+- The model's assumptions can't all be met with the normal physics: W+
+  ionizes again about 2π (S₁/S₀)/p times per gyration. So decision 6's
+  test-only option was needed after all, but for the charge rather than
+  the birth: `imp_iz_max_charge` (CPU only) stops ionization at W+. The
+  cosine/Thompson birth is fine, since p doesn't depend on the speed.
+- B is at 0.01° to the wall, so the plasma reaches it (the source needs
+  a flux) while an ion moves only ~1e-3 ρ along B per gyration.
+- `reg_prompt_redep` (p01 to p10, b4, and `full` without the charge
+  limit) and `check_redeposition.py`, which takes p from the saved
+  inputs and the same OpenADAS table, interpolated as Flan does.
+  Tolerance: 4 standard errors plus 0.01.
+- Unit tests: `IonizRecomb.PromptBy`, `IonizRecomb.MaxCharge`,
+  `SlabWall.PromptTally`.
+
+The plan below was:
 
 - A tally of prompt returns. Each slot records the time it first
   ionized. A return is prompt if it comes within one gyroperiod of the

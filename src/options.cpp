@@ -1295,6 +1295,19 @@ namespace Options
 		{m_imp_atom_num = imp_atom_num;}
 
 	/**
+	* Sets the imp_iz_max_charge option.
+	*
+	* Highest charge the impurity can ionize to. It is for regression
+	* cases that compare with models leaving out further ionization, e.g.,
+	* prompt redeposition after ionizing once (Fussmann's model), not for
+	* physics runs. Below 0 (the default) there is no limit. CPU only.
+	*
+	* @param imp_iz_max_charge New value of the imp_iz_max_charge option.
+	*/
+	void Options::set_imp_iz_max_charge(int imp_iz_max_charge)
+		{m_imp_iz_max_charge = imp_iz_max_charge;}
+
+	/**
 	* Sets the imp_mass_amu option.
 	*
 	* Mass of the impurity (amu).
@@ -2800,6 +2813,14 @@ namespace Options
 	*/
 	int Options::imp_atom_num() const 
 		{return m_imp_atom_num;}
+
+	/**
+	* Returns the imp_iz_max_charge option.
+	*
+	* @return Value of the imp_iz_max_charge option (below 0: no limit).
+	*/
+	int Options::imp_iz_max_charge() const
+		{return m_imp_iz_max_charge;}
 
 	/**
 	* Returns the imp_mass_amu option.

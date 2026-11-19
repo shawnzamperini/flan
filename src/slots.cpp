@@ -61,6 +61,7 @@ namespace Slots
 		m_yidx.resize(N);
 		m_zidx.resize(N);
 		m_weight.resize(N);
+		m_prompt_by.resize(N, -1.0);
 		m_q.resize(N);
 		m_state.resize(N);
 	}
@@ -224,6 +225,16 @@ namespace Slots
 	* @return Vector of length N() with one entry per slot.
 	*/
 	const std::vector<double>& Slots::weight() const noexcept {return m_weight;}
+
+	/**
+	* The particle time (pt) up to which a return to the wall counts as
+	* prompt: the time it first ionized plus one gyroperiod of the singly
+	* charged ion at the local field, 2 pi m / (e B). -1 until it first
+	* ionizes. Set by OpenADAS::ioniz_recomb and read by Sputtering::
+	* Deposition. Host only: the GPU path doesn't track it.
+	*/
+	const std::vector<double>& Slots::prompt_by() const noexcept
+		{return m_prompt_by;}
 
 	/**
 	* Returns the charge state of each particle.
@@ -398,6 +409,7 @@ namespace Slots
 	* @param val Monte Carlo weight to store in slot i.
 	*/
 	void Slots::set_weight(int i, double val) {m_weight[i] = val;}
+	void Slots::set_prompt_by(int i, double val) {m_prompt_by[i] = val;}
 
 	/**
 	* Sets the q value of a single slot.
@@ -969,6 +981,7 @@ namespace Slots
 					slots.set_vZ(i, p.vZ);
 					slots.set_q(i, p.q);
 					slots.set_weight(i, p.weight);
+					slots.set_prompt_by(i, -1.0);
 					slots.set_state(i, 0);
 				}
 			}  // i loop

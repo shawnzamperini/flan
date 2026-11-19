@@ -1581,7 +1581,9 @@ namespace Sputtering
 	Deposition::Deposition(const Surface& surface, const int atomic_number)
 		: m_surface {&surface},
 		m_redeposited(surface.size(), 0.0),
-		m_charge(atomic_number + 1, 0.0)
+		m_charge(atomic_number + 1, 0.0),
+		m_prompt(surface.size(), 0.0),
+		m_prompt_charge(atomic_number + 1, 0.0)
 	{
 		for (std::size_t e {}; e < surface.size(); ++e)
 		{
@@ -1607,15 +1609,19 @@ namespace Sputtering
 	}
 
 	/**
-	* Adds an absorbed atom to the time since birth and charge tallies.
-	* Called from inside OpenMP loops, so the adds are atomic.
+	* Adds an absorbed atom to the time since birth and charge tallies, and
+	* to the prompt charge tally if it came back promptly. Called from
+	* inside OpenMP loops, so the adds are atomic.
 	*
 	* @param pt Time since the atom was born (s).
 	* @param q Its charge when it was absorbed.
 	* @param weight Its weight (atoms/s).
+	* @param prompt_by The time since birth up to which its return is
+	*        prompt (Slots::Slots::prompt_by), below 0 if it never ionized.
+	* @return True if the return was prompt.
 	*/
-	void Deposition::add_lifetime_and_charge(const double pt, const int q,
-		const double weight)
+	bool Deposition::add_lifetime_and_charge(const double pt, const int q,
+		const double weight, const double prompt_by)
 	{
 		const std::size_t nbins {m_lifetime.size()};
 		std::size_t bin {static_cast<std::size_t>(std::upper_bound(
@@ -1629,6 +1635,14 @@ namespace Sputtering
 			static_cast<int>(m_charge.size()) - 1)};
 		#pragma omp atomic
 		m_charge[charge] += weight;
+
+		const bool prompt {prompt_by >= 0.0 && pt <= prompt_by};
+		if (prompt)
+		{
+			#pragma omp atomic
+			m_prompt_charge[charge] += weight;
+		}
+		return prompt;
 	}
 
 	/**
@@ -1650,12 +1664,17 @@ namespace Sputtering
 	* @param pt Time since the atom was born (s).
 	* @param q Its charge.
 	* @param weight Its weight (atoms/s).
+	* @param prompt_by The time since birth up to which its return is
+	*        prompt (Slots::Slots::prompt_by). Below 0 (the default) it
+	*        isn't.
 	*/
 	void Deposition::add_into_wall_cell(const int zone, const int i,
 		const int j, const int k, const int prev_zone, const int prev_i,
-		const int prev_j, const double pt, const int q, const double weight)
+		const int prev_j, const double pt, const int q, const double weight,
+		const double prompt_by)
 	{
-		add_lifetime_and_charge(pt, q, weight);
+		const bool prompt {add_lifetime_and_charge(pt, q, weight,
+			prompt_by)};
 
 		const auto it {m_wall_cells.find(cell_key(zone, i, j, k))};
 		if (it == m_wall_cells.end())
@@ -1677,6 +1696,11 @@ namespace Sputtering
 		}
 		#pragma omp atomic
 		m_redeposited[pick] += weight;
+		if (prompt)
+		{
+			#pragma omp atomic
+			m_prompt[pick] += weight;
+		}
 	}
 
 	/**
@@ -1700,13 +1724,17 @@ namespace Sputtering
 	* @param pt Time since the atom was born (s).
 	* @param q Its charge.
 	* @param weight Its weight (atoms/s).
+	* @param prompt_by The time since birth up to which its return is
+	*        prompt (Slots::Slots::prompt_by). Below 0 (the default) it
+	*        isn't.
 	*/
 	void Deposition::add_at_wall_face(const Zones::Zones& zones,
 		const int zone, const Zones::Face face,
 		const std::array<double, 3>& pos, const double pt, const int q,
-		const double weight)
+		const double weight, const double prompt_by)
 	{
-		add_lifetime_and_charge(pt, q, weight);
+		const bool prompt {add_lifetime_and_charge(pt, q, weight,
+			prompt_by)};
 
 		if (!m_wall_faces.empty())
 		{
@@ -1728,6 +1756,11 @@ namespace Sputtering
 			{
 				#pragma omp atomic
 				m_redeposited[it->second] += weight;
+				if (prompt)
+				{
+					#pragma omp atomic
+					m_prompt[it->second] += weight;
+				}
 				return;
 			}
 		}
@@ -1760,6 +1793,8 @@ namespace Sputtering
 		sum(m_redeposited);
 		sum(m_lifetime);
 		sum(m_charge);
+		sum(m_prompt);
+		sum(m_prompt_charge);
 	}
 
 	/**
@@ -1768,7 +1803,9 @@ namespace Sputtering
 	* cells with no element (unassigned) and at wall faces, and their total
 	* (atoms/s). Also the edges of the time since birth bins (s), the rate
 	* in each bin, and the rate at each charge state, for every redeposited
-	* atom.
+	* atom. The prompt returns onto each element and at each charge state,
+	* and their total (every prompt return, including those that land with
+	* no element under them).
 	*/
 	///@{
 	const std::vector<double>& Deposition::redeposited() const
@@ -1786,6 +1823,15 @@ namespace Sputtering
 	const std::vector<double>& Deposition::lifetime() const
 		{return m_lifetime;}
 	const std::vector<double>& Deposition::charge() const {return m_charge;}
+	const std::vector<double>& Deposition::prompt() const {return m_prompt;}
+	const std::vector<double>& Deposition::prompt_charge() const
+		{return m_prompt_charge;}
+	double Deposition::prompt_total() const
+	{
+		double sum {};
+		for (const double r : m_prompt_charge) sum += r;
+		return sum;
+	}
 	///@}
 
 	/**
@@ -1825,6 +1871,12 @@ namespace Sputtering
 			mean_q += q * m_charge[q] / tot;
 		os << "  Mean charge when they land " << mean_q << ", "
 			<< 100.0 * m_charge[0] / tot << "% as neutrals\n";
+		const double prompt {prompt_total()};
+		os << "  Prompt (within one singly charged gyroperiod of first "
+			"ionizing): " << prompt << " atoms/s";
+		if (source_rate > 0.0)
+			os << ", " << 100.0 * prompt / source_rate << "% of the source";
+		os << "\n";
 		if (m_wall_face > 0.0 || m_unassigned > 0.0)
 		{
 			os << "  " << 100.0 * m_wall_face / tot << "% at wall faces and "

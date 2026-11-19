@@ -201,7 +201,7 @@ namespace ImpurityTransport
 	*            temperature.
 	* @param oa_ioniz OpenADAS ionization rate coefficients (SCD).
 	* @param oa_recomb OpenADAS recombination rate coefficients (ACD).
-	* @param opts Simulation options (currently unused).
+	* @param opts Simulation options, for the charge limit (imp_iz_max_charge).
 	* @param dt Time step (s).
 	* @param ioniz_warnings Counter of particles whose ionization
 	*                       probability exceeded 1.
@@ -218,7 +218,7 @@ namespace ImpurityTransport
 
 		// Updates particle charge within
 		OpenADAS::ioniz_recomb(slots, bkg, oa_ioniz, oa_recomb, dt, 
-			ioniz_warnings, recomb_warnings, rngs);
+			ioniz_warnings, recomb_warnings, rngs, opts.imp_iz_max_charge());
 	}
 
 

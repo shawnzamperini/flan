@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "background.h"
+#include "constants.h"
 #include "openadas.h"
 #include "openadas_device.h"
 #include "pcg32.h"
@@ -515,6 +516,12 @@ namespace OpenADAS
 	* should be used if they happen often, so they are counted in
 	* ioniz_warnings and recomb_warnings.
 	*
+	* A particle that ionizes from neutral for the first time gets its
+	* prompt_by set (see Slots::Slots::prompt_by): its particle time plus
+	* one gyroperiod of the singly charged ion, 2 pi m / (e B), at the
+	* field where it ionized. Where B is 0 there is no gyration, and
+	* prompt_by is the time it ionized, so no return counts as prompt.
+	*
 	* @param slots Particle slots. The charges are updated in place.
 	* @param bkg Background plasma.
 	* @param oa_ioniz OpenADAS ionization (scd) rate coefficients.
@@ -525,14 +532,26 @@ namespace OpenADAS
 	* @param recomb_warnings Incremented by the number of particles with a
 	*        recombination probability greater than 1.
 	* @param rngs Random number generators, one per OpenMP thread.
+	* @param max_charge Highest charge particles can ionize to, for tests
+	*        that need the atoms to stop at a charge state
+	*        (imp_iz_max_charge). Below 0 (the default), or above the
+	*        atomic number, there is no limit.
 	*/
 	void ioniz_recomb(Slots::Slots& slots,
 		const Background::Background& bkg, const OpenADAS& oa_ioniz,
 		const OpenADAS& oa_recomb, const double dt,
-		int& ioniz_warnings, int& recomb_warnings, std::vector<pcg32>& rngs)
+		int& ioniz_warnings, int& recomb_warnings, std::vector<pcg32>& rngs,
+		const int max_charge)
 	{
-		// Atomic number
-		int Z {slots.Z()};
+		// Highest charge a particle can ionize to: the atomic number, or
+		// max_charge if that is lower. calc_ioniz_recomb_probs stops
+		// ionization there.
+		const int Z {max_charge >= 0 ? std::min(max_charge, slots.Z())
+			: slots.Z()};
+
+		// Gyrofrequency of the singly charged ion per tesla, e / m, for
+		// prompt_by
+		const double e_over_m {-Constants::charge_e / slots.mass()};
 
 		#pragma omp parallel
 		{
@@ -576,6 +595,16 @@ namespace OpenADAS
 				// Clever branchless way to adjust the charge
 				const int dq = ionize - recomb;
 				slots.set_q(i, q + dq);
+
+				// First ionization from neutral: start the prompt window
+				if (q == 0 && dq == 1 && slots.prompt_by()[i] < 0.0)
+				{
+					const double B {bkg.interp_4d(bkg.get_bmag(), zone, t, x,
+						y, z)};
+					const double pt {slots.pt()[i]};
+					slots.set_prompt_by(i, B > 0.0 ? pt + 2.0
+						* Constants::pi / (e_over_m * B) : pt);
+				}
 			}  // i loop
 		}  // omp parallel
 	}  // ioniz_recomb

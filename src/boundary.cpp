@@ -539,7 +539,7 @@ namespace Boundary
 						{
 							deposition->add_at_wall_face(zones, zone, face,
 								pos, slots.pt()[i], slots.q()[i],
-								slots.weight()[i]);
+								slots.weight()[i], slots.prompt_by()[i]);
 						}
 						break;
 					}
@@ -629,7 +629,7 @@ namespace Boundary
 						deposition->add_into_wall_cell(zone, xidx, yidx,
 							zidx, slots.zone()[i], slots.xidx()[i],
 							slots.yidx()[i], slots.pt()[i], slots.q()[i],
-							slots.weight()[i]);
+							slots.weight()[i], slots.prompt_by()[i]);
 					}
 				}
 			}

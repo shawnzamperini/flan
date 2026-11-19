@@ -294,6 +294,11 @@ namespace Sputtering
 	* Everything is a rate, in atoms/s, since every particle's weight is
 	* the atoms/s it stands for: adding up the weights of the particles
 	* that land on an element gives the rate atoms are redeposited on it.
+	*
+	* Prompt returns are also tallied on their own: those landing within
+	* one gyroperiod of the singly charged ion after the atom first
+	* ionized (Slots::Slots::prompt_by), as in Fussmann's model of prompt
+	* redeposition.
 	*/
 	class Deposition
 	{
@@ -310,8 +315,13 @@ namespace Sputtering
 													///< bin edges (s)
 		std::vector<double> m_lifetime {};	///< Rate in each time bin
 		std::vector<double> m_charge {};	///< Rate at each charge state
+		std::vector<double> m_prompt {};	///< Prompt rate onto each
+											///< element
+		std::vector<double> m_prompt_charge {};	///< Prompt rate at each
+												///< charge state
 
-		void add_lifetime_and_charge(double pt, int q, double weight);
+		bool add_lifetime_and_charge(double pt, int q, double weight,
+			double prompt_by);
 
 	public:
 
@@ -321,10 +331,10 @@ namespace Sputtering
 
 		void add_into_wall_cell(int zone, int i, int j, int k,
 			int prev_zone, int prev_i, int prev_j, double pt, int q,
-			double weight);
+			double weight, double prompt_by = -1.0);
 		void add_at_wall_face(const Zones::Zones& zones, int zone,
 			Zones::Face face, const std::array<double, 3>& pos, double pt,
-			int q, double weight);
+			int q, double weight, double prompt_by = -1.0);
 
 		void reduce(int root);
 
@@ -335,6 +345,9 @@ namespace Sputtering
 		const std::vector<double>& lifetime_edges() const;
 		const std::vector<double>& lifetime() const;
 		const std::vector<double>& charge() const;
+		const std::vector<double>& prompt() const;
+		const std::vector<double>& prompt_charge() const;
+		double prompt_total() const;
 
 		void print_summary(std::ostream& os, double source_rate) const;
 	};

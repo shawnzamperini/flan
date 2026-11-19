@@ -15,6 +15,7 @@ files in this directory are older and are not part of this set.
 | `reg_friction` | Tungsten at rest (or carbon at the ion temperature) in a flowing plasma is dragged up to the flow speed | Spitzer slowing-down time (between two Maxwellians for carbon) |
 | `reg_thermal_force` | Tungsten (or carbon) in a plasma with parallel heat fluxes drifts against them | Drift where friction cancels Z² (β_i ∇T_i + 0.71 ∇T_e), with Stangeby's mass-dependent β_i (2.61 for W in D, 2.05 for C in D) |
 | `reg_drifts` | Gyration, and the ExB, polarization, grad-B and curvature drifts of a single particle, without collisions | Cyclotron frequency and the guiding-center drift formulas |
+| `reg_prompt_redep` | Tungsten sputtered off a wall in a field parallel to it, ionizing to W+ and gyrating, comes back to the wall in its first gyration | Fussmann's prompt redeposition, ⟨r⟩(p) averaged over the exponential distribution of ionization lengths (`fussmann.py`) |
 
 Each case has variants (other charge states, collision sub-cycling off,
 the GPU, one heat flux or one drift at a time), chosen by a command-line
@@ -45,23 +46,59 @@ done
 for v in gyration exb polarization gradb curvature gradb_gpu; do
     <build dir>/reg_drifts $v
 done
+export OPENADAS_ROOT=<directory with scd50/ and acd50/>
+for v in p01 p03 p1 p3 p10 b4 full; do <build dir>/reg_prompt_redep $v; done
 ```
 
 Leave out `z10_gpu` and `gradb_gpu` without a GPU. The collision runs
 take from seconds to a few minutes each on a laptop, the drift runs about
-a second. Each writes `<case>_<variant>.nc`.
+a second. The prompt redeposition runs take about one (p01) to several
+(p10) minutes each on 16 cores. Each writes `<case>_<variant>.nc`.
+
+`reg_prompt_redep` reads the D on W yield table from `data/sputtering/` in
+Flan's directory (set when it's built) and the OpenADAS rates from
+`OPENADAS_ROOT`.
 
 ## Checking
 
 ```
 python <flan>/regression/check_collisions.py <output directory>
 python <flan>/regression/check_drifts.py <output directory>
+python <flan>/regression/check_redeposition.py <output directory>
 ```
 
 Each reads the output files of its cases found there, takes all the
 inputs from the files themselves, prints a table and writes plots
-(`check_friction.png`, `check_thermal_force.png`, `check_drifts.png`).
-The exit status is 1 if a check failed.
+(`check_friction.png`, `check_thermal_force.png`, `check_drifts.png`,
+`check_redeposition.png`). The exit status is 1 if a check failed.
+
+### Prompt redeposition
+
+Fussmann's model gives the fraction of sputtered atoms that come back to
+the wall in their first gyration after ionizing, for a field parallel to
+the wall, cosine emission, and no electric field. It depends only on
+p = e B / (m n_e S0), the mean ionization length over the gyroradius. For
+an atom that ionizes after x gyroradii it is 1 / (1 + x²); Flan samples
+ionization as a Poisson process, so the comparison is with that averaged
+over the exponential distribution of x, ⟨r⟩(p) (`fussmann.py`, which
+also checks 1 / (1 + x²) from the geometry by Monte Carlo).
+
+The runs meet the model's assumptions with a few settings:
+
+- The field is at 0.01 degrees to the wall, so the plasma reaches it, but
+  an ion moves only about 1e-3 of a gyroradius along B toward the wall in
+  a gyration.
+- Ionization stops at W+ (`imp_iz_max_charge = 1`). Otherwise W+ would
+  ionize again about 2π (S1 / S0) / p times per gyration, close to once at
+  p = 1, which the model leaves out. The `full` variant allows it, to show
+  how much it matters; it's printed but not checked.
+- Collisions, the thermal force and the electric field are off.
+
+The script works out p from the inputs saved in each file, with S0 from
+the same OpenADAS file Flan used, interpolated the same way. A run passes
+if Flan's prompt fraction (returns within one W+ gyroperiod of first
+ionizing, over the source) is within 4 standard errors plus 0.01 of
+⟨r⟩(p).
 
 ### Drifts
 

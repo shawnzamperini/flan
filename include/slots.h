@@ -35,6 +35,9 @@ namespace Slots
 	*   X,Y,Z: Coordinates of the particle in Cartesian space
 	*   vX,vY,vZ: Velocity components of the particle in Cartesian space
 	*   weight: The Monte Carlo weight of the particle
+	*   prompt_by: Particle time up to which a return to the wall is
+	*     prompt, one singly charged gyroperiod after it first ionized
+	*     (-1 until then; host only)
 	*   q: Current charge of the particle
 	*   Z: Atomic number
 	*   mass: The mass of the particle (kg)
@@ -66,6 +69,7 @@ namespace Slots
         std::vector<int> m_zidx;
 
         std::vector<double> m_weight;
+        std::vector<double> m_prompt_by;  // host only, see prompt_by()
         std::vector<int> m_q;
         std::vector<int> m_state;
 
@@ -96,6 +100,7 @@ namespace Slots
         const std::vector<int>& yidx() const noexcept;
         const std::vector<int>& zidx() const noexcept;
         const std::vector<double>& weight() const noexcept;
+        const std::vector<double>& prompt_by() const noexcept;
         const std::vector<int>& q() const noexcept;
         const std::vector<int>& state() const noexcept;
 
@@ -122,6 +127,7 @@ namespace Slots
         void set_yidx(int i, int val);
         void set_zidx(int i, int val);
         void set_weight(int i, double val);
+        void set_prompt_by(int i, double val);
         void set_q(int i, int val);
         void set_state(int i, int val);
 

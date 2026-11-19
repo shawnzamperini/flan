@@ -623,6 +623,13 @@ namespace Options
 				assign_option<int>(set_func, var, key);
 			}
 
+			else if (key == "imp_iz_max_charge")
+			{
+				auto set_func = std::bind(&Options::set_imp_iz_max_charge,
+					&opts, std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
 			else if (key == "imp_mass_amu")
 			{
 				auto set_func = std::bind(&Options::set_imp_mass_amu, &opts,

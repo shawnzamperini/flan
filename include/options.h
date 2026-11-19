@@ -127,6 +127,7 @@ namespace Options
 
 		// Impurity characteristics
 		int m_imp_atom_num                            {74};
+		int m_imp_iz_max_charge                       {-1};
 		double m_imp_mass_amu                     {183.84};
 		int m_imp_init_charge                          {1};
 
@@ -309,6 +310,7 @@ namespace Options
 		void set_imp_ybound_buffer(double imp_ybound_buffer);
 		void set_imp_zbound_buffer(double imp_zbound_buffer);
 		void set_imp_atom_num(int imp_atom_num);
+		void set_imp_iz_max_charge(int imp_iz_max_charge);
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
 		void set_imp_num(int imp_num);
@@ -436,6 +438,7 @@ namespace Options
 		double imp_ybound_buffer() const;
 		double imp_zbound_buffer() const;
 		int imp_atom_num() const;
+		int imp_iz_max_charge() const;
 		double imp_mass_amu() const;
 		int imp_init_charge() const;
 		int imp_num() const;

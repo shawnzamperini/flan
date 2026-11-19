@@ -388,17 +388,26 @@ With `imp_source_opt = "sputter"`, Flan also tallies where the sputtered
 atoms land back on the wall (`Sputtering::Deposition`). On a SOLEDGE3X
 background, an atom that moves into a wall cell (chi = 1) is absorbed and
 put on the surface element between that wall cell and the plasma cell it
-came from. On a HERMES background, an atom absorbed at a target is put on
-the element of the target face it crossed. Since every
+came from. On a HERMES background, or the slab with a wall, an atom
+absorbed at a wall face is put on the element of the face it crossed.
+Since every
 atom's weight is the atoms/s it stands for, adding up the weights landing
 on an element gives the rate atoms are redeposited there, and subtracting
 that from the element's source (averaged over the run) gives its net
 erosion. How long after being sputtered each atom landed, and its charge
 then, are tallied too.
 
+Prompt returns are tallied on their own as well. When an atom first
+ionizes, Flan notes the time one gyroperiod of the singly charged ion,
+$2\pi m/(eB)$ at the field there, later. A return before then is prompt:
+the atom came back within its first gyration, as in Fussmann's model of
+prompt redeposition. The rest come back later, after more ionization,
+drifts or collisions.
+
 A summary is printed at the end of the run: the redeposited rate and its
 share of the source, the share back within 1 µs, 10 µs, 100 µs and 1 ms,
-and the mean charge when they land. The tallies are saved in the
+the mean charge when they land, and the prompt share of the source. The
+tallies are saved in the
 `sputtering` group:
 
 | Variable | Shape | Units | Contents |
@@ -409,12 +418,14 @@ and the mean charge when they land. The tallies are saved in the
 | `lifetime_edges` | (lifetime_edge) | s | Edges of the time since birth bins, 10 per decade from 10$^{-10}$ to 10$^{-1}$ s |
 | `redeposited_lifetime` | (lifetime_bin) | atoms/s | Redeposited rate by time since birth |
 | `redeposited_charge` | (charge) | atoms/s | Redeposited rate by charge when they landed (0 to Z) |
+| `prompt` | (element) | atoms/s | Rate atoms land back on the element promptly |
+| `prompt_charge` | (charge) | atoms/s | Prompt rate by charge when they landed |
 
 and the attributes `redeposited_total`, `redeposited_wall_face` (atoms
 absorbed at a wall face with no element on it: the ends of the zones of a
 SOLEDGE3X background, which are inside the material) and
 `redeposited_unassigned` (atoms that went more than a cell into the wall
-in one step, so their element isn't known).
+in one step, so their element isn't known), and `prompt_total`.
 
 There's no sheath in the background, so atoms close to the wall don't feel
 its strong electric field. Prompt redeposition, of atoms that come back
@@ -567,6 +578,18 @@ Then make the table, look at the plots, check it against reference data
 command that made it in the commit message.
 
 ## Validation
+
+### Prompt redeposition without a sheath
+
+The regression case `reg_prompt_redep` (see `regression/README.md`)
+sputters tungsten off a wall of the slab background, in a field parallel
+to it, and compares the prompt fraction with Fussmann's
+$\langle r\rangle(p)$ for p from about 0.1 to 10. To match the model,
+ionization stops at W$^+$ (`imp_iz_max_charge = 1`): W$^+$ would
+otherwise ionize again about $2\pi(S_1/S_0)/p$ times per gyration, which
+the model leaves out.
+
+### Yields
 
 !!! note "To do"
     Compare the D on W yields with Eckstein's tabulated values (Eckstein,

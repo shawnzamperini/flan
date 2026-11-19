@@ -1511,3 +1511,36 @@ TEST(SlabWall, Checks)
 		slab_wall_options("none"))}, testing::ExitedWithCode(EXIT_FAILURE),
 		"slab_wall");
 }
+
+// A return is prompt if it comes by prompt_by, and is tallied by element
+// and charge as well as with the rest. One that never ionized (prompt_by
+// below 0) or came later isn't.
+TEST(SlabWall, PromptTally)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("ymin"))};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+	const double side {0.05 / 8.0};
+	const std::array<double, 3> pos {0.5 * side, -0.0251, -0.025
+		+ 0.5 * side};
+	const auto& zones {bkg.get_zones()};
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 1e-6, 1, 1.0, 2e-6);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 2e-6, 2, 2.0, 2e-6);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 3e-6, 1, 4.0, 2e-6);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 1e-6, 0, 8.0, -1.0);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 1e-6, 1, 16.0);
+
+	EXPECT_DOUBLE_EQ(dep.total(), 31.0);
+	EXPECT_DOUBLE_EQ(dep.prompt_total(), 3.0);
+	EXPECT_DOUBLE_EQ(dep.prompt_charge()[1], 1.0);
+	EXPECT_DOUBLE_EQ(dep.prompt_charge()[2], 2.0);
+	double on_elements {};
+	for (std::size_t e {}; e < surface.size(); ++e)
+	{
+		const auto& el {surface.elements()[e]};
+		const bool here {el.i == 0 && el.k == 0};
+		EXPECT_DOUBLE_EQ(dep.prompt()[e], here ? 3.0 : 0.0);
+		on_elements += dep.prompt()[e];
+	}
+	EXPECT_DOUBLE_EQ(on_elements, 3.0);
+}

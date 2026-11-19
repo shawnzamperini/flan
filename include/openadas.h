@@ -62,7 +62,8 @@ namespace OpenADAS
 	void ioniz_recomb(Slots::Slots& slots, 
 		const Background::Background& bkg, const OpenADAS& oa_ioniz, 
 		const OpenADAS& oa_recomb, const double dt, 
-		int& ioniz_warnings, int& recomb_warnings, std::vector<pcg32>& rngs);
+		int& ioniz_warnings, int& recomb_warnings, std::vector<pcg32>& rngs,
+		int max_charge = -1);
 
 	// Free memory of device-side OpenADAS struct
 	void free_oa(OpenADASDevice& oa_d, int device_id);

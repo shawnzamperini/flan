@@ -137,6 +137,13 @@ R"(
 	// The thermal force needs the heat fluxes and the CPU
 	Collisions::check_thermal_force(bkg, opts);
 
+	// The charge limit for tests is only applied on the CPU
+	if (opts.imp_iz_max_charge() >= 0 && opts.use_gpu_int() > 0)
+	{
+		Errors::fatal_error("imp_iz_max_charge only works on the CPU. Set "
+			"use_gpu = \"off\".");
+	}
+
 	// The sputtered source. Every rank calculates its own from the
 	// broadcast background, since every rank starts particles from it.
 	// Each particle then stands for source_rate / imp_num atoms/s (its

@@ -583,6 +583,9 @@ namespace SaveResults
 		// Impurity characteristics
 		save_scalar(input_group, opts.imp_atom_num(), "imp_atom_num", 
 			dim_scalar, "impurity atomic number", "");
+		save_scalar(input_group, opts.imp_iz_max_charge(), "imp_iz_max_charge",
+			dim_scalar, "highest charge the impurity ionizes to (below 0: no "
+			"limit)", "");
 		save_scalar(input_group, opts.imp_mass_amu(), "imp_mass_amu", 
 			dim_scalar, "impurity mass", "(amu)");
 		save_scalar(input_group, opts.imp_init_charge(), "imp_init_charge", 
@@ -1518,6 +1521,17 @@ namespace SaveResults
 			deposition->wall_face());
 		group.putAtt("redeposited_unassigned", netCDF::ncDouble,
 			deposition->unassigned());
+
+		// Prompt returns: within one singly charged gyroperiod of the atom
+		// first ionizing
+		save_vector_1d(group, deposition->prompt(), "prompt", dim_elem,
+			"rate sputtered atoms land back on the element promptly, within "
+			"one singly charged gyroperiod of first ionizing", "(atoms/s)");
+		save_vector_1d(group, deposition->prompt_charge(), "prompt_charge",
+			dim_q, "rate of promptly redeposited atoms by their charge when "
+			"they landed (0 to Z)", "(atoms/s)");
+		group.putAtt("prompt_total", netCDF::ncDouble,
+			deposition->prompt_total());
 	}
 
 	/**
