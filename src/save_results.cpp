@@ -440,6 +440,10 @@ namespace SaveResults
 			"slab background: relative gradient of the field strength in +Y", "(1/m)");
 		save_scalar(input_group, opts.slab_major_radius(), "slab_major_radius", dim_scalar,
 			"slab background: major radius the box is bent to (0 = straight)", "(m)");
+		save_string(input_group, opts.slab_wall(), "slab_wall", dim_str,
+			"slab background: which face is a wall");
+		save_scalar(input_group, opts.slab_b_angle(), "slab_b_angle", dim_scalar,
+			"slab background: angle of the field from +X toward -Y", "(deg)");
 
 		save_string(input_group, opts.save_track(), "save_track", dim_str, 
 			"save particle t,x,y,z track option");
@@ -1445,6 +1449,10 @@ namespace SaveResults
 			{return static_cast<int>(e.fallback);}), "fallback", dim_elem,
 			"1 if no wall outline segment was close, so the face's own "
 			"normal and area are used", "");
+		save_vector_1d(group, ints([](const E& e)
+			{return static_cast<int>(e.cartesian);}), "cartesian", dim_elem,
+			"1 on a Cartesian zone (slab), where R, Z, phi and n_R, n_Z "
+			"above are X, Y, Z and the X, Y parts of the normal", "");
 
 		// Per time frame and element
 		auto save_2d = [&](const std::vector<double>& v,

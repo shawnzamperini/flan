@@ -8,8 +8,9 @@ material, and the ion's energy and angle of incidence.
 
 !!! note "Work in progress"
     With `imp_source_opt = "sputter"`, Flan follows the atoms the
-    background plasma sputters off the wall of a SOLEDGE3X background, or
-    off the targets of a HERMES background, as this page describes.
+    background plasma sputters off the wall of a SOLEDGE3X background,
+    off the targets of a HERMES background, or off a wall face of the
+    slab background, as this page describes.
     Sputtering by the impurities themselves, and the sheath's effect on
     where they redeposit, are planned next (see the
     [Sheath and Self-Sputtering Plan](../developer/sheath-plan.md)).
@@ -193,6 +194,16 @@ pointing into the plasma, and its own area, which are the target's. There
 is no wall mask and nothing to correct, so the rest of this section,
 about SOLEDGE3X, doesn't apply. The outer edges of the SOL and the PFRs
 are absorbing faces, not walls, and aren't sputtered.
+
+### Slab: one wall face
+
+The slab background can have one face of its box as a wall
+(`slab_wall`), with the magnetic field at an angle to it
+(`slab_b_angle`). It's for checking sputtering and redeposition against
+analytic results. The box is Cartesian, so the wall is flat. Its surface
+elements are the cell faces on that side of the box, with the box's normal
+and the cells' areas, as for a HERMES target. In the output, the elements'
+R, Z and phi are the slab's X, Y and Z (`cartesian` = 1).
 
 ### SOLEDGE3X: a wall mask
 

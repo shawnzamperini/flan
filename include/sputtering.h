@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <ostream>
 #include <cstdint>
@@ -72,6 +73,12 @@ namespace Sputtering
 	* cell face on a wall face of its zone, with the face's own normal and
 	* area, and there is no wall cell (wall_zone = -1). See sputtering.cpp
 	* for why.
+	*
+	* On a Cartesian zone (the straight slab, Zones::Zones::is_cartesian)
+	* the element is a cell face on a wall face of its zone, as for HERMES,
+	* but with no toroidal angle: the fields named R, Z and phi hold X, Y
+	* and Z, so the in-plane geometry is the same code (cartesian = true).
+	* Use normal_xyz for the unit normal in Cartesian coordinates.
 	*/
 	struct SurfaceElement
 	{
@@ -104,8 +111,32 @@ namespace Sputtering
 		int wall_j {};			///< y index of the wall cell (its z index
 								///< is k, the same as the plasma cell's)
 
+		bool cartesian {};		///< On a Cartesian zone: R, Z and phi
+								///< above are X, Y and Z
+
 		/// True if the element is on a wall face of its zone (a target)
 		bool on_wall_face() const {return wall_zone < 0;}
+
+		/**
+		* The unit normal into the plasma in Cartesian (X, Y, Z).
+		*
+		* On a toroidal zone the normal (n_R, n_Z) turns with the toroidal
+		* angle: positions are (R cos phi, phi_sign R sin phi, Z), so R
+		* points along (cos phi, phi_sign sin phi, 0). On a Cartesian zone
+		* it's (n_R, n_Z, 0) everywhere, since there n_R and n_Z are its X
+		* and Y parts and wall faces are x or y faces.
+		*
+		* @param z The element's z coordinate where the normal is wanted
+		*        (the toroidal angle; not used on a Cartesian zone).
+		* @param phi_sign The background's phi_sign (+1 or -1).
+		* @return The unit normal (X, Y, Z).
+		*/
+		std::array<double, 3> normal_xyz(const double z,
+			const double phi_sign) const
+		{
+			if (cartesian) return {n_R, n_Z, 0.0};
+			return {n_R * std::cos(z), n_R * phi_sign * std::sin(z), n_Z};
+		}
 	};
 
 	/**

@@ -488,8 +488,11 @@ namespace Sputtering
 	* whose grid is fitted to the targets (HERMES) has the targets at the
 	* wall faces of its zones (find_wall_faces).
 	*
-	* The run stops if neither gives any surface, e.g., for a Gkeyll or
-	* slab background, whose z isn't the toroidal angle.
+	* A slab background with a wall (slab_wall) is Cartesian, and its wall
+	* face is found the same way (find_wall_faces).
+	*
+	* The run stops if neither gives any surface, e.g., for a Gkeyll
+	* background, or a slab without a wall.
 	*
 	* @param bkg The background, with its geometry.
 	* @param max_wall_dist How far, in cell widths, the nearest wall
@@ -508,9 +511,10 @@ namespace Sputtering
 		if (m_elements.empty())
 		{
 			Errors::fatal_error("Sputtering surfaces need a background with "
-				"a wall mask (chi), as SOLEDGE3X backgrounds have, or with "
+				"a wall mask (chi), as SOLEDGE3X backgrounds have, with "
 				"wall faces on a toroidal grid fitted to the targets, as "
-				"HERMES backgrounds have. This background has neither.");
+				"HERMES backgrounds have, or a slab background with a wall "
+				"(slab_wall). This background has none of these.");
 		}
 	}
 
@@ -527,9 +531,15 @@ namespace Sputtering
 	* across the face (wall_zone = -1), so redeposited atoms are put on the
 	* element by where they cross the face (Deposition::add_at_wall_face).
 	*
-	* Only zones whose z is the toroidal angle (Zones::is_toroidal) are
-	* used, since the area and the normal's direction need phi. Wall faces
-	* in z are skipped, as they aren't in the poloidal plane.
+	* Only zones whose z is the toroidal angle (Zones::is_toroidal) or that
+	* are Cartesian (Zones::is_cartesian, the straight slab) are used,
+	* since the area and the normal's direction need to know what z is.
+	* Wall faces in z are skipped, as they aren't in the poloidal plane (or
+	* the X-Y plane).
+	*
+	* On a Cartesian zone the face's corners are its cell edges in (X, Y)
+	* directly, held in the R and Z fields of the element, and its area is
+	* the edge length times the cell's length in z (cartesian = true).
 	*
 	* @param bkg Background whose zones have wall faces.
 	*/
@@ -546,15 +556,32 @@ namespace Sputtering
 
 		for (int zone {}; zone < zones.get_nzones(); ++zone)
 		{
-			if (!zones.is_toroidal(zone)) continue;
+			const bool cartesian {zones.is_cartesian(zone)};
+			if (!zones.is_toroidal(zone) && !cartesian) continue;
 			const int nx {zones.get_nx(zone)};
 			const int ny {zones.get_ny(zone)};
+			const auto& grid_x {zones.get_grid_x(zone)};
+			const auto& grid_y {zones.get_grid_y(zone)};
 			const auto& grid_z {zones.get_grid_z(zone)};
 
+			// A cell corner in the poloidal plane, (R, Z), or in the X-Y
+			// plane on a Cartesian zone, where x and y are X and Y
 			auto corner = [&](int ci, int cj, int k) -> RZ
 			{
+				if (cartesian) return {grid_x[ci], grid_y[cj]};
 				return {std::hypot(grid_X(zone, ci, cj, k),
 					grid_Y(zone, ci, cj, k)), grid_Z(zone, ci, cj, k)};
+			};
+			// A cell's center in the same plane
+			auto center_of = [&](int i, int j, int k) -> RZ
+			{
+				if (cartesian)
+				{
+					return {0.5 * (grid_x[i] + grid_x[i + 1]),
+						0.5 * (grid_y[j] + grid_y[j + 1])};
+				}
+				return {std::hypot(X(zone, i, j, k), Y(zone, i, j, k)),
+					Z(zone, i, j, k)};
 			};
 
 			for (const FaceStencil& s : stencils)
@@ -594,12 +621,13 @@ namespace Sputtering
 					e.Z1 = c1.Z;
 					e.R_mid = mid.R;
 					e.Z_mid = mid.Z;
-					e.area_face = norm(c1 - c0) * mid.R
-						* (e.phi_max - e.phi_min);
+					// Swept around in phi (R dphi), or straight along Z
+					e.cartesian = cartesian;
+					e.area_face = norm(c1 - c0) * (e.phi_max - e.phi_min)
+						* (cartesian ? 1.0 : mid.R);
 					e.area = e.area_face;
 
-					const RZ center {std::hypot(X(zone, i, j, k),
-						Y(zone, i, j, k)), Z(zone, i, j, k)};
+					const RZ center {center_of(i, j, k)};
 					const RZ n_face {orient_like(unit_normal(c0, c1),
 						center - mid)};
 					e.n_R = n_face.R;
@@ -1097,9 +1125,8 @@ namespace Sputtering
 			// of its phi range. Positions are (R cos phi,
 			// phi_sign R sin phi, Z), with the background's phi_sign, so
 			// R_hat is (cos phi, phi_sign sin phi, 0).
-			const double phi {0.5 * (el.phi_min + el.phi_max)};
-			const Vec3 n_wall {el.n_R * std::cos(phi),
-				el.n_R * m_phi_sign * std::sin(phi), el.n_Z};
+			const Vec3 n_wall {el.normal_xyz(
+				0.5 * (el.phi_min + el.phi_max), m_phi_sign)};
 
 			// Plasma in the element's plasma cell
 			const double n_i {std::max(static_cast<double>(
@@ -1500,8 +1527,7 @@ namespace Sputtering
 			/ m_imp_mass_kg)};
 
 		// 5. Direction: cosine about the normal at the atom's phi
-		const std::array<double, 3> n {el.n_R * std::cos(b.z),
-			el.n_R * m_phi_sign * std::sin(b.z), el.n_Z};
+		const std::array<double, 3> n {el.normal_xyz(b.z, m_phi_sign)};
 		const double u1 {rng.next_double()};
 		const double u2 {rng.next_double()};
 		const auto d {cosine_direction(n, u1, u2)};

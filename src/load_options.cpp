@@ -518,6 +518,20 @@ namespace Options
 				assign_option<double>(set_func, var, key);
 			}
 
+			else if (key == "slab_wall")
+			{
+				auto set_func = std::bind(&Options::set_slab_wall, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "slab_b_angle")
+			{
+				auto set_func = std::bind(&Options::set_slab_b_angle, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "tbound_type")
 			{
 				auto set_func = std::bind(&Options::set_tbound_type, &opts,

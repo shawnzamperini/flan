@@ -33,6 +33,7 @@
 #include "hdf5_utils.h"
 #include "options.h"
 #include "pcg32.h"
+#include "read_bkg.h"
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
 #include "slots.h"
@@ -1320,4 +1321,193 @@ TEST(SputteringDeposition, WallFaces)
 	EXPECT_DOUBLE_EQ(dep.redeposited()[right], 4.0);
 	EXPECT_DOUBLE_EQ(dep.wall_face(), 8.0);
 	EXPECT_DOUBLE_EQ(dep.total(), 15.0);
+}
+
+namespace
+{
+	// Slab options with a wall on one face. The faces default to
+	// absorbing, so the one across from the wall isn't periodic.
+	Options::Options slab_wall_options(const std::string& wall,
+		const double b_angle = 0.0)
+	{
+		Options::Options opts {source_options()};
+		opts.set_bkg_source("slab");
+		opts.set_slab_ne(1e19);
+		opts.set_slab_te(20.0);
+		opts.set_slab_ti(20.0);
+		opts.set_slab_bmag(2.0);
+		opts.set_slab_tmax(1e-5);
+		opts.set_slab_wall(wall);
+		opts.set_slab_b_angle(b_angle);
+		return opts;
+	}
+}
+
+// A slab wall at y min is the 8 x 8 cell faces of that side of the 5 cm
+// box: normal +Y, each 6.25 mm square, 25 cm^2 in all. It is a Cartesian
+// surface, so the normal doesn't turn with z.
+TEST(SlabWall, SurfaceYmin)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("ymin"))};
+	ASSERT_EQ(bkg.get_zones().get_face(0, Zones::ymin), Zones::face_wall);
+	EXPECT_TRUE(bkg.get_zones().is_cartesian(0));
+
+	const Sputtering::Surface surface(bkg);
+	EXPECT_TRUE(surface.from_wall_faces());
+	ASSERT_EQ(surface.size(), 64u);
+	const double side {0.05 / 8.0};
+	for (const auto& e : surface.elements())
+	{
+		EXPECT_TRUE(e.cartesian);
+		EXPECT_TRUE(e.on_wall_face());
+		EXPECT_EQ(e.face, Zones::ymin);
+		EXPECT_EQ(e.j, 0);
+		EXPECT_NEAR(e.area, side * side, 1e-15);
+		EXPECT_NEAR(e.Z_mid, -0.025, 1e-15);	// Y of the face
+		EXPECT_NEAR(e.R_mid, (e.i + 0.5) * side, 1e-15);	// X
+		EXPECT_NEAR(e.phi_min, -0.025 + e.k * side, 1e-15);	// Z
+		for (const double z : {e.phi_min, e.phi_max})
+		{
+			const auto n {e.normal_xyz(z, 1.0)};
+			EXPECT_NEAR(n[0], 0.0, 1e-15);
+			EXPECT_NEAR(n[1], 1.0, 1e-15);
+			EXPECT_NEAR(n[2], 0.0, 1e-15);
+		}
+	}
+	EXPECT_NEAR(surface.total_area(), 0.05 * 0.05, 1e-14);
+}
+
+// At x max the normal is -X, and the surface is the y-z side
+TEST(SlabWall, SurfaceXmax)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("xmax"))};
+	const Sputtering::Surface surface(bkg);
+	ASSERT_EQ(surface.size(), 64u);
+	for (const auto& e : surface.elements())
+	{
+		EXPECT_EQ(e.face, Zones::xmax);
+		EXPECT_EQ(e.i, 7);
+		EXPECT_NEAR(e.R_mid, 0.05, 1e-15);
+		const auto n {e.normal_xyz(0.0, 1.0)};
+		EXPECT_NEAR(n[0], -1.0, 1e-15);
+		EXPECT_NEAR(n[1], 0.0, 1e-15);
+	}
+	EXPECT_NEAR(surface.total_area(), 0.05 * 0.05, 1e-14);
+}
+
+// slab_b_angle turns B from +X toward -Y. With the wall at y min it is the
+// angle between B and the wall, and the flow along B runs into the wall.
+TEST(SlabWall, FieldAngle)
+{
+	for (const double deg : {0.0, 3.0, 30.0, 87.0, 90.0})
+	{
+		auto opts {slab_wall_options("ymin", deg)};
+		opts.set_slab_flow(1e4);
+		const auto bkg {Background::read_bkg(opts)};
+		const double a {deg * S3XTest::pi / 180.0};
+		for (const int t : {0, 127})
+		{
+			const double bX {bkg.get_bX()(0, t, 3, 4, 5)};
+			const double bY {bkg.get_bY()(0, t, 3, 4, 5)};
+			EXPECT_NEAR(bX, 2.0 * std::cos(a), 1e-6);
+			EXPECT_NEAR(bY, -2.0 * std::sin(a), 1e-6);
+			EXPECT_NEAR(bkg.get_bZ()(0, t, 3, 4, 5), 0.0, 1e-12);
+			EXPECT_NEAR(bkg.get_bmag()(0, t, 3, 4, 5), 2.0, 1e-6);
+
+			// Angle between B and the wall (normal +Y)
+			EXPECT_NEAR(std::asin(std::abs(bY) / 2.0), a, 1e-6);
+			EXPECT_NEAR(bkg.get_uX()(0, t, 3, 4, 5), 1e4 * std::cos(a), 1e-2);
+			EXPECT_NEAR(bkg.get_uY()(0, t, 3, 4, 5), -1e4 * std::sin(a), 1e-2);
+		}
+	}
+}
+
+// The plasma flowing along B at angle a to the wall puts a flux n u sin a
+// on it, and atoms are born just off the wall, moving away from it
+TEST_F(SputteringTable, SlabWallSource)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	const double deg {10.0};
+	auto opts {slab_wall_options("ymin", deg)};
+	opts.set_slab_flow(1e4);
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg, table, opts);
+
+	const double flux {1e19 * 1e4 * std::sin(deg * S3XTest::pi / 180.0)};
+	for (std::size_t e {}; e < source.size(); ++e)
+	{
+		EXPECT_NEAR(source.flux()[e], flux, 1e-5 * flux);
+		EXPECT_NEAR(source.rate()[e], flux * 0.02
+			* surface.elements()[e].area, 1e-5 * flux * 0.02
+			* surface.elements()[e].area);
+	}
+	EXPECT_NEAR(source.total_rate()[0], flux * 0.02 * 0.05 * 0.05,
+		1e-5 * flux * 0.02 * 0.05 * 0.05);
+
+	pcg32 rng(7, 1);
+	const double side {0.05 / 8.0};
+	for (int n {}; n < 2000; ++n)
+	{
+		const auto b {source.sample_birth(rng)};
+		const auto& el {surface.elements()[b.element]};
+		EXPECT_NEAR(b.y, -0.025 + 1e-3 * side, 1e-12);
+		EXPECT_GE(b.x, el.R0 - 1e-15);
+		EXPECT_LE(b.x, el.R0 + side + 1e-15);
+		EXPECT_GE(b.z, el.phi_min);
+		EXPECT_LE(b.z, el.phi_max);
+		EXPECT_GE(b.vY, 0.0);
+	}
+}
+
+// An atom absorbed at the slab wall lands on the element under it
+TEST(SlabWall, Deposition)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("ymin"))};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+	const double side {0.05 / 8.0};
+	const std::array<double, 3> pos {2.5 * side, -0.0251,
+		-0.025 + 6.5 * side};
+	dep.add_at_wall_face(bkg.get_zones(), 0, Zones::ymin, pos, 1e-6, 3,
+		2.0);
+	double total {};
+	for (std::size_t e {}; e < surface.size(); ++e)
+	{
+		const auto& el {surface.elements()[e]};
+		const double expected {el.i == 2 && el.k == 6 ? 2.0 : 0.0};
+		EXPECT_DOUBLE_EQ(dep.redeposited()[e], expected);
+		total += dep.redeposited()[e];
+	}
+	EXPECT_DOUBLE_EQ(total, 2.0);
+	EXPECT_DOUBLE_EQ(dep.wall_face(), 0.0);
+}
+
+// What the slab won't do with a wall or a turned field
+TEST(SlabWall, Checks)
+{
+	auto periodic {slab_wall_options("ymin")};
+	periodic.set_max_ybound_type("periodic");
+	EXPECT_EXIT(Background::read_bkg(periodic),
+		testing::ExitedWithCode(EXIT_FAILURE), "can't be periodic");
+
+	auto bent {slab_wall_options("ymin")};
+	bent.set_slab_major_radius(1.0);
+	EXPECT_EXIT(Background::read_bkg(bent),
+		testing::ExitedWithCode(EXIT_FAILURE), "straight slab");
+
+	auto e_field {slab_wall_options("ymin", 10.0)};
+	e_field.set_slab_efield_y(100.0);
+	EXPECT_EXIT(Background::read_bkg(e_field),
+		testing::ExitedWithCode(EXIT_FAILURE), "slab_b_angle");
+
+	auto too_far {slab_wall_options("ymin", 91.0)};
+	EXPECT_EXIT(Background::read_bkg(too_far),
+		testing::ExitedWithCode(EXIT_FAILURE), "-90 to 90");
+
+	// Without a wall the slab has no surface to sputter
+	EXPECT_EXIT(Sputtering::Surface {Background::read_bkg(
+		slab_wall_options("none"))}, testing::ExitedWithCode(EXIT_FAILURE),
+		"slab_wall");
 }

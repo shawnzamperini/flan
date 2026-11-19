@@ -105,6 +105,8 @@ namespace Options
 		double m_slab_efield_y_rate                   {0.0};
 		double m_slab_bgrad_y                         {0.0};
 		double m_slab_major_radius                    {0.0};
+		std::string m_slab_wall                    {"none"};
+		double m_slab_b_angle                         {0.0};
 
 		// Geometry options
 		std::string m_tbound_type            {"absorbing"};
@@ -289,6 +291,8 @@ namespace Options
 		void set_slab_efield_y_rate(double slab_efield_y_rate);
 		void set_slab_bgrad_y(double slab_bgrad_y);
 		void set_slab_major_radius(double slab_major_radius);
+		void set_slab_wall(std::string slab_wall);
+		void set_slab_b_angle(double slab_b_angle);
 		void set_tbound_type(std::string tbound_type);
 		void set_min_xbound_type(std::string min_xbound_type);
 		void set_max_xbound_type(std::string max_xbound_type);
@@ -414,6 +418,8 @@ namespace Options
 		double slab_efield_y_rate() const;
 		double slab_bgrad_y() const;
 		double slab_major_radius() const;
+		const std::string& slab_wall() const;
+		double slab_b_angle() const;
 		const std::string& tbound_type() const;
 		const std::string& min_xbound_type() const;
 		const std::string& max_xbound_type() const;

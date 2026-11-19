@@ -39,9 +39,9 @@ yet:
   a sheath.
 - The Boris push takes E from the background, interpolated to the particle.
   The time step is fixed (`imp_time_step`), usually 1e-9 to 1e-8 s.
-- The slab background (`bkg_source = "slab"`) for regression cases. It
-  has B along +X and no wall, and its z is a length, so `Sputtering::Surface`
-  doesn't work on it (it needs the toroidal angle).
+- The slab background (`bkg_source = "slab"`) for regression cases. Before
+  S1 it had B along +X and no wall, and its z is a length, so
+  `Sputtering::Surface` didn't work on it (it needed the toroidal angle).
 - `python/rustbca_yields.py` already makes W on W tables
   (`python rustbca_yields.py W W`), but `Sputtering::Source` only accepts
   tables whose projectile is singly charged (D+).
@@ -186,7 +186,16 @@ sources, in a draft section of [Sputtering](../physics/sputtering.md):
   there is no closed form with a sheath.
 
 **Phase S1: a slab with a wall.** So everything after this can be checked
-on the slab, as CLAUDE.md asks of new physics.
+on the slab, as CLAUDE.md asks of new physics. Done: `slab_wall` makes one
+face of the straight slab a wall (`face_wall`), and `slab_b_angle` turns B
+from +X toward −Y, so with the wall at y min it's the angle between B and
+the wall. Zones can be marked Cartesian (`Zones::set_cartesian`), and on
+those `Surface::find_wall_faces` takes the corners from the zone's grid,
+with R, Z and phi holding X, Y and Z (`SurfaceElement::cartesian`,
+`normal_xyz`). Tests in `test_sputtering_cpu.cpp` (`SlabWall`): the
+surface at y min and x max, the field angle and flow, the flux
+n u sin α onto the wall and the births, deposition on the element under
+the atom, and the option checks. Wall faces on the slab are CPU only.
 
 - Slab options for a material wall: which face is a wall (`face_wall`),
   and the angle between B and that wall (B tilted in the plane of the

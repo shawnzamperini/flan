@@ -538,6 +538,45 @@ namespace Options
 		{m_slab_major_radius = slab_major_radius;}
 
 	/**
+	* Sets the slab_wall option.
+	*
+	* Which face of the slab background's box is a material wall, such as
+	* a divertor target: particles that reach it are absorbed and counted
+	* as hitting the wall, and with imp_source_opt = "sputter" the plasma
+	* sputters it. The face replaces whatever its *bound_type gives. Only
+	* for a straight slab (slab_major_radius = 0) on the CPU.
+	*
+	* Valid values are "none", "xmin", "xmax", "ymin" and "ymax". An
+	* invalid value prints an error and leaves the option unchanged.
+	*
+	* @param slab_wall New value of the slab_wall option.
+	*/
+	void Options::set_slab_wall(std::string slab_wall)
+	{
+		if (check_input<std::string>("slab_wall", slab_wall,
+			{"none", "xmin", "xmax", "ymin", "ymax"}))
+		{
+			m_slab_wall = slab_wall;
+		}
+	}
+
+	/**
+	* Sets the slab_b_angle option.
+	*
+	* Angle (degrees) the slab background's magnetic field is turned from
+	* +X toward -Y, in the X-Y plane: the unit vector along B is (cos a,
+	* -sin a, 0). With the wall at the y min face (slab_wall = "ymin"), it
+	* is the angle between the field and the wall, and the field runs into
+	* the wall going along +B. 0 (the default) is the field along +X. Must
+	* be from -90 to 90. Only for a straight slab, without slab_efield_y,
+	* slab_efield_y_rate or slab_bgrad_y.
+	*
+	* @param slab_b_angle New value of the slab_b_angle option.
+	*/
+	void Options::set_slab_b_angle(double slab_b_angle)
+		{m_slab_b_angle = slab_b_angle;}
+
+	/**
 	* Sets the tbound_type option.
 	*
 	* Boundary condition at the start and end of the background time range.
@@ -2579,6 +2618,23 @@ namespace Options
 	*/
 	double Options::slab_major_radius() const
 		{return m_slab_major_radius;}
+
+	/**
+	* Returns the slab_wall option (slab background: which face is a wall).
+	*
+	* @return Value of the slab_wall option.
+	*/
+	const std::string& Options::slab_wall() const
+		{return m_slab_wall;}
+
+	/**
+	* Returns the slab_b_angle option (slab background: angle of the field
+	* from +X toward -Y).
+	*
+	* @return Value of the slab_b_angle option.
+	*/
+	double Options::slab_b_angle() const
+		{return m_slab_b_angle;}
 
 	/**
 	* Returns the tbound_type option.
