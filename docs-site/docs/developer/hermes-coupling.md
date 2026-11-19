@@ -3,8 +3,8 @@
 This page is the development plan for reading HERMES plasma backgrounds
 into Flan, the same way SOLEDGE3X backgrounds are read
 (`bkg_source = "hermes"`). The first version reads output from
-JAX-Hermes3, a Python/JAX reimplementation of Hermes-3. The plan for a
-second reader, for BOUT++ Hermes-3 dump files, is in
+JAX-Hermes3, a Python/JAX reimplementation of Hermes-3. A second reader,
+for BOUT++ Hermes-3 dump files, is described in
 [BOUT++ Hermes-3 reader](#bout-hermes-3-reader). The last section is a
 short summary for the HERMES-3 developers of how the coupling works and
 what it assumes.
@@ -490,7 +490,10 @@ extra reading since the files are open anyway.
 [Input Options](../input-options.md#hermes); a BOUT++ section in
 [HERMES Backgrounds](../running/hermes.md) (which files, which options
 come from `BOUT.settings`, memory and read time); this page's summary for
-the HERMES-3 developers.
+the HERMES-3 developers. Done: the options were documented as they were
+added (Phases B2 and B5); HERMES Backgrounds has a BOUT++ Hermes-3
+section, and its heat-flux text covers the target cells and the capped
+ion skew; the summary below covers both formats.
 
 ### Decisions to make
 
@@ -543,26 +546,38 @@ people who know the code.
 
 From the hypnotoad grid: `Rxy`, `Zxy` and the four cell corners, `Brxy`,
 `Bzxy`, `Btxy`, `zShift`, `ShiftAngle`, `ixseps1`, `jyseps1_1`,
-`jyseps2_2` and the metric (`J`, `g_22`, `dx`, `dy`). From each snapshot:
-`Ne`, `Pe`, `Pi`, `NVi`, `phi` and `t`. From the run's input: Nnorm,
-Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
+`jyseps2_2` and the metric (`J`, `g_22`, `dx`, `dy`).
+
+- JAX-Hermes3: from each snapshot `Ne`, `Pe`, `Pi`, `NVi`, `phi` and
+  `t`; from the run's input Nnorm, Tnorm, Bnorm, the ion `AA`, `zperiod`
+  and the conduction coefficients.
+- BOUT++ Hermes-3: from the dump files `Ne`, `Pe`, `P<ion>`, `phi`,
+  `V<ion>` (or `NV<ion>`), `Apar` if present, `t_array`, Nnorm, Tnorm,
+  Bnorm, `zperiod` and the process layout; from `BOUT.settings` (set by
+  hand as options) the ion `AA` and the conduction coefficients.
 
 ### What Flan computes from them
 
 - **Geometry**: each cell's (R, Z) corners and its toroidal extent give the
   cell in Cartesian coordinates, with (R, z, Z) taken as right handed.
 - **Plasma**: n_e = Ne Nnorm, T_e = (Pe / Ne) Tnorm, T_i = (Pi / Ne) Tnorm
-  (so n_i = n_e), V_par = NVi / (AA Ne) times c_s0 = sqrt(e Tnorm / m_p),
-  and the potential phi Tnorm.
+  (so n_i = n_e), V_par times c_s0 = sqrt(e Tnorm / m_p), and the
+  potential phi Tnorm. V_par is NVi / (AA Ne) for JAX-Hermes3; for
+  BOUT++ it is `V<ion>`, or (NV - Ne Apar) / (AA Ne) from the canonical
+  momentum of an electromagnetic run.
 - **Fields**: B from `Brxy`, `Bzxy` and `Btxy`; E = -grad phi, with its
-  parallel part -grad_par phi taken along the field line as below.
+  parallel part -grad_par phi taken along the field line as below. For
+  an electromagnetic BOUT++ run, -dApar/dt is added to E_par, from Apar
+  at the output times on either side of each loaded one.
 - **Ion flow**: V_par b plus the E x B and grad-B drifts.
 - **Parallel heat fluxes** (for the thermal force), as in
   `braginskii_conduction`: q_par = -kappa grad_par T with
   kappa = c P tau / m and tau = 1 / Σν, where Σν is the sum of the
   species' Braginskii collision frequencies (e-e and e-i for electrons,
   i-i and i-e for ions, as in `braginskii_collisions`). The flux limiter
-  (`kappa_limit_alpha`) is off unless it's set.
+  (`kappa_limit_alpha`) is off unless it's set. Nothing is conducted
+  through a target face, so a target cell's q_par is half the flux
+  through its face with the next cell.
 - **Parallel derivatives and interpolation in y** follow the field line:
   going from plane y to y + 1, z changes by Δ`zShift`, plus `ShiftAngle`
   across the core branch cut. For derivatives the neighboring planes are
@@ -593,7 +608,11 @@ Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
 7. Without neutrals in the run, Flan sees only the ions and electrons.
    Impurity ionization and recombination use n_e and T_e.
 8. Snapshot fields are cell-centered values with the x guard cells
-   included and no y guard cells.
+   included and no y guard cells. In BOUT++ dumps each block has its
+   guard cells; the x guards are kept only at the domain's x edges and
+   the y guards are dropped.
+9. In BOUT++ dumps, `Apar` is b·A in units of Bnorm rho_s0, and `Vi` and
+   `Apar` are along b, which is along +y.
 
 ### Questions for the HERMES-3 developers
 
@@ -607,11 +626,12 @@ Tnorm, Bnorm, the ion `AA`, `zperiod` and the conduction coefficients.
    through the parallel fluxes alone. Is the rest the radial flux through
    the outer SOL and PFR boundaries, or something else that Flan should
    include (e.g., a sheath heat flux different from the bulk fluxes)?
-4. For BOUT++ Hermes-3 output: is the plan in
-   [BOUT++ Hermes-3 reader](#bout-hermes-3-reader) right about the guard
-   cells, the canonical momentum written as `NV` in electromagnetic runs,
-   and `V` being the flow? Is dApar/dt usually small enough to leave out
-   of E_par for impurities?
+4. For BOUT++ Hermes-3 output: are assumptions 8 and 9 right, and is
+   `NV` always the canonical momentum AA N V + Z N Apar in
+   electromagnetic runs? Flan takes dApar/dt from the output times, so it
+   misses changes in Apar faster than the output interval; is that a
+   reasonable approximation, or should the run write E_par (or
+   dApar/dt) directly?
 5. Does JAX-Hermes3 shift between planes with FFTs (as BOUT++'s
    `ShiftedMetric` does) and take grad_par as above? If it interpolates
    differently, Flan's E∥ and q_par would differ slightly from the run's.
