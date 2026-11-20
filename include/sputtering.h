@@ -173,6 +173,8 @@ namespace Sputtering
 		void print_summary(std::ostream& os) const;
 	};
 
+	bool has_surfaces(const Background::Background& bkg);
+
 	double sheath_energy(double te, double ti, double elec_mass_amu,
 		double ion_mass_amu, int charge);
 

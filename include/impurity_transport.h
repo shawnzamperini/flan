@@ -13,6 +13,7 @@
 // Declared in sputtering.h, which isn't included here to keep this header
 // light
 namespace Sputtering {class Source; class Deposition;}
+namespace Sheath {class Sheath;}
 
 namespace ImpurityTransport
 {
@@ -21,5 +22,6 @@ namespace ImpurityTransport
 		Options::Options& opts, Timer::Timer& timer,
 		const Sputtering::Source* source = nullptr,
 		Sputtering::Deposition* deposition = nullptr,
-		Boundary::Fates* fates_out = nullptr);
+		Boundary::Fates* fates_out = nullptr,
+		const Sheath::Sheath* sheath = nullptr);
 }

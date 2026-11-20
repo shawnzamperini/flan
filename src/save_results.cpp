@@ -536,6 +536,8 @@ namespace SaveResults
 		save_string(input_group, opts.sput_bohm_floor(), "sput_bohm_floor",
 			dim_str, "parallel flow onto the wall at least the sound speed "
 			"option");
+		save_string(input_group, opts.sheath_model(), "sheath_model",
+			dim_str, "sheath field in front of the walls");
 		save_scalar(input_group, opts.sput_angle_val(), "sput_angle_val",
 			dim_scalar, "angle of incidence of ions on the wall from the "
 			"normal", "(degrees)");

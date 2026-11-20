@@ -58,6 +58,11 @@ target_compile_definitions(test_sputtering_cpu PRIVATE
 	FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 add_test(NAME SputteringCPUTest COMMAND test_sputtering_cpu)
 
+add_executable(test_sheath_cpu test_sheath_cpu.cpp)
+target_link_libraries(test_sheath_cpu PRIVATE flan gtest_main
+	OpenMP::OpenMP_CXX)
+add_test(NAME SheathCPUTest COMMAND test_sheath_cpu)
+
 add_executable(test_thermal_force_cpu test_thermal_force_cpu.cpp)
 target_link_libraries(test_thermal_force_cpu PRIVATE flan gtest_main
 	OpenMP::OpenMP_CXX)

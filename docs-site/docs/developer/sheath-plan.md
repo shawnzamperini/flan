@@ -240,7 +240,47 @@ The plan below was:
   compares the prompt fraction with Fussmann's at each p, within the
   statistical error plus a tolerance set in S0.
 
-**Phase S3: the sheath field (CPU).**
+**Phase S3: the sheath field (CPU).** Done:
+
+- `Sheath::Sheath` (`sheath.h`, `sheath.cpp`) holds `Params` for every
+  wall element and time frame (Te, Ti, n_e and B of the element's plasma
+  cell; θ from B and the element's normal), and for each plasma cell next
+  to the wall, its elements. `potential`, `field` and `range` give φ(d),
+  E · n(d) and how far the field reaches for either model.
+- The gyroradius is ρ_s = c_s / Ω_i with c_s = √(e(Te + Ti)/m_i): Borodkina's
+  ρ_iCs, and GITR's √(2kT/m)/Ω at Ti = Te (Brooks' R_DT is √2 smaller).
+- No floor on f_D past the critical angle: f_D goes to 0 continuously
+  there (only its slope jumps), and the kinetic results give no value to
+  set a floor from. Past it both models put the whole drop in the
+  presheath. Easy to add as an option if S5 shows it matters.
+- `"borodkina"` at normal incidence: Q = −λ_w and ξ_mps is infinite (one
+  Debye layer, decaying over 1/a ≈ 2 λ_D, as in Brooks). φ and E are
+  continuous at ξ_mps at every angle checked (10° to 85°). Within about a
+  degree of the critical angle a and Q take odd values, but the Debye
+  layer holds only a few percent of the drop there.
+- The distance from an element is measured across its plasma cell: the
+  fraction of the way from the element's face to the opposite face, times
+  the cell's thickness along the element's normal (2 (c − m) · n). Exact
+  on the slab and on rectangular cells; on the staircase it is the
+  distance along the outline's normal. The field is only added in the
+  cells next to the wall, so it is cut off at the far side of a cell
+  thinner than the sheath; `Sheath` counts such elements and
+  `print_summary` warns.
+- `update_velocity_cpu` adds `Sheath::field_at` to the interpolated E.
+  `flan.cpp` builds the `Sheath` from the sputtered source's surface (or
+  its own) when `sheath_model` isn't `"off"`.
+- `sheath_model` defaults to `"brooks"` (the user's call, ahead of S5).
+  Backgrounds without walls (`Sputtering::has_surfaces`) go without it,
+  and a GPU run goes without it with a warning. `reg_prompt_redep` turns
+  it off, since Fussmann's model has no sheath.
+- Tests: `test_sheath_cpu.cpp` (the scales, f_D over θ and the critical
+  angle, ∫E · n = φ_wall and E = −dφ/dd for both models over 0° to 89°,
+  Brooks' and Borodkina's forms, the field on the slab wall, and an ion
+  falling through the field gaining φ(start) − φ_wall), and
+  `SheathField.DiagonalWall` (toroidal 45° staircase: distance, θ, and
+  the normal turning with φ).
+
+The plan was:
 
 - `src/sheath.cpp`, `include/sheath.h`: the profile φ(d), E(d), and the
   per-element, per-frame parameters (drops, L_DS, L_MPS, α from b · n),
@@ -261,7 +301,44 @@ The plan below was:
   values from its equations; the field points to the wall and is zero far
   from it; the lookup finds the right element across zone faces.
 
-**Phase S4: sub-stepping near the wall.**
+**Phase S4: sub-stepping near the wall.** Done:
+
+- `Sheath::substeps` gives each charged particle that can reach the
+  field this step (d − v_max dt within 7 scale lengths) a number of
+  sub-steps N so none moves it more than 2% (`substep_frac`) of the local
+  scale length: the Debye layer's if it can reach that layer this step,
+  the presheath's if not. v_max is its speed plus what the rest of the
+  drop could add. At least 2, at most 20000 (`max_substeps`).
+- `Boris::substep_cpu` pushes those particles in N sub-steps of dt/N
+  (Boris update, move, find the cell). The leapfrog's half-step offset is
+  moved from dt/2 to h/2 at the start and back at the end; Boris is
+  reversible, so these cancel on consecutive near-wall steps. A particle
+  leaving the grid gets a kick of (f − ½)h at its last position inside (f
+  the fraction of the sub-step at which it crossed), so it hits the wall
+  with its velocity at the crossing. `update_velocity_cpu` and
+  `step_cpu` skip the sub-stepped particles' push and move; `step_cpu`
+  still advances their time.
+- The Boris loop body is now `Boris::push_one_cpu`, used by both.
+- Test `SheathSubstep.ImpactEnergy`: a W ion of charge 1 or 4 released at
+  rest 4 scale lengths out, B at 30° to the wall, hits it with
+  Z (φ(start) − φ_wall) to 1e-3 for both models at dt = 1e-10, 1e-9 and
+  1e-8 s (1e-11 s passes too, but takes over a minute in a debug build).
+  Without the crossing kick the error was up to 1%.
+  `SheathSubstep.NeededAtLargeSteps` shows that the plain push is off by
+  more than 5% at 1e-8 s.
+- Cost: on the slab prompt redeposition case, where nearly every particle
+  is near the wall, the run takes about 1.5 times as long. On a HERMES
+  turbulence background with a sputtered target source, the push's time
+  is unchanged (the run was even shorter, as more atoms come back
+  promptly).
+- On that background about half the target elements have a plasma cell
+  thinner than 7 presheath lengths, leaving out up to about 4% of the
+  drop past the cell's far side. `print_summary` now reports the largest
+  such fraction. Carrying the field into the next cell out would fix it;
+  left for now.
+
+The plan was:
+
 
 - Near-wall particles take Boris sub-steps; the absorption itself is still
   done by the boundary check.

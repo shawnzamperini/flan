@@ -895,6 +895,33 @@ namespace Sputtering
 	}
 
 	/**
+	* Whether a background has wall surfaces a Surface can be made from:
+	* a wall mask (chi), or a wall face on the x or y side of a toroidal or
+	* Cartesian zone. The Surface constructor stops the run when there are
+	* none, so this lets options that are on by default (sheath_model)
+	* skip backgrounds without walls instead.
+	*
+	* @param bkg The background.
+	* @return True if Surface(bkg) would find elements to make.
+	*/
+	bool has_surfaces(const Background::Background& bkg)
+	{
+		if (!bkg.get_chi().get_data().empty()) return true;
+		const Zones::Zones& zones {bkg.get_zones()};
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			if (!zones.is_toroidal(zone) && !zones.is_cartesian(zone))
+				continue;
+			for (const auto f : {Zones::xmin, Zones::xmax, Zones::ymin,
+				Zones::ymax})
+			{
+				if (zones.get_face(zone, f) == Zones::face_wall) return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	* Returns the energy an ion gains falling through the sheath and
 	* presheath in front of a floating wall (eV).
 	*

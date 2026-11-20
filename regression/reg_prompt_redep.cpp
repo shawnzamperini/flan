@@ -39,7 +39,8 @@
 *   sputter it, so the field is at 0.01 degrees to it (slab_b_angle). In
 *   one gyration an ion then moves about 1e-3 of a gyroradius toward or
 *   away from the wall along B, which is negligible.
-* - No electric field, collisions or thermal force: all off.
+* - No electric field, collisions or thermal force: all off, the sheath
+*   field included (sheath_model = "off").
 * - No further ionization in the first gyration. W+ would ionize again
 *   about 2 pi (S_1 / S_0) / p times per gyration, close to once at p = 1,
 *   so the runs stop ionization at W+ (imp_iz_max_charge = 1).
@@ -136,6 +137,7 @@ Inputs base_inputs(const std::string& variant)
 	inpts["imp_time_step"] = 5e-9;
 	inpts["imp_collisions"] = "off";
 	inpts["imp_thermal_force"] = "off";
+	inpts["sheath_model"] = "off";
 
 	inpts["save_track"] = "off";
 	inpts["print_interval"] = 10;

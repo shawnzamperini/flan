@@ -36,6 +36,7 @@
 #include "read_bkg.h"
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
+#include "sheath.h"
 #include "slots.h"
 #include "sputtering.h"
 #include "vectors.h"
@@ -1543,4 +1544,45 @@ TEST(SlabWall, PromptTally)
 		on_elements += dep.prompt()[e];
 	}
 	EXPECT_DOUBLE_EQ(on_elements, 3.0);
+}
+
+// The sheath field on a toroidal background, in front of the 45 degree
+// staircase wall: B along Z is 45 degrees from the wall's normal
+// (-1, -1) / sqrt(2) in (R, Z). In plasma cell (6, 3) the particle is 0.8
+// of the way to the cell's xmax face, so 0.2 cell widths (2 mm) in R from
+// it, 2 mm / sqrt(2) along the normal, nearer than the ymax face. The
+// field is along the normal turned to the particle's toroidal angle.
+TEST(SheathField, DiagonalWall)
+{
+	const auto bkg {diagonal_with_plasma(Plasma {})};
+	const Sputtering::Surface surface(bkg);
+	const Sheath::Sheath sheath(surface, bkg, Sheath::Model::brooks);
+	ASSERT_EQ(sheath.size(), surface.size());
+
+	const double phi {0.13};
+	const std::array<double, 3> pos {6.8, 3.5, phi};
+	std::size_t e {};
+	double d {};
+	ASSERT_TRUE(sheath.distance(0, 6, 3, 1, pos, e, d));
+	const auto& el {surface.elements()[e]};
+	EXPECT_EQ(el.face, Zones::xmax);
+	EXPECT_EQ(el.i, 6);
+	EXPECT_EQ(el.j, 3);
+	EXPECT_NEAR(d, 0.002 / std::sqrt(2.0), 1e-12);
+
+	const auto& p {sheath.params(0, e)};
+	EXPECT_NEAR(p.theta, S3XTest::pi / 4.0, 1e-9);
+	const double en {Sheath::field(p, Sheath::Model::brooks, d)};
+	ASSERT_LT(en, 0.0);
+	const auto E {sheath.field_at(0, 0, 6, 3, 1, pos)};
+	const auto n {el.normal_xyz(phi, bkg.get_phi_sign())};
+	for (int c {}; c < 3; ++c) EXPECT_NEAR(E[c], en * n[c], 1e-9 * -en);
+
+	// Pulling toward the wall, up and out in R
+	EXPECT_GT(E[0] * std::cos(phi) + E[1] * std::sin(phi), 0.0);
+	EXPECT_GT(E[2], 0.0);
+
+	// A cell away from the wall has no field
+	const auto none {sheath.field_at(0, 0, 6, 1, 1, {6.5, 1.5, phi})};
+	for (const double c : none) EXPECT_DOUBLE_EQ(c, 0.0);
 }

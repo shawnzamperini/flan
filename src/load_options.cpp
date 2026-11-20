@@ -399,6 +399,13 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "sheath_model")
+			{
+				auto set_func = std::bind(&Options::set_sheath_model, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "sput_angle_val")
 			{
 				auto set_func = std::bind(&Options::set_sput_angle_val, &opts,

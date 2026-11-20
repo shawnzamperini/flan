@@ -29,6 +29,7 @@
 #include "read_bkg.h"
 #include "read_gkyl.h"
 #include "save_results.h"
+#include "sheath.h"
 #include "sputtering.h"
 #include "timer.h"
 #include "vectors.h"
@@ -187,13 +188,46 @@ R"(
 		}
 	}
 
+	// The sheath field in front of the walls, from the same wall surface
+	// as the sputtered source (or its own if there's no source). It's on
+	// by default, so a background without walls just goes without, and on
+	// the GPU (where it isn't written yet) it's left out with a warning.
+	std::optional<Sheath::Sheath> sheath {};
+	if (opts.sheath_model_int() > 0 && (source
+		|| Sputtering::has_surfaces(bkg)))
+	{
+		if (opts.use_gpu_int() > 0)
+		{
+			if (rank == 0)
+			{
+				std::cout << "Warning! The sheath field (sheath_model = \""
+					<< opts.sheath_model() << "\") only runs on the CPU for "
+					"now, so this GPU run goes without it.\n";
+			}
+		}
+		else
+		{
+			const auto model {static_cast<Sheath::Model>(
+				opts.sheath_model_int())};
+			if (source) sheath.emplace(source->surface(), bkg, model);
+			else
+			{
+				const Sputtering::Surface surface(bkg,
+					opts.sput_max_wall_dist());
+				sheath.emplace(surface, bkg, model);
+			}
+			if (rank == 0) sheath->print_summary(std::cout);
+		}
+	}
+
 	// Begin main particle following loop.
 	timer.start(Timer::Section::Imp);
 	Boundary::Fates fates {};
 	Collisions::reset_skew_counts();
 	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
 		timer, source ? &*source : nullptr,
-		deposition ? &*deposition : nullptr, &fates)};
+		deposition ? &*deposition : nullptr, &fates,
+		sheath ? &*sheath : nullptr)};
 	timer.stop(Timer::Section::Imp);
 
 	// How the thermal force's skewed sampling went, over every rank

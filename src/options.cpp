@@ -86,6 +86,7 @@ namespace Options
 		set_imp_source_opt(m_imp_source_opt);
 		set_sput_flux_opt(m_sput_flux_opt);
 		set_sput_bohm_floor(m_sput_bohm_floor);
+		set_sheath_model(m_sheath_model);
 	}
 
 	// Setter definitions. They're all the same, so just throwing together
@@ -1031,6 +1032,41 @@ namespace Options
 
 		if (sput_bohm_floor == "off") m_sput_bohm_floor_int = 0;
 		else if (sput_bohm_floor == "on") m_sput_bohm_floor_int = 1;
+	}
+
+	/**
+	* Sets the sheath_model option.
+	*
+	* The electric field of the sheath in front of the wall (the magnetic
+	* presheath and the Debye sheath), added to the push in the plasma
+	* cells next to the wall surfaces (see sheath.cpp). The layers are far
+	* thinner than a cell, so the background doesn't hold them. "brooks" is
+	* Brooks' two-exponential profile, as in ERO and GITR, and "borodkina"
+	* Borodkina and Tsvetkov's; both split the drop the same way. The
+	* default is "brooks". It only does anything on a background with wall
+	* surfaces (as for imp_source_opt = "sputter"), and is left out on
+	* other backgrounds. CPU only: a GPU run goes without it, with a
+	* warning.
+	*
+	* Valid values are "off", "brooks" and "borodkina". An invalid value
+	* prints an error and leaves the option unchanged. Also sets the
+	* control integer returned by sheath_model_int() to 0 for "off", 1 for
+	* "brooks", 2 for "borodkina" (the values of Sheath::Model). An invalid
+	* value leaves the control integer unchanged.
+	*
+	* @param sheath_model New value of the sheath_model option.
+	*/
+	void Options::set_sheath_model(std::string sheath_model)
+	{
+		if (check_input<std::string>("sheath_model", sheath_model,
+			{"off", "brooks", "borodkina"}))
+		{
+			m_sheath_model = sheath_model;
+		}
+
+		if (sheath_model == "off") m_sheath_model_int = 0;
+		else if (sheath_model == "brooks") m_sheath_model_int = 1;
+		else if (sheath_model == "borodkina") m_sheath_model_int = 2;
 	}
 
 	/**
@@ -2500,6 +2536,14 @@ namespace Options
 		{return m_sput_flux_opt;}
 	const std::string& Options::sput_bohm_floor() const
 		{return m_sput_bohm_floor;}
+
+	/**
+	* Returns the sheath_model option.
+	*
+	* @return Value of the sheath_model option.
+	*/
+	const std::string& Options::sheath_model() const
+		{return m_sheath_model;}
 	double Options::sput_angle_val() const {return m_sput_angle_val;}
 	double Options::sput_max_wall_dist() const
 		{return m_sput_max_wall_dist;}
@@ -3647,6 +3691,9 @@ namespace Options
 
 	int Options::sput_bohm_floor_int() const
 		{return get_control_int("sput_bohm_floor", m_sput_bohm_floor_int);}
+
+	int Options::sheath_model_int() const
+		{return get_control_int("sheath_model", m_sheath_model_int);}
 
 	// Setter declarations for internal control variables
 
