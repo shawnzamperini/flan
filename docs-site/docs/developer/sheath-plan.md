@@ -405,7 +405,7 @@ The plan was:
 - Then a HERMES run with and without the sheath, for the change in the
   redeposited share and the W leaving the divertor.
 
-**Phase S6: self-sputtering.** Done, apart from the W on W table runs:
+**Phase S6: self-sputtering.** Done:
 
 - `Sputtering::SelfSource` (CPU only). `Deposition::add_at_wall_face`
   and `add_into_wall_cell` return the element a particle landed on, and
@@ -446,9 +446,14 @@ The plan was:
   f₁ = f₀ (0.585 against 0.596 at Y0 = 0.5, 0.583 against 0.588 at 1.25),
   and T = S f₀ Y0 / (1 − f₁ Y0) (T / S = 0.416 and 2.749). All pass.
   About 4 minutes each on 16 cores.
-- Still to do: the W on W table (`rustbca_yields.py W W --emax 1e5
-  --ne 53`, running as a batch job) into `data/sputtering/`, then the
-  `w_te<Te>` variants.
+- `data/sputtering/W_on_W.h5` (RustBCA 3.0.0, 10 eV to 10 keV) and the
+  `w_te<Te>` variants (full ionization, "brooks" sheath, B at 2 degrees),
+  printed by the checker. At Te = 20 eV the mean yield of what lands is
+  0.012 and T / S = 0.009 (3 generations); at 50 eV it is 0.091 and
+  0.089 (7 generations). The checker's rough estimate, every landing
+  particle an ion at q φ_fl + 2 Ti, gives 0.032 and 0.31: the yield is
+  steep there, and the mean impact energy (58 and 124 eV) is well below
+  that estimate's. About 3 and 2 minutes on 16 cores.
 
 The plan was:
 
