@@ -3900,11 +3900,14 @@ namespace Options
 	* prints an error saying GPU support was not compiled in.
 	*
 	* @param device_id ID of the GPU to copy to (unused).
+	* @return nullptr, since there is no device copy. Without a return
+	* the call would be undefined behaviour, not just an error message.
 	*/
 	OptionsDevice* Options::to_device(int device_id)
 	{
 		std::cerr << "Error! Options::to_device was called but GPU support"
 				  << " was not compiled in.\n";
+		return nullptr;
 	}
 
 	/**
