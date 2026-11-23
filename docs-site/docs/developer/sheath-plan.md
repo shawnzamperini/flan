@@ -405,7 +405,52 @@ The plan was:
 - Then a HERMES run with and without the sheath, for the change in the
   redeposited share and the W leaving the divertor.
 
-**Phase S6: self-sputtering.**
+**Phase S6: self-sputtering.** Done, apart from the W on W table runs:
+
+- `Sputtering::SelfSource` (CPU only). `Deposition::add_at_wall_face`
+  and `add_into_wall_cell` return the element a particle landed on, and
+  the boundary check passes it to `SelfSource::rebirth` (reached through
+  `Deposition::self`, so nothing else is threaded through the main
+  loop).
+- Impact energy and angle (`self_impact`): from the velocity with the
+  sheath field on; without it, an ion gets q φ_wall added to its motion
+  along the normal, with φ_wall the floating drop alone (as in the sheath
+  model, or `sheath_drop` Te), not the D⁺ 0.5 Te presheath. Neutrals keep
+  their own energy. `Source::phi_wall` holds the drop per frame and
+  element.
+- Rebirth: Y from the table, the element's self-sputtered rate gets w Y,
+  and the weight w Y goes through roulette (`roulette`, below
+  `sput_self_min_weight` times the source particles' weight). A survivor
+  becomes a neutral where it hit, a thousandth of a cell into the plasma
+  cell, with a Thompson energy cut off at Λ E (Λ = 1 for W on W) and a
+  cosine direction. Its time since birth and `prompt_by` are reset; the
+  background time goes on. `Slots::generation` counts its generations.
+- Avalanche: a particle that would pass `sput_self_max_gen` (1000) stops
+  the run after the boundary check, with the multiplication measured
+  along the chains. With roulette a chain survives each generation with
+  probability about min(f, f Y), so long chains only happen when that is
+  near 1.
+- Output (sputtering group): `self_sputtered` and `net_erosion_self` per
+  element, `generation_weight` and `generation_landed`, the
+  multiplication T / (S + T), the chain estimate, mean yield, impact
+  energy and angle, and what roulette ended. `fates_self_sputtered`
+  counts the rebirths.
+- Tests: `SelfSputtering.Roulette`, `SelfSputtering.Impact`,
+  `SputteringTable.SelfRebirth` (place, direction, weight, tallies,
+  sheath on and off, below threshold, generation cap),
+  `SelfRoulette`, `SelfChecks`, `SelfBoundary` (through
+  `check_bounds_cpu`).
+- `reg_self_sputter` y05 and y125 (constant Y0 from
+  `make_self_tables.py`) and `check_self_sputter.py`: W_{g+1} = Y0 L_g
+  (exact without roulette, binomial with it), the tallies agree,
+  f₁ = f₀ (0.585 against 0.596 at Y0 = 0.5, 0.583 against 0.588 at 1.25),
+  and T = S f₀ Y0 / (1 − f₁ Y0) (T / S = 0.416 and 2.749). All pass.
+  About 4 minutes each on 16 cores.
+- Still to do: the W on W table (`rustbca_yields.py W W --emax 1e5
+  --ne 53`, running as a batch job) into `data/sputtering/`, then the
+  `w_te<Te>` variants.
+
+The plan was:
 
 - A W on W table in `data/sputtering/` from `rustbca_yields.py`, with the
   energy range extended to what 3 Z Te + 2 Ti reaches.

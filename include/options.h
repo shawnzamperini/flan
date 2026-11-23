@@ -89,6 +89,10 @@ namespace Options
 		std::string m_sheath_model                 {"brooks"};
 		double m_sheath_fd                          {-1.0};
 		double m_sheath_drop                        {-1.0};
+		std::string m_sput_self                     {"off"};
+		std::string m_sput_self_table_file    {"undefined"};
+		double m_sput_self_min_weight               {0.1};
+		int m_sput_self_max_gen                     {1000};
 		double m_sput_angle_val                     {60.0};
 		double m_sput_max_wall_dist                  {2.0};
 		
@@ -220,6 +224,7 @@ namespace Options
 		int m_sput_flux_opt_int                       {-1};
 		int m_sput_bohm_floor_int                     {-1};
 		int m_sheath_model_int                        {-1};
+		int m_sput_self_int                           {-1};
 
 		template <typename T>
 		bool check_input(const std::string& var, const T& value, 
@@ -282,6 +287,10 @@ namespace Options
 		void set_sheath_model(std::string sheath_model);
 		void set_sheath_fd(double sheath_fd);
 		void set_sheath_drop(double sheath_drop);
+		void set_sput_self(std::string sput_self);
+		void set_sput_self_table_file(std::string sput_self_table_file);
+		void set_sput_self_min_weight(double sput_self_min_weight);
+		void set_sput_self_max_gen(int sput_self_max_gen);
 		void set_sput_angle_val(double sput_angle_val);
 		void set_sput_max_wall_dist(double sput_max_wall_dist);
 		void set_min_ne(double min_ne);
@@ -413,6 +422,10 @@ namespace Options
 		const std::string& sheath_model() const;
 		double sheath_fd() const;
 		double sheath_drop() const;
+		const std::string& sput_self() const;
+		const std::string& sput_self_table_file() const;
+		double sput_self_min_weight() const;
+		int sput_self_max_gen() const;
 		double sput_angle_val() const;
 		double sput_max_wall_dist() const;
 		double min_ne() const;
@@ -533,6 +546,7 @@ namespace Options
 		int sput_flux_opt_int() const;
 		int sput_bohm_floor_int() const;
 		int sheath_model_int() const;
+		int sput_self_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);

@@ -420,6 +420,34 @@ namespace Options
 				assign_option<double>(set_func, var, key);
 			}
 
+			else if (key == "sput_self")
+			{
+				auto set_func = std::bind(&Options::set_sput_self, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_self_table_file")
+			{
+				auto set_func = std::bind(&Options::set_sput_self_table_file, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_self_min_weight")
+			{
+				auto set_func = std::bind(&Options::set_sput_self_min_weight, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "sput_self_max_gen")
+			{
+				auto set_func = std::bind(&Options::set_sput_self_max_gen, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
 			else if (key == "sput_angle_val")
 			{
 				auto set_func = std::bind(&Options::set_sput_angle_val, &opts,

@@ -223,6 +223,38 @@ R"(
 		}
 	}
 
+	// Self-sputtering: impurities landing on the wall sputter more atoms
+	// and carry on as one of them. With the sheath field on, they've been
+	// accelerated through it already; without, the drop is added to their
+	// impact energy.
+	std::optional<Sputtering::SelfSource> self {};
+	if (opts.sput_self_int() == 1)
+	{
+		if (!source)
+		{
+			Errors::fatal_error("sput_self = \"on\" needs the sputtered "
+				"source (imp_source_opt = \"sputter\").");
+		}
+		if (opts.sput_self_table_file() == "undefined")
+		{
+			Errors::fatal_error("sput_self = \"on\" needs a "
+				"self-sputtering yield table, set with "
+				"sput_self_table_file.");
+		}
+		const Sputtering::YieldTable self_table(opts.sput_self_table_file());
+		self.emplace(*source, self_table, opts, sheath.has_value());
+		deposition->set_self(&*self);
+		if (rank == 0)
+		{
+			std::cout << "Self-sputtering on, yields from "
+				<< opts.sput_self_table_file() << " (" << self_table
+				.energy_min() << " to " << self_table.energy_max()
+				<< " eV). Roulette below " << self->min_weight()
+				<< " atoms/s; the run stops at generation "
+				<< opts.sput_self_max_gen() << ".\n";
+		}
+	}
+
 	// Begin main particle following loop.
 	timer.start(Timer::Section::Imp);
 	Boundary::Fates fates {};
@@ -247,6 +279,11 @@ R"(
 		deposition->reduce(0);
 		if (rank == 0)
 			deposition->print_summary(std::cout, source->source_rate());
+	}
+	if (self)
+	{
+		self->reduce(0);
+		if (rank == 0) self->print_summary(std::cout, source->source_rate());
 	}
 
 	// Reduce imp_stats from each rank, defined in impurity_stats.cpp. Only

@@ -543,6 +543,18 @@ namespace SaveResults
 			"from the field angle", "");
 		save_scalar(input_group, opts.sheath_drop(), "sheath_drop",
 			dim_scalar, "sheath drop over Te, -1 for the floating drop", "");
+		save_string(input_group, opts.sput_self(), "sput_self", dim_str,
+			"self-sputtering option");
+		save_string(input_group, opts.sput_self_table_file(),
+			"sput_self_table_file", dim_str, "self-sputtering yield table "
+			"file");
+		save_scalar(input_group, opts.sput_self_min_weight(),
+			"sput_self_min_weight", dim_scalar, "weight below which "
+			"self-sputtered particles play Russian roulette, over the "
+			"source particles' weight", "");
+		save_scalar(input_group, opts.sput_self_max_gen(),
+			"sput_self_max_gen", dim_scalar, "most self-sputtering "
+			"generations before the run stops as an avalanche", "");
 		save_scalar(input_group, opts.sput_angle_val(), "sput_angle_val",
 			dim_scalar, "angle of incidence of ions on the wall from the "
 			"normal", "(degrees)");
@@ -1397,7 +1409,8 @@ namespace SaveResults
 				{"fates_core", fates->core},
 				{"fates_time_end", fates->time_end},
 				{"fates_runaway", fates->runaway},
-				{"fates_max_time", fates->max_time}};
+				{"fates_max_time", fates->max_time},
+				{"fates_self_sputtered", fates->self_sputtered}};
 			for (const auto& [name, count] : counts)
 				group.putAtt(name, netCDF::ncInt64, count);
 		}
@@ -1566,6 +1579,53 @@ namespace SaveResults
 			deposition->mean_energy());
 		group.putAtt("mean_impact_angle", netCDF::ncDouble,
 			deposition->mean_angle());
+
+		// Self-sputtering. Net erosion then counts the self-sputtered
+		// atoms as leaving the element too.
+		const Sputtering::SelfSource* self {deposition->self()};
+		if (self == nullptr) return;
+		const auto& self_rate {self->self_sputtered()};
+		std::vector<double> net_self(n);
+		for (std::size_t e {}; e < n; ++e)
+			net_self[e] = net[e] + self_rate[e];
+		save_vector_1d(group, self_rate, "self_sputtered", dim_elem, "rate "
+			"atoms are sputtered off the element by impurities landing on "
+			"it (sum of weight * self-sputtering yield)", "(atoms/s)");
+		save_vector_1d(group, net_self, "net_erosion_self", dim_elem,
+			"source_mean + self_sputtered - redeposited, the net erosion "
+			"with self-sputtering", "(atoms/s)");
+		std::vector<double> gen {self->generation_weight()};
+		gen[0] = source.source_rate();
+		const netCDF::NcDim dim_gen {group.addDim("generation", gen.size())};
+		save_vector_1d(group, gen, "generation_weight", dim_gen, "rate "
+			"carried into each self-sputtering generation (0 is the D+ "
+			"source, g the atoms self-sputtered g times)", "(atoms/s)");
+		save_vector_1d(group, self->generation_landed(), "generation_landed",
+			dim_gen, "rate landing on wall elements from each "
+			"self-sputtering generation", "(atoms/s)");
+		group.putAtt("sput_self_table_file", self->table().path());
+		group.putAtt("self_sputtered_total", netCDF::ncDouble,
+			self->self_total());
+		group.putAtt("self_landed", netCDF::ncDouble, self->landed());
+		group.putAtt("self_mean_yield", netCDF::ncDouble,
+			self->mean_yield());
+		group.putAtt("self_mean_impact_energy", netCDF::ncDouble,
+			self->mean_energy());
+		group.putAtt("self_mean_impact_angle", netCDF::ncDouble,
+			self->mean_angle());
+		group.putAtt("self_roulette_lost", netCDF::ncDouble,
+			self->roulette_lost());
+		group.putAtt("self_min_weight", netCDF::ncDouble,
+			self->min_weight());
+		group.putAtt("self_multiplication", netCDF::ncDouble,
+			self->self_total() / (source.source_rate()
+			+ self->self_total()));
+		group.putAtt("self_chain_multiplication", netCDF::ncDouble,
+			self->chain_multiplication());
+		group.putAtt("self_num_below_threshold", netCDF::ncInt64,
+			self->num_below_threshold());
+		group.putAtt("self_num_above_table", netCDF::ncInt64,
+			self->num_above_table());
 	}
 
 	/**

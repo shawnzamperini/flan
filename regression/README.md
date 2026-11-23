@@ -17,6 +17,7 @@ files in this directory are older and are not part of this set.
 | `reg_drifts` | Gyration, and the ExB, polarization, grad-B and curvature drifts of a single particle, without collisions | Cyclotron frequency and the guiding-center drift formulas |
 | `reg_prompt_redep` | Tungsten sputtered off a wall in a field parallel to it, ionizing to W+ and gyrating, comes back to the wall in its first gyration | Fussmann's prompt redeposition, ⟨r⟩(p) averaged over the exponential distribution of ionization lengths (`fussmann.py`) |
 | `reg_sheath_angles` | D⁺ test ions fall from 10 ρ_s through the `"borodkina"` sheath field onto a wall, with the field at 45° or 60° to the normal | Energy conservation (exactly), and Borodkina and Tsvetkov's impact angle distributions (Fig. 2a of their 2015 paper) |
+| `reg_self_sputter` | Tungsten landing on the wall sputters more tungsten, with a constant yield Y0 (0.5, 1.25) | The weight in each generation, W_{g+1} = Y0 L_g, and the total S f₀ Y0 / (1 − f₁ Y0), with the self-sputtered atoms coming back as often as the D-sputtered ones |
 
 Each case has variants (other charge states, collision sub-cycling off,
 the GPU, one heat flux or one drift at a time), chosen by a command-line
@@ -55,6 +56,8 @@ for m in brooks borodkina; do for a in 2 5 10 20; do
     <build dir>/reg_prompt_redep ${m}_a$a
 done; done
 for v in a45 a60; do <build dir>/reg_sheath_angles $v; done
+python <flan>/regression/make_self_tables.py
+for v in y05 y125 w_te20 w_te50; do <build dir>/reg_self_sputter $v; done
 ```
 
 Leave out `z10_gpu` and `gradb_gpu` without a GPU. The collision runs
@@ -68,6 +71,11 @@ cores, and write `reg_sheath_angles_<variant>.txt`.
 Flan's directory (set when it's built) and the OpenADAS rates from
 `OPENADAS_ROOT`.
 
+`reg_self_sputter` needs the same, plus the constant-yield tables
+`self_y05.h5` and `self_y125.h5` in the working directory, which
+`make_self_tables.py` writes, and `data/sputtering/W_on_W.h5` for the
+`w_te<Te>` variants. y05 takes about 4 minutes on 16 cores.
+
 ## Checking
 
 ```
@@ -75,12 +83,14 @@ python <flan>/regression/check_collisions.py <output directory>
 python <flan>/regression/check_drifts.py <output directory>
 python <flan>/regression/check_redeposition.py <output directory>
 python <flan>/regression/check_sheath_angles.py <output directory>
+python <flan>/regression/check_self_sputter.py <output directory>
 ```
 
 Each reads the output files of its cases found there, takes all the
 inputs from the files themselves, prints a table and writes plots
 (`check_friction.png`, `check_thermal_force.png`, `check_drifts.png`,
-`check_redeposition.png`, `check_sheath_angles.png`). The exit status is
+`check_redeposition.png`, `check_sheath_angles.png`,
+`check_self_sputter.png`). The exit status is
 1 if a check failed.
 
 ### Prompt redeposition
@@ -216,3 +226,35 @@ The table also lists three references:
 
 ∇T is not an input of the slab. It is the gradient that would carry the
 run's heat flux in a collisional plasma (Braginskii's conductivities).
+
+### Self-sputtering
+
+With `sput_self = "on"`, a W atom or ion landing on the wall sputters Y
+atoms and the particle carries on as one of them with its weight times Y.
+The output tallies the weight carried into each generation, W_g (W₀ = S,
+the D⁺ source), and the weight landing on the wall from it, L_g, so
+f_g = L_g / W_g is generation g's return fraction.
+
+`y05` and `y125` are `reg_prompt_redep`'s p1 case (W⁺ only, B at 0.01° to
+the wall, no electric field) with a constant yield, 0.5 or 1.25, from
+`make_self_tables.py`. With a constant yield every particle of a
+generation has the same weight (S / imp_num times Y0^g, or the roulette
+weight), so the script can count them, and checks:
+
+- W_{g+1} = Y0 L_g: exactly where no roulette is played (and the counts
+  are whole numbers), and within 4 standard deviations of the binomial
+  roulette where it is.
+- The self-sputtered total, its sum over the elements and the redeposited
+  total agree with the generation tallies.
+- f₁ (generations 1 and up) equals f₀ within 4 standard errors plus 0.02.
+  Prompt redeposition doesn't depend on an atom's speed, so atoms
+  sputtered by W, which are faster, should come back as often as those
+  sputtered by D⁺.
+- The self-sputtered rate is S f₀ Y0 / (1 − f₁ Y0), and the
+  multiplication T / (S + T) is f₁ Y0, to 2%.
+
+`w_te<Te>` use the RustBCA W on W table at Te = Ti = 20 or 50 eV with
+full ionization and the sheath on, and are printed, not checked: the
+self-sputtered rate, the multiplication, the landing ions' mean charge,
+energy and yield, and the yield at the energies the charges fall through.
+

@@ -62,6 +62,7 @@ namespace Slots
 		m_zidx.resize(N);
 		m_weight.resize(N);
 		m_prompt_by.resize(N, -1.0);
+		m_generation.resize(N, 0);
 		m_q.resize(N);
 		m_state.resize(N);
 	}
@@ -237,6 +238,15 @@ namespace Slots
 		{return m_prompt_by;}
 
 	/**
+	* How many times each particle has been self-sputtered: 0 for an atom
+	* from the source, and one more each time it lands on the wall and
+	* carries on as an atom it sputtered (Sputtering::SelfSource). Host
+	* only: the GPU path doesn't track it.
+	*/
+	const std::vector<int>& Slots::generation() const noexcept
+		{return m_generation;}
+
+	/**
 	* Returns the charge state of each particle.
 	*
 	* @return Vector of length N() with one entry per slot.
@@ -410,6 +420,7 @@ namespace Slots
 	*/
 	void Slots::set_weight(int i, double val) {m_weight[i] = val;}
 	void Slots::set_prompt_by(int i, double val) {m_prompt_by[i] = val;}
+	void Slots::set_generation(int i, int val) {m_generation[i] = val;}
 
 	/**
 	* Sets the q value of a single slot.
@@ -982,6 +993,7 @@ namespace Slots
 					slots.set_q(i, p.q);
 					slots.set_weight(i, p.weight);
 					slots.set_prompt_by(i, -1.0);
+					slots.set_generation(i, 0);
 					slots.set_state(i, 0);
 				}
 			}  // i loop

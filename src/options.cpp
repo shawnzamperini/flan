@@ -87,6 +87,7 @@ namespace Options
 		set_sput_flux_opt(m_sput_flux_opt);
 		set_sput_bohm_floor(m_sput_bohm_floor);
 		set_sheath_model(m_sheath_model);
+		set_sput_self(m_sput_self);
 	}
 
 	// Setter definitions. They're all the same, so just throwing together
@@ -2603,6 +2604,111 @@ namespace Options
 	double Options::sheath_drop() const {return m_sheath_drop;}
 
 	/**
+	* Sets the sput_self option.
+	*
+	* Whether impurities that land on a wall element sputter more atoms
+	* (self-sputtering). The particle carries on as one of the atoms it
+	* sputtered, with its weight multiplied by the yield from the
+	* sput_self_table_file table (see Sputtering::SelfSource). Needs
+	* imp_source_opt = "sputter". CPU only.
+	*
+	* Valid values are "off" and "on". An invalid value prints an error and
+	* leaves the option unchanged. Also sets the control integer returned
+	* by sput_self_int() to 0 for "off", 1 for "on". An invalid value
+	* leaves the control integer unchanged.
+	*
+	* @param sput_self New value of the sput_self option.
+	*/
+	void Options::set_sput_self(std::string sput_self)
+	{
+		if (check_input<std::string>("sput_self", sput_self, {"off", "on"}))
+			m_sput_self = sput_self;
+
+		if (sput_self == "off") m_sput_self_int = 0;
+		else if (sput_self == "on") m_sput_self_int = 1;
+	}
+
+	/**
+	* Sets the sput_self_table_file option.
+	*
+	* Path to the self-sputtering yield table (the impurity on the wall
+	* material, e.g. W on W), made by python/rustbca_yields.py. Needed
+	* with sput_self = "on".
+	*
+	* @param sput_self_table_file New value of the sput_self_table_file
+	*        option.
+	*/
+	void Options::set_sput_self_table_file(std::string sput_self_table_file)
+		{m_sput_self_table_file = sput_self_table_file;}
+
+	/**
+	* Sets the sput_self_min_weight option.
+	*
+	* The weight, as a fraction of a particle's weight from the D+
+	* sputtered source, below which a self-sputtered particle plays Russian
+	* roulette: it carries on with this weight with probability (its new
+	* weight) / (this weight), and ends otherwise. That keeps the expected
+	* weight, while particles of little weight don't cost as much as the
+	* others.
+	*
+	* Valid values are 0 to 1. 0 turns roulette off. An invalid value
+	* prints an error and leaves the option unchanged.
+	*
+	* @param sput_self_min_weight New value of the sput_self_min_weight
+	*        option.
+	*/
+	void Options::set_sput_self_min_weight(double sput_self_min_weight)
+	{
+		if (sput_self_min_weight >= 0.0 && sput_self_min_weight <= 1.0)
+			m_sput_self_min_weight = sput_self_min_weight;
+		else
+		{
+			std::cerr << "Error! sput_self_min_weight must be from 0 to 1, "
+				"not " << sput_self_min_weight << ". Leaving it at "
+				<< m_sput_self_min_weight << ".\n";
+		}
+	}
+
+	/**
+	* Sets the sput_self_max_gen option.
+	*
+	* The most self-sputtering generations a particle can go through. A
+	* particle reaching it stops the run: with roulette, chains only get
+	* that long when the self-sputtering multiplication (the share coming
+	* back times the mean yield) is close to or above 1, the
+	* self-sputtering avalanche, where the self-sputtered rate has no
+	* steady value.
+	*
+	* Valid values are 1 and above. An invalid value prints an error and
+	* leaves the option unchanged.
+	*
+	* @param sput_self_max_gen New value of the sput_self_max_gen option.
+	*/
+	void Options::set_sput_self_max_gen(int sput_self_max_gen)
+	{
+		if (sput_self_max_gen >= 1) m_sput_self_max_gen = sput_self_max_gen;
+		else
+		{
+			std::cerr << "Error! sput_self_max_gen must be 1 or above, not "
+				<< sput_self_max_gen << ". Leaving it at "
+				<< m_sput_self_max_gen << ".\n";
+		}
+	}
+
+	/**
+	* @name Self-sputtering option getters
+	* See the setters for what each option means.
+	*/
+	///@{
+	const std::string& Options::sput_self() const {return m_sput_self;}
+	const std::string& Options::sput_self_table_file() const
+		{return m_sput_self_table_file;}
+	double Options::sput_self_min_weight() const
+		{return m_sput_self_min_weight;}
+	int Options::sput_self_max_gen() const {return m_sput_self_max_gen;}
+	///@}
+
+	/**
 	* Returns the sheath_model option.
 	*
 	* @return Value of the sheath_model option.
@@ -3759,6 +3865,14 @@ namespace Options
 
 	int Options::sheath_model_int() const
 		{return get_control_int("sheath_model", m_sheath_model_int);}
+
+	/**
+	* Returns the control integer for sput_self: 0 for "off", 1 for "on".
+	*
+	* @return Control integer of the sput_self option.
+	*/
+	int Options::sput_self_int() const
+		{return get_control_int("sput_self", m_sput_self_int);}
 
 	// Setter declarations for internal control variables
 

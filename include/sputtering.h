@@ -251,6 +251,7 @@ namespace Sputtering
 		double m_phi_sign {1.0};		///< Background's toroidal handedness
 		std::vector<double> m_e_sheath {};	///< Sheath energy (eV), per idx
 		std::vector<double> m_ti {};		///< Ion temperature (eV), per idx
+		std::vector<double> m_phi_wall {};	///< Floating drop (V), per idx
 		std::vector<std::array<double, 4>> m_cell_bounds {};	///< x and y
 										///< edges of each element's cell
 		std::vector<double> m_frame_lo {};	///< Start of each frame's window
@@ -282,6 +283,10 @@ namespace Sputtering
 		int num_above_table() const;
 		const std::vector<double>& frame_lo() const;
 		const std::vector<double>& frame_hi() const;
+		const YieldTable& table() const;
+		const std::vector<std::array<double, 4>>& cell_bounds() const;
+		const std::vector<double>& phi_wall() const;
+		double phi_sign() const;
 
 		Birth sample_birth(pcg32& rng) const;
 
@@ -312,10 +317,13 @@ namespace Sputtering
 		double mass {};				///< Mass (kg)
 	};
 
+	class SelfSource;
+
 	class Deposition
 	{
 	private:
 		const Surface* m_surface {nullptr};	///< The surface elements
+		SelfSource* m_self {nullptr};	///< Self-sputtering, if on
 		std::unordered_map<std::uint64_t, std::vector<std::size_t>>
 			m_wall_cells {};		///< Elements bordering each wall cell
 		std::unordered_map<std::uint64_t, std::size_t>
@@ -359,14 +367,17 @@ namespace Sputtering
 		Deposition(const Surface& surface, int atomic_number,
 			double phi_sign = 1.0);
 
-		void add_into_wall_cell(int zone, int i, int j, int k,
+		long add_into_wall_cell(int zone, int i, int j, int k,
 			int prev_zone, int prev_i, int prev_j, double pt, int q,
 			double weight, double prompt_by = -1.0,
 			const Impact* impact = nullptr);
-		void add_at_wall_face(const Zones::Zones& zones, int zone,
+		long add_at_wall_face(const Zones::Zones& zones, int zone,
 			Zones::Face face, const std::array<double, 3>& pos, double pt,
 			int q, double weight, double prompt_by = -1.0,
 			const Impact* impact = nullptr);
+
+		void set_self(SelfSource* self);
+		SelfSource* self() const;
 
 		void reduce(int root);
 
@@ -387,6 +398,111 @@ namespace Sputtering
 		double mean_energy() const;
 		double mean_angle() const;
 		const std::vector<double>& element_energy() const;
+
+		void print_summary(std::ostream& os, double source_rate) const;
+	};
+	/**
+	* The energy and angle an impurity hits the wall with, for the
+	* self-sputtering yield (see self_impact).
+	*/
+	struct SelfImpact
+	{
+		double energy {};	///< Impact energy (eV)
+		double angle {};	///< Angle from the element's normal (degrees)
+	};
+
+	SelfImpact self_impact(const std::array<double, 3>& v, double mass,
+		const std::array<double, 3>& n, int q, double phi_wall);
+
+	double roulette(double weight, double min_weight, double u);
+
+	/**
+	* A particle that landed on the wall and carries on as one of the atoms
+	* it sputtered (SelfSource::rebirth). If alive is false it ends there,
+	* redeposited, and nothing else is set.
+	*/
+	struct Rebirth
+	{
+		bool alive {};			///< Carries on as a sputtered atom
+		bool avalanche {};		///< Ended at sput_self_max_gen
+		int zone {};			///< Zone it starts in
+		double x {};			///< Computational x
+		double y {};			///< Computational y
+		double z {};			///< Computational z
+		int i {};				///< x index of its cell
+		int j {};				///< y index of its cell
+		int k {};				///< z index of its cell
+		double vX {};			///< Cartesian velocity (m/s)
+		double vY {};
+		double vZ {};
+		double weight {};		///< New weight (atoms/s)
+	};
+
+	/**
+	* Self-sputtering: impurities landing on a wall element sputter more
+	* atoms, from a yield table of the impurity on the wall material (e.g.,
+	* W on W). The particle carries on as one of those atoms, with its
+	* weight multiplied by the yield, so no particles are added mid-run.
+	* See sputtering.cpp for how and the member function docs.
+	*
+	* The tallies are rates (atoms/s), like Deposition's. Per-element
+	* values are averaged over the run, not kept per frame.
+	*/
+	class SelfSource
+	{
+	private:
+		YieldTable m_table {};			///< Impurity on the wall material
+		const Source* m_source {nullptr};	///< Elements, cells, drops
+		bool m_sheath_on {};			///< Push includes the sheath field
+		double m_lambda {};				///< Largest energy fraction the
+										///< impurity can give a wall atom
+		double m_imp_mass_kg {};		///< Mass of the impurity (kg)
+		double m_phi_sign {1.0};		///< Background's toroidal handedness
+		double m_min_weight {};			///< Roulette below this (atoms/s)
+		int m_max_gen {};				///< Generation that stops the run
+
+		std::vector<double> m_self {};	///< Self-sputtered rate per element
+		std::vector<double> m_gen_weight {};	///< Weight carried on into
+												///< each generation
+		std::vector<double> m_gen_landed {};	///< Weight landing on
+												///< elements from each
+												///< generation
+		double m_landed {};				///< Rate landing on elements
+		double m_self_total {};			///< Self-sputtered rate, sum w Y
+		double m_energy_sum {};			///< Sum of w E, landed on elements
+		double m_angle_sum {};			///< Sum of w angle
+		double m_roulette_lost {};		///< Rate ended by roulette
+		long long m_num_below {};		///< Landings below threshold
+		long long m_num_above {};		///< Landings past the table's end
+
+	public:
+
+		SelfSource() = default;
+
+		SelfSource(const Source& source, const YieldTable& table,
+			const Options::Options& opts, bool sheath_on);
+
+		Rebirth rebirth(std::size_t e, int frame,
+			const std::array<double, 3>& pos, const Impact& impact, int q,
+			double weight, int generation, pcg32& rng);
+
+		void reduce(int root);
+
+		const YieldTable& table() const;
+		double min_weight() const;
+		int max_gen() const;
+		const std::vector<double>& self_sputtered() const;
+		const std::vector<double>& generation_weight() const;
+		const std::vector<double>& generation_landed() const;
+		double self_total() const;
+		double landed() const;
+		double mean_yield() const;
+		double mean_energy() const;
+		double mean_angle() const;
+		double roulette_lost() const;
+		double chain_multiplication() const;
+		long long num_below_threshold() const;
+		long long num_above_table() const;
 
 		void print_summary(std::ostream& os, double source_rate) const;
 	};

@@ -33,6 +33,8 @@ namespace Boundary
 		long long core {};		///< Put back in at a core face
 		long long time_end {};	///< Reached the end of the background time
 		long long runaway {};	///< Absorbed after too many crossings
+		long long self_sputtered {};	///< Landed on the wall and carried
+										///< on as a self-sputtered atom
 		long long max_time {};	///< Followed longer than imp_max_time (set
 								///< by follow_impurities, not here)
 
