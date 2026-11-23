@@ -348,7 +348,44 @@ The plan was:
 - Check the cost on a HERMES case: only particles near the wall should
   pay for it.
 
-**Phase S5: prompt redeposition with the sheath.**
+**Phase S5: prompt redeposition with the sheath.** Done:
+
+- Impact tallies in `Deposition` (`Sputtering::Impact`, passed from the
+  boundary check): the energy and the angle from the element's normal of
+  each absorbed particle, as histograms, means and the energy on each
+  element (for S6), and the mean time since birth. Saved in the
+  sputtering group and printed in the summary.
+- Options `sheath_fd` and `sheath_drop` fix f_D and the drop (over Te),
+  for Brooks' reference case and for checks with a vanishing drop.
+  `"borodkina"` uses −Δn λ_mps = (λ_mps / L)², so a given f_D carries
+  through to it too.
+- `reg_sheath_angles` (a45, a60) and `check_sheath_angles.py`: D⁺ test
+  ions from 10 ρ_s through the `"borodkina"` field, pushed as in the main
+  loop. Energy is conserved to 4e-4 of the drop or better for every ion.
+  The impact angle distribution matches Borodkina and Tsvetkov's at 45°
+  (mean 30.4° against 32.4°) and has their shape and width at 60° but
+  about 4° nearer the normal (31.5° against 35.9°). The time step and the
+  profile (`"brooks"` gives 31.1°) don't change that; the start does (the
+  paper only says "a shifted Maxwell velocity distribution"; shifting by
+  0.5 or 2 c_s instead of c_s gives 29° or 39°), so the mean's tolerance
+  is 5°.
+- `reg_prompt_redep` variants: `drop0` (sheath on, drop 1e-4 Te) recovers
+  Fussmann and is checked; `<model>_a<angle>` at 2° to 20° are printed and
+  plotted. At p ≈ 1 the sheath raises the prompt fraction from 0.59 to
+  0.72 to 0.86, less as B gets steeper, and the two profiles agree to
+  about 0.015.
+- `brooks_ref` is printed beside Brooks' Table 1, not checked: Flan gives
+  charge 1.4, 105 eV, 13° from the normal and 0.04 μs, against his 2.6,
+  553 eV, 72° and 0.6 μs. Flan's W⁰ ionization length there is about
+  0.06 mm (OpenADAS) against his 0.40 mm mean ionization height, so its W
+  ionizes deep in the presheath. The rates differ, not the sheath.
+- HERMES (TCV-X21 turbulence background, sputtered targets, 1000 W for
+  20 μs): prompt redeposition 53% without the sheath and 67% with
+  `"brooks"`. The W leaving the divertor wasn't measured.
+- `sheath_model` was already made `"brooks"` by default before S5.
+
+The plan was:
+
 
 - `reg_prompt_redep` variants with the sheath on, same p sweep and a scan
   of field angle and Te, for both `"brooks"` and `"borodkina"`. How much

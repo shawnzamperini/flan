@@ -538,6 +538,11 @@ namespace SaveResults
 			"option");
 		save_string(input_group, opts.sheath_model(), "sheath_model",
 			dim_str, "sheath field in front of the walls");
+		save_scalar(input_group, opts.sheath_fd(), "sheath_fd", dim_scalar,
+			"share of the sheath drop in the Debye sheath, -1 for the one "
+			"from the field angle", "");
+		save_scalar(input_group, opts.sheath_drop(), "sheath_drop",
+			dim_scalar, "sheath drop over Te, -1 for the floating drop", "");
 		save_scalar(input_group, opts.sput_angle_val(), "sput_angle_val",
 			dim_scalar, "angle of incidence of ions on the wall from the "
 			"normal", "(degrees)");
@@ -1534,6 +1539,33 @@ namespace SaveResults
 			"they landed (0 to Z)", "(atoms/s)");
 		group.putAtt("prompt_total", netCDF::ncDouble,
 			deposition->prompt_total());
+
+		// What they hit the wall with
+		const netCDF::NcDim dim_eedge {group.addDim("impact_energy_edge",
+			deposition->energy_edges().size())};
+		const netCDF::NcDim dim_ebin {group.addDim("impact_energy_bin",
+			deposition->impact_energy().size())};
+		const netCDF::NcDim dim_abin {group.addDim("impact_angle_bin",
+			deposition->impact_angle().size())};
+		save_vector_1d(group, deposition->energy_edges(),
+			"impact_energy_edges", dim_eedge, "edges of the impact energy "
+			"bins", "(eV)");
+		save_vector_1d(group, deposition->impact_energy(), "impact_energy",
+			dim_ebin, "rate of redeposited atoms by their kinetic energy "
+			"when they hit the wall", "(atoms/s)");
+		save_vector_1d(group, deposition->impact_angle(), "impact_angle",
+			dim_abin, "rate of redeposited atoms landing on an element by "
+			"their angle from its normal, in 1 degree bins from 0 to 90",
+			"(atoms/s)");
+		save_vector_1d(group, deposition->element_energy(),
+			"redeposited_energy", dim_elem, "sum of rate * impact energy "
+			"of the atoms landing on the element", "(eV atoms/s)");
+		group.putAtt("mean_lifetime", netCDF::ncDouble,
+			deposition->mean_lifetime());
+		group.putAtt("mean_impact_energy", netCDF::ncDouble,
+			deposition->mean_energy());
+		group.putAtt("mean_impact_angle", netCDF::ncDouble,
+			deposition->mean_angle());
 	}
 
 	/**

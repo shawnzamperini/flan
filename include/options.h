@@ -87,6 +87,8 @@ namespace Options
 		std::string m_sput_flux_opt       {"parallel_exb"};
 		std::string m_sput_bohm_floor              {"off"};
 		std::string m_sheath_model                 {"brooks"};
+		double m_sheath_fd                          {-1.0};
+		double m_sheath_drop                        {-1.0};
 		double m_sput_angle_val                     {60.0};
 		double m_sput_max_wall_dist                  {2.0};
 		
@@ -278,6 +280,8 @@ namespace Options
 		void set_sput_flux_opt(std::string sput_flux_opt);
 		void set_sput_bohm_floor(std::string sput_bohm_floor);
 		void set_sheath_model(std::string sheath_model);
+		void set_sheath_fd(double sheath_fd);
+		void set_sheath_drop(double sheath_drop);
 		void set_sput_angle_val(double sput_angle_val);
 		void set_sput_max_wall_dist(double sput_max_wall_dist);
 		void set_min_ne(double min_ne);
@@ -407,6 +411,8 @@ namespace Options
 		const std::string& sput_flux_opt() const;
 		const std::string& sput_bohm_floor() const;
 		const std::string& sheath_model() const;
+		double sheath_fd() const;
+		double sheath_drop() const;
 		double sput_angle_val() const;
 		double sput_max_wall_dist() const;
 		double min_ne() const;

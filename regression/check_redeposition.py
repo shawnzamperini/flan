@@ -28,6 +28,23 @@ wall, and the time step. A run that lets atoms ionize past W+
 (imp_iz_max_charge below 0, the "full" variant) is printed but not
 checked, since the model leaves that out.
 
+Runs with the sheath field on (sheath_model not "off"):
+
+- drop0, with a drop of 1e-4 Te (sheath_drop), is Fussmann's case again and
+  is checked the same way.
+- <model>_a<angle> are printed, not checked: the prompt fraction, and the
+  redeposited ions' mean charge, impact energy and angle, against the field's
+  angle to the wall for each profile ("brooks", "borodkina"), plotted in
+  check_redeposition_sheath.png. The difference between the profiles is the
+  sensitivity to the profile's shape.
+- brooks_ref, Brooks' reference case (Phys. Fluids B 2, 1858, 1990,
+  Table 1), is printed beside his numbers, not checked. Flan's W0 ionization
+  length there (n S0 from OpenADAS, and the sputtered atoms' speed) is about
+  0.06 mm, several times shorter than Brooks' mean ionization height of
+  0.40 mm, so its W ionizes deeper in the magnetic presheath: it gains less of
+  the drop, comes back sooner, at a lower charge and nearer the normal. The
+  difference is in the ionization rates, not the sheath.
+
 Usage:
     python check_redeposition.py [directory with the .nc files]
 
@@ -137,12 +154,27 @@ class Run:
             self.Z = int(val("imp_atom_num"))
             self.n = int(val("imp_num"))
             self.max_charge = int(val("imp_iz_max_charge"))
+            names = inp.variables.keys()
+            self.sheath = (str(val("sheath_model")) if "sheath_model" in names
+                else "off")
+            self.drop = (float(val("sheath_drop")) if "sheath_drop" in names
+                else -1.0)
             self.adas_root = str(val("openadas_root"))
             self.adas_year = int(val("openadas_year"))
             sput = nc.groups["sputtering"]
             self.source = float(sput.getncattr("source_rate"))
             self.redep = float(sput.getncattr("redeposited_total"))
             self.prompt = float(sput.getncattr("prompt_total"))
+            attrs = sput.ncattrs()
+            self.mean_energy = (float(sput.getncattr("mean_impact_energy"))
+                if "mean_impact_energy" in attrs else float("nan"))
+            self.mean_angle = (float(sput.getncattr("mean_impact_angle"))
+                if "mean_impact_angle" in attrs else float("nan"))
+            self.mean_lifetime = (float(sput.getncattr("mean_lifetime"))
+                if "mean_lifetime" in attrs else float("nan"))
+            q = np.array(sput.variables["redeposited_charge"][:])
+            self.mean_charge = (float((np.arange(len(q)) * q).sum() / q.sum())
+                if q.sum() > 0 else float("nan"))
 
         year = "{:02d}".format(self.adas_year)
         adas = os.path.join(self.adas_root, "scd" + year,
@@ -153,7 +185,9 @@ class Run:
         self.frac = self.prompt / self.source
         self.sigma = math.sqrt(max(self.frac * (1 - self.frac), 1e-12)
             / self.n)
-        self.checked = self.max_charge >= 0
+        no_sheath = self.sheath == "off" or 0.0 < self.drop < 0.01
+        self.checked = self.max_charge >= 0 and no_sheath
+        self.scan = self.sheath != "off" and "_a" in self.name
         self.passed = abs(self.frac - self.expected) <= (N_SIGMA * self.sigma
             + TOL_ABS)
 
@@ -183,9 +217,38 @@ def main():
             print("Note: in {}, {:.1%} of the returns weren't prompt".format(
                 r.name, 1 - r.prompt / r.redep))
     for r in runs:
-        if not r.checked:
+        if r.max_charge < 0 and r.sheath == "off":
             print("{}: atoms ionize past W+, {:.4f} back promptly against "
                 "{:.4f} from the model".format(r.name, r.frac, r.expected))
+
+    # The sheath angle scan
+    scan = sorted((r for r in runs if r.scan), key=lambda r: (r.sheath,
+        r.angle))
+    if scan:
+        print("\nWith the sheath field (not checked): Fussmann without it "
+            "gives {:.4f}".format(scan[0].expected))
+        print("{:<28} {:>6} {:>7} {:>7} {:>9} {:>9}".format("run",
+            "B-wall", "prompt", "charge", "energy", "angle"))
+        for r in scan:
+            print("{:<28} {:6.1f} {:7.4f} {:7.2f} {:9.1f} {:9.1f}".format(
+                r.name, r.angle, r.frac, r.mean_charge, r.mean_energy,
+                r.mean_angle))
+
+    # Brooks' reference case
+    for r in runs:
+        if r.name.endswith("brooks_ref"):
+            print("\nBrooks' reference case (not checked; see the top of "
+                "this script):")
+            print("{:<26} {:>8} {:>8}".format("redeposited W", "Brooks",
+                "Flan"))
+            print("{:<26} {:8.1f} {:8.2f}".format("charge", 2.6,
+                r.mean_charge))
+            print("{:<26} {:8.0f} {:8.0f}".format("impact energy (eV)", 553,
+                r.mean_energy))
+            print("{:<26} {:8.0f} {:8.0f}".format("angle from normal (deg)",
+                72, r.mean_angle))
+            print("{:<26} {:8.2f} {:8.3f}".format("time to return (us)", 0.6,
+                1e6 * r.mean_lifetime))
 
     try:
         import matplotlib
@@ -201,7 +264,7 @@ def main():
         ax.errorbar([r.p for r in chk], [r.frac for r in chk],
             yerr=[2 * r.sigma for r in chk], fmt="o", color="C0",
             label="Flan, ionizing to W+ only")
-        info = [r for r in runs if not r.checked]
+        info = [r for r in runs if r.max_charge < 0 and r.sheath == "off"]
         if info:
             ax.plot([r.p for r in info], [r.frac for r in info], "s",
                 color="C3", label="Flan, full ionization")
@@ -216,6 +279,37 @@ def main():
         print("\nPlot: " + out)
     except ImportError:
         print("\nmatplotlib not found, no plot")
+
+    if scan:
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+            fig, axs = plt.subplots(1, 3, figsize=(11, 3.5))
+            for model, marker in (("brooks", "o-"), ("borodkina", "s--")):
+                rs = [r for r in scan if r.sheath == model]
+                if not rs:
+                    continue
+                a = [r.angle for r in rs]
+                axs[0].plot(a, [r.frac for r in rs], marker, label=model)
+                axs[1].plot(a, [r.mean_energy for r in rs], marker,
+                    label=model)
+                axs[2].plot(a, [r.mean_angle for r in rs], marker,
+                    label=model)
+            axs[0].axhline(scan[0].expected, color="k", ls=":",
+                label="Fussmann, no sheath")
+            axs[0].set_ylabel("fraction promptly redeposited")
+            axs[1].set_ylabel("mean impact energy (eV)")
+            axs[2].set_ylabel("mean impact angle from normal (deg)")
+            for ax in axs:
+                ax.set_xlabel("angle between B and the wall (deg)")
+            axs[0].legend(fontsize=8)
+            fig.tight_layout()
+            out = os.path.join(directory, "check_redeposition_sheath.png")
+            fig.savefig(out, dpi=150)
+            print("Plot: " + out)
+        except ImportError:
+            pass
 
     n_checked = sum(r.checked for r in runs)
     print("\n{} of {} checks passed, {} failed".format(n_checked - failed,

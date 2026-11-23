@@ -1605,12 +1605,16 @@ namespace Sputtering
 	* @param surface The surface elements. It has to outlive this object.
 	* @param atomic_number Atomic number of the impurity.
 	*/
-	Deposition::Deposition(const Surface& surface, const int atomic_number)
+	Deposition::Deposition(const Surface& surface, const int atomic_number,
+		const double phi_sign)
 		: m_surface {&surface},
 		m_redeposited(surface.size(), 0.0),
 		m_charge(atomic_number + 1, 0.0),
 		m_prompt(surface.size(), 0.0),
-		m_prompt_charge(atomic_number + 1, 0.0)
+		m_prompt_charge(atomic_number + 1, 0.0),
+		m_phi_sign {phi_sign},
+		m_angle(90, 0.0),
+		m_element_energy(surface.size(), 0.0)
 	{
 		for (std::size_t e {}; e < surface.size(); ++e)
 		{
@@ -1633,6 +1637,68 @@ namespace Sputtering
 				-10.0 + static_cast<double>(b) / per_decade));
 		}
 		m_lifetime.assign(m_lifetime_edges.size() - 1, 0.0);
+
+		// Impact energies from 0.01 eV to 100 keV, 20 bins a decade
+		for (int b {}; b <= 20 * 7; ++b)
+			m_energy_edges.push_back(std::pow(10.0, -2.0 + b / 20.0));
+		m_energy.assign(m_energy_edges.size() - 1, 0.0);
+	}
+
+	/**
+	* Adds an absorbed particle's impact energy and angle to the tallies.
+	*
+	* The energy is its kinetic energy, 0.5 m v^2. The angle is from the
+	* element's normal, with the normal at the particle's toroidal angle z
+	* (or the element's own on a Cartesian zone); it's only added when the
+	* particle landed on an element. Energies outside the bins go in the
+	* first or last. Called from inside OpenMP loops, so the adds are
+	* atomic.
+	*
+	* @param impact The particle's velocity and mass, or nullptr to add
+	*        nothing.
+	* @param el The element it landed on, or nullptr.
+	* @param z Its toroidal angle (its z coordinate).
+	* @param weight Its weight (atoms/s).
+	* @param e Index of el.
+	*/
+	void Deposition::add_impact(const Impact* impact,
+		const SurfaceElement* el, const double z, const double weight,
+		const std::size_t e)
+	{
+		if (impact == nullptr) return;
+		const auto& v {impact->v};
+		const double v2 {v[0] * v[0] + v[1] * v[1] + v[2] * v[2]};
+		const double energy {0.5 * impact->mass * v2 / Constants::ev_to_j};
+		const std::size_t nbins {m_energy.size()};
+		std::size_t bin {static_cast<std::size_t>(std::upper_bound(
+			m_energy_edges.begin(), m_energy_edges.end(), energy)
+			- m_energy_edges.begin())};
+		bin = bin == 0 ? 0 : std::min(bin - 1, nbins - 1);
+		#pragma omp atomic
+		m_energy[bin] += weight;
+		#pragma omp atomic
+		m_energy_sum += weight * energy;
+		#pragma omp atomic
+		m_energy_weight += weight;
+
+		if (el == nullptr || !(v2 > 0.0)) return;
+		#pragma omp atomic
+		m_element_energy[e] += weight * energy;
+
+		// The normal points into the plasma, the velocity into the wall
+		const auto n {el->normal_xyz(z, m_phi_sign)};
+		const double c {std::clamp(-(v[0] * n[0] + v[1] * n[1] + v[2]
+			* n[2]) / std::sqrt(v2), -1.0, 1.0)};
+		const double angle {std::acos(std::abs(c)) * 180.0
+			/ Constants::pi};
+		const int abin {std::clamp(static_cast<int>(angle), 0,
+			static_cast<int>(m_angle.size()) - 1)};
+		#pragma omp atomic
+		m_angle[abin] += weight;
+		#pragma omp atomic
+		m_angle_sum += weight * angle;
+		#pragma omp atomic
+		m_angle_weight += weight;
 	}
 
 	/**
@@ -1657,6 +1723,9 @@ namespace Sputtering
 		bin = bin == 0 ? 0 : std::min(bin - 1, nbins - 1);
 		#pragma omp atomic
 		m_lifetime[bin] += weight;
+
+		#pragma omp atomic
+		m_lifetime_sum += weight * pt;
 
 		const int charge {std::clamp(q, 0,
 			static_cast<int>(m_charge.size()) - 1)};
@@ -1698,7 +1767,7 @@ namespace Sputtering
 	void Deposition::add_into_wall_cell(const int zone, const int i,
 		const int j, const int k, const int prev_zone, const int prev_i,
 		const int prev_j, const double pt, const int q, const double weight,
-		const double prompt_by)
+		const double prompt_by, const Impact* impact)
 	{
 		const bool prompt {add_lifetime_and_charge(pt, q, weight,
 			prompt_by)};
@@ -1706,6 +1775,7 @@ namespace Sputtering
 		const auto it {m_wall_cells.find(cell_key(zone, i, j, k))};
 		if (it == m_wall_cells.end())
 		{
+			add_impact(impact, nullptr, 0.0, weight, 0);
 			#pragma omp atomic
 			m_unassigned += weight;
 			return;
@@ -1728,6 +1798,11 @@ namespace Sputtering
 			#pragma omp atomic
 			m_prompt[pick] += weight;
 		}
+
+		// The staircase element's normal, at the middle of its phi range
+		const SurfaceElement& el {m_surface->elements()[pick]};
+		add_impact(impact, &el, 0.5 * (el.phi_min + el.phi_max), weight,
+			pick);
 	}
 
 	/**
@@ -1758,7 +1833,7 @@ namespace Sputtering
 	void Deposition::add_at_wall_face(const Zones::Zones& zones,
 		const int zone, const Zones::Face face,
 		const std::array<double, 3>& pos, const double pt, const int q,
-		const double weight, const double prompt_by)
+		const double weight, const double prompt_by, const Impact* impact)
 	{
 		const bool prompt {add_lifetime_and_charge(pt, q, weight,
 			prompt_by)};
@@ -1788,10 +1863,13 @@ namespace Sputtering
 					#pragma omp atomic
 					m_prompt[it->second] += weight;
 				}
+				add_impact(impact, &m_surface->elements()[it->second], z,
+					weight, it->second);
 				return;
 			}
 		}
 
+		add_impact(impact, nullptr, 0.0, weight, 0);
 		#pragma omp atomic
 		m_wall_face += weight;
 	}
@@ -1813,10 +1891,20 @@ namespace Sputtering
 				MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
 			if (rank == root) v = total;
 		};
-		std::vector<double> scalars {m_unassigned, m_wall_face};
+		std::vector<double> scalars {m_unassigned, m_wall_face,
+			m_lifetime_sum, m_energy_sum, m_energy_weight, m_angle_sum,
+			m_angle_weight};
 		sum(scalars);
 		m_unassigned = scalars[0];
 		m_wall_face = scalars[1];
+		m_lifetime_sum = scalars[2];
+		m_energy_sum = scalars[3];
+		m_energy_weight = scalars[4];
+		m_angle_sum = scalars[5];
+		m_angle_weight = scalars[6];
+		sum(m_energy);
+		sum(m_angle);
+		sum(m_element_energy);
 		sum(m_redeposited);
 		sum(m_lifetime);
 		sum(m_charge);
@@ -1832,9 +1920,34 @@ namespace Sputtering
 	* in each bin, and the rate at each charge state, for every redeposited
 	* atom. The prompt returns onto each element and at each charge state,
 	* and their total (every prompt return, including those that land with
-	* no element under them).
+	* no element under them). The mean time since birth of the redeposited
+	* atoms (s). The impact energy bin edges (eV), and the rate in each
+	* energy bin and each 1 degree bin of the angle from the element's
+	* normal, their means (eV, degrees), and the sum of weight * energy on
+	* each element (eV atoms/s), for the particles added with an Impact.
 	*/
 	///@{
+	const std::vector<double>& Deposition::energy_edges() const
+		{return m_energy_edges;}
+	const std::vector<double>& Deposition::impact_energy() const
+		{return m_energy;}
+	const std::vector<double>& Deposition::impact_angle() const
+		{return m_angle;}
+	const std::vector<double>& Deposition::element_energy() const
+		{return m_element_energy;}
+	double Deposition::mean_lifetime() const
+	{
+		const double tot {total()};
+		return tot > 0.0 ? m_lifetime_sum / tot : 0.0;
+	}
+	double Deposition::mean_energy() const
+	{
+		return m_energy_weight > 0.0 ? m_energy_sum / m_energy_weight : 0.0;
+	}
+	double Deposition::mean_angle() const
+	{
+		return m_angle_weight > 0.0 ? m_angle_sum / m_angle_weight : 0.0;
+	}
 	const std::vector<double>& Deposition::redeposited() const
 		{return m_redeposited;}
 	double Deposition::unassigned() const {return m_unassigned;}
@@ -1898,6 +2011,16 @@ namespace Sputtering
 			mean_q += q * m_charge[q] / tot;
 		os << "  Mean charge when they land " << mean_q << ", "
 			<< 100.0 * m_charge[0] / tot << "% as neutrals\n";
+		os << "  Mean time since birth " << mean_lifetime() * 1e6
+			<< " us";
+		if (m_energy_weight > 0.0)
+			os << ", impact energy " << mean_energy() << " eV";
+		if (m_angle_weight > 0.0)
+		{
+			os << ", angle from the normal " << mean_angle()
+				<< " degrees";
+		}
+		os << "\n";
 		const double prompt {prompt_total()};
 		os << "  Prompt (within one singly charged gyroperiod of first "
 			"ionizing): " << prompt << " atoms/s";

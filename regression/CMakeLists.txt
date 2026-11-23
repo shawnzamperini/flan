@@ -22,11 +22,14 @@ find_package(flan REQUIRED HINTS "${FLAN_ROOT}/lib/cmake")
 find_package(MPI REQUIRED)
 
 # One program per case
-foreach(case reg_friction reg_thermal_force reg_drifts reg_prompt_redep)
+find_package(OpenMP REQUIRED)
+foreach(case reg_friction reg_thermal_force reg_drifts reg_prompt_redep
+		reg_sheath_angles)
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${case}.cpp")
 		add_executable(${case} ${case}.cpp)
 		target_include_directories(${case} PRIVATE "${FLAN_ROOT}/include")
-		target_link_libraries(${case} PRIVATE flan MPI::MPI_CXX)
+		target_link_libraries(${case} PRIVATE flan MPI::MPI_CXX
+			OpenMP::OpenMP_CXX)
 		target_compile_definitions(${case} PRIVATE
 			FLAN_DATA_DIR="${FLAN_ROOT}/data")
 	endif()

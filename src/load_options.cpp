@@ -406,6 +406,20 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "sheath_fd")
+			{
+				auto set_func = std::bind(&Options::set_sheath_fd, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "sheath_drop")
+			{
+				auto set_func = std::bind(&Options::set_sheath_drop, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "sput_angle_val")
 			{
 				auto set_func = std::bind(&Options::set_sput_angle_val, &opts,

@@ -16,6 +16,7 @@ files in this directory are older and are not part of this set.
 | `reg_thermal_force` | Tungsten (or carbon) in a plasma with parallel heat fluxes drifts against them | Drift where friction cancels Z² (β_i ∇T_i + 0.71 ∇T_e), with Stangeby's mass-dependent β_i (2.61 for W in D, 2.05 for C in D) |
 | `reg_drifts` | Gyration, and the ExB, polarization, grad-B and curvature drifts of a single particle, without collisions | Cyclotron frequency and the guiding-center drift formulas |
 | `reg_prompt_redep` | Tungsten sputtered off a wall in a field parallel to it, ionizing to W+ and gyrating, comes back to the wall in its first gyration | Fussmann's prompt redeposition, ⟨r⟩(p) averaged over the exponential distribution of ionization lengths (`fussmann.py`) |
+| `reg_sheath_angles` | D⁺ test ions fall from 10 ρ_s through the `"borodkina"` sheath field onto a wall, with the field at 45° or 60° to the normal | Energy conservation (exactly), and Borodkina and Tsvetkov's impact angle distributions (Fig. 2a of their 2015 paper) |
 
 Each case has variants (other charge states, collision sub-cycling off,
 the GPU, one heat flux or one drift at a time), chosen by a command-line
@@ -47,13 +48,21 @@ for v in gyration exb polarization gradb curvature gradb_gpu; do
     <build dir>/reg_drifts $v
 done
 export OPENADAS_ROOT=<directory with scd50/ and acd50/>
-for v in p01 p03 p1 p3 p10 b4 full; do <build dir>/reg_prompt_redep $v; done
+for v in p01 p03 p1 p3 p10 b4 full drop0 brooks_ref; do
+    <build dir>/reg_prompt_redep $v
+done
+for m in brooks borodkina; do for a in 2 5 10 20; do
+    <build dir>/reg_prompt_redep ${m}_a$a
+done; done
+for v in a45 a60; do <build dir>/reg_sheath_angles $v; done
 ```
 
 Leave out `z10_gpu` and `gradb_gpu` without a GPU. The collision runs
 take from seconds to a few minutes each on a laptop, the drift runs about
 a second. The prompt redeposition runs take about one (p01) to several
 (p10) minutes each on 16 cores. Each writes `<case>_<variant>.nc`.
+The sheath angle runs take about 2 (a45) and 4 (a60) minutes on 16
+cores, and write `reg_sheath_angles_<variant>.txt`.
 
 `reg_prompt_redep` reads the D on W yield table from `data/sputtering/` in
 Flan's directory (set when it's built) and the OpenADAS rates from
@@ -65,12 +74,14 @@ Flan's directory (set when it's built) and the OpenADAS rates from
 python <flan>/regression/check_collisions.py <output directory>
 python <flan>/regression/check_drifts.py <output directory>
 python <flan>/regression/check_redeposition.py <output directory>
+python <flan>/regression/check_sheath_angles.py <output directory>
 ```
 
 Each reads the output files of its cases found there, takes all the
 inputs from the files themselves, prints a table and writes plots
 (`check_friction.png`, `check_thermal_force.png`, `check_drifts.png`,
-`check_redeposition.png`). The exit status is 1 if a check failed.
+`check_redeposition.png`, `check_sheath_angles.png`). The exit status is
+1 if a check failed.
 
 ### Prompt redeposition
 
@@ -99,6 +110,44 @@ the same OpenADAS file Flan used, interpolated the same way. A run passes
 if Flan's prompt fraction (returns within one W+ gyroperiod of first
 ionizing, over the source) is within 4 standard errors plus 0.01 of
 ⟨r⟩(p).
+
+The cases with the sheath field on (`sheath_model`, `"off"` in the
+others):
+
+- `drop0` turns the field on with a drop of 1e-4 Te (`sheath_drop`).
+  That is Fussmann's case again, and it is checked the same way.
+- `<model>_a<angle>` put B at 2° to 20° to the wall with either profile.
+  The script prints the prompt fraction and the redeposited ions' mean
+  charge, impact energy and angle, and plots them against the angle
+  (`check_redeposition_sheath.png`). They aren't checked; the gap between
+  the profiles is the sensitivity to the profile's shape.
+- `brooks_ref` is Brooks' reference case (D-T at 75 eV, 1e20 m⁻³,
+  B = 5 T at 87° from the normal, f_D = 0.25 and a 3 Te drop set with
+  `sheath_fd` and `sheath_drop`, collisions on). It is printed beside his
+  numbers, not checked. Flan's W⁰ ionizes within about 0.06 mm (OpenADAS),
+  several times nearer the wall than Brooks' 0.40 mm, so deep in the
+  magnetic presheath: it gains less of the drop and comes back sooner, at
+  a lower charge and nearer the normal. That difference comes from the
+  ionization rates, not the sheath.
+
+### Sheath impact angles
+
+D⁺ test ions start 10 ρ_s from a slab wall with a Maxwellian at Ti
+shifted by c_s along B (only those moving toward the wall), and fall
+through the `"borodkina"` sheath field with no collisions, taking the
+same steps as Flan's main loop, sub-steps near the wall included. Two
+checks:
+
+- **Energy conservation, to 1e-3 of the drop.** Each ion should hit with
+  its starting energy plus e(φ(start) − φ_wall), whatever its orbit. This
+  is the exact check of the field and the near-wall push.
+- **The impact angle distribution** against Borodkina and Tsvetkov's
+  model curves, read off their figure: the mean within 5° and the
+  standard deviation within 3°. Their paper doesn't say how the
+  Maxwellian is shifted, and the shift moves the mean by several degrees
+  (29° to 39° at 60° for 0.5 to 2 c_s), so the mean's tolerance is wide.
+  At 45° Flan's distribution lies on theirs; at 60° it has the same shape
+  and width, about 4° nearer the normal.
 
 ### Drifts
 

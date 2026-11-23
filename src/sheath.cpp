@@ -32,6 +32,11 @@
 * itself goes to 0 smoothly (only its slope jumps), so it isn't held at a
 * floor: the published results give no value for one.
 *
+* The options sheath_fd and sheath_drop replace f_D and the drop (over Te)
+* with given values, for comparing with models that fix them (Brooks'
+* reference case has f_D = 0.25 and a drop of 3 Te) and for sensitivity
+* studies. The presheath then takes lam_mps = lam_w (1 - f_D).
+*
 * Two shapes for the potential (sheath_model):
 *
 * - "brooks": Brooks (1990), as in ERO and GITR,
@@ -97,11 +102,15 @@ namespace Sheath
 	*        wall's normal.
 	* @param elec_mass_amu Electron mass (amu).
 	* @param ion_mass_amu Main ion mass (amu).
+	* @param f_d If 0 to 1, the share of the drop in the Debye sheath, in
+	*        place of the one from the angle (the sheath_fd option).
+	* @param drop_te If above 0, the drop over Te, in place of the floating
+	*        drop (the sheath_drop option).
 	* @return The sheath's Params.
 	*/
 	Params make_params(const double te, const double ti, const double ne,
 		const double bmag, const double cos_theta, const double elec_mass_amu,
-		const double ion_mass_amu)
+		const double ion_mass_amu, const double f_d, const double drop_te)
 	{
 		Params p {};
 		if (!(te > 0.0) || !(ne > 0.0)) return p;
@@ -123,23 +132,25 @@ namespace Sheath
 		const double s {std::sin(p.theta)};
 
 		// The floating drop and its split
-		p.lam_w = 0.5 * std::log(2.0 * Constants::pi * elec_mass_amu
-			/ ion_mass_amu * (1.0 + std::max(ti, 0.0) / te));
+		p.lam_w = drop_te > 0.0 ? -drop_te : 0.5 * std::log(2.0 * Constants::pi
+			* elec_mass_amu / ion_mass_amu * (1.0 + std::max(ti, 0.0) / te));
 		p.phi_wall = p.lam_w * te;
 		const double ln_cos {c > 0.0 ? std::log(c)
 			: -std::numeric_limits<double>::infinity()};
-		p.lam_mps = std::max(ln_cos, p.lam_w);
+		p.lam_mps = f_d >= 0.0 ? p.lam_w * (1.0 - std::min(f_d, 1.0))
+			: std::max(ln_cos, p.lam_w);
 		p.f_d = std::clamp(1.0 - p.lam_mps / p.lam_w, 0.0, 1.0);
 
 		// Borodkina and Tsvetkov's profile. L is the presheath's decay
 		// length in Debye lengths.
 		p.l_mps = omega > 0.0 ? p.rho_s * s / p.lambda_d : 0.0;
-		p.debye = ln_cos > p.lam_w;
+		p.debye = p.lam_mps > p.lam_w;
 		if (p.debye)
 		{
-			// -Delta n_mps lam_mps = (ln cos / sin)^2 (lambda_D / rho_s)^2,
-			// written so that it goes to 0 at normal incidence
-			const double g {s > 0.0 ? ln_cos / s : 0.0};
+			// -Delta n_mps lam_mps = (lam_mps / L)^2, with L = rho_s sin /
+			// lambda_D, written so that it goes to 0 at normal incidence
+			// (lam_mps is ln cos unless f_D is given)
+			const double g {s > 0.0 ? p.lam_mps / s : 0.0};
 			const double ratio {omega > 0.0 ? p.lambda_d / p.rho_s : 0.0};
 			const double dn_lam {g * g * ratio * ratio};
 			const double drop {p.lam_w - p.lam_mps};
@@ -152,7 +163,7 @@ namespace Sheath
 			// At normal incidence the presheath has no drop, Q = -lam_w and
 			// the Debye layer goes on forever (xi_mps infinite)
 			const double arg {(drop + p.q) / p.q};
-			p.xi_mps = arg > 0.0 && ln_cos < 0.0 ? -std::log(arg) / p.a
+			p.xi_mps = arg > 0.0 && p.lam_mps < 0.0 ? -std::log(arg) / p.a
 				: std::numeric_limits<double>::infinity();
 
 			// If the approximation stops working (a or Q not positive),
@@ -302,9 +313,14 @@ namespace Sheath
 	* @param surface The wall surface elements.
 	* @param bkg The background, with its plasma, field and geometry.
 	* @param model The profile. With Model::off nothing is set up.
+	* @param f_d If 0 to 1, f_D for every element (sheath_fd), in place of
+	*        the one from the angle.
+	* @param drop_te If above 0, the drop over Te (sheath_drop), in place
+	*        of the floating drop.
 	*/
 	Sheath::Sheath(const Sputtering::Surface& surface,
-		const Background::Background& bkg, const Model model)
+		const Background::Background& bkg, const Model model,
+		const double f_d, const double drop_te)
 		: m_model {model},
 		m_nframes {static_cast<int>(bkg.get_times().size())},
 		m_phi_sign {bkg.get_phi_sign()}
@@ -392,7 +408,7 @@ namespace Sheath
 			Params& p {m_params[t * n_elem + e]};
 			p = make_params(te(z, t, el.i, el.j, el.k),
 				ti(z, t, el.i, el.j, el.k), ne(z, t, el.i, el.j, el.k), bmag,
-				cos_theta, me, mi);
+				cos_theta, me, mi, f_d, drop_te);
 			// Thin: the field is still above 1e-3 of the drop per scale
 			// length at the cell's far side
 			if (range(p, m_model, 7.0) > m_elements[e].thickness)

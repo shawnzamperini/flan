@@ -537,9 +537,12 @@ namespace Boundary
 							: local.absorbed);
 						if (deposition != nullptr && code == Zones::face_wall)
 						{
+							const Sputtering::Impact impact {{slots.vX()[i],
+								slots.vY()[i], slots.vZ()[i]}, slots.mass()};
 							deposition->add_at_wall_face(zones, zone, face,
 								pos, slots.pt()[i], slots.q()[i],
-								slots.weight()[i], slots.prompt_by()[i]);
+								slots.weight()[i], slots.prompt_by()[i],
+								&impact);
 						}
 						break;
 					}
@@ -626,10 +629,12 @@ namespace Boundary
 					++local.chi;
 					if (deposition != nullptr)
 					{
+						const Sputtering::Impact impact {{slots.vX()[i],
+							slots.vY()[i], slots.vZ()[i]}, slots.mass()};
 						deposition->add_into_wall_cell(zone, xidx, yidx,
 							zidx, slots.zone()[i], slots.xidx()[i],
 							slots.yidx()[i], slots.pt()[i], slots.q()[i],
-							slots.weight()[i], slots.prompt_by()[i]);
+							slots.weight()[i], slots.prompt_by()[i], &impact);
 					}
 				}
 			}

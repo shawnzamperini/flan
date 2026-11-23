@@ -57,7 +57,8 @@ namespace Sheath
 	};
 
 	Params make_params(double te, double ti, double ne, double bmag,
-		double cos_theta, double elec_mass_amu, double ion_mass_amu);
+		double cos_theta, double elec_mass_amu, double ion_mass_amu,
+		double f_d = -1.0, double drop_te = -1.0);
 
 	double potential(const Params& p, Model model, double d);
 
@@ -119,7 +120,8 @@ namespace Sheath
 		Sheath() = default;
 
 		Sheath(const Sputtering::Surface& surface,
-			const Background::Background& bkg, Model model);
+			const Background::Background& bkg, Model model,
+			double f_d = -1.0, double drop_te = -1.0);
 
 		Model model() const;
 		std::size_t size() const;

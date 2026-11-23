@@ -1586,3 +1586,54 @@ TEST(SheathField, DiagonalWall)
 	const auto none {sheath.field_at(0, 0, 6, 1, 1, {6.5, 1.5, phi})};
 	for (const double c : none) EXPECT_DOUBLE_EQ(c, 0.0);
 }
+
+// Impact tallies on the slab wall at y min (normal +Y): a particle coming
+// straight in is at 0 degrees, one coming in at 45 degrees is at 45, and
+// one at 60 degrees from the normal at 60. The energies are 0.5 m v^2,
+// and the mean time since birth is weighted by rate.
+TEST(SlabWall, ImpactTally)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("ymin"))};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+	const double side {0.05 / 8.0};
+	const std::array<double, 3> pos {0.5 * side, -0.0251, -0.025
+		+ 0.5 * side};
+	const auto& zones {bkg.get_zones()};
+	const double mass {183.84 * 1.661e-27};
+	const double v {1e4};
+	const double energy {0.5 * mass * v * v / 1.602e-19};
+	const double s {std::sqrt(0.5)};
+	const Sputtering::Impact straight {{0.0, -v, 0.0}, mass};
+	const Sputtering::Impact oblique {{v * s, -v * s, 0.0}, mass};
+	const Sputtering::Impact steep {{0.0, -0.5 * v, v * std::sqrt(0.75)},
+		mass};
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 1e-6, 1, 1.0, -1.0,
+		&straight);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 2e-6, 1, 2.0, -1.0,
+		&oblique);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 4e-6, 1, 1.0, -1.0,
+		&steep);
+
+	// Without an Impact, only the time since birth counts
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 0.0, 1, 4.0);
+
+	EXPECT_NEAR(dep.mean_energy(), energy, 1e-9 * energy);
+	EXPECT_NEAR(dep.mean_angle(), (0.0 + 2.0 * 45.0 + 60.0) / 4.0, 1e-9);
+	EXPECT_NEAR(dep.mean_lifetime(), (1e-6 + 4e-6 + 4e-6) / 8.0, 1e-18);
+	EXPECT_DOUBLE_EQ(dep.impact_angle()[0], 1.0);
+	EXPECT_DOUBLE_EQ(dep.impact_angle()[44] + dep.impact_angle()[45], 2.0);
+	EXPECT_DOUBLE_EQ(dep.impact_angle()[59] + dep.impact_angle()[60], 1.0);
+	double in_bins {};
+	for (const double r : dep.impact_energy()) in_bins += r;
+	EXPECT_DOUBLE_EQ(in_bins, 4.0);
+	const auto& edges {dep.energy_edges()};
+	for (std::size_t b {}; b < dep.impact_energy().size(); ++b)
+	{
+		const bool here {edges[b] <= energy && energy < edges[b + 1]};
+		EXPECT_DOUBLE_EQ(dep.impact_energy()[b], here ? 4.0 : 0.0);
+	}
+	double on_elements {};
+	for (const double r : dep.element_energy()) on_elements += r;
+	EXPECT_NEAR(on_elements, 4.0 * energy, 1e-9 * energy);
+}

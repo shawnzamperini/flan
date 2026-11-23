@@ -2538,6 +2538,71 @@ namespace Options
 		{return m_sput_bohm_floor;}
 
 	/**
+	* Sets the sheath_fd option.
+	*
+	* The share of the sheath drop in the Debye sheath, f_D, in place of
+	* the one from the field's angle to the wall (1 - ln cos(theta) /
+	* lam_w). For comparing with models that fix it, such as Brooks'
+	* reference case (0.25), and for sensitivity studies. -1 (the
+	* default) works it out from the angle.
+	*
+	* Valid values are -1 and 0 to 1. An invalid value prints an error and
+	* leaves the option unchanged.
+	*
+	* @param sheath_fd New value of the sheath_fd option.
+	*/
+	void Options::set_sheath_fd(double sheath_fd)
+	{
+		if (sheath_fd == -1.0 || (sheath_fd >= 0.0 && sheath_fd <= 1.0))
+			m_sheath_fd = sheath_fd;
+		else
+		{
+			std::cerr << "Error! sheath_fd must be -1 or from 0 to 1, not "
+				<< sheath_fd << ". Leaving it at " << m_sheath_fd << ".\n";
+		}
+	}
+
+	/**
+	* Sets the sheath_drop option.
+	*
+	* The sheath's potential drop in units of Te (e |phi_wall| / Te), in
+	* place of the floating drop (-0.5 ln[2 pi (m_e / m_i)(1 + Ti / Te)],
+	* about 2.8 for D at Ti = Te). For comparing with models that fix it,
+	* such as Brooks' reference case (3), and for checks with a vanishing
+	* drop. -1 (the default) uses the floating drop.
+	*
+	* Valid values are -1 and above 0. An invalid value prints an error and
+	* leaves the option unchanged.
+	*
+	* @param sheath_drop New value of the sheath_drop option.
+	*/
+	void Options::set_sheath_drop(double sheath_drop)
+	{
+		if (sheath_drop == -1.0 || sheath_drop > 0.0)
+			m_sheath_drop = sheath_drop;
+		else
+		{
+			std::cerr << "Error! sheath_drop must be -1 or above 0, not "
+				<< sheath_drop << ". Leaving it at " << m_sheath_drop
+				<< ".\n";
+		}
+	}
+
+	/**
+	* Returns the sheath_fd option.
+	*
+	* @return Value of the sheath_fd option.
+	*/
+	double Options::sheath_fd() const {return m_sheath_fd;}
+
+	/**
+	* Returns the sheath_drop option.
+	*
+	* @return Value of the sheath_drop option.
+	*/
+	double Options::sheath_drop() const {return m_sheath_drop;}
+
+	/**
 	* Returns the sheath_model option.
 	*
 	* @return Value of the sheath_model option.

@@ -302,6 +302,16 @@ namespace Sputtering
 	* ionized (Slots::Slots::prompt_by), as in Fussmann's model of prompt
 	* redeposition.
 	*/
+	/**
+	* What an absorbed particle hits the wall with: its Cartesian velocity
+	* and mass, for the impact energy and angle tallies of Deposition.
+	*/
+	struct Impact
+	{
+		std::array<double, 3> v {};	///< Velocity (vX, vY, vZ) (m/s)
+		double mass {};				///< Mass (kg)
+	};
+
 	class Deposition
 	{
 	private:
@@ -321,22 +331,42 @@ namespace Sputtering
 											///< element
 		std::vector<double> m_prompt_charge {};	///< Prompt rate at each
 												///< charge state
+		double m_phi_sign {1.0};	///< Handedness of (R, phi, Z)
+		double m_lifetime_sum {};	///< Sum of weight * time since birth
+		std::vector<double> m_energy_edges {};	///< Impact energy bin
+												///< edges (eV)
+		std::vector<double> m_energy {};	///< Rate in each energy bin
+		std::vector<double> m_angle {};		///< Rate in each 1 degree bin
+											///< of the angle from the
+											///< normal
+		double m_energy_sum {};		///< Sum of weight * impact energy
+		double m_energy_weight {};	///< Rate with an impact energy
+		double m_angle_sum {};		///< Sum of weight * impact angle
+		double m_angle_weight {};	///< Rate with an impact angle
+		std::vector<double> m_element_energy {};	///< Sum of weight *
+													///< impact energy on
+													///< each element
 
 		bool add_lifetime_and_charge(double pt, int q, double weight,
 			double prompt_by);
+		void add_impact(const Impact* impact, const SurfaceElement* el,
+			double z, double weight, std::size_t e);
 
 	public:
 
 		Deposition() = default;
 
-		Deposition(const Surface& surface, int atomic_number);
+		Deposition(const Surface& surface, int atomic_number,
+			double phi_sign = 1.0);
 
 		void add_into_wall_cell(int zone, int i, int j, int k,
 			int prev_zone, int prev_i, int prev_j, double pt, int q,
-			double weight, double prompt_by = -1.0);
+			double weight, double prompt_by = -1.0,
+			const Impact* impact = nullptr);
 		void add_at_wall_face(const Zones::Zones& zones, int zone,
 			Zones::Face face, const std::array<double, 3>& pos, double pt,
-			int q, double weight, double prompt_by = -1.0);
+			int q, double weight, double prompt_by = -1.0,
+			const Impact* impact = nullptr);
 
 		void reduce(int root);
 
@@ -350,6 +380,13 @@ namespace Sputtering
 		const std::vector<double>& prompt() const;
 		const std::vector<double>& prompt_charge() const;
 		double prompt_total() const;
+		double mean_lifetime() const;
+		const std::vector<double>& energy_edges() const;
+		const std::vector<double>& impact_energy() const;
+		const std::vector<double>& impact_angle() const;
+		double mean_energy() const;
+		double mean_angle() const;
+		const std::vector<double>& element_energy() const;
 
 		void print_summary(std::ostream& os, double source_rate) const;
 	};

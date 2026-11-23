@@ -32,6 +32,21 @@
 *                          check of the model (which leaves further
 *                          ionization out); the checker prints it to show
 *                          how much it matters.
+*   drop0                  As p1 with the sheath field on ("brooks") but a
+*                          drop of 1e-4 Te (sheath_drop): Fussmann's case
+*                          again, checked the same way.
+*   brooks_a<angle>,       As p1 with the sheath field on and B at <angle>
+*   borodkina_a<angle>     degrees to the wall (2, 5, 10, 20 in the
+*                          README): how much the sheath raises the prompt
+*                          fraction, and how much that depends on the
+*                          profile. Printed, not checked.
+*   brooks_ref             Brooks' reference case (1990, Table 1): D-T at
+*                          75 eV, 1e20 m^-3, B = 5 T at 87 degrees from the
+*                          normal, his f_D = 0.25 and 3 Te drop
+*                          (sheath_fd, sheath_drop), collisions on, full
+*                          ionization. The checker compares the
+*                          redeposited W's charge, impact energy and
+*                          angle, and time to return with his.
 *
 * The model's assumptions, and how the runs meet them:
 *
@@ -194,10 +209,53 @@ int main(int argc, char* argv[])
 		set_times(inpts, 3e18, 2.0);
 		inpts["imp_iz_max_charge"] = -1;
 	}
+
+	// With the sheath: a drop so small that it's Fussmann's case again
+	else if (variant == "drop0")
+	{
+		set_times(inpts, 3e18, 2.0);
+		inpts["sheath_model"] = "brooks";
+		inpts["sheath_drop"] = 1e-4;
+	}
+
+	// With the sheath, as p1 with B at 2 to 20 degrees to the wall, for
+	// either profile: <model>_a<angle>
+	else if (variant.starts_with("brooks_a")
+		|| variant.starts_with("borodkina_a"))
+	{
+		const auto u {variant.find("_a")};
+		set_times(inpts, 3e18, 2.0);
+		inpts["sheath_model"] = variant.substr(0, u);
+		inpts["slab_b_angle"] = std::stod(variant.substr(u + 2));
+	}
+
+	// Brooks' reference case (Phys. Fluids B 2, 1858, 1990, Table 1): D-T
+	// at Te = Ti = 75 eV and 1e20 m^-3, B = 5 T at 87 degrees from the
+	// normal, his f_D = 0.25 and drop of 3 Te, collisions on, and
+	// ionization as far as it goes
+	else if (variant == "brooks_ref")
+	{
+		inpts["gkyl_ion_mass_amu"] = 2.5;
+		inpts["slab_ne"] = 1e20;
+		inpts["slab_te"] = 75.0;
+		inpts["slab_ti"] = 75.0;
+		inpts["slab_bmag"] = 5.0;
+		inpts["slab_flow"] = std::sqrt(150.0 * 1.602e-19 / (2.5 * 1.661e-27));
+		inpts["slab_b_angle"] = 3.0;
+		inpts["sheath_model"] = "brooks";
+		inpts["sheath_fd"] = 0.25;
+		inpts["sheath_drop"] = 3.0;
+		inpts["imp_iz_max_charge"] = -1;
+		inpts["imp_collisions"] = "nanbu";
+		inpts["imp_max_time"] = 1e-5;
+		inpts["slab_tmax"] = 1e-5;
+		inpts["imp_time_step"] = 1e-9;
+	}
 	else
 	{
 		std::cerr << "Usage: reg_prompt_redep <variant>, with <variant> one "
-			"of p01, p03, p1, p3, p10, b4, full\n";
+			"of p01, p03, p1, p3, p10, b4, full, drop0, brooks_a<angle>, "
+			"borodkina_a<angle>, brooks_ref\n";
 		MPI_Finalize();
 		return 1;
 	}

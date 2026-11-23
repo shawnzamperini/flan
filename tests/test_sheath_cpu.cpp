@@ -202,6 +202,41 @@ TEST(SheathProfile, Borodkina)
 		* std::exp(-1.0 / std::sin(p89.theta)), 1e-9);
 }
 
+// sheath_fd and sheath_drop: f_D and the drop given, as in Brooks'
+// reference case (f_D = 0.25, 3 Te at 87 degrees, past the critical
+// angle). Both profiles still integrate to the drop, and Borodkina's is
+// still continuous at xi_mps.
+TEST(SheathProfile, Overrides)
+{
+	const auto p {Sheath::make_params(75.0, 75.0, 1e20, 5.0,
+		std::cos(87.0 * pi / 180.0), me_amu, 2.5, 0.25, 3.0)};
+	EXPECT_DOUBLE_EQ(p.f_d, 0.25);
+	EXPECT_DOUBLE_EQ(p.lam_w, -3.0);
+	EXPECT_DOUBLE_EQ(p.phi_wall, -225.0);
+	EXPECT_DOUBLE_EQ(p.lam_mps, -2.25);
+	ASSERT_TRUE(p.debye);
+	for (const auto m : {Sheath::Model::brooks, Sheath::Model::borodkina})
+	{
+		EXPECT_NEAR(Sheath::potential(p, m, 0.0), -225.0, 1e-9);
+		EXPECT_NEAR(integrate_field(p, m), -225.0, 1e-4 * 225.0);
+	}
+	const double d0 {p.xi_mps * p.lambda_d};
+	const auto m {Sheath::Model::borodkina};
+	EXPECT_NEAR(Sheath::potential(p, m, d0 * (1.0 - 1e-10)),
+		Sheath::potential(p, m, d0 * (1.0 + 1e-10)), 1e-6);
+
+	// Brooks: the Debye part holds f_D of the drop
+	const auto b {Sheath::Model::brooks};
+	EXPECT_NEAR(Sheath::potential(p, b, 10.0 * p.lambda_d), -225.0 * (0.25
+		* std::exp(-5.0) + 0.75 * std::exp(-10.0 * p.lambda_d / p.rho_s)),
+		1e-9);
+
+	// Only the drop given: f_D from the angle, of the new drop
+	const auto q {Sheath::make_params(20.0, 20.0, 1e19, 2.0,
+		std::cos(60.0 * pi / 180.0), me_amu, mi_amu, -1.0, 4.0)};
+	EXPECT_NEAR(q.f_d, 1.0 - std::log(0.5) / -4.0, 1e-12);
+}
+
 // "off" gives nothing
 TEST(SheathProfile, Off)
 {

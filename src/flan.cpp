@@ -179,7 +179,8 @@ R"(
 				"follow.");
 		}
 		// Where the sputtered atoms land back on the wall
-		deposition.emplace(source->surface(), opts.imp_atom_num());
+		deposition.emplace(source->surface(), opts.imp_atom_num(),
+			bkg.get_phi_sign());
 		if (rank == 0 && opts.imp_source_scale_fact() != 1.0)
 		{
 			std::cout << "Warning! imp_source_scale_fact isn't used with "
@@ -209,12 +210,14 @@ R"(
 		{
 			const auto model {static_cast<Sheath::Model>(
 				opts.sheath_model_int())};
-			if (source) sheath.emplace(source->surface(), bkg, model);
+			if (source) sheath.emplace(source->surface(), bkg, model,
+				opts.sheath_fd(), opts.sheath_drop());
 			else
 			{
 				const Sputtering::Surface surface(bkg,
 					opts.sput_max_wall_dist());
-				sheath.emplace(surface, bkg, model);
+				sheath.emplace(surface, bkg, model, opts.sheath_fd(),
+					opts.sheath_drop());
 			}
 			if (rank == 0) sheath->print_summary(std::cout);
 		}
