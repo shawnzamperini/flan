@@ -94,6 +94,7 @@ namespace Options
 		double m_sput_self_min_weight               {0.1};
 		int m_sput_self_max_gen                     {1000};
 		double m_sput_angle_val                     {60.0};
+		std::string m_sput_impact_opt               {"formula"};
 		double m_sput_max_wall_dist                  {2.0};
 		
 		// General background options
@@ -225,6 +226,7 @@ namespace Options
 		int m_sput_bohm_floor_int                     {-1};
 		int m_sheath_model_int                        {-1};
 		int m_sput_self_int                           {-1};
+		int m_sput_impact_opt_int                     {-1};
 
 		template <typename T>
 		bool check_input(const std::string& var, const T& value, 
@@ -288,6 +290,7 @@ namespace Options
 		void set_sheath_fd(double sheath_fd);
 		void set_sheath_drop(double sheath_drop);
 		void set_sput_self(std::string sput_self);
+		void set_sput_impact_opt(std::string sput_impact_opt);
 		void set_sput_self_table_file(std::string sput_self_table_file);
 		void set_sput_self_min_weight(double sput_self_min_weight);
 		void set_sput_self_max_gen(int sput_self_max_gen);
@@ -423,6 +426,7 @@ namespace Options
 		double sheath_fd() const;
 		double sheath_drop() const;
 		const std::string& sput_self() const;
+		const std::string& sput_impact_opt() const;
 		const std::string& sput_self_table_file() const;
 		double sput_self_min_weight() const;
 		int sput_self_max_gen() const;
@@ -547,6 +551,7 @@ namespace Options
 		int sput_bohm_floor_int() const;
 		int sheath_model_int() const;
 		int sput_self_int() const;
+		int sput_impact_opt_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);

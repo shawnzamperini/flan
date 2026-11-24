@@ -166,7 +166,29 @@ R"(
 		if (rank == 0) std::cout << "Calculating the sputtered source...\n";
 		const Sputtering::Surface surface(bkg, opts.sput_max_wall_dist());
 		const Sputtering::YieldTable table(opts.sput_table_file());
-		source.emplace(surface, bkg, table, opts);
+
+		// The ions' impact energies and angles from D+ test ions pushed
+		// through the sheath field, which must then be on, or from the
+		// formula at sput_angle_val
+		Sheath::Model impact_model {Sheath::Model::off};
+		if (opts.sput_impact_opt_int() == 1)
+		{
+			if (opts.sheath_model_int() == 0)
+			{
+				Errors::fatal_error("sput_impact_opt = \"sheath\" pushes the "
+					"ions through the sheath field, but sheath_model is "
+					"\"off\". Turn the sheath on, or use sput_impact_opt = "
+					"\"formula\".");
+			}
+			impact_model = static_cast<Sheath::Model>(
+				opts.sheath_model_int());
+			if (rank == 0)
+			{
+				std::cout << "Pushing D+ test ions through the sheath for "
+					"their impact energies and angles...\n";
+			}
+		}
+		source.emplace(surface, bkg, table, opts, impact_model);
 		if (rank == 0)
 		{
 			surface.print_summary(std::cout);

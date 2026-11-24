@@ -278,6 +278,12 @@ namespace Sputtering
 											///< per idx
 		std::vector<double> m_impact_angle {};	///< Mean impact angle of
 												///< the ions (deg), per idx
+		std::vector<double> m_ion_energy_edges {};	///< Energy bins (eV)
+		std::vector<double> m_ion_energy {};	///< Ions/s by energy
+		std::vector<double> m_ion_angle {};		///< Ions/s by angle
+		std::vector<double> m_sput_ion_energy {};	///< Atoms/s they
+													///< sputter, by energy
+		std::vector<double> m_sput_ion_angle {};	///< And by angle
 
 	public:
 
@@ -309,6 +315,11 @@ namespace Sputtering
 		double phi_sign() const;
 		const std::vector<double>& impact_angle() const;
 		const Sheath::ImpactTable* impacts() const;
+		const std::vector<double>& ion_energy_edges() const;
+		const std::vector<double>& ion_energy() const;
+		const std::vector<double>& ion_angle() const;
+		const std::vector<double>& sputtering_ion_energy() const;
+		const std::vector<double>& sputtering_ion_angle() const;
 
 		Birth sample_birth(pcg32& rng) const;
 

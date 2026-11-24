@@ -40,6 +40,7 @@
 #include "netcdf"
 #include "options.h"
 #include "save_results.h"
+#include "sheath.h"
 #include "sputtering.h"
 #include "vectors.h"
 #include "zones.h"
@@ -543,6 +544,8 @@ namespace SaveResults
 			"from the field angle", "");
 		save_scalar(input_group, opts.sheath_drop(), "sheath_drop",
 			dim_scalar, "sheath drop over Te, -1 for the floating drop", "");
+		save_string(input_group, opts.sput_impact_opt(), "sput_impact_opt",
+			dim_str, "where the ions' impact energies and angles come from");
 		save_string(input_group, opts.sput_self(), "sput_self", dim_str,
 			"self-sputtering option");
 		save_string(input_group, opts.sput_self_table_file(),
@@ -1496,7 +1499,11 @@ namespace SaveResults
 		save_2d(source.energy(), "energy", "mean energy of the ions hitting "
 			"the wall", "(eV)");
 		save_2d(source.yield(), "yield", "sputtering yield averaged over the "
-			"energies of the ions hitting the wall", "(atoms/ion)");
+			"energies (and with sput_impact_opt = \"sheath\", angles) of "
+			"the ions hitting the wall", "(atoms/ion)");
+		save_2d(source.impact_angle(), "ion_angle", "mean angle from the "
+			"normal of the ions hitting the wall (sput_angle_val with "
+			"sput_impact_opt = \"formula\")", "(degrees)");
 		save_2d(source.rate(), "rate", "rate atoms are sputtered off the "
 			"element", "(atoms/s)");
 
@@ -1508,6 +1515,41 @@ namespace SaveResults
 		save_vector_1d(group, source.mean_rate(), "source_mean", dim_elem,
 			"rate atoms are sputtered off the element, averaged over the "
 			"frames' time windows", "(atoms/s)");
+
+		// The ions' impact energies and angles, from the sheath model
+		group.putAtt("sput_impact_opt", source.impacts() ? "sheath"
+			: "formula");
+		if (const Sheath::ImpactTable* imp {source.impacts()})
+		{
+			const netCDF::NcDim dim_iedge {group.addDim("ion_energy_edge",
+				source.ion_energy_edges().size())};
+			const netCDF::NcDim dim_ibin {group.addDim("ion_energy_bin",
+				source.ion_energy().size())};
+			const netCDF::NcDim dim_iabin {group.addDim("ion_angle_bin",
+				source.ion_angle().size())};
+			save_vector_1d(group, source.ion_energy_edges(),
+				"ion_energy_edges", dim_iedge, "edges of the ion impact "
+				"energy bins", "(eV)");
+			save_vector_1d(group, source.ion_energy(), "ion_energy_hist",
+				dim_ibin, "rate ions hit the wall by impact energy, averaged "
+				"over the frames' time windows", "(ions/s)");
+			save_vector_1d(group, source.ion_angle(), "ion_angle_hist",
+				dim_iabin, "rate ions hit the wall by angle from the normal, "
+				"in 1 degree bins from 0 to 90", "(ions/s)");
+			save_vector_1d(group, source.sputtering_ion_energy(),
+				"sputtering_ion_energy_hist", dim_ibin, "rate the ions in "
+				"each impact energy bin sputter atoms", "(atoms/s)");
+			save_vector_1d(group, source.sputtering_ion_angle(),
+				"sputtering_ion_angle_hist", dim_iabin, "rate the ions in "
+				"each 1 degree bin of angle sputter atoms", "(atoms/s)");
+			group.putAtt("ion_impact_points", netCDF::ncInt,
+				static_cast<int>(imp->size()));
+			group.putAtt("ion_impact_num_ions", netCDF::ncInt,
+				imp->num_ions());
+			group.putAtt("ion_impact_lost", netCDF::ncInt, imp->lost());
+			group.putAtt("ion_impact_max_energy_error", netCDF::ncDouble,
+				imp->max_energy_error());
+		}
 
 		// Where the atoms landed
 		if (deposition == nullptr) return;

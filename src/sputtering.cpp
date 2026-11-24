@@ -1249,52 +1249,6 @@ namespace Sputtering
 			m_total_rate[t] += m_rate[idx];
 		}
 
-		// With the sheath model, the yield averaged over the impact
-		// samples of each element's point, weighted by their share of the
-		// flux, with energies over Te times the element's Te
-		if (m_impacts)
-		{
-			m_impacts->build();
-			std::fill(m_total_rate.begin(), m_total_rate.end(), 0.0);
-			for (std::size_t idx {}; idx < n_all; ++idx)
-			{
-				const std::size_t e {idx % n_elem};
-				const int t {static_cast<int>(idx / n_elem)};
-				const int point {m_point[idx]};
-				if (point >= 0)
-				{
-					double y {}, energy {}, ang {}, above {};
-					for (const auto& smp : m_impacts->samples(point))
-					{
-						const double en {smp.energy * m_te[idx]};
-						y += smp.weight * table.get_yield(en, smp.angle);
-						energy += smp.weight * en;
-						ang += smp.weight * smp.angle;
-						if (en > table.energy_max()) above += smp.weight;
-					}
-					if (above > 0.01) ++m_num_above_table;
-					m_yield[idx] = y;
-					m_energy[idx] = energy;
-					m_impact_angle[idx] = ang;
-					m_rate[idx] = m_flux[idx] * y
-						* m_surface.elements()[e].area;
-				}
-				m_total_rate[t] += m_rate[idx];
-			}
-		}
-
-		// Computational x and y edges of each element's plasma cell, for
-		// placing atoms on its face
-		const Zones::Zones& zones {bkg.get_zones()};
-		m_cell_bounds.reserve(n_elem);
-		for (const SurfaceElement& el : m_surface.elements())
-		{
-			const auto& gx {zones.get_grid_x(el.zone)};
-			const auto& gy {zones.get_grid_y(el.zone)};
-			m_cell_bounds.push_back({gx[el.i], gx[el.i + 1], gy[el.j],
-				gy[el.j + 1]});
-		}
-
 		// Each frame stands for the times nearer to it than to the other
 		// frames (the frame a particle uses is the nearest one), from half
 		// way to the frame before to half way to the frame after, and to
@@ -1316,6 +1270,116 @@ namespace Sputtering
 		{
 			return m_nframes == 1 ? 1.0 : m_frame_hi[t] - m_frame_lo[t];
 		};
+
+		// With the sheath model, the yield averaged over the impact
+		// samples of each element's point, weighted by their share of the
+		// flux, with energies over Te times the element's Te. The energies
+		// and angles of the ions hitting the wall, and of those weighted by
+		// their yield (the atoms they sputter), are histogrammed at the
+		// same time, averaged over the frames' windows like the rates
+		// (ions/s and atoms/s in each bin). Each element and frame is
+		// independent, so they're split between the threads, each with
+		// histograms of its own that are added up at the end.
+		if (m_impacts)
+		{
+			m_impacts->build();
+
+			// Energy bins of 20 a decade from 0.01 eV to 100 keV
+			constexpr int per_decade {20};
+			constexpr double log_lo {-2.0};
+			const int n_ebin {per_decade * 7};
+			for (int b {}; b <= n_ebin; ++b)
+			{
+				m_ion_energy_edges.push_back(std::pow(10.0, log_lo
+					+ static_cast<double>(b) / per_decade));
+			}
+			for (auto* v : {&m_ion_energy, &m_sput_ion_energy})
+				v->assign(n_ebin, 0.0);
+			for (auto* v : {&m_ion_angle, &m_sput_ion_angle})
+				v->assign(90, 0.0);
+			double total_window {};
+			for (int t {}; t < m_nframes; ++t) total_window += window(t);
+
+			int num_above {};
+			#pragma omp parallel reduction(+:num_above)
+			{
+				std::vector<double> ion_e(n_ebin, 0.0), sput_e(n_ebin, 0.0);
+				std::vector<double> ion_a(90, 0.0), sput_a(90, 0.0);
+
+				#pragma omp for schedule(dynamic, 256)
+				for (std::size_t idx = 0; idx < n_all; ++idx)
+				{
+					const int point {m_point[idx]};
+					if (point < 0) continue;
+					const std::size_t e {idx % n_elem};
+					const int t {static_cast<int>(idx / n_elem)};
+					const double ions {m_flux[idx]
+						* m_surface.elements()[e].area * window(t)
+						/ total_window};
+					double y {}, energy {}, ang {}, above {};
+					for (const auto& smp : m_impacts->samples(point))
+					{
+						const double en {smp.energy * m_te[idx]};
+						const double ys {table.get_yield(en, smp.angle)};
+						y += smp.weight * ys;
+						energy += smp.weight * en;
+						ang += smp.weight * smp.angle;
+						if (en > table.energy_max()) above += smp.weight;
+						if (!(ions > 0.0)) continue;
+
+						const double w {ions * smp.weight};
+						const int bin {static_cast<int>(std::floor(
+							(std::log10(en) - log_lo) * per_decade))};
+						if (bin >= 0 && bin < n_ebin)
+						{
+							ion_e[bin] += w;
+							sput_e[bin] += w * ys;
+						}
+						const int abin {std::clamp(static_cast<int>(
+							smp.angle), 0, 89)};
+						ion_a[abin] += w;
+						sput_a[abin] += w * ys;
+					}
+					if (above > 0.01) ++num_above;
+					m_yield[idx] = y;
+					m_energy[idx] = energy;
+					m_impact_angle[idx] = ang;
+					m_rate[idx] = m_flux[idx] * y
+						* m_surface.elements()[e].area;
+				}
+
+				#pragma omp critical
+				{
+					for (int b {}; b < n_ebin; ++b)
+					{
+						m_ion_energy[b] += ion_e[b];
+						m_sput_ion_energy[b] += sput_e[b];
+					}
+					for (int b {}; b < 90; ++b)
+					{
+						m_ion_angle[b] += ion_a[b];
+						m_sput_ion_angle[b] += sput_a[b];
+					}
+				}
+			}
+			m_num_above_table += num_above;
+
+			std::fill(m_total_rate.begin(), m_total_rate.end(), 0.0);
+			for (std::size_t idx {}; idx < n_all; ++idx)
+				m_total_rate[idx / n_elem] += m_rate[idx];
+		}
+
+		// Computational x and y edges of each element's plasma cell, for
+		// placing atoms on its face
+		const Zones::Zones& zones {bkg.get_zones()};
+		m_cell_bounds.reserve(n_elem);
+		for (const SurfaceElement& el : m_surface.elements())
+		{
+			const auto& gx {zones.get_grid_x(el.zone)};
+			const auto& gy {zones.get_grid_y(el.zone)};
+			m_cell_bounds.push_back({gx[el.i], gx[el.i + 1], gy[el.j],
+				gy[el.j + 1]});
+		}
 
 		// Atoms sputtered off each element in each frame's window, added
 		// up in the order the per-element values are stored, for picking
@@ -1418,6 +1482,28 @@ namespace Sputtering
 	{
 		return m_impacts.get();
 	}
+
+	/**
+	* @name Ion impact histograms
+	* With the sheath model only (empty otherwise): the edges of the
+	* energy bins (eV, 20 a decade from 0.01 eV to 100 keV), and the rate
+	* ions hit the whole wall in each energy bin and each 1 degree bin of
+	* angle from the normal (ions/s), and the same weighted by their
+	* yield, the rate the ions in each bin sputter atoms (atoms/s). All
+	* averaged over the frames' windows, like source_rate.
+	*/
+	///@{
+	const std::vector<double>& Source::ion_energy_edges() const
+		{return m_ion_energy_edges;}
+	const std::vector<double>& Source::ion_energy() const
+		{return m_ion_energy;}
+	const std::vector<double>& Source::ion_angle() const
+		{return m_ion_angle;}
+	const std::vector<double>& Source::sputtering_ion_energy() const
+		{return m_sput_ion_energy;}
+	const std::vector<double>& Source::sputtering_ion_angle() const
+		{return m_sput_ion_angle;}
+	///@}
 
 	double Source::mean_total_rate() const
 	{

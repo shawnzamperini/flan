@@ -420,6 +420,13 @@ namespace Options
 				assign_option<double>(set_func, var, key);
 			}
 
+			else if (key == "sput_impact_opt")
+			{
+				auto set_func = std::bind(&Options::set_sput_impact_opt,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
 			else if (key == "sput_self")
 			{
 				auto set_func = std::bind(&Options::set_sput_self, &opts,

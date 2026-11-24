@@ -88,6 +88,7 @@ namespace Options
 		set_sput_bohm_floor(m_sput_bohm_floor);
 		set_sheath_model(m_sheath_model);
 		set_sput_self(m_sput_self);
+		set_sput_impact_opt(m_sput_impact_opt);
 	}
 
 	// Setter definitions. They're all the same, so just throwing together
@@ -2612,10 +2613,9 @@ namespace Options
 	* sput_self_table_file table (see Sputtering::SelfSource). Needs
 	* imp_source_opt = "sputter". CPU only.
 	*
-	* Valid values are "off" and "on". An invalid value prints an error and
-	* leaves the option unchanged. Also sets the control integer returned
-	* by sput_self_int() to 0 for "off", 1 for "on". An invalid value
-	* leaves the control integer unchanged.
+	* Valid values are "off" and "on"; anything else stops the run
+	* (check_input). Also sets the control integer returned by
+	* sput_self_int() to 0 for "off", 1 for "on".
 	*
 	* @param sput_self New value of the sput_self option.
 	*/
@@ -2626,6 +2626,35 @@ namespace Options
 
 		if (sput_self == "off") m_sput_self_int = 0;
 		else if (sput_self == "on") m_sput_self_int = 1;
+	}
+
+	/**
+	* Sets the sput_impact_opt option.
+	*
+	* Where the energies and angles the background's ions hit the wall
+	* with, for the sputtered source, come from. "formula": the sheath and
+	* presheath energy (Sputtering::sheath_energy) plus a thermal energy
+	* at Ti, all at sput_angle_val. "sheath": D+ test ions pushed through
+	* the sheath_model field (Sheath::ImpactTable), which gives the
+	* energies and angles together. "sheath" needs sheath_model to be on.
+	* CPU only.
+	*
+	* Valid values are "formula" and "sheath"; anything else stops the run
+	* (check_input). Also sets the control integer returned by
+	* sput_impact_opt_int() to 0 for "formula", 1 for "sheath".
+	*
+	* @param sput_impact_opt New value of the sput_impact_opt option.
+	*/
+	void Options::set_sput_impact_opt(std::string sput_impact_opt)
+	{
+		if (check_input<std::string>("sput_impact_opt", sput_impact_opt,
+			{"formula", "sheath"}))
+		{
+			m_sput_impact_opt = sput_impact_opt;
+		}
+
+		if (sput_impact_opt == "formula") m_sput_impact_opt_int = 0;
+		else if (sput_impact_opt == "sheath") m_sput_impact_opt_int = 1;
 	}
 
 	/**
@@ -2701,6 +2730,14 @@ namespace Options
 	*/
 	///@{
 	const std::string& Options::sput_self() const {return m_sput_self;}
+
+	/**
+	* Returns the sput_impact_opt option.
+	*
+	* @return Value of the sput_impact_opt option.
+	*/
+	const std::string& Options::sput_impact_opt() const
+		{return m_sput_impact_opt;}
 	const std::string& Options::sput_self_table_file() const
 		{return m_sput_self_table_file;}
 	double Options::sput_self_min_weight() const
@@ -3873,6 +3910,15 @@ namespace Options
 	*/
 	int Options::sput_self_int() const
 		{return get_control_int("sput_self", m_sput_self_int);}
+
+	/**
+	* Returns the control integer for sput_impact_opt: 0 for "formula", 1
+	* for "sheath".
+	*
+	* @return Control integer of the sput_impact_opt option.
+	*/
+	int Options::sput_impact_opt_int() const
+		{return get_control_int("sput_impact_opt", m_sput_impact_opt_int);}
 
 	// Setter declarations for internal control variables
 

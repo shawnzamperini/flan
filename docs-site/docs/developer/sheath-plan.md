@@ -583,12 +583,40 @@ and frame uses its grid point's samples.
     of the drop + 0.5 Te + 3 Ti) and `SheathImpactsStep` (a step yield
     gives the flux share above it, and births only pick ions above
     it).
-- **D3. Option and output.** `sput_impact_opt` = `"formula"` (now's
-  behaviour, the default until D4 passes) or `"sheath"`, which uses
-  `sheath_model`'s profile (and `sheath_fd`, `sheath_drop`) and stops
-  with an error if it is `"off"`. Output: the mean D⁺ impact angle per
-  element and frame, D⁺ energy and angle histograms over the run, the
-  grid and sample count; the start-of-run summary prints the mean angle.
+- **D3. Option and output.** Done:
+  - `sput_impact_opt` = `"formula"` (the default) or `"sheath"`, through
+    options.h/.cpp, load_options.cpp, save_results.cpp (input group) and
+    input-options.md. CPU only, like the rest of sputtering, so nothing
+    for the GPU options. `flan.cpp` passes `sheath_model`'s profile to
+    `Source` and stops with an error if the sheath is `"off"`.
+  - Sputtering group: `ion_angle` (time, element), the mean angle of the
+    ions hitting each element (`sput_angle_val` with `"formula"`); with
+    `"sheath"`, `ion_energy_hist` and `ion_angle_hist` (ions/s hitting
+    the wall by impact energy, 20 bins a decade from 0.01 eV to 100 keV,
+    and by 1° of angle) and `sputtering_ion_energy_hist` and
+    `sputtering_ion_angle_hist` (the atoms/s the ions in each bin
+    sputter), all averaged over the frames' windows like `source_rate`,
+    and the attributes `sput_impact_opt`, `ion_impact_points`,
+    `ion_impact_num_ions`, `ion_impact_lost` and
+    `ion_impact_max_energy_error`.
+  - Tests: `SputteringOptions.ImpactOpt`; `SheathImpacts` also checks the
+    histograms add up to the ion flux and, weighted by the yield, to the
+    source. The sheath-off error checked by hand on TCV-X21.
+  - The setters' comments said an invalid value leaves the option
+    unchanged, but `check_input` stops the run; corrected for
+    `sput_self` and `sput_impact_opt`.
+  - The averaging over the samples (yield, energy, angle, histograms) is
+    one OpenMP loop over the elements and frames, with per-thread
+    histograms. Serial it took most of a TCV-X21 run (207,000
+    element-frames × 2000 samples, twice).
+  - TCV-X21 (sputtered targets, `"brooks"`, 1000 W, 20 μs): 111 points,
+    none lost, energy conserved to 7e-5 of the drop. The run takes 4.0
+    minutes against 2.35 with `"formula"`, the difference being the
+    test ions. With the field 85° to 87° from the normal the ions hit at
+    72° on average (73° weighted by the flux) with 175 eV, against 60°
+    and 144 eV, and the sputtered source is 3.45e16 atoms/s against
+    9.84e15, 3.5 times larger. The ions that sputter hit with a median of
+    376 eV (all ions 168 eV) at 71°.
 - **D4. Regression.** A constant yield gives Y_eff = Y₀ exactly; a yield
   linear in E and flat in angle gives back the mean impact energy
   (within a few percent of the drop + 0.5 Te + 3 Ti, see D2); at normal

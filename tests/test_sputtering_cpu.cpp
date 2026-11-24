@@ -1522,6 +1522,27 @@ TEST_F(SputteringTable, SheathImpacts)
 	EXPECT_NEAR(sheath.source_rate(), formula.source_rate(),
 		1e-12 * formula.source_rate());
 
+	// The histograms of the ions hitting the wall add up to the ion flux
+	// onto it, and weighted by the yield to the source. Only with the
+	// sheath model.
+	EXPECT_TRUE(formula.ion_energy().empty());
+	auto sum = [](const std::vector<double>& v)
+	{
+		double total {};
+		for (const double x : v) total += x;
+		return total;
+	};
+	const double ions {sheath.source_rate() / 0.02};
+	EXPECT_EQ(sheath.ion_energy_edges().size(),
+		sheath.ion_energy().size() + 1);
+	EXPECT_EQ(sheath.ion_angle().size(), 90u);
+	EXPECT_NEAR(sum(sheath.ion_energy()), ions, 1e-9 * ions);
+	EXPECT_NEAR(sum(sheath.ion_angle()), ions, 1e-9 * ions);
+	EXPECT_NEAR(sum(sheath.sputtering_ion_energy()), sheath.source_rate(),
+		1e-9 * sheath.source_rate());
+	EXPECT_NEAR(sum(sheath.sputtering_ion_angle()), sheath.source_rate(),
+		1e-9 * sheath.source_rate());
+
 	pcg32 rng(5, 1);
 	for (int n {}; n < 200; ++n)
 	{
@@ -1971,6 +1992,22 @@ TEST_F(SputteringTable, SelfChecks)
 	EXPECT_EXIT(Sputtering::SelfSource(source,
 		Sputtering::YieldTable {m_self_path}, opts, false),
 		testing::ExitedWithCode(EXIT_FAILURE), "mass");
+}
+
+// sput_impact_opt: "formula" (the default) or "sheath", with its control
+// integer; anything else stops the run
+TEST(SputteringOptions, ImpactOpt)
+{
+	Options::Options opts {};
+	EXPECT_EQ(opts.sput_impact_opt(), "formula");
+	EXPECT_EQ(opts.sput_impact_opt_int(), 0);
+	opts.set_sput_impact_opt("sheath");
+	EXPECT_EQ(opts.sput_impact_opt(), "sheath");
+	EXPECT_EQ(opts.sput_impact_opt_int(), 1);
+	opts.set_sput_impact_opt("formula");
+	EXPECT_EQ(opts.sput_impact_opt_int(), 0);
+	EXPECT_EXIT(opts.set_sput_impact_opt("bogus"),
+		testing::ExitedWithCode(EXIT_FAILURE), "sput_impact_opt");
 }
 
 // Through the boundary check: a W ion past the slab wall is redeposited
