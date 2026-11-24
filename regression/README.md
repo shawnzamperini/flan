@@ -17,6 +17,7 @@ files in this directory are older and are not part of this set.
 | `reg_drifts` | Gyration, and the ExB, polarization, grad-B and curvature drifts of a single particle, without collisions | Cyclotron frequency and the guiding-center drift formulas |
 | `reg_prompt_redep` | Tungsten sputtered off a wall in a field parallel to it, ionizing to W+ and gyrating, comes back to the wall in its first gyration | Fussmann's prompt redeposition, ⟨r⟩(p) averaged over the exponential distribution of ionization lengths (`fussmann.py`) |
 | `reg_sheath_angles` | D⁺ test ions fall from 10 ρ_s through the `"borodkina"` sheath field onto a wall, with the field at 45° or 60° to the normal, pushed by the main loop's routines or (`_sampler`) by `Sheath::sample_impacts` | Energy conservation (exactly), Borodkina and Tsvetkov's impact angle distributions (Fig. 2a of their 2015 paper), and the sampler against the main loop |
+| `reg_sheath_impacts` | The sputtered source from the D⁺ impact energies and angles of the sheath model (`sput_impact_opt = "sheath"`), with synthetic yield tables and RustBCA's D on W | The same source as `"formula"` for a constant yield; for a yield linear in energy, the drop plus the flux-weighted mean energy the ions enter the sheath with; at B along the normal, the angle distribution from the drop; Borodkina's cases against `reg_sheath_angles`' sampler |
 | `reg_self_sputter` | Tungsten landing on the wall sputters more tungsten, with a constant yield Y0 (0.5, 1.25) | The weight in each generation, W_{g+1} = Y0 L_g, and the total S f₀ Y0 / (1 − f₁ Y0), with the self-sputtered atoms coming back as often as the D-sputtered ones |
 
 Each case has variants (other charge states, collision sub-cycling off,
@@ -56,6 +57,15 @@ for m in brooks borodkina; do for a in 2 5 10 20; do
     <build dir>/reg_prompt_redep ${m}_a$a
 done; done
 for v in a45 a60 a45_sampler a60_sampler; do <build dir>/reg_sheath_angles $v; done
+python <flan>/regression/make_impact_tables.py
+for v in const_a60 const_a60_formula lin_a0 lin_a60 lin_a85 lin_a60_ti0.5 \
+        lin_a85_ti2 bor_a45 bor_a60; do
+    <build dir>/reg_sheath_impacts $v
+done
+for te in 20 50 100; do for a in 60 85; do
+    <build dir>/reg_sheath_impacts dw_te${te}_a$a
+    <build dir>/reg_sheath_impacts dw_te${te}_a${a}_formula
+done; done
 python <flan>/regression/make_self_tables.py
 for v in y05 y125 w_te20 w_te50; do <build dir>/reg_self_sputter $v; done
 ```
@@ -72,6 +82,13 @@ cores, and a few seconds for the `_sampler` variants, and write
 Flan's directory (set when it's built) and the OpenADAS rates from
 `OPENADAS_ROOT`.
 
+`reg_sheath_impacts` needs the tables `impact_const.h5` and
+`impact_lin.h5` in the working directory, which `make_impact_tables.py`
+writes, and `data/sputtering/D_on_W.h5` for the `dw` variants; not the
+OpenADAS rates. Each run takes a few seconds. The `bor` variants are
+checked against the `_sampler` outputs of `reg_sheath_angles`, so run
+those in the same directory.
+
 `reg_self_sputter` needs the same, plus the constant-yield tables
 `self_y05.h5` and `self_y125.h5` in the working directory, which
 `make_self_tables.py` writes, and `data/sputtering/W_on_W.h5` for the
@@ -84,6 +101,7 @@ python <flan>/regression/check_collisions.py <output directory>
 python <flan>/regression/check_drifts.py <output directory>
 python <flan>/regression/check_redeposition.py <output directory>
 python <flan>/regression/check_sheath_angles.py <output directory>
+python <flan>/regression/check_sheath_impacts.py <output directory>
 python <flan>/regression/check_self_sputter.py <output directory>
 ```
 
@@ -91,6 +109,7 @@ Each reads the output files of its cases found there, takes all the
 inputs from the files themselves, prints a table and writes plots
 (`check_friction.png`, `check_thermal_force.png`, `check_drifts.png`,
 `check_redeposition.png`, `check_sheath_angles.png`,
+`check_sheath_impacts.png`,
 `check_self_sputter.png`). The exit status is
 1 if a check failed.
 
@@ -159,6 +178,42 @@ checks:
   (29° to 39° at 60° for 0.5 to 2 c_s), so the mean's tolerance is wide.
   At 45° Flan's distribution lies on theirs; at 60° it has the same shape
   and width, about 4° nearer the normal.
+
+### Sheath impacts
+
+With `sput_impact_opt = "sheath"`, the sputtered source averages the yield
+over the energies and angles D⁺ test ions hit the wall with after falling
+through the sheath field (`Sheath::ImpactTable`). The test ions start
+10 ρ_s out with a Maxwellian at Ti shifted by c_s along B, weighted by
+their speed along B. The field is static, so each hits with its starting
+energy plus the drop, and the flux-weighted mean starting energy is Ti
+(across B) plus an integral over the shifted Maxwellian along B
+(`check_sheath_impacts.py`), about 0.5 Te + 3 Ti in all; the `"formula"`
+energy has 2 Ti. The variants are named by their parts (see
+`reg_sheath_impacts.cpp`): the table and plasma (`const`, `lin`, `bor`,
+`dw`), then the field's angle to the normal (`a<deg>`), Te (`te<Te>`),
+Ti / Te (`ti<r>`, moved onto the impact table's grid) and `formula`. The
+script checks:
+
+- Every `"sheath"` run: no test ion lost, energy conserved to 1e-3 of the
+  drop, and the histograms add up to the ion flux and the source.
+- `const` (Y = 0.02): the same source with both options.
+- `lin` (Y = 1e-3 E / eV, flat in angle): the yield is 1e-3 times the
+  mean impact energy, which is the drop plus the mean starting energy
+  within 4 standard errors (from the spread of the starting energies and
+  the 2000 test ions).
+- `lin_a0`: with B along the normal the field only adds to the speed
+  along it, so the angles follow from the starting Maxwellian and the
+  drop; the flux-weighted mean within 4 standard errors.
+- `bor_a45`, `bor_a60`: the flux-weighted mean angle against the
+  sampler's at the same plasma (`reg_sheath_angles_a<alpha>_sampler`),
+  within 4 standard errors plus 2°. The table takes λ_D / ρ_s to the
+  nearest power of 2, and these cases, with a large Debye length, are
+  sensitive to it: at 45° (λ_D / ρ_s = 0.18) a factor √2 moves the mean
+  angle by up to 2°.
+
+The `dw` runs print the mean impact energy, angle, yield and source with
+both options, not checked.
 
 ### Drifts
 

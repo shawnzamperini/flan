@@ -24,7 +24,7 @@ find_package(MPI REQUIRED)
 # One program per case
 find_package(OpenMP REQUIRED)
 foreach(case reg_friction reg_thermal_force reg_drifts reg_prompt_redep
-		reg_sheath_angles reg_self_sputter)
+		reg_sheath_angles reg_self_sputter reg_sheath_impacts)
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${case}.cpp")
 		add_executable(${case} ${case}.cpp)
 		target_include_directories(${case} PRIVATE "${FLAN_ROOT}/include")

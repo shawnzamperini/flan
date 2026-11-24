@@ -617,12 +617,36 @@ and frame uses its grid point's samples.
     and 144 eV, and the sputtered source is 3.45e16 atoms/s against
     9.84e15, 3.5 times larger. The ions that sputter hit with a median of
     376 eV (all ions 168 eV) at 71°.
-- **D4. Regression.** A constant yield gives Y_eff = Y₀ exactly; a yield
-  linear in E and flat in angle gives back the mean impact energy
-  (within a few percent of the drop + 0.5 Te + 3 Ti, see D2); at normal
-  incidence the source matches `"formula"` with `sput_angle_val` = 0;
-  the 45° and 60° histograms match Borodkina's. D on W at a few Te and
-  field angles is printed, `"formula"` beside `"sheath"`.
+- **D4. Regression.** Done: `reg_sheath_impacts` (slab, 100 W atoms
+  followed briefly, a few seconds a run), `make_impact_tables.py`
+  (constant and linear synthetic D on W tables) and
+  `check_sheath_impacts.py`. Checked, all passing:
+  - every `"sheath"` run: no test ion lost, energy to 1e-3 of the drop,
+    the histograms adding up to the ion flux and the source;
+  - Y = 0.02: the same source as `"formula"` (to 1e-9);
+  - Y = 1e-3 E: Y_eff = 1e-3 times the mean impact energy, and that is
+    the drop plus the flux-weighted mean starting energy, worked out by
+    quadrature over the shifted Maxwellian (instead of the rough
+    0.5 Te + 3 Ti), within 4 standard errors, at θ = 0°, 60°, 85° and
+    Ti / Te = 0.5, 1, 2. A sampler run with 200,000 ions gives the
+    expected energy to 0.1 eV, so the 2000-ion runs' 1 to 2 SE offsets
+    are noise;
+  - θ = 0°: the angle distribution worked out from the drop (B along the
+    normal only speeds the ions up along it), in place of the planned
+    comparison with `"formula"` at 0°, which isn't exact since the ions
+    keep their speed across B and hit at about 21°;
+  - Borodkina's 45° and 60° cases against `reg_sheath_angles`' sampler at
+    the same plasma, in place of her digitised curves (which the sampler
+    is already checked against): 32.1° against 31.0° and 34.4° against
+    34.3°. The 45° difference is the table's grid in λ_D / ρ_s: that
+    case has λ_D / ρ_s = 0.18, moved to 0.25, and there a factor √2
+    moves the mean angle 1.5° to 1.9° (0.3° at the 60° case's 0.011).
+    The check allows 2° on top of 4 SE. A finer grid (a step of 0.5 in
+    log2) would halve this at about twice the points.
+  - Printed, D on W: the sheath source is 1.2 to 1.5 times the
+    formula's at Te = Ti = 100 eV, 2.3 to 2.6 at 50 eV, and 6 to 32 at
+    20 eV, where both are near threshold. At Te = 10 eV every D⁺ hits
+    below threshold with `"sheath"` and Flan stops (source 0).
 - **D5. Docs and a full case.** The D⁺ impact section in
   [Sputtering](../physics/sputtering.md) and the option in
   [Input Options](../input-options.md); TCV-X21 with both options (gross
