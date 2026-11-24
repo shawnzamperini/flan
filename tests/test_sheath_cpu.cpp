@@ -518,3 +518,113 @@ TEST(SheathSubstep, NeededAtLargeSteps)
 	ASSERT_GT(e, 0.0);
 	EXPECT_GT(std::abs(e - gain), 0.05 * gain) << e << " vs " << gain;
 }
+
+// The impact sampler (sample_impacts): D+ test ions from 10 rho_s through
+// either profile, at field angles from normal to past the critical angle.
+// Each hits the wall with its starting energy plus e (phi(start) -
+// phi_wall), to 1e-3 of the drop (B does no work and the field is
+// static), and nearly all of them hit. Weights are the ions' speeds along
+// B toward the wall, so they're positive.
+TEST(SheathImpacts, EnergyConserved)
+{
+	for (const auto m : {Sheath::Model::brooks, Sheath::Model::borodkina})
+	for (const double deg : {0.0, 30.0, 60.0, 85.0, 89.0})
+	{
+		const auto p {params_at(deg)};
+		const auto r {Sheath::sample_impacts(p, m, 200, 7)};
+		EXPECT_EQ(r.num_ions, 200);
+		EXPECT_LE(r.lost, 4) << static_cast<int>(m) << " " << deg;
+		EXPECT_EQ(static_cast<int>(r.hits.size()) + r.lost, 200);
+		EXPECT_LT(r.max_energy_error, 1e-3) << static_cast<int>(m) << " "
+			<< deg;
+		EXPECT_NEAR(r.start_distance, 10.0 * p.rho_s, 1e-15);
+		for (const auto& h : r.hits)
+		{
+			EXPECT_GT(h.weight, 0.0);
+			EXPECT_GE(h.angle, 0.0);
+			EXPECT_LE(h.angle, 90.0);
+			EXPECT_GT(h.energy, -p.phi_wall * 0.99);
+		}
+	}
+}
+
+// At normal incidence E is along B, so neither changes an ion's speed
+// across B: it hits with the speed across B it started with. That's
+// Rayleigh at Ti, mean v_th sqrt(pi / 2), whatever the speed along B (the
+// start only rejects on that), so speed * sin(angle) has that mean. (An
+// ion that starts almost at rest along B can take longer than the
+// sampler follows it, so a few may be lost.)
+TEST(SheathImpacts, NormalIncidence)
+{
+	const auto p {params_at(0.0)};
+	const auto r {Sheath::sample_impacts(p, Sheath::Model::brooks, 4000,
+		3)};
+	const int n {static_cast<int>(r.hits.size())};
+	ASSERT_GE(n, 3990);
+	const double mass {mi_amu * 1.661e-27};
+	const double v_th {std::sqrt(1.602e-19 * 20.0 / mass)};
+	double sum {};
+	for (const auto& h : r.hits)
+	{
+		const double v {std::sqrt(2.0 * h.energy * 1.602e-19 / mass)};
+		sum += v * std::sin(h.angle * pi / 180.0);
+	}
+	// The mean's standard error is about 0.52 v_th / sqrt(n)
+	EXPECT_NEAR(sum / n, v_th * std::sqrt(pi / 2.0),
+		4.0 * 0.52 * v_th / std::sqrt(n));
+}
+
+// The magnetic presheath turns the ions from along B toward the normal,
+// so on average they hit nearer the normal than the field is, for both
+// profiles.
+TEST(SheathImpacts, TurnedTowardNormal)
+{
+	for (const auto m : {Sheath::Model::brooks, Sheath::Model::borodkina})
+	{
+		for (const double deg : {45.0, 60.0, 85.0})
+		{
+			const auto r {Sheath::sample_impacts(params_at(deg), m, 500, 11)};
+			double w {}, mean {};
+			for (const auto& h : r.hits)
+			{
+				w += h.weight;
+				mean += h.weight * h.angle;
+			}
+			mean /= w;
+			EXPECT_LT(mean, deg - 5.0) << static_cast<int>(m) << " " << deg;
+		}
+	}
+}
+
+// Each ion has its own random stream, so the same seed gives the same
+// impacts (whatever the threads), and another seed different ones.
+TEST(SheathImpacts, Reproducible)
+{
+	const auto p {params_at(60.0)};
+	const auto a {Sheath::sample_impacts(p, Sheath::Model::brooks, 100, 5)};
+	const auto b {Sheath::sample_impacts(p, Sheath::Model::brooks, 100, 5)};
+	const auto c {Sheath::sample_impacts(p, Sheath::Model::brooks, 100, 6)};
+	ASSERT_EQ(a.hits.size(), b.hits.size());
+	for (std::size_t k {}; k < a.hits.size(); ++k)
+	{
+		EXPECT_EQ(a.hits[k].energy, b.hits[k].energy);
+		EXPECT_EQ(a.hits[k].angle, b.hits[k].angle);
+		EXPECT_EQ(a.hits[k].weight, b.hits[k].weight);
+	}
+	ASSERT_FALSE(c.hits.empty());
+	EXPECT_NE(a.hits[0].energy, c.hits[0].energy);
+}
+
+// Nothing to push without a plasma, and Params carries what the sampler
+// needs (Ti, B, the ion mass)
+TEST(SheathImpacts, Params)
+{
+	const auto p {params_at(30.0, 10.0)};
+	EXPECT_EQ(p.ti, 10.0);
+	EXPECT_EQ(p.bmag, 2.0);
+	EXPECT_EQ(p.ion_mass_amu, mi_amu);
+	const auto r {Sheath::sample_impacts(Sheath::Params {},
+		Sheath::Model::brooks, 10, 1)};
+	EXPECT_TRUE(r.hits.empty());
+	EXPECT_EQ(r.lost, 10);
+}

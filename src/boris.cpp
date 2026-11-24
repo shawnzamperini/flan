@@ -202,6 +202,45 @@ namespace Boris
 
 
 	/**
+	* The Boris velocity update: half the electric kick, the rotation about
+	* B, then the other half of the electric kick. It conserves energy in a
+	* pure magnetic field and is time reversible, which the near-wall
+	* sub-stepping relies on (see substep_cpu). push_one_cpu and the sheath
+	* impact sampler (Sheath::sample_impacts) both use it, so they push
+	* particles the same way.
+	*
+	* @param v Velocity (m/s), updated in place.
+	* @param E Electric field (V/m).
+	* @param B Magnetic field (T).
+	* @param q_m Charge over mass (C/kg).
+	* @param dt Time step (s). Negative pushes backward.
+	*/
+	void kick(std::array<double, 3>& v, const std::array<double, 3>& E,
+		const std::array<double, 3>& B, const double q_m, const double dt)
+	{
+		// t = q B dt / 2m, and s = 2 t / (1 + t^2)
+		std::array<double, 3> t {};
+		for (int j {}; j < 3; ++j) t[j] = q_m * B[j] * 0.5 * dt;
+		const double tmag2 {t[0] * t[0] + t[1] * t[1] + t[2] * t[2]};
+		std::array<double, 3> s {};
+		for (int j {}; j < 3; ++j) s[j] = 2.0 * t[j] / (1.0 + tmag2);
+
+		// v- (half the electric kick), v' and v+ (the rotation)
+		std::array<double, 3> vminus {};
+		for (int j {}; j < 3; ++j) vminus[j] = v[j] + q_m * E[j] * 0.5 * dt;
+		const std::array<double, 3> vminus_cross_t
+			{Utilities::cross_product(vminus, t)};
+		std::array<double, 3> vprime {};
+		for (int j {}; j < 3; ++j) vprime[j] = vminus[j] + vminus_cross_t[j];
+		const std::array<double, 3> vprime_cross_s
+			{Utilities::cross_product(vprime, s)};
+
+		// v+ and the other half of the electric kick
+		for (int j {}; j < 3; ++j)
+			v[j] = vminus[j] + vprime_cross_s[j] + q_m * E[j] * 0.5 * dt;
+	}
+
+	/**
 	* Advances the velocity of one particle by dt with the Boris algorithm
 	* (see update_velocity_cpu for the method). The particle's cell
 	* indices (tidx, xidx, yidx, zidx) must be those of its position.
@@ -422,45 +461,16 @@ namespace Boris
 			for (int k {}; k < 3; ++k) E_local[k] += e_sh[k];
 		}
 
-		// Normal Boris algorithm continues
-
-		// Store in local variables for conveinence
-		double q_m {slots.q()[i] * -Constants::charge_e / slots.mass()};
+		// Normal Boris algorithm continues. Velocities are stored at the
+		// half time steps before the position: x_i = x(t_i) and
+		// v_i = v(t_i - dt/2).
+		const double q_m {slots.q()[i] * -Constants::charge_e / slots.mass()};
 		std::array<double, 3> v {slots.vX()[i], slots.vY()[i], slots.vZ()[i]};
-
-		// t vector
-		std::array<double, 3> t {};
-		for (int j {}; j < 3; ++j) t[j] = q_m * B_local[j] * 0.5 * dt;
-
-		// Magnitude of t, squared
-		double tmag2 {t[0]*t[0] + t[1]*t[1] + t[2]*t[2]};
-
-		// s vector
-		std::array<double, 3> s {};
-		for (int j {}; j < 3; ++j) s[j] = 2 * t[j] / (1.0 + tmag2);
-
-		// v minus
-		std::array<double, 3> vminus {};
-		for (int j {}; j < 3; ++j) vminus[j] = v[j] + q_m * E_local[j] * 0.5*dt;
-
-		// v prime
-		std::array<double, 3> vprime {};
-		std::array<double, 3> vminus_cross_t {Utilities::cross_product(vminus,	
-			t)};
-		for (int j {}; j < 3; ++j) vprime[j] = vminus[j] + vminus_cross_t[j];
-
-		// v plus
-		std::array<double, 3> vplus {};
-		std::array<double ,3> vprime_cross_s {Utilities::cross_product(vprime, 
-			s)};
-		for (int j {}; j < 3; ++j) vplus[j] = vminus[j] + vprime_cross_s[j];
-
-		// v n+1/2
-		// Note we are storing particle velocity at the half time steps before
-		// the position. I.e., xi = x(ti), vi = v(ti - dt/2). 
-		slots.set_vX(i, vplus[0] + q_m * E_local[0] * 0.5 * dt);
-		slots.set_vY(i, vplus[1] + q_m * E_local[1] * 0.5 * dt);
-		slots.set_vZ(i, vplus[2] + q_m * E_local[2] * 0.5 * dt);
+		kick(v, {E_local[0], E_local[1], E_local[2]},
+			{B_local[0], B_local[1], B_local[2]}, q_m, dt);
+		slots.set_vX(i, v[0]);
+		slots.set_vY(i, v[1]);
+		slots.set_vZ(i, v[2]);
 
 		// Interpolate reciprocal and tangent basis vector at impurity location
 		std::array<double, 9> int_rec_bas {interp_recp(bkg, zone,

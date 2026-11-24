@@ -506,9 +506,83 @@ progress" note and the "sheath is still missing" caveat;
 README the new cases. A HERMES case with sheath and self-sputtering
 shows the net erosion along the targets.
 
+**Phase S8: D⁺ impacts from the sheath model.** The sputtered source
+takes the D⁺ impact energy from a formula (the floating drop, 0.5 Te of
+presheath and a thermal 2 Ti) and every ion hits at `sput_angle_val`
+(60° by default). Pushed through the sheath field, D⁺ hits with about
+the same mean energy, but nearer the normal (about 30° in
+`reg_sheath_angles`), with energy and angle correlated, and near
+threshold the D on W yield depends on the angle. So the source should
+average the yield over the energies and angles the sheath model gives.
+
+The 1-D problem, in units of ρ_s, c_s and Te, depends only on the field
+angle θ_B (which also fixes f_D), Ti / Te and λ_D / ρ_s. So test ions are
+pushed for a grid of those, not per element and frame, and each element
+and frame uses its grid point's samples.
+
+- **D1. Test-ion engine.** Done:
+  - `Sheath::sample_impacts` pushes D⁺ test ions (charge 1) in the 1-D
+    sheath frame: wall at y = 0, uniform B at θ from the normal pointing
+    at the wall, E = `field(p, model, y)` along the normal. They start at
+    10 ρ_s from a Maxwellian at Ti shifted by c_s along B, keeping those
+    moving toward the wall along B, as in `reg_sheath_angles`. It returns
+    each hit's energy, angle from the normal, and weight v · b at the
+    start (the ion's share of the flux into the sheath), with how many
+    were lost and the largest energy error. Each ion has its own random
+    stream, so results don't depend on threads.
+  - The push is the main loop's: the Boris update is now
+    `Boris::kick` (shared by `push_one_cpu`, same arithmetic in the same
+    order) and the sub-step rule a free `Sheath::substeps(Params, ...)`
+    (called by the member), with the same half-step offsets and crossing
+    kick as `Boris::substep_cpu`. The step is 1/100 of a gyroperiod; at
+    1/50 the a60 energy error was 8.6e-4 of the drop, at 1/100 3.8e-4
+    (the main loop's), for the same run time. Ions are lost after 2000
+    gyroperiods or going back past twice their start.
+  - `Params` now carries Ti, |B| and the ion mass, so the sampler needs
+    nothing else and can't be given a Ti that disagrees with ρ_s.
+  - Tests (`test_sheath_cpu.cpp`, `SheathImpacts.*`): energy conserved to
+    1e-3 of the drop and at most 2% lost for both profiles at 0°, 30°,
+    60°, 85° and 89°; at normal incidence the speed across B is the
+    starting Rayleigh one; ions hit nearer the normal than the field
+    (64° to 68° at 85°); reproducible by seed.
+  - `reg_sheath_angles` `a45_sampler` and `a60_sampler`, checked by
+    `check_sheath_angles.py` as the main-loop runs are and against them:
+    mean angles 30.40° and 31.51° against the main loop's 30.42° and
+    31.50°, standard deviations within 0.12°. 2 to 4 seconds against 2
+    to 5 minutes. Weighted by the flux, the means are 31.0° and 34.3°.
+- **D2. Table and the source.** `Sputtering::Source` collects the
+  (θ_B, Ti / Te, λ_D / ρ_s) its elements use, builds a grid over that
+  range at startup (log in λ_D / ρ_s) and runs the sampler on it in
+  parallel. Each element and frame averages Y over its grid point's
+  samples, weighted by the flux, for Y_eff; the ion for each birth (its
+  energy sets the Thompson cut-off) is drawn from the same samples
+  weighted by w Y. Γ is unchanged.
+- **D3. Option and output.** `sput_impact_opt` = `"formula"` (now's
+  behaviour, the default until D4 passes) or `"sheath"`, which uses
+  `sheath_model`'s profile (and `sheath_fd`, `sheath_drop`) and stops
+  with an error if it is `"off"`. Output: the mean D⁺ impact angle per
+  element and frame, D⁺ energy and angle histograms over the run, the
+  grid and sample count; the start-of-run summary prints the mean angle.
+- **D4. Regression.** A constant yield gives Y_eff = Y₀ exactly; a yield
+  linear in E and flat in angle gives back the mean impact energy
+  (within a few percent of 3.3 Te + 2 Ti for D at Ti = Te); at normal
+  incidence the source matches `"formula"` with `sput_angle_val` = 0;
+  the 45° and 60° histograms match Borodkina's. D on W at a few Te and
+  field angles is printed, `"formula"` beside `"sheath"`.
+- **D5. Docs and a full case.** The D⁺ impact section in
+  [Sputtering](../physics/sputtering.md) and the option in
+  [Input Options](../input-options.md); TCV-X21 with both options (gross
+  source, its spread along the targets, net erosion). Then `"sheath"`
+  becomes the default.
+
+Decisions (2026-11-23): the c_s-shifted start, fixed, as in
+`reg_sheath_angles`; the table built at startup, not a file; `"sheath"`
+follows `sheath_model` and refuses `"off"`; `"formula"` stays the
+default until D4 passes; the E × B share of Γ gets the same
+distribution, stated as a limitation.
+
 **Later**: the GPU path (sputtering is CPU only today, so this goes with
-moving the sputtered source to the GPU), reflection, and a sheath for D+
-impact energies from the same model.
+moving the sputtered source to the GPU) and reflection.
 
 ## Phase S0 findings
 

@@ -24,7 +24,13 @@
 *   a45   alpha = 45 degrees, Te = Ti = 30 eV, n = 1e18 m^-3, B = 5 T
 *   a60   alpha = 60 degrees, Te = Ti = 30 eV, n = 1e20 m^-3, B = 3 T
 *
-* (Borodkina and Tsvetkov's two cases). Their paper gives the start only
+* (Borodkina and Tsvetkov's two cases), or a45_sampler or a60_sampler:
+* the same cases, with the ions pushed by Sheath::sample_impacts (the
+* one-dimensional sampler the sputtered source uses for D+ impacts)
+* instead of the main loop's routines. Its output has the same form,
+* plus the mean angle weighted by each ion's share of the flux, so
+* check_sheath_angles.py checks it the same way and against the main
+* loop's. Their paper gives the start only
 * as "a shifted Maxwell velocity distribution" from 10 rho_s. The background is the slab with a
 * wall at y min (slab_wall), set entirely through the slab_* options. The
 * output is reg_sheath_angles_<variant>.txt in the working directory: the
@@ -79,13 +85,16 @@ int main(int argc, char* argv[])
 	MPI_Init(&argc, &argv);
 
 	const std::string variant {argc > 1 ? argv[1] : ""};
+	const bool sampler {variant.ends_with("_sampler")};
+	const std::string base {sampler ? variant.substr(0, variant.size()
+		- std::string("_sampler").size()) : variant};
 	Case c {};
-	if (variant == "a45") c = {45.0, 1e18, 5.0};
-	else if (variant == "a60") c = {60.0, 1e20, 3.0};
+	if (base == "a45") c = {45.0, 1e18, 5.0};
+	else if (base == "a60") c = {60.0, 1e20, 3.0};
 	else
 	{
 		std::cerr << "Usage: reg_sheath_angles <variant>, with <variant> "
-			"a45 or a60\n";
+			"a45, a60, a45_sampler or a60_sampler\n";
 		MPI_Finalize();
 		return 1;
 	}
@@ -113,6 +122,55 @@ int main(int argc, char* argv[])
 	const Sheath::Sheath sheath(surface, bkg, Sheath::Model::borodkina);
 	sheath.print_summary(std::cout);
 	const auto& p {sheath.params(0, 0)};
+	const std::string out {"reg_sheath_angles_" + variant + ".txt"};
+
+	// The same ions through the sampler the sputtered source uses
+	if (sampler)
+	{
+		const auto r {Sheath::sample_impacts(p, Sheath::Model::borodkina,
+			num_ions, 12345)};
+		std::vector<double> hits(90, 0.0);
+		double angle_sum {}, energy_sum {}, w_sum {}, w_angle_sum {};
+		for (const auto& h : r.hits)
+		{
+			hits[std::min(static_cast<int>(h.angle), 89)] += 1.0;
+			angle_sum += h.angle;
+			energy_sum += h.energy;
+			w_sum += h.weight;
+			w_angle_sum += h.weight * h.angle;
+		}
+		const double n_hit {static_cast<double>(r.hits.size())};
+		const double mean_angle {n_hit > 0 ? angle_sum / n_hit : 0.0};
+		const double mean_energy {n_hit > 0 ? energy_sum / n_hit : 0.0};
+		std::ofstream f(out);
+		f << "# D+ impact angles on a wall, Borodkina and Tsvetkov's "
+			"sheath, from Sheath::sample_impacts\n";
+		f << "alpha " << c.alpha << "\n";
+		f << "te " << te << "\n";
+		f << "ti " << te << "\n";
+		f << "ne " << c.ne << "\n";
+		f << "bmag " << c.bmag << "\n";
+		f << "rho_s " << p.rho_s << "\n";
+		f << "lambda_d " << p.lambda_d << "\n";
+		f << "drop " << -p.phi_wall << "\n";
+		f << "num_ions " << num_ions << "\n";
+		f << "hit " << r.hits.size() << "\n";
+		f << "lost " << r.lost << "\n";
+		f << "mean_angle " << mean_angle << "\n";
+		f << "mean_angle_flux " << (w_sum > 0 ? w_angle_sum / w_sum : 0.0)
+			<< "\n";
+		f << "mean_energy " << mean_energy << "\n";
+		f << "max_energy_error " << r.max_energy_error << "\n";
+		f << "# angle_lo count\n";
+		for (int k {}; k < 90; ++k) f << k << " " << hits[k] << "\n";
+		std::cout << out << ": " << r.hits.size() << " of " << num_ions
+			<< " hit the wall, mean angle " << mean_angle << " degrees ("
+			<< (w_sum > 0 ? w_angle_sum / w_sum : 0.0) << " weighted by "
+			"the flux), mean energy " << mean_energy << " eV, energy "
+			"conserved to " << r.max_energy_error << " of the drop\n";
+		MPI_Finalize();
+		return 0;
+	}
 
 	// The ions: 10 rho_s from the wall, Maxwellian at Ti plus c_s along
 	// b, which points toward the wall (its Y part is negative)
@@ -259,7 +317,6 @@ int main(int argc, char* argv[])
 	}
 	n_lost += alive;
 
-	const std::string out {"reg_sheath_angles_" + variant + ".txt"};
 	std::ofstream f(out);
 	f << "# D+ impact angles on a wall, Borodkina and Tsvetkov's sheath\n";
 	f << "alpha " << c.alpha << "\n";

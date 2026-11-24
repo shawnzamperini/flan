@@ -39,6 +39,9 @@ namespace Sheath
 	struct Params
 	{
 		double te {};		///< Electron temperature (eV)
+		double ti {};		///< Ion temperature (eV)
+		double bmag {};		///< Field strength (T)
+		double ion_mass_amu {};	///< Main ion mass (amu)
 		double phi_wall {};	///< Potential at the wall, the floating drop (V)
 		double f_d {};		///< Share of the drop in the Debye sheath
 		double lambda_d {};	///< Electron Debye length (m)
@@ -65,6 +68,37 @@ namespace Sheath
 	double field(const Params& p, Model model, double d);
 
 	double range(const Params& p, Model model, double n_scales = 28.0);
+
+	int substeps(const Params& p, Model model, double d, double speed,
+		double q_over_m, double dt);
+
+	/// One test ion that hit the wall (sample_impacts)
+	struct ImpactSample
+	{
+		double energy {};	///< Kinetic energy when it hit (eV)
+		double angle {};	///< Angle of its velocity from the normal
+							///< (degrees, 0 to 90)
+		double weight {};	///< Its share of the flux into the sheath:
+							///< its speed along B toward the wall at the
+							///< start (m/s)
+	};
+
+	/// What sample_impacts returns
+	struct Impacts
+	{
+		std::vector<ImpactSample> hits {};	///< The ions that hit the wall
+		int num_ions {};			///< Ions started
+		int lost {};				///< Ions that went back out into the
+									///< plasma or ran out of steps
+		double start_distance {};	///< Where they started (m)
+		double max_energy_error {};	///< Most |E - E_start - (phi_start -
+									///< phi_wall)| over the hits, over
+									///< the drop
+	};
+
+	Impacts sample_impacts(const Params& p, Model model, int num_ions,
+		std::uint64_t seed, double start_rho_s = 10.0,
+		int steps_per_gyro = 100, int max_gyros = 2000);
 
 	/**
 	* The sheath field in front of the wall surfaces of a background: the

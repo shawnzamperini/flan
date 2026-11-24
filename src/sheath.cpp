@@ -74,6 +74,9 @@
 * The field is added only in the plasma cells next to the wall (see
 * Sheath::Sheath), so a cell should be several rho_s thick for the field
 * to have died away before its far side.
+*
+* sample_impacts pushes main ions (D+) through the same field in one
+* dimension, to get the energies and angles they hit the wall with.
 */
 #include <algorithm>
 #include <cmath>
@@ -81,8 +84,10 @@
 #include <iostream>
 #include <limits>
 
+#include "boris.h"
 #include "constants.h"
 #include "errors.h"
+#include "pcg32.h"
 #include "sheath.h"
 
 namespace Sheath
@@ -115,6 +120,9 @@ namespace Sheath
 		Params p {};
 		if (!(te > 0.0) || !(ne > 0.0)) return p;
 		p.te = te;
+		p.ti = std::max(ti, 0.0);
+		p.bmag = bmag;
+		p.ion_mass_amu = ion_mass_amu;
 
 		const double mi {ion_mass_amu * Constants::amu_to_kg};
 		const double c_s {std::sqrt(Constants::ev_to_j * (te + std::max(ti,
@@ -551,22 +559,44 @@ namespace Sheath
 		double d {};
 		if (!distance(zone, i, j, k, pos, e, d)) return 1;
 		const int t {std::clamp(frame, 0, m_nframes - 1)};
-		const Params& p {params(t, e)};
-		if (p.te == 0.0) return 1;
+		return ::Sheath::substeps(params(t, e), m_model, d, speed, q_over_m,
+			dt);
+	}
+
+	/**
+	* Number of sub-steps a particle at distance d from a wall needs this
+	* time step, by the rule Sheath::substeps describes (that member finds
+	* the particle's element and distance, then calls this). Kept as a
+	* function of the sheath alone so the impact sampler
+	* (sample_impacts) sub-steps exactly as the main loop does.
+	*
+	* @param p The sheath (make_params).
+	* @param model "brooks" or "borodkina"; "off" gives 1.
+	* @param d Distance from the wall along its normal (m).
+	* @param speed The particle's speed (m/s).
+	* @param q_over_m Its charge over mass (C/kg), > 0 for positive ions.
+	* @param dt The time step (s).
+	* @return The number of sub-steps, 1 if it needs none.
+	*/
+	int substeps(const Params& p, const Model model, const double d,
+		const double speed, const double q_over_m, const double dt)
+	{
+		if (model == Model::off || !(q_over_m > 0.0) || p.te == 0.0)
+			return 1;
 
 		// The fastest it could be going, and how close it could get
-		const double drop {std::max(potential(p, m_model, d) - p.phi_wall,
+		const double drop {std::max(potential(p, model, d) - p.phi_wall,
 			0.0)};
 		const double v_max {speed + std::sqrt(2.0 * q_over_m * drop)};
 		const double reach {v_max * dt};
 		const double nearest {d - reach};
-		if (nearest > range(p, m_model, 7.0)) return 1;
+		if (nearest > range(p, model, 7.0)) return 1;
 
 		// The Debye layer's scale and extent, and the presheath's scale
 		double l_debye {};
 		double debye_edge {};
 		double l_mps {};
-		if (m_model == Model::brooks)
+		if (model == Model::brooks)
 		{
 			l_debye = p.f_d > 0.0 ? 2.0 * p.lambda_d : 0.0;
 			debye_edge = 7.0 * l_debye;
@@ -588,9 +618,197 @@ namespace Sheath
 
 		// At least 2 in the field, so that a particle crossing the wall
 		// gets its impact velocity (see Boris::substep_cpu)
-		const double n {std::ceil(reach / (substep_frac * scale))};
+		const double n {std::ceil(reach / (Sheath::substep_frac * scale))};
 		return static_cast<int>(std::clamp(n, 2.0,
-			static_cast<double>(max_substeps)));
+			static_cast<double>(Sheath::max_substeps)));
+	}
+
+	/**
+	* Pushes main ions (charge 1) through the sheath in front of a flat
+	* wall, as test particles, and returns the energy and angle each hits
+	* the wall with. This is what the sputtering source needs for the ions
+	* that sputter (sput_impact_opt = "sheath"), and reg_sheath_angles
+	* checks it against Borodkina and Tsvetkov's impact angles.
+	*
+	* The problem is one dimensional: the wall is the plane y = 0 with its
+	* normal n = +y, B is uniform at theta from the normal and points
+	* toward the wall, b = (sin theta, -cos theta, 0), and the field is
+	* field(p, model, y) along n. Only y matters, so x and z aren't
+	* followed.
+	*
+	* Each ion starts start_rho_s ion sound gyroradii from the wall, where
+	* the field has died away, with a Maxwellian at Ti shifted by c_s along
+	* b (the Bohm criterion at the entrance of the magnetic presheath).
+	* Only ions moving toward the wall along B enter the sheath, so ions
+	* with v . b <= 0 are drawn again. Their share of the flux into the
+	* sheath goes as v . b, which is each sample's weight: averages over
+	* the ions hitting the wall should weight by it. (Unweighted, the
+	* samples are the ions present at the start, as in Borodkina and
+	* Tsvetkov's figure.)
+	*
+	* The push is the main loop's. Each time step is 1/steps_per_gyro of a
+	* gyroperiod, and an ion near the wall takes the same sub-steps
+	* (substeps) of the same Boris update (Boris::kick), with velocities at
+	* the half steps and the same kick at the crossing, so its velocity is
+	* the one it crossed the wall with (see Boris::substep_cpu). An ion
+	* that goes back out past twice its starting distance, or hasn't hit
+	* the wall after max_gyros gyroperiods, is lost. Ions crawling along a
+	* very grazing field take longest.
+	*
+	* Each ion has its own random stream, (seed, ion index + 1), so the
+	* result doesn't depend on the number of threads.
+	*
+	* @param p The sheath (make_params), with Ti, B and the ion mass.
+	* @param model "brooks" or "borodkina". "off" still pushes the ions,
+	*        with no field.
+	* @param num_ions Number of test ions.
+	* @param seed Seed for the random streams.
+	* @param start_rho_s Starting distance from the wall, in rho_s.
+	* @param steps_per_gyro Time steps per gyroperiod, away from the wall.
+	* @param max_gyros Longest an ion is followed, in gyroperiods.
+	* @return The ions that hit, how many were lost, and the largest error
+	*         in energy conservation as a fraction of the drop.
+	*/
+	Impacts sample_impacts(const Params& p, const Model model,
+		const int num_ions, const std::uint64_t seed,
+		const double start_rho_s, const int steps_per_gyro,
+		const int max_gyros)
+	{
+		Impacts out {};
+		out.num_ions = num_ions;
+		if (p.te == 0.0 || !(p.bmag > 0.0) || !(p.ion_mass_amu > 0.0)
+			|| num_ions <= 0)
+		{
+			out.lost = std::max(num_ions, 0);
+			return out;
+		}
+
+		const double mass {p.ion_mass_amu * Constants::amu_to_kg};
+		const double q_m {Constants::ev_to_j / mass};
+		const double c_s {std::sqrt(Constants::ev_to_j * (p.te + p.ti)
+			/ mass)};
+		const double v_th {std::sqrt(Constants::ev_to_j * p.ti / mass)};
+		const double omega {q_m * p.bmag};
+		const double dt {2.0 * Constants::pi / omega / steps_per_gyro};
+		const long max_steps {static_cast<long>(max_gyros)
+			* steps_per_gyro};
+		const std::array<double, 3> b {std::sin(p.theta),
+			-std::cos(p.theta), 0.0};
+		const std::array<double, 3> bvec {p.bmag * b[0], p.bmag * b[1],
+			0.0};
+		const double y0 {start_rho_s * p.rho_s};
+		const double y_lost {2.0 * y0};
+		const double phi_start {potential(p, model, y0)};
+		const double drop {phi_start - p.phi_wall};
+		out.start_distance = y0;
+
+		auto efield = [&](const double y) -> std::array<double, 3>
+		{
+			return {0.0, field(p, model, std::max(y, 0.0)), 0.0};
+		};
+
+		// Each ion: hit (1), lost (0), and what it hit with
+		std::vector<ImpactSample> sample(num_ions);
+		std::vector<int> hit(num_ions, 0);
+		std::vector<double> error(num_ions, 0.0);
+
+		#pragma omp parallel for schedule(dynamic, 16)
+		for (int k = 0; k < num_ions; ++k)
+		{
+			pcg32 rng(seed, static_cast<std::uint64_t>(k) + 1);
+
+			// Only ions moving toward the wall along B enter
+			std::array<double, 3> v {};
+			double v_par {};
+			do
+			{
+				for (int j {}; j < 3; ++j)
+					v[j] = rng.normal(0.0, v_th) + c_s * b[j];
+				v_par = v[0] * b[0] + v[1] * b[1] + v[2] * b[2];
+			} while (v_par <= 0.0);
+			const double e_start {0.5 * mass * (v[0] * v[0] + v[1] * v[1]
+				+ v[2] * v[2]) / Constants::ev_to_j};
+
+			// Velocities at the half steps, as in the main loop
+			double y {y0};
+			Boris::kick(v, efield(y), bvec, q_m, -0.5 * dt);
+
+			// The kick at the crossing gives the velocity it crossed y = 0
+			// with: f is the fraction of the (sub-)step h at which it
+			// crossed, and v is at the step's middle
+			auto cross = [&](const double before, const double h)
+			{
+				const double f {std::clamp(before / (before - y), 0.0,
+					1.0)};
+				Boris::kick(v, efield(before), bvec, q_m, (f - 0.5) * h);
+			};
+
+			bool done {};
+			for (long step {}; step < max_steps && !done; ++step)
+			{
+				const double speed {std::sqrt(v[0] * v[0] + v[1] * v[1]
+					+ v[2] * v[2])};
+				const int n {substeps(p, model, y, speed, q_m, dt)};
+				if (n <= 1)
+				{
+					Boris::kick(v, efield(y), bvec, q_m, dt);
+					const double before {y};
+					y += v[1] * dt;
+					if (y < 0.0)
+					{
+						cross(before, dt);
+						hit[k] = 1;
+						done = true;
+					}
+				}
+				else
+				{
+					// Sub-steps of h, with v moved from t - dt/2 to
+					// t - h/2 first and back to t + dt/2 at the end
+					const double h {dt / n};
+					Boris::kick(v, efield(y), bvec, q_m, 0.5 * (dt - h));
+					for (int s {}; s < n; ++s)
+					{
+						Boris::kick(v, efield(y), bvec, q_m, h);
+						const double before {y};
+						y += v[1] * h;
+						if (y < 0.0)
+						{
+							cross(before, h);
+							hit[k] = 1;
+							done = true;
+							break;
+						}
+					}
+					if (!done)
+						Boris::kick(v, efield(y), bvec, q_m, -0.5 * (dt - h));
+				}
+				if (!done && y > y_lost) done = true;
+			}
+			if (hit[k] == 0) continue;
+
+			const double speed2 {v[0] * v[0] + v[1] * v[1] + v[2] * v[2]};
+			const double speed {std::sqrt(speed2)};
+			ImpactSample& smp {sample[k]};
+			smp.energy = 0.5 * mass * speed2 / Constants::ev_to_j;
+			smp.angle = std::acos(std::min(std::abs(v[1]) / speed, 1.0))
+				* 180.0 / Constants::pi;
+			smp.weight = v_par;
+			error[k] = drop != 0.0 ? std::abs(smp.energy - e_start - drop)
+				/ std::abs(p.phi_wall) : 0.0;
+		}
+
+		for (int k {}; k < num_ions; ++k)
+		{
+			if (hit[k] == 0)
+			{
+				++out.lost;
+				continue;
+			}
+			out.hits.push_back(sample[k]);
+			out.max_energy_error = std::max(out.max_energy_error, error[k]);
+		}
+		return out;
 	}
 
 	/**

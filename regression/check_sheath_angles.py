@@ -22,6 +22,15 @@ checks per run:
    39 degrees. So the start alone could account for a few degrees, and the
    tolerance on the mean allows for it.
 
+The _sampler variants push the same ions with Sheath::sample_impacts, the
+one-dimensional sampler the sputtered source uses for D+ impacts, instead
+of the main loop's routines. They get the same two checks, and a third
+when the main loop's run of the same case is there too:
+
+3. The sampler against the main loop. The mean and standard deviation of
+   the angle must agree to within 4 standard errors of their difference
+   (the runs use different random numbers) plus 0.2 degrees.
+
 Usage:
     python check_sheath_angles.py [directory with the .txt files]
 
@@ -38,6 +47,7 @@ import numpy as np
 ENERGY_TOL = 1e-3   # of the drop
 MEAN_TOL = 5.0      # degrees
 STD_TOL = 3.0       # degrees
+SAME_TOL = 0.2      # degrees, on top of 4 standard errors
 
 # Borodkina and Tsvetkov's model curves, (theta in degrees, dN/dtheta per
 # degree), read off Fig. 2a
@@ -88,6 +98,8 @@ class Run:
         self.mean = float((self.theta * self.frac).sum())
         self.std = float(np.sqrt(((self.theta - self.mean) ** 2
             * self.frac).sum()))
+        self.n = counts.sum()
+        self.sampler = self.name.endswith("_sampler")
         self.alpha = self.info["alpha"]
         self.model_mean, self.model_std = model_stats(self.alpha)
         self.energy_ok = self.info["max_energy_error"] <= ENERGY_TOL
@@ -104,9 +116,9 @@ def main():
         sys.exit(1)
     runs = [Run(p) for p in paths]
 
-    print("{:<24} {:>5} {:>9} {:>11} {:>11} {:>6}".format("run", "alpha",
+    print("{:<32} {:>5} {:>9} {:>11} {:>11} {:>6}".format("run", "alpha",
         "energy", "mean", "std", ""))
-    print("{:<24} {:>5} {:>9} {:>11} {:>11}".format("", "(deg)",
+    print("{:<32} {:>5} {:>9} {:>11} {:>11}".format("", "(deg)",
         "error", "Flan/model", "Flan/model"))
     checks = 0
     failed = 0
@@ -114,7 +126,7 @@ def main():
         ok = r.energy_ok and r.mean_ok and r.std_ok
         checks += 3
         failed += (not r.energy_ok) + (not r.mean_ok) + (not r.std_ok)
-        print("{:<24} {:5.0f} {:9.1e} {:5.1f}/{:<5.1f} {:5.1f}/{:<5.1f} "
+        print("{:<32} {:5.0f} {:9.1e} {:5.1f}/{:<5.1f} {:5.1f}/{:<5.1f} "
             "{:>6}".format(r.name, r.alpha, r.info["max_energy_error"],
             r.mean, r.model_mean, r.std, r.model_std,
             "pass" if ok else "FAIL"))
@@ -127,12 +139,20 @@ def main():
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(figsize=(5.5, 4))
+        colors = {}
         for r in runs:
+            if r.sampler:
+                continue
             line, = ax.plot(r.theta, r.frac, "-",
                 label="Flan, {:.0f}°".format(r.alpha))
+            colors[r.alpha] = line.get_color()
             t, f = np.array(MODEL[r.alpha]).T
             ax.plot(t, f, "o--", ms=3, color=line.get_color(),
                 label="Borodkina model, {:.0f}°".format(r.alpha))
+        for r in runs:
+            if r.sampler:
+                ax.plot(r.theta, r.frac, ":", color=colors.get(r.alpha),
+                    label="Flan sampler, {:.0f}°".format(r.alpha))
         ax.set_xlabel("angle from the normal (degrees)")
         ax.set_ylabel(r"$dN/d\theta$ (per degree)")
         ax.set_xlim(0, 90)
@@ -143,6 +163,29 @@ def main():
         print("\nPlot: " + out)
     except ImportError:
         print("\nmatplotlib not found, no plot")
+
+    # The sampler against the main loop, case by case
+    loops = {r.alpha: r for r in runs if not r.sampler}
+    for r in runs:
+        if not r.sampler or r.alpha not in loops:
+            continue
+        m = loops[r.alpha]
+        se_mean = np.sqrt(r.std ** 2 / r.n + m.std ** 2 / m.n)
+        # The standard error of a standard deviation is about
+        # std / sqrt(2 n)
+        se_std = np.sqrt(r.std ** 2 / (2 * r.n) + m.std ** 2 / (2 * m.n))
+        mean_ok = abs(r.mean - m.mean) <= 4 * se_mean + SAME_TOL
+        std_ok = abs(r.std - m.std) <= 4 * se_std + SAME_TOL
+        checks += 2
+        failed += (not mean_ok) + (not std_ok)
+        print("{} against {}: mean {:.2f} / {:.2f}, std {:.2f} / {:.2f} "
+            "(tolerance {:.2f} and {:.2f}) {}".format(r.name, m.name,
+            r.mean, m.mean, r.std, m.std, 4 * se_mean + SAME_TOL,
+            4 * se_std + SAME_TOL, "pass" if mean_ok and std_ok
+            else "FAIL"))
+        if "mean_angle_flux" in r.info:
+            print("  weighted by the flux into the sheath: mean "
+                "{:.2f}".format(r.info["mean_angle_flux"]))
 
     print("\n{} of {} checks passed, {} failed".format(checks - failed, checks,
         failed))

@@ -16,7 +16,7 @@ files in this directory are older and are not part of this set.
 | `reg_thermal_force` | Tungsten (or carbon) in a plasma with parallel heat fluxes drifts against them | Drift where friction cancels Z² (β_i ∇T_i + 0.71 ∇T_e), with Stangeby's mass-dependent β_i (2.61 for W in D, 2.05 for C in D) |
 | `reg_drifts` | Gyration, and the ExB, polarization, grad-B and curvature drifts of a single particle, without collisions | Cyclotron frequency and the guiding-center drift formulas |
 | `reg_prompt_redep` | Tungsten sputtered off a wall in a field parallel to it, ionizing to W+ and gyrating, comes back to the wall in its first gyration | Fussmann's prompt redeposition, ⟨r⟩(p) averaged over the exponential distribution of ionization lengths (`fussmann.py`) |
-| `reg_sheath_angles` | D⁺ test ions fall from 10 ρ_s through the `"borodkina"` sheath field onto a wall, with the field at 45° or 60° to the normal | Energy conservation (exactly), and Borodkina and Tsvetkov's impact angle distributions (Fig. 2a of their 2015 paper) |
+| `reg_sheath_angles` | D⁺ test ions fall from 10 ρ_s through the `"borodkina"` sheath field onto a wall, with the field at 45° or 60° to the normal, pushed by the main loop's routines or (`_sampler`) by `Sheath::sample_impacts` | Energy conservation (exactly), Borodkina and Tsvetkov's impact angle distributions (Fig. 2a of their 2015 paper), and the sampler against the main loop |
 | `reg_self_sputter` | Tungsten landing on the wall sputters more tungsten, with a constant yield Y0 (0.5, 1.25) | The weight in each generation, W_{g+1} = Y0 L_g, and the total S f₀ Y0 / (1 − f₁ Y0), with the self-sputtered atoms coming back as often as the D-sputtered ones |
 
 Each case has variants (other charge states, collision sub-cycling off,
@@ -55,7 +55,7 @@ done
 for m in brooks borodkina; do for a in 2 5 10 20; do
     <build dir>/reg_prompt_redep ${m}_a$a
 done; done
-for v in a45 a60; do <build dir>/reg_sheath_angles $v; done
+for v in a45 a60 a45_sampler a60_sampler; do <build dir>/reg_sheath_angles $v; done
 python <flan>/regression/make_self_tables.py
 for v in y05 y125 w_te20 w_te50; do <build dir>/reg_self_sputter $v; done
 ```
@@ -65,7 +65,8 @@ take from seconds to a few minutes each on a laptop, the drift runs about
 a second. The prompt redeposition runs take about one (p01) to several
 (p10) minutes each on 16 cores. Each writes `<case>_<variant>.nc`.
 The sheath angle runs take about 2 (a45) and 4 (a60) minutes on 16
-cores, and write `reg_sheath_angles_<variant>.txt`.
+cores, and a few seconds for the `_sampler` variants, and write
+`reg_sheath_angles_<variant>.txt`.
 
 `reg_prompt_redep` reads the D on W yield table from `data/sputtering/` in
 Flan's directory (set when it's built) and the OpenADAS rates from

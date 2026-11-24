@@ -4,6 +4,7 @@
 */
 #pragma once
 
+#include <array>
 #include <vector>
 
 #include "background.h"
@@ -15,6 +16,9 @@ namespace Sheath {class Sheath;}
 
 namespace Boris
 {
+	void kick(std::array<double, 3>& v, const std::array<double, 3>& E,
+		const std::array<double, 3>& B, double q_m, double dt);
+
 	void update_velocity_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, 
 		const Options::Options& opts,
