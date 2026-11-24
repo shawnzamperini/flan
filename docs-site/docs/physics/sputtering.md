@@ -6,14 +6,15 @@ tungsten from divertor targets. How many atoms come out per incident ion is
 the sputtering yield $Y$, which depends on the projectile, the wall
 material, and the ion's energy and angle of incidence.
 
-!!! note "Work in progress"
-    With `imp_source_opt = "sputter"`, Flan follows the atoms the
-    background plasma sputters off the wall of a SOLEDGE3X background,
-    off the targets of a HERMES background, or off a wall face of the
-    slab background, as this page describes.
-    Sputtering by the impurities themselves, and the sheath's effect on
-    where they redeposit, are planned next (see the
-    [Sheath and Self-Sputtering Plan](../developer/sheath-plan.md)).
+With `imp_source_opt = "sputter"`, Flan follows the atoms the background
+plasma sputters off the wall of a SOLEDGE3X background, off the targets of
+a HERMES background, or off a wall face of the slab background. The
+sheath's electric field pulls the ions they become back to the wall
+([The sheath](#the-sheath)), and with `sput_self = "on"` the impurities
+landing on the wall sputter more of it
+([Self-sputtering](#self-sputtering)). All of this is CPU only. How it
+was built and checked is in the
+[Sheath and Self-Sputtering Plan](../developer/sheath-plan.md).
 
 ## Where the yields come from
 
@@ -145,6 +146,7 @@ with h5py.File("data/sputtering/D_on_W.h5") as f:
 | File | Projectile | Target | Energies | Angles |
 |---|---|---|---|---|
 | `D_on_W.h5` | D | W | 66: 41 from 10 eV to 10 keV, plus 25 from 197 to 672 eV | 20, 0 to 85° every 5°, 87° and 89° |
+| `W_on_W.h5` | W | W | 66: 41 from 10 eV to 10 keV, plus 25 from 17 to 60 eV | 20, as above |
 
 The D on W yields, as a function of energy at a few angles and as a
 function of angle at a few energies (made with `--plot-only` and
@@ -160,6 +162,13 @@ Interpolating this table agrees with RustBCA run at energies and angles
 between the table's points to within the statistical error: within about
 5% above 280 eV, and within the (large) counting error of RustBCA itself
 just above threshold, where the yield is below $10^{-5}$.
+
+W on W (`W_on_W.h5`, for [self-sputtering](#self-sputtering)) has a much
+lower threshold, about 40 eV at normal incidence, since a W projectile
+can give all its energy to a W atom ($\Lambda = 1$). The yield passes 1
+near 900 eV at normal incidence and a few hundred eV at 60°, and reaches
+about 5 at normal incidence and 10 at 60° by 10 keV. Impacts above
+10 keV use the 10 keV yield (see below), and are counted in the output.
 
 ## How Flan uses a table
 
@@ -427,10 +436,235 @@ SOLEDGE3X background, which are inside the material) and
 `redeposited_unassigned` (atoms that went more than a cell into the wall
 in one step, so their element isn't known), and `prompt_total`.
 
-There's no sheath in the background, so atoms close to the wall don't feel
-its strong electric field. Prompt redeposition, of atoms that come back
-within their first gyration after ionizing, is underestimated until the
-sheath is resolved.
+How they hit the wall is tallied too, from each atom's velocity as it's
+absorbed: its kinetic energy, and its angle from the normal of the
+element it lands on. With the [sheath](#the-sheath) on, this is the
+energy and angle it hits with, since the push has carried it through
+the sheath.
+
+| Variable | Shape | Units | Contents |
+|---|---|---|---|
+| `impact_energy_edges` | (impact_energy_edge) | eV | Edges of the energy bins, 20 per decade from 0.01 eV to 100 keV |
+| `impact_energy` | (impact_energy_bin) | atoms/s | Redeposited rate by impact energy |
+| `impact_angle` | (impact_angle_bin) | atoms/s | Redeposited rate by angle from the normal, 1° bins from 0 to 90° |
+| `redeposited_energy` | (element) | eV atoms/s | Rate times impact energy, summed over the atoms landing on the element; over `redeposited`, the mean impact energy there |
+
+with the attributes `mean_impact_energy`, `mean_impact_angle` and
+`mean_lifetime` (the mean time since birth when they landed).
+
+## The sheath
+
+Between the plasma and a wall there is a potential drop of about
+$3T_e/e$, the floating sheath drop, which holds the electrons back so
+that as many leave to the wall as ions. With the field at a grazing angle
+to the wall, it's in two layers: the magnetic presheath (Chodura layer),
+a few ion sound gyroradii $\rho_s = c_s/\Omega_i$ thick, where the ions
+are turned from along $\mathbf{B}$ toward the wall, and the Debye sheath,
+a few Debye lengths $\lambda_D$ thick, next to the wall. Both are far
+thinner than a cell of the background (tens of µm and a fraction of a mm,
+against mm to cm), so the background doesn't hold them. Yet a sputtered W
+atom typically ionizes inside them, and their field pulls the ion back to
+the wall, much harder than its gyration alone would.
+
+`sheath_model` adds this field to the push, as an analytic function of
+the distance $d$ from the wall, in the plasma cells next to a wall. It's
+`"brooks"` by default, and `"off"` leaves it out. The background's own
+field already holds the collisional presheath, so only these two layers
+are added.
+
+### The drop and how it's split
+
+The drop at the wall is the floating drop,
+
+$$
+\phi_\text{wall} = -\frac{T_e}{2e}\ln\!\left(2\pi\frac{m_e}{m_i}\left(1 + \frac{T_i}{T_e}\right)\right),
+$$
+
+with the plasma of the wall element's cell in each background frame
+(about $2.8\,T_e$ for D at $T_i = T_e$). It's split between the layers by
+the angle $\theta$ between the field and the wall's normal (Stangeby,
+2012; Borodkina and Tsvetkov, 2015). The magnetic presheath takes
+$-(T_e/e)\ln\cos\theta$, which grows as the field gets more grazing,
+and the Debye sheath the rest, a share
+
+$$
+f_D = 1 - \frac{\ln\cos\theta}{\lambda_w},\qquad \lambda_w = \frac{e\phi_\text{wall}}{T_e}.
+$$
+
+Past Stangeby's critical angle, where $-\ln\cos\theta$ would be more
+than the whole drop (about 86.5° for D at $T_i = T_e$), $f_D = 0$ and the
+whole drop is in the presheath. Kinetic simulations show the Debye sheath
+fading smoothly toward that angle rather than at it (Coulette and
+Manfredi, 2016), but give no value to hold it at.
+
+`sheath_fd` sets $f_D$ and `sheath_drop` sets $e\phi_\text{wall}/T_e$ in
+place of these, to compare with models that fix them.
+
+### Its shape
+
+The two models differ in how the drop falls off with $d$:
+
+- **`"brooks"`** is Brooks' (1990) two exponentials,
+  $$
+  \phi(d) = f_D\,\phi_\text{wall}\,e^{-d/2\lambda_D} + (1 - f_D)\,\phi_\text{wall}\,e^{-d/\rho_s},
+  $$
+  the form GITR and ERO use, so Flan compares directly with them. Brooks
+  used a constant $f_D$; Flan uses the split above.
+- **`"borodkina"`** is Borodkina and Tsvetkov's (2015) analytic profile: a
+  Debye layer solved from Poisson's equation next to the wall, joined to
+  an exponential presheath with decay length $\rho_s\sin\theta$. It has
+  been checked against PIC simulations. Past the critical angle it's the
+  presheath alone, anchored at the wall. Comparing it with `"brooks"`
+  shows how much a result depends on the profile's shape.
+
+$\rho_s = c_s/\Omega_i$ with $c_s = \sqrt{e(T_e + T_i)/m_i}$, and the
+field is $E = -d\phi/dd$ along the element's normal, pointing at the
+wall. Its integral from the wall out is the whole drop for both models.
+
+### Distance from the wall
+
+Each plasma cell next to a wall knows its wall elements. A particle in
+one of those cells is $d$ from an element's face, measured along the
+element's normal across the cell: the fraction of the way from that face
+to the opposite one, times the cell's thickness along the normal. This
+is exact on the slab and on HERMES's rectangular target cells. On a
+SOLEDGE3X staircase it's the distance along the outline's normal, with
+the same mismatch the [source](#soledge3x-a-wall-mask) has.
+
+The field is only added in the cells next to the wall, so in a cell
+thinner than the sheath it stops at the cell's far side. The share of the
+drop that leaves out is printed at the start of the run (the largest over
+the elements and frames), with a warning when there is any.
+
+### Sub-stepping near the wall
+
+A W ion crosses the Debye sheath in about a nanosecond, which is also a
+usual time step, so a plain push would get the energy it gains in the
+sheath wrong. Each step, a charged particle that could reach the field
+in that step is pushed in $N$ sub-steps instead of one, with $N$ set so
+that no sub-step moves it more than 2% of the scale length of the layer
+it can reach (the Debye sheath's if it can get there in this step, the
+presheath's if not), from its speed plus what the rest of the drop could
+add. $N$ is between 2 and 20000. The sub-steps are Boris pushes like the
+main one, and a particle leaving the grid in one hits the wall with its
+velocity where it crossed. Particles away from the wall don't pay for
+any of this.
+
+So an ion of charge $Z$ falling from rest through the drop hits the wall
+with $Ze\Delta\phi$ to about $10^{-3}$, at time steps from $10^{-10}$
+to $10^{-8}$ s.
+
+### What it leaves out
+
+- **D$^+$ impacts.** The sputtered source still uses the formula for
+  $E_\text{sheath}$ and the fixed angle `sput_angle_val` above, not ions
+  pushed through this field.
+- **The GPU.** Sputtering is CPU only, and a GPU run goes without the
+  sheath, with a warning.
+- **Secondary electron emission**, which would lower the drop.
+
+## Self-sputtering
+
+Tungsten landing on a tungsten wall sputters more tungsten, and more
+easily than deuterium does: a W ion can give a W atom all its energy, so
+the W on W threshold is about 40 eV against 200 eV for D, and its yield
+passes 1 at several hundred eV. A W$^{q+}$ ion falling through the sheath
+gains about $3qT_e$, so at a few tens of eV this is a source of its own,
+and the atoms it sputters can come back and sputter again.
+
+With `sput_self = "on"`, each impurity atom or ion landing on a wall
+element sputters
+
+$$
+Y(E, \theta)
+$$
+
+atoms, from the yield table `sput_self_table_file` (the impurity on the
+wall material, e.g. `data/sputtering/W_on_W.h5`) at its impact energy $E$
+and angle $\theta$ from the element's normal (`Sputtering::SelfSource`).
+It needs `imp_source_opt = "sputter"`, and the table's projectile must be
+the impurity being followed and its target the D table's.
+
+### Impact energy and angle
+
+- **With the sheath on**, both come from the particle's velocity as it
+  hits, since the push has carried it through the sheath.
+- **With it off**, an ion of charge $q$ hasn't fallen through the drop,
+  so $q e\phi_\text{wall}$ is added to its motion along the normal,
+  $v_n' = \sqrt{v_n^2 + 2qe\phi_\text{wall}/m}$, and the angle is from
+  $v_n'$ and its motion along the wall. $\phi_\text{wall}$ is the
+  floating drop alone (or `sheath_drop` $T_e$), the drop the sheath field
+  would have, without the $\tfrac{1}{2}T_e$ of the presheath used for the
+  D$^+$. Neutrals keep their own energy.
+
+### Carrying on as a sputtered atom
+
+New particles aren't added mid-run. Instead the particle that landed
+carries on as one of the atoms it sputtered, standing for all of them by
+its weight. Its weight is the real atoms/s it stands for, so a particle
+of weight $w$ that lands sputters $wY$ atoms/s, and carries on with
+weight $wY$:
+
+1. **Tallies.** $w$ is redeposited on the element (as without
+   self-sputtering), and $wY$ is self-sputtered off it.
+2. **Russian roulette.** If $wY$ is below $w_\text{min}$,
+   `sput_self_min_weight` times the weight of a source particle, the
+   particle carries on with weight $w_\text{min}$ with probability
+   $wY/w_\text{min}$ and ends otherwise. This keeps the expected weight
+   and stops long chains of ever lighter particles from taking the run's
+   time. With $Y = 0$ (below threshold) it ends.
+3. **Where and how.** It starts again as a neutral where it hit, a
+   thousandth of a cell into the plasma cell, with a Thompson energy cut
+   off at $\Lambda E$ ($\Lambda = 1$ for W on W, so up to its whole
+   impact energy) and a cosine direction about the element's normal, as
+   for the [sputtered source](#starting-the-sputtered-atoms). Its time
+   since birth and prompt-return time are reset; the background time goes
+   on.
+4. **Generation.** Its generation goes up by one: 0 for an atom
+   sputtered by D$^+$, $g$ for one self-sputtered $g$ times.
+
+The sputtered source $S$ and the self-sputtered rate
+$T = \sum_{g \ge 1} W_g$, with $W_g$ the weight carried into generation
+$g$, add up to the gross erosion. If a share $f$ of the atoms come back,
+each sputtering $Y$ on average, then $W_{g+1} = fYW_g$ and
+$T = S\,fY/(1 - fY)$. The multiplication $M = T/(S + T)$ is $fY$ in that
+case. As $fY$ nears 1 the chains get long, and at 1 or more they don't
+end: the self-sputtering avalanche, where the wall erodes faster and
+faster. A particle reaching `sput_self_max_gen` generations stops the run
+with a message giving the multiplication measured along the chains, the
+mean yield and the mean impact energy, rather than running on. With
+roulette, a chain survives each generation with probability about
+$\min(f, fY)$, so long chains only happen when that's near 1.
+
+### Output
+
+In the `sputtering` group:
+
+| Variable | Shape | Units | Contents |
+|---|---|---|---|
+| `self_sputtered` | (element) | atoms/s | Rate self-sputtered off the element |
+| `net_erosion_self` | (element) | atoms/s | `source_mean + self_sputtered - redeposited`, the net erosion with self-sputtering |
+| `generation_weight` | (generation) | atoms/s | Rate carried into each generation; 0 is the D$^+$ source |
+| `generation_landed` | (generation) | atoms/s | Rate landing on the wall from each generation |
+
+and the attributes `self_sputtered_total`, `self_landed`,
+`self_mean_yield`, `self_mean_impact_energy` and `self_mean_impact_angle`
+(over what landed), `self_multiplication` ($T/(S + T)$),
+`self_chain_multiplication` (from the generations,
+$\sum_{g \ge 2} W_g / \sum_{g \ge 1} W_g$), `self_roulette_lost` (the
+rate roulette ended), `self_min_weight`, and `self_num_below_threshold`
+and `self_num_above_table` (landings below the table's lowest energy, with
+$Y = 0$, and above its highest, with the highest energy's yield). The
+`fates_self_sputtered` attribute counts the particles that carried on.
+`net_erosion` and `redeposited` count every generation, so with
+self-sputtering the redeposited rate can be more than the D$^+$ source.
+
+A summary is printed at the end of the run: $T$ and $T/S$, the
+multiplication both ways, what landed with its mean yield, energy and
+angle, the deepest generation and what roulette ended.
+
+While the last chains finish, no new particles start, so the progress
+line can stay at the same "% remaining" for a while.
 
 ## Running a case and what to expect
 
@@ -460,12 +694,17 @@ python python/plot_sputtering.py case.nc --mesh /path/to/mesh_S3X.h5 --save case
 ```
 
 `--mesh` (a SOLEDGE3X mesh file) only draws the wall outline, so leave it
-out for a HERMES run. It prints the source, the share redeposited, what happened to the
-particles, the mean time a particle was followed and the impurity
-inventory per zone and above the X-point, checked against the source
-times the mean time followed. It plots the gross and net erosion along
-the wall, when the redeposited atoms landed (with the gyroperiod of a
-singly charged ion at the strongest source marked) and their charge.
+out for a HERMES run. It prints the source, the share redeposited and
+what it hit the wall with, the self-sputtered rate and multiplication
+(with `sput_self = "on"`), what happened to the particles, the mean time
+a particle was followed and the impurity inventory per zone and above the
+X-point, checked against the source times the mean time followed. It
+plots the gross and net erosion along the wall (with self-sputtering,
+gross counts the self-sputtered atoms and net is `net_erosion_self`),
+when the redeposited atoms landed (with the gyroperiod of a singly
+charged ion at the strongest source marked) and their charge. On a
+HERMES run it also plots the sputtered, self-sputtered, redeposited and
+net rates along each target. It reads multi-zone runs only.
 `python/plot_multizone.py` shows the impurity density.
 
 ### What to expect
@@ -488,12 +727,17 @@ For deuterium sputtering tungsten near threshold:
 - **The ones that get away set the leakage.** The few percent that
   escape prompt redeposition carry the impurity along the field lines,
   and where they go is decided by the parallel forces on them.
-- **The sheath is still missing.** Without the sheath's electric field,
-  fewer ions are pulled back to the wall right away, so prompt
-  redeposition is underestimated and more atoms escape than should. It is
-  planned. Until then, the redeposited share and the prompt landing times
-  are the most trustworthy results, and the impurity away from the targets
-  is the least.
+- **The sheath raises prompt redeposition.** Its field pulls the ions
+  back to the wall faster than their gyration would, more so the more
+  grazing the field. With `sheath_model = "off"` prompt redeposition is
+  underestimated and more atoms escape than should.
+- **Self-sputtering depends steeply on $T_e$.** The ions landing on the
+  wall have a few times $qT_e$, and the W on W yield rises steeply over
+  tens to hundreds of eV, so the multiplication is small at low $T_e$ and
+  grows fast with it. The mean impact energy of what lands can be well
+  below $q\phi_\text{wall} + 2T_i$ for the mean charge: atoms that ionize
+  inside the sheath gain only the part of the drop between there and the
+  wall, and some land as neutrals.
 - **The thermal force is included when the background has heat fluxes.**
   The ions that escape are pushed along the field toward higher
   temperature, which competes with the friction with the main ion flow
@@ -579,6 +823,9 @@ command that made it in the commit message.
 
 ## Validation
 
+All of these are regression cases on the slab background, described in
+`regression/README.md` with their checkers.
+
 ### Prompt redeposition without a sheath
 
 The regression case `reg_prompt_redep` (see `regression/README.md`)
@@ -588,6 +835,39 @@ $\langle r\rangle(p)$ for p from about 0.1 to 10. To match the model,
 ionization stops at W$^+$ (`imp_iz_max_charge = 1`): W$^+$ would
 otherwise ionize again about $2\pi(S_1/S_0)/p$ times per gyration, which
 the model leaves out.
+
+### The sheath
+
+- **Energy.** Unit tests release ions of charge 1 and 4 at rest in front
+  of the wall, with the field at 30°, and check that they hit it with
+  $Ze\Delta\phi$ to $10^{-3}$, for both models and time steps from
+  $10^{-10}$ to $10^{-8}$ s.
+- **Impact angles.** `reg_sheath_angles` pushes D$^+$ test ions from
+  $10\rho_s$ through the `"borodkina"` field, as the main loop does, and
+  compares their impact angles with Borodkina and Tsvetkov's PIC-checked
+  distributions at 45° and 60°. Energy is conserved to $4\times10^{-4}$ of
+  the drop. The distributions agree in shape and width, and their means to
+  within a few degrees, which is how much the mean moves with how the ions
+  start (the paper doesn't say exactly).
+- **Prompt redeposition.** `reg_prompt_redep`'s `drop0` variant has the
+  sheath on with almost no drop and recovers Fussmann's model. Its
+  variants at field angles from 2° to 20° show how much the sheath raises
+  prompt redeposition, and that `"brooks"` and `"borodkina"` give nearly
+  the same answer.
+
+### Self-sputtering
+
+`reg_self_sputter` runs the prompt redeposition case with self-sputtering
+and a constant yield $Y_0$ (0.5 and 1.25), for which the chain can be
+worked out from the run's own tallies: each generation carries
+$W_{g+1} = Y_0 L_g$, with $L_g$ the rate landing from generation $g$,
+exactly without roulette and within its counting error with it; the
+self-sputtered atoms come back as often as the D-sputtered ones (prompt
+redeposition doesn't depend on an atom's speed); and
+$T = S f_0 Y_0/(1 - f_1 Y_0)$, with $f_0$ and $f_1$ the shares of the
+first two generations that come back. Variants with the W on W table and
+the sheath on at a few $T_e$ are printed beside a rough estimate of the
+yield, not checked.
 
 ### Yields
 
@@ -621,10 +901,14 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
   For D on W this is the energy range that matters most at typical
   divertor temperatures, so the uncertainty in the yield is largest where
   it counts.
-- **No sputtering by the impurities themselves** (self-sputtering) or by
-  other impurities in the plasma yet.
-- **Fixed angle of incidence.** Every ion hits at `sput_angle_val`. In
-  reality the angle depends on the field angle and the sheath.
+- **No sputtering by other impurities** in the plasma, or by the
+  followed impurity on a wall of another material, and no reflection:
+  an impurity that hits the wall either sticks or (with self-sputtering)
+  carries on as a sputtered atom.
+- **Fixed angle of incidence for D$^+$.** Every D$^+$ ion hits at
+  `sput_angle_val`, and with the impact energy from the formula. In
+  reality both depend on the field angle and the sheath. The impurities'
+  own impacts do come from the push.
 - **Atoms start on the staircase.** An atom starts at a staircase face,
   but its direction is about the outline's normal, which can be tilted
   from the face's. A direction that points back through the face goes
@@ -635,7 +919,8 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
 - **Sputtered atoms' distributions.** The Thompson energy and cosine
   angle distributions are the usual approximations. RustBCA could give the
   real distributions for each impact energy and angle instead.
-- **No sheath yet.** See [What to expect](#what-to-expect).
+- **CPU only.** Sputtering, the sheath and self-sputtering don't run on
+  the GPU yet.
 
 ## References
 
@@ -651,3 +936,14 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
 - G. Fussmann et al., "High-Z elements as target materials in fusion
   devices", in *Plasma Physics and Controlled Nuclear Fusion Research
   1994*, IAEA, Vol. 2, p. 143 (1995).
+- J. N. Brooks, "Near-surface sputtered particle transport for an oblique
+  incidence magnetic field plasma", *Phys. Fluids B* **2**, 1858 (1990).
+- I. E. Borodkina and I. V. Tsvetkov, "Modelling of charged particle
+  dynamics in the sheath and plasma-facing surface sputtering", *Physics
+  Procedia* **71**, 25 (2015).
+- P. C. Stangeby, "The Chodura sheath for angles of a few degrees between
+  the magnetic field and the surface of divertor targets and limiters",
+  *Nucl. Fusion* **52**, 083012 (2012).
+- D. Coulette and G. Manfredi, "Kinetic simulations of the Chodura and
+  Debye sheaths for magnetic fields with grazing incidence", *Plasma Phys.
+  Control. Fusion* (2016), arXiv:1509.04479.

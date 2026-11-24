@@ -476,7 +476,30 @@ The plan was:
   Te, against Y averaged over the impact energies 3 Z Te + 2 Ti and the
   charges the ions land with.
 
-**Phase S7: docs and a full case.** [Sputtering](../physics/sputtering.md)
+**Phase S7: docs and a full case.** Done:
+
+- [Sputtering](../physics/sputtering.md): "The sheath" and
+  "Self-sputtering" sections, the impact tallies under Redeposition, the
+  W on W table, the sheath and self-sputtering regressions under
+  Validation, and the "work in progress" note and the "sheath is still
+  missing" caveats replaced. [Input Options](../input-options.md) and the
+  regression README got the new options and cases in S3 to S6.
+  [Code Structure](code-structure.md) says where the source, the sheath
+  and self-sputtering hook into the main loop.
+- `python/plot_sputtering.py` prints the impact means, the self-sputtered
+  rate, multiplication and generations, counts self-sputtering in the
+  erosion maps, and plots the sputtered, self-sputtered, redeposited and
+  net rates along each target (`_targets.png`, for runs with at most 8
+  targets).
+- HERMES (TCV-X21 turbulence background, sputtered targets, `"brooks"`
+  sheath, 10⁴ W for 20 μs, W_on_W.h5), with self-sputtering off and on:
+  T / S = 0.018 (mean yield 0.026 at 75 eV and 18° from the normal, down
+  to generation 3); 68% of what is sputtered comes back either way; the
+  net erosion over the targets goes from 3.16e15 to 3.22e15 atoms/s, about
+  2%, about the statistical noise at 10⁴ particles. Self-sputtering
+  is strongest where the D sputtering is. 14 and 12 minutes on 16 cores.
+
+The plan was: [Sputtering](../physics/sputtering.md)
 gets the sheath and self-sputtering sections in place of the "work in
 progress" note and the "sheath is still missing" caveat;
 [Input Options](../input-options.md) the new options; the regression

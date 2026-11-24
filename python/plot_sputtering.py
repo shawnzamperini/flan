@@ -8,13 +8,20 @@ impurity inventory) and prints:
 
  - the sputtered source, the share redeposited, and what happened to the
    particles (fates);
+ - what the redeposited atoms hit the wall with, and with self-sputtering
+   (sput_self = "on") the self-sputtered rate, the multiplication and the
+   generations;
  - the mean time a particle was followed, and the impurity inventory per
    zone and away from the divertor, checked against source x time;
 
 and plots:
 
  - the gross erosion and net erosion per unit area along the wall in the
-   (R, Z) plane, summed over the toroidal cells;
+   (R, Z) plane, summed over the toroidal cells (gross counting the
+   self-sputtered atoms too, when there are any);
+ - the same along each target, against the distance along it, with the
+   sputtered, self-sputtered and redeposited rates (for runs with at most
+   8 targets, such as HERMES; a SOLEDGE3X staircase has too many pieces);
  - how long after being sputtered the redeposited atoms landed, with the
    gyroperiod of a singly charged ion at the strongest source marked;
  - their charge when they landed.
@@ -163,13 +170,31 @@ def print_summary(run, upper=False):
 	a = run["attrs"]
 	S = a["source_rate"]
 	print("Sputtered source:      {:.3e} atoms/s".format(S))
+	if "self_sputtered_total" in a:
+		T = a["self_sputtered_total"]
+		gen = np.nonzero(run["generation_weight"])[0]
+		print("Self-sputtered:        {:.3e} atoms/s ({:.3g} times the "
+			"source), multiplication {:.3g} (along the chains {:.3g})".format(
+			T, T / S, a["self_multiplication"],
+			a["self_chain_multiplication"]))
+		print("  mean yield {:.3g} at {:.3g} eV and {:.3g} degrees, down to "
+			"generation {}, {:.3e} atoms/s ended by roulette".format(
+			a["self_mean_yield"], a["self_mean_impact_energy"],
+			a["self_mean_impact_angle"], gen.max() if len(gen) else 0,
+			a["self_roulette_lost"]))
 	if "redeposited_total" in a:
 		redep = a["redeposited_total"]
 		print("Redeposited:           {:.3e} atoms/s ({:.1f}% of the "
-			"source)".format(redep, 100 * redep / S))
+			"source{})".format(redep, 100 * redep / S,
+			", every generation" if "self_sputtered_total" in a else ""))
 		print("  at wall faces:       {:.1f}%, into wall cells with no "
 			"element: {:.1f}%".format(100 * a["redeposited_wall_face"] / S,
 			100 * a["redeposited_unassigned"] / S))
+	if "mean_impact_energy" in a:
+		print("  hitting with:        {:.3g} eV, {:.3g} degrees from the "
+			"normal, {:.3g} us after birth (means)".format(
+			a["mean_impact_energy"], a["mean_impact_angle"],
+			a["mean_lifetime"] * 1e6))
 
 	fates = {k[len("fates_"):]: int(v) for k, v in a.items()
 		if k.startswith("fates_")}
@@ -177,7 +202,7 @@ def print_summary(run, upper=False):
 		print("Particle fates (of {} particles):".format(run["imp_num"]))
 		for k, v in fates.items():
 			if v:
-				print("  {:<12} {}".format(k, v))
+				print("  {:<15} {}".format(k, v))
 
 	# Mean time followed: every recorded step is one time step of one
 	# particle (assumes a constant time step)
@@ -199,8 +224,14 @@ def print_summary(run, upper=False):
 			above = zd["Z_cen"][:, :, None] > z_x
 			away += inv[(above if not upper else ~above)
 				& np.ones_like(inv, bool)].sum()
+	# Source x mean time followed assumes every particle carries the
+	# source's weight all its life. A self-sputtered particle carries on
+	# with weight w Y, mostly less, so with self-sputtering it's only a
+	# rough check.
 	print("Impurity inventory:    {:.3e} atoms, time-averaged (source x "
-		"mean time followed = {:.3e})".format(total, S * t_mean))
+		"mean time followed = {:.3e}{})".format(total, S * t_mean,
+		", not exact with self-sputtering, as the weights change"
+		if "self_sputtered_total" in a else ""))
 	for z, inv in per_zone.items():
 		if inv > 0:
 			print("  zone {:>2}: {:.3e} ({:.1f}%)".format(z, inv,
@@ -210,30 +241,108 @@ def print_summary(run, upper=False):
 			"below" if upper else "above", z_x, 100 * away / total))
 
 
+def wall_places(run):
+	"""
+	Groups the wall elements into places: elements at the same zone, cell
+	and face in every toroidal cell are one place.
+
+	Inputs
+	 - run (dict) : From load_run.
+
+	Returns the index of each place's first element, and the place of each
+	element.
+	"""
+	key = np.stack([run["zone"], run["i"], run["j"], run["face"]], axis=1)
+	_, first, inverse = np.unique(key, axis=0, return_index=True,
+		return_inverse=True)
+	return first, inverse.ravel()
+
+
+def per_area(run, inverse, name):
+	"""
+	A rate per element summed over each place, per unit area of the place
+	(atoms m^-2 s^-1), or None if the run doesn't have it.
+
+	Inputs
+	 - run (dict)          : From load_run.
+	 - inverse (array)     : Place of each element, from wall_places.
+	 - name (str or array) : Variable in the sputtering group, or the rates
+	                         per element themselves.
+	"""
+	rate = run.get(name) if isinstance(name, str) else name
+	if rate is None:
+		return None
+	area = np.bincount(inverse, weights=run["area"])
+	summed = np.bincount(inverse, weights=rate)
+	with np.errstate(invalid="ignore", divide="ignore"):
+		return np.where(area > 0, summed / area, 0.0)
+
+
 def wall_maps(run):
 	"""
 	Gross and net erosion per unit area at each place on the wall, summed
 	over the toroidal cells.
 
+	With self-sputtering, the gross erosion counts the self-sputtered
+	atoms as well as those the plasma sputters, and the net erosion is
+	net_erosion_self (source + self-sputtered - redeposited).
+
 	Inputs
 	 - run (dict) : From load_run.
 
 	Returns R and Z of each place (m), and the gross and net erosion per
-	unit area there (atoms m^-2 s^-1). Elements at the same zone, cell
-	and face in every toroidal cell are one place.
+	unit area there (atoms m^-2 s^-1).
 	"""
-	key = np.stack([run["zone"], run["i"], run["j"], run["face"]], axis=1)
-	_, first, inverse = np.unique(key, axis=0, return_index=True,
-		return_inverse=True)
-	inverse = inverse.ravel()
-	area = np.bincount(inverse, weights=run["area"])
-	gross = np.bincount(inverse, weights=run["source_mean"])
-	net = np.bincount(inverse, weights=run.get("net_erosion",
+	first, inverse = wall_places(run)
+	gross = run["source_mean"] + run.get("self_sputtered", 0.0)
+	net = run.get("net_erosion_self", run.get("net_erosion",
 		run["source_mean"]))
-	with np.errstate(invalid="ignore", divide="ignore"):
-		return (run["R_mid"][first], run["Z_mid"][first],
-			np.where(area > 0, gross / area, 0.0),
-			np.where(area > 0, net / area, 0.0))
+	return (run["R_mid"][first], run["Z_mid"][first],
+		per_area(run, inverse, gross), per_area(run, inverse, net))
+
+
+def target_profiles(run, max_targets=8):
+	"""
+	The erosion along each target: the places of each zone and face,
+	ordered by their cell index along the target, against the distance
+	along it. A HERMES target is the y end of a zone, so its places run
+	along x.
+
+	Inputs
+	 - run (dict)        : From load_run.
+	 - max_targets (int) : Return None if there are more targets than this
+	                       (a SOLEDGE3X staircase is many short pieces).
+
+	Returns a list of dictionaries, one per target, with its zone and face,
+	the distance along it from its first place (m), and per unit area the
+	sputtered ("source"), self-sputtered, redeposited and net rates
+	(atoms m^-2 s^-1; self-sputtered None without self-sputtering). Or
+	None.
+	"""
+	first, inverse = wall_places(run)
+	zone, face = run["zone"][first], run["face"][first]
+	groups = sorted(set(zip(zone.tolist(), face.tolist())))
+	if len(groups) > max_targets:
+		return None
+	rates = {
+		"source": per_area(run, inverse, "source_mean"),
+		"self": per_area(run, inverse, "self_sputtered"),
+		"redeposited": per_area(run, inverse, "redeposited"),
+	}
+	net = run.get("net_erosion_self", run.get("net_erosion"))
+	rates["net"] = None if net is None else per_area(run, inverse, net)
+	R, Z = run["R_mid"][first], run["Z_mid"][first]
+	out = []
+	for z, f in groups:
+		sel = np.nonzero((zone == z) & (face == f))[0]
+		sel = sel[np.lexsort((run["j"][first][sel], run["i"][first][sel]))]
+		step = np.hypot(np.diff(R[sel]), np.diff(Z[sel]))
+		prof = {"zone": z, "face": f,
+			"dist": np.concatenate([[0.0], np.cumsum(step)])}
+		for k, v in rates.items():
+			prof[k] = None if v is None else v[sel]
+		out.append(prof)
+	return out
 
 
 def gyroperiod(run):
@@ -257,8 +366,8 @@ def plot_all(run, mesh_path=None, save=None):
 	 - run (dict)          : From load_run.
 	 - mesh_path (str)     : SOLEDGE3X mesh file, for the wall outline.
 	 - save (str or None)  : Prefix to save the figures to
-	                         ({save}_erosion.png, {save}_landing.png). None
-	                         shows them.
+	                         ({save}_erosion.png, {save}_landing.png and
+	                         {save}_targets.png). None shows them.
 	"""
 	walls = []
 	if mesh_path is not None:
@@ -330,10 +439,48 @@ def plot_all(run, mesh_path=None, save=None):
 		ax4.set_title("Charge of the redeposited atoms")
 	fig2.tight_layout()
 
+	# Along each target
+	profs = target_profiles(run)
+	fig3 = None
+	if profs:
+		ncol = min(len(profs), 2)
+		nrow = (len(profs) + ncol - 1) // ncol
+		fig3, axs = plt.subplots(nrow, ncol, figsize=(5.5 * ncol, 3.8 * nrow),
+			squeeze=False)
+
+		# One linear range about 0 for every target, so they compare, at
+		# 1e-4 of the strongest sputtering
+		top = max(np.abs(p["source"]).max() for p in profs)
+		linthresh = max(top * 1e-4, 1.0)
+		face_names = ["xmin", "xmax", "ymin", "ymax", "zmin", "zmax"]
+		for ax, p in zip(axs.ravel(), profs):
+			d = p["dist"] * 100
+			ax.plot(d, p["source"], label="sputtered by the plasma")
+			if p["self"] is not None:
+				ax.plot(d, p["self"], label="self-sputtered")
+			if p["redeposited"] is not None:
+				ax.plot(d, p["redeposited"], label="redeposited")
+			if p["net"] is not None:
+				ax.plot(d, p["net"], color="k", label="net erosion")
+			ax.axhline(0, color="0.6", lw=0.5)
+			ax.set_yscale("symlog", linthresh=linthresh)
+			ax.set_xlabel("Distance along the target (cm)")
+			ax.set_ylabel("atoms m$^{-2}$ s$^{-1}$")
+			ax.set_title("Zone {}, {} face".format(p["zone"],
+				face_names[p["face"]]))
+		for ax in axs.ravel()[len(profs):]:
+			ax.set_visible(False)
+		axs.ravel()[0].legend(fontsize=8)
+		fig3.tight_layout()
+
 	if save is not None:
 		fig1.savefig(save + "_erosion.png", dpi=150)
 		fig2.savefig(save + "_landing.png", dpi=150)
-		print("Saved {}_erosion.png and {}_landing.png".format(save, save))
+		names = [save + "_erosion.png", save + "_landing.png"]
+		if fig3 is not None:
+			fig3.savefig(save + "_targets.png", dpi=150)
+			names.append(save + "_targets.png")
+		print("Saved " + ", ".join(names))
 	else:
 		plt.show()
 
