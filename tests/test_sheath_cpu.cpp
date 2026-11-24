@@ -628,3 +628,88 @@ TEST(SheathImpacts, Params)
 	EXPECT_TRUE(r.hits.empty());
 	EXPECT_EQ(r.lost, 10);
 }
+
+// The impact table's grid: sheaths within half a step of each other in
+// theta, ln(Ti / Te) and log2(lambda_D / rho_s) share a point, others
+// don't, and a point's sheath has its grid values. No sheath (no
+// plasma) gives no point.
+TEST(SheathImpactTable, Points)
+{
+	Sheath::ImpactTable table(Sheath::Model::brooks, me_amu, mi_amu);
+	const int a {table.add(params_at(60.0))};
+	EXPECT_EQ(a, 0);
+	EXPECT_EQ(table.add(params_at(60.2)), a);
+	EXPECT_EQ(table.add(params_at(60.0, 20.5)), a);
+	EXPECT_NE(table.add(params_at(61.0)), a);
+	EXPECT_NE(table.add(params_at(60.0, 30.0)), a);
+	EXPECT_EQ(table.add(Sheath::Params {}), -1);
+	EXPECT_EQ(table.size(), 3u);
+	EXPECT_FALSE(table.built());
+
+	// Grazing beyond 89.75 degrees is held at 89.5
+	EXPECT_EQ(table.add(params_at(89.9)), table.add(params_at(89.5)));
+
+	const auto v {table.point_values(a)};
+	EXPECT_NEAR(v[0], 60.0, 1e-12);
+	EXPECT_NEAR(v[1], 1.0, 1e-12);
+	const auto p0 {params_at(60.0)};
+	EXPECT_NEAR(std::log2(v[2]), std::round(std::log2(p0.lambda_d
+		/ p0.rho_s)), 1e-12);
+	const auto p {table.point_params(a)};
+	EXPECT_NEAR(p.theta * 180.0 / pi, 60.0, 1e-9);
+	EXPECT_NEAR(p.ti / p.te, 1.0, 1e-12);
+	EXPECT_NEAR(p.lambda_d / p.rho_s, v[2], 1e-9 * v[2]);
+	EXPECT_EQ(p.ion_mass_amu, mi_amu);
+}
+
+// Impacts scale with Te: a sheath at Te = Ti = 40 eV with a point's
+// three numbers gives the point's energies (over Te) times 40, and the
+// same angles, to within the statistical error. The table's weights add
+// up to 1.
+TEST(SheathImpactTable, ScalesWithTe)
+{
+	Sheath::ImpactTable table(Sheath::Model::borodkina, me_amu, mi_amu,
+		-1.0, -1.0, 2000, 3);
+	const int point {table.add(params_at(60.0))};
+	table.build();
+	ASSERT_TRUE(table.built());
+	const auto& smp {table.samples(point)};
+	ASSERT_GT(smp.size(), 1900u);
+	double w {}, e_tab {}, a_tab {};
+	for (const auto& s : smp)
+	{
+		w += s.weight;
+		e_tab += s.weight * s.energy;
+		a_tab += s.weight * s.angle;
+	}
+	EXPECT_NEAR(w, 1.0, 1e-12);
+
+	// The same three numbers at 40 eV, 3 T: n_e from lambda_D / rho_s
+	const auto [deg, ti_te, ratio] {table.point_values(point)};
+	const double te {40.0};
+	const double mi {mi_amu * 1.661e-27};
+	const double rho_s {std::sqrt(1.602e-19 * 2.0 * te / mi)
+		/ (1.602e-19 * 3.0 / mi)};
+	const double ne {8.85e-12 * te / (1.602e-19 * ratio * rho_s * ratio
+		* rho_s)};
+	const auto p {Sheath::make_params(te, ti_te * te, ne, 3.0,
+		std::cos(deg * pi / 180.0), me_amu, mi_amu)};
+	EXPECT_NEAR(p.lambda_d / p.rho_s, ratio, 1e-3 * ratio);
+	const auto r {Sheath::sample_impacts(p, Sheath::Model::borodkina, 2000,
+		99)};
+	double w2 {}, e2 {}, a2 {}, a2sq {};
+	for (const auto& h : r.hits)
+	{
+		w2 += h.weight;
+		e2 += h.weight * h.energy;
+		a2 += h.weight * h.angle;
+		a2sq += h.weight * h.angle * h.angle;
+	}
+	e2 /= w2;
+	a2 /= w2;
+	const double sd {std::sqrt(a2sq / w2 - a2 * a2)};
+
+	// Two independent samples of 2000: a few standard errors
+	EXPECT_NEAR(a_tab, a2, 5.0 * sd * std::sqrt(2.0 / 2000.0));
+	EXPECT_NEAR(e_tab * te, e2, 0.03 * e2);
+}

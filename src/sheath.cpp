@@ -812,6 +812,176 @@ namespace Sheath
 	}
 
 	/**
+	* An empty table of D+ impacts for the given sheath. Points are added
+	* with add and sampled with build.
+	*
+	* @param model "brooks" or "borodkina", the profile the ions fall
+	*        through.
+	* @param elec_mass_amu Electron mass (amu).
+	* @param ion_mass_amu Main ion mass (amu).
+	* @param f_d The sheath_fd option (-1 for the split from the angle).
+	* @param drop_te The sheath_drop option (-1 for the floating drop).
+	* @param num_ions Test ions per point.
+	* @param seed Seed for the points' random streams.
+	*/
+	ImpactTable::ImpactTable(const Model model, const double elec_mass_amu,
+		const double ion_mass_amu, const double f_d, const double drop_te,
+		const int num_ions, const std::uint64_t seed)
+		: m_model {model}, m_me_amu {elec_mass_amu},
+		m_mi_amu {ion_mass_amu}, m_f_d {f_d}, m_drop_te {drop_te},
+		m_num_ions {num_ions}, m_seed {seed}
+	{}
+
+	namespace
+	{
+		/// Packs a point's grid indices into one key (each well within
+		/// 2^20 of 0)
+		std::uint64_t impact_key(const std::array<int, 3>& k)
+		{
+			auto u = [](int v)
+				{return static_cast<std::uint64_t>(v + (1 << 20)) & 0x1fffff;};
+			return (u(k[0]) << 42) | (u(k[1]) << 21) | u(k[2]);
+		}
+	}
+
+	/**
+	* The point for a wall element's sheath, added if it's new: the
+	* nearest grid point in theta, ln(Ti / Te) and log2(lambda_D / rho_s).
+	* theta is held below 90 degrees by half a step, since at 90 nothing
+	* reaches the wall (and nothing flows onto it along B either).
+	*
+	* @param p The element's sheath (make_params).
+	* @return The point, or -1 if there's no sheath (no plasma or no
+	*         field).
+	*/
+	int ImpactTable::add(const Params& p)
+	{
+		if (p.te == 0.0 || !(p.bmag > 0.0) || !std::isfinite(p.rho_s)
+			|| !(p.lambda_d > 0.0))
+		{
+			return -1;
+		}
+		const double deg {p.theta * 180.0 / Constants::pi};
+		const int max_theta {static_cast<int>(std::lround(90.0 / theta_step))
+			- 1};
+		const std::array<int, 3> k {
+			std::min(static_cast<int>(std::lround(deg / theta_step)),
+				max_theta),
+			static_cast<int>(std::lround(std::log(std::max(p.ti, 1e-3 * p.te)
+				/ p.te) / log_ti_step)),
+			static_cast<int>(std::lround(std::log2(p.lambda_d / p.rho_s)
+				/ log2_lambda_step))};
+		const std::uint64_t key {impact_key(k)};
+		const auto it {m_index.find(key)};
+		if (it != m_index.end()) return it->second;
+		const int point {static_cast<int>(m_keys.size())};
+		m_index.emplace(key, point);
+		m_keys.push_back(k);
+		m_built = false;
+		return point;
+	}
+
+	/**
+	* The grid values of a point: theta (degrees), Ti / Te and
+	* lambda_D / rho_s.
+	*
+	* @param point A point from add.
+	*/
+	std::array<double, 3> ImpactTable::point_values(const int point) const
+	{
+		const auto& k {m_keys.at(point)};
+		return {k[0] * theta_step, std::exp(k[1] * log_ti_step),
+			std::exp2(k[2] * log2_lambda_step)};
+	}
+
+	/**
+	* A sheath with a point's values, for sampling it. Te is 10 eV and B
+	* 1 T; n_e is then whatever gives the point's lambda_D / rho_s. Any
+	* other choice with the same three numbers gives the same impacts,
+	* with energies in proportion to Te.
+	*
+	* @param point A point from add.
+	*/
+	Params ImpactTable::point_params(const int point) const
+	{
+		const auto [deg, ti_te, ratio] {point_values(point)};
+		constexpr double te {10.0};
+		constexpr double bmag {1.0};
+		const double mi {m_mi_amu * Constants::amu_to_kg};
+		const double c_s {std::sqrt(Constants::ev_to_j * te * (1.0 + ti_te)
+			/ mi)};
+		const double rho_s {c_s / (Constants::ev_to_j * bmag / mi)};
+		const double lambda_d {ratio * rho_s};
+		const double ne {Constants::eps0 * te / (Constants::ev_to_j
+			* lambda_d * lambda_d)};
+		return make_params(te, ti_te * te, ne, bmag,
+			std::cos(deg * Constants::pi / 180.0), m_me_amu, m_mi_amu, m_f_d,
+			m_drop_te);
+	}
+
+	/**
+	* Samples every point not sampled yet: num_ions test ions through its
+	* sheath (sample_impacts, which runs them in parallel), with a seed of
+	* its own from its grid indices, so a point's samples don't depend on
+	* which other points the run has. Energies are kept over Te and the
+	* weights normalized to add up to 1.
+	*/
+	void ImpactTable::build()
+	{
+		m_samples.resize(m_keys.size());
+		for (std::size_t point {}; point < m_keys.size(); ++point)
+		{
+			if (!m_samples[point].empty()) continue;
+			const Params p {point_params(static_cast<int>(point))};
+			const std::uint64_t seed {m_seed * 0x9e3779b97f4a7c15ULL
+				^ impact_key(m_keys[point])};
+			Impacts r {sample_impacts(p, m_model, m_num_ions, seed)};
+			m_lost += r.lost;
+			m_max_energy_error = std::max(m_max_energy_error,
+				r.max_energy_error);
+			double w {};
+			for (const auto& h : r.hits) w += h.weight;
+			for (auto& h : r.hits)
+			{
+				h.energy /= p.te;
+				h.weight = w > 0.0 ? h.weight / w : 0.0;
+			}
+			m_samples[point] = std::move(r.hits);
+		}
+		m_built = true;
+	}
+
+	/// The sheath profile the ions fall through
+	Model ImpactTable::model() const {return m_model;}
+
+	/// Number of points
+	std::size_t ImpactTable::size() const {return m_keys.size();}
+
+	/// Test ions per point
+	int ImpactTable::num_ions() const {return m_num_ions;}
+
+	/// Every point has been sampled
+	bool ImpactTable::built() const {return m_built;}
+
+	/**
+	* A point's samples: energy over Te, angle from the normal (degrees)
+	* and weight (adding up to 1 over the point).
+	*
+	* @param point A point from add, after build.
+	*/
+	const std::vector<ImpactSample>& ImpactTable::samples(const int point)
+		const
+	{
+		return m_samples.at(point);
+	}
+
+	/// Test ions lost over every point
+	int ImpactTable::lost() const {return m_lost;}
+
+	/// Largest energy error over every point, as a fraction of the drop
+	double ImpactTable::max_energy_error() const {return m_max_energy_error;}
+
+	/**
 	* Prints the sheath model, the range of the drop, of f_D and of the
 	* field angle over the elements and frames, and how many elements have
 	* a cell thinner than the field's reach.

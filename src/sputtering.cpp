@@ -199,6 +199,7 @@
 #include "hdf5_utils.h"
 #include "indices.h"
 #include "options.h"
+#include "sheath.h"
 #include "sputtering.h"
 #include "zones.h"
 
@@ -1055,7 +1056,7 @@ namespace Sputtering
 	*/
 	Source::Source(const Surface& surface,
 		const Background::Background& bkg, const YieldTable& table,
-		const Options::Options& opts)
+		const Options::Options& opts, const Sheath::Model impact_model)
 		: m_surface {surface},
 		m_nframes {static_cast<int>(bkg.get_times().size())},
 		m_phi_sign {bkg.get_phi_sign()}
@@ -1120,9 +1121,19 @@ namespace Sputtering
 		const std::size_t n_elem {m_surface.size()};
 		const std::size_t n_all {n_elem * m_nframes};
 		for (auto* v : {&m_flux, &m_flux_par, &m_flux_exb, &m_energy,
-			&m_yield, &m_rate, &m_e_sheath, &m_ti, &m_phi_wall})
+			&m_yield, &m_rate, &m_e_sheath, &m_ti, &m_phi_wall, &m_te,
+			&m_impact_angle})
 		{
 			v->assign(n_all, 0.0);
+		}
+		m_point.assign(n_all, -1);
+
+		// D+ impacts from the sheath model: each element and frame gets a
+		// point of the table, sampled once they're all known
+		if (impact_model != Sheath::Model::off)
+		{
+			m_impacts = std::make_shared<Sheath::ImpactTable>(impact_model,
+				me_amu, mi_amu, opts.sheath_fd(), opts.sheath_drop());
 		}
 
 		// Kept for starting particles
@@ -1170,11 +1181,13 @@ namespace Sputtering
 			// direction for the parallel flow or the drift.
 			double flux_par {};
 			double flux_exb {};
+			double cos_theta {};	// |b . n|, for the sheath
 			if (B2 > 0.0)
 			{
 				const double Bmag {std::sqrt(B2)};
 				const Vec3 b_hat {B[0] / Bmag, B[1] / Bmag, B[2] / Bmag};
 				const double b_n {dot3(b_hat, n_wall)};
+				cos_theta = std::abs(b_n);
 				const Vec3 u {uX(z, t, i, j, k), uY(z, t, i, j, k),
 					uZ(z, t, i, j, k)};
 
@@ -1198,22 +1211,35 @@ namespace Sputtering
 			const double flux {std::max(0.0,
 				use_exb ? flux_par + flux_exb : flux_par)};
 
-			// 5. Effective yield at the fixed angle
+			// 5. Effective yield at the fixed angle, or (with the sheath
+			// model) a point of the impact table, whose yield is found
+			// once the table is sampled, below
 			const double e_sheath {sheath_energy(te_c, ti_c, me_amu, mi_amu,
 				1)};
-			const EffectiveYield y {effective_yield(table, e_sheath, ti_c,
-				angle)};
-			if (y.frac_above > 0.01) ++m_num_above_table;
-
-			// 6. Rate
+			if (m_impacts && B2 > 0.0)
+			{
+				m_point[idx] = m_impacts->add(Sheath::make_params(te_c, ti_c,
+					n_i, std::sqrt(B2), cos_theta, me_amu, mi_amu,
+					opts.sheath_fd(), opts.sheath_drop()));
+			}
 			m_flux[idx] = flux;
 			m_flux_par[idx] = flux_par;
 			m_flux_exb[idx] = flux_exb;
-			m_energy[idx] = e_sheath + 2.0 * ti_c;
-			m_yield[idx] = y.yield;
-			m_rate[idx] = flux * y.yield * el.area;
 			m_e_sheath[idx] = e_sheath;
 			m_ti[idx] = ti_c;
+			m_te[idx] = te_c;
+			if (m_point[idx] < 0)
+			{
+				const EffectiveYield y {effective_yield(table, e_sheath,
+					ti_c, angle)};
+				if (y.frac_above > 0.01) ++m_num_above_table;
+				m_energy[idx] = e_sheath + 2.0 * ti_c;
+				m_yield[idx] = y.yield;
+				m_impact_angle[idx] = angle;
+			}
+
+			// 6. Rate
+			m_rate[idx] = flux * m_yield[idx] * el.area;
 
 			// The floating drop alone (no presheath), as the sheath model
 			// has it, or sheath_drop Te. For self-sputtering without the
@@ -1221,6 +1247,40 @@ namespace Sputtering
 			m_phi_wall[idx] = opts.sheath_drop() > 0.0
 				? opts.sheath_drop() * te_c : e_sheath - 0.5 * te_c;
 			m_total_rate[t] += m_rate[idx];
+		}
+
+		// With the sheath model, the yield averaged over the impact
+		// samples of each element's point, weighted by their share of the
+		// flux, with energies over Te times the element's Te
+		if (m_impacts)
+		{
+			m_impacts->build();
+			std::fill(m_total_rate.begin(), m_total_rate.end(), 0.0);
+			for (std::size_t idx {}; idx < n_all; ++idx)
+			{
+				const std::size_t e {idx % n_elem};
+				const int t {static_cast<int>(idx / n_elem)};
+				const int point {m_point[idx]};
+				if (point >= 0)
+				{
+					double y {}, energy {}, ang {}, above {};
+					for (const auto& smp : m_impacts->samples(point))
+					{
+						const double en {smp.energy * m_te[idx]};
+						y += smp.weight * table.get_yield(en, smp.angle);
+						energy += smp.weight * en;
+						ang += smp.weight * smp.angle;
+						if (en > table.energy_max()) above += smp.weight;
+					}
+					if (above > 0.01) ++m_num_above_table;
+					m_yield[idx] = y;
+					m_energy[idx] = energy;
+					m_impact_angle[idx] = ang;
+					m_rate[idx] = m_flux[idx] * y
+						* m_surface.elements()[e].area;
+				}
+				m_total_rate[t] += m_rate[idx];
+			}
 		}
 
 		// Computational x and y edges of each element's plasma cell, for
@@ -1342,6 +1402,23 @@ namespace Sputtering
 	*/
 	double Source::phi_sign() const {return m_phi_sign;}
 
+	/**
+	* Mean angle from the normal the ions hit each element at (degrees),
+	* weighted by their share of the flux: from the sheath model's
+	* samples with sput_impact_opt = "sheath", or sput_angle_val. Per
+	* frame and element, like rate().
+	*/
+	const std::vector<double>& Source::impact_angle() const
+	{
+		return m_impact_angle;
+	}
+
+	/// The D+ impact table, or nullptr without the sheath model
+	const Sheath::ImpactTable* Source::impacts() const
+	{
+		return m_impacts.get();
+	}
+
 	double Source::mean_total_rate() const
 	{
 		if (m_total_rate.empty()) return 0.0;
@@ -1366,6 +1443,7 @@ namespace Sputtering
 		double sum_exb {};
 		double sum_energy {};
 		double sum_yield {};
+		double sum_angle {};
 		const std::size_t n {size()};
 		for (int t {}; t < m_nframes; ++t)
 		for (std::size_t e {}; e < n; ++e)
@@ -1377,6 +1455,7 @@ namespace Sputtering
 			sum_exb += m_flux_exb[idx] * a;
 			sum_energy += m_energy[idx] * m_flux[idx] * a;
 			sum_yield += m_yield[idx] * m_flux[idx] * a;
+			sum_angle += m_impact_angle[idx] * m_flux[idx] * a;
 		}
 		const auto [min_it, max_it] {std::minmax_element(m_total_rate.begin(),
 			m_total_rate.end())};
@@ -1393,8 +1472,18 @@ namespace Sputtering
 				<< " ions/s, net parallel " << sum_par / m_nframes
 				<< " and net E x B " << sum_exb / m_nframes << "\n"
 				<< "  Mean impact energy " << sum_energy / sum_flux_area
-				<< " eV and yield " << sum_yield / sum_flux_area
-				<< " (weighted by the ion flux)\n";
+				<< " eV, angle " << sum_angle / sum_flux_area
+				<< " degrees from the normal, and yield " << sum_yield
+				/ sum_flux_area << " (weighted by the ion flux)\n";
+		}
+		if (m_impacts)
+		{
+			os << "  Ion impacts from the sheath model ("
+				<< (m_impacts->model() == Sheath::Model::brooks ? "brooks"
+				: "borodkina") << "): " << m_impacts->size() << " points, "
+				<< m_impacts->num_ions() << " test ions each, "
+				<< m_impacts->lost() << " lost, energy conserved to "
+				<< m_impacts->max_energy_error() << " of the drop\n";
 		}
 		if (m_num_above_table > 0)
 		{
@@ -1574,9 +1663,42 @@ namespace Sputtering
 		}
 		b.z = el.phi_min + rng.next_double() * (el.phi_max - el.phi_min);
 
-		// 3. Energy of the ion that sputtered it
-		b.e_impact = sample_impact_energy(m_table, m_e_sheath[idx],
-			m_ti[idx], m_angle, rng.next_double());
+		// 3. Energy (and angle) of the ion that sputtered it: from the
+		// impact samples of the element's point, weighted by their share
+		// of the flux times their yield, or from the formula at
+		// sput_angle_val
+		if (m_point[idx] >= 0)
+		{
+			const auto& smp {m_impacts->samples(m_point[idx])};
+			std::vector<double> cdf(smp.size());
+			double total {};
+			for (std::size_t k {}; k < smp.size(); ++k)
+			{
+				total += smp[k].weight * m_table.get_yield(smp[k].energy
+					* m_te[idx], smp[k].angle);
+				cdf[k] = total;
+			}
+			if (total > 0.0)
+			{
+				const std::size_t k {std::min(static_cast<std::size_t>(
+					std::upper_bound(cdf.begin(), cdf.end(),
+					rng.next_double() * total) - cdf.begin()),
+					smp.size() - 1)};
+				b.e_impact = smp[k].energy * m_te[idx];
+				b.a_impact = smp[k].angle;
+			}
+			else
+			{
+				b.e_impact = m_energy[idx];
+				b.a_impact = m_impact_angle[idx];
+			}
+		}
+		else
+		{
+			b.e_impact = sample_impact_energy(m_table, m_e_sheath[idx],
+				m_ti[idx], m_angle, rng.next_double());
+			b.a_impact = m_angle;
+		}
 
 		// 4. Energy of the atom, Thompson cut off at Lambda E_ion
 		b.e_atom = sample_thompson(m_table.target_Es(),

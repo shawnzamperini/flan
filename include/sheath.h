@@ -101,6 +101,64 @@ namespace Sheath
 		int steps_per_gyro = 100, int max_gyros = 2000);
 
 	/**
+	* D+ impact samples (sample_impacts) on a grid of the three numbers
+	* the one-dimensional problem depends on, for the sputtered source
+	* (sput_impact_opt = "sheath"). In units of rho_s, c_s and Te, an
+	* ion's path through the sheath depends only on the field angle theta
+	* (which also sets f_D), Ti / Te and lambda_D / rho_s, so impact
+	* energies scale with Te and the angles don't change. The grid is
+	* theta_step in theta, a factor exp(log_ti_step) in Ti / Te and
+	* 2^log2_lambda_step in lambda_D / rho_s. Only the points the run
+	* uses are made (add), then sampled (build). See sheath.cpp.
+	*/
+	class ImpactTable
+	{
+	public:
+		static constexpr double theta_step {0.5};		///< Degrees
+		static constexpr double log_ti_step {0.1};		///< ln(Ti / Te)
+		static constexpr double log2_lambda_step {1.0};	///< log2(lambda_D
+														///< / rho_s)
+		static constexpr int default_num_ions {2000};	///< Per point
+
+	private:
+		Model m_model {Model::off};
+		double m_me_amu {};
+		double m_mi_amu {};
+		double m_f_d {-1.0};
+		double m_drop_te {-1.0};
+		int m_num_ions {default_num_ions};
+		std::uint64_t m_seed {1};
+		std::unordered_map<std::uint64_t, int> m_index {};	///< Key to point
+		std::vector<std::array<int, 3>> m_keys {};	///< Grid indices of
+													///< each point
+		/// Each point's samples, energies over Te and weights summing to 1
+		std::vector<std::vector<ImpactSample>> m_samples {};
+		int m_lost {};
+		double m_max_energy_error {};
+		bool m_built {};
+
+	public:
+		ImpactTable() = default;
+
+		ImpactTable(Model model, double elec_mass_amu, double ion_mass_amu,
+			double f_d = -1.0, double drop_te = -1.0,
+			int num_ions = default_num_ions, std::uint64_t seed = 1);
+
+		int add(const Params& p);
+		void build();
+
+		Model model() const;
+		std::size_t size() const;
+		int num_ions() const;
+		bool built() const;
+		const std::vector<ImpactSample>& samples(int point) const;
+		std::array<double, 3> point_values(int point) const;
+		Params point_params(int point) const;
+		int lost() const;
+		double max_energy_error() const;
+	};
+
+	/**
 	* The sheath field in front of the wall surfaces of a background: the
 	* Params of every surface element in every time frame, and for each
 	* plasma cell next to the wall, its elements. field_at gives the field

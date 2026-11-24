@@ -11,12 +11,20 @@
 #include <cstddef>
 #include <ostream>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "background.h"
 #include "options.h"
+
+// sheath.h includes this file, so only what Source needs is declared
+namespace Sheath
+{
+	enum class Model : int;
+	class ImpactTable;
+}
 #include "pcg32.h"
 #include "zones.h"
 
@@ -215,6 +223,7 @@ namespace Sputtering
 		int frame {};			///< Time frame it was picked from
 		std::size_t element {};	///< Surface element it was picked from
 		double e_impact {};		///< Energy of the sputtering ion (eV)
+		double a_impact {};		///< Its angle from the normal (degrees)
 		double e_atom {};		///< Energy of the sputtered atom (eV)
 	};
 
@@ -260,12 +269,23 @@ namespace Sputtering
 		double m_source_rate {};			///< Time-averaged total rate
 		std::vector<double> m_mean_rate {};	///< Time-averaged rate per element
 
+		// D+ impacts from the sheath model (sput_impact_opt = "sheath"),
+		// or nullptr for the formula and sput_angle_val
+		std::shared_ptr<Sheath::ImpactTable> m_impacts {};
+		std::vector<int> m_point {};		///< Table point per idx, -1 for
+											///< the formula
+		std::vector<double> m_te {};		///< Electron temperature (eV),
+											///< per idx
+		std::vector<double> m_impact_angle {};	///< Mean impact angle of
+												///< the ions (deg), per idx
+
 	public:
 
 		Source() = default;
 
 		Source(const Surface& surface, const Background::Background& bkg,
-			const YieldTable& table, const Options::Options& opts);
+			const YieldTable& table, const Options::Options& opts,
+			Sheath::Model impact_model = Sheath::Model {0});
 
 		const Surface& surface() const;
 		std::size_t size() const;
@@ -287,6 +307,8 @@ namespace Sputtering
 		const std::vector<std::array<double, 4>>& cell_bounds() const;
 		const std::vector<double>& phi_wall() const;
 		double phi_sign() const;
+		const std::vector<double>& impact_angle() const;
+		const Sheath::ImpactTable* impacts() const;
 
 		Birth sample_birth(pcg32& rng) const;
 

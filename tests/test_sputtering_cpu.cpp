@@ -1477,6 +1477,91 @@ TEST_F(SputteringTable, SlabWallSource)
 	}
 }
 
+// D+ impacts from the sheath model (sput_impact_opt = "sheath"): with a
+// constant yield the averaged yield is exactly that, whatever the
+// impacts, so the rate is the same as the formula's; the slab's uniform
+// plasma is one point of the impact table; the ions hit nearer the
+// normal than the field (80 degrees from it here); and each birth
+// carries an ion energy and angle.
+//
+// The mean impact energy is the drop plus what the flux into the sheath
+// carries. For a Maxwellian at Ti drifting at c_s along B, weighted by
+// the speed along B, that's m c_s^2 / 2 + 2.5 Ti (the speed along B adds
+// m c_s^2 / 2 + 1.5 Ti, across it Ti): with c_s^2 = (Te + Ti) e / m,
+// 0.5 Te + 3 Ti on top of the floating drop. The formula has 0.5 Te +
+// 2 Ti, so the sheath model's is Ti more (only ions moving toward the
+// wall are kept, which changes it little at Ti = Te).
+TEST_F(SputteringTable, SheathImpacts)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	auto opts {slab_wall_options("ymin", 10.0)};
+	opts.set_slab_flow(1e4);
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source formula(surface, bkg, table, opts);
+	const Sputtering::Source sheath(surface, bkg, table, opts,
+		Sheath::Model::brooks);
+
+	EXPECT_EQ(formula.impacts(), nullptr);
+	ASSERT_NE(sheath.impacts(), nullptr);
+	EXPECT_EQ(sheath.impacts()->size(), 1u);
+	EXPECT_TRUE(sheath.impacts()->built());
+	for (std::size_t e {}; e < sheath.size(); ++e)
+	{
+		EXPECT_NEAR(sheath.yield()[e], 0.02, 1e-12);
+		EXPECT_NEAR(sheath.rate()[e], formula.rate()[e],
+			1e-12 * formula.rate()[e]);
+		EXPECT_LT(sheath.impact_angle()[e], 70.0);
+		EXPECT_GT(sheath.impact_angle()[e], 5.0);
+		EXPECT_NEAR(formula.impact_angle()[e], 60.0, 1e-12);
+		// The formula's is the drop + 0.5 Te + 2 Ti
+		const double expected {formula.energy()[e] + 20.0};
+		EXPECT_NEAR(sheath.energy()[e], expected, 0.03 * expected);
+	}
+	EXPECT_NEAR(sheath.source_rate(), formula.source_rate(),
+		1e-12 * formula.source_rate());
+
+	pcg32 rng(5, 1);
+	for (int n {}; n < 200; ++n)
+	{
+		const auto b {sheath.sample_birth(rng)};
+		EXPECT_GT(b.e_impact, 0.0);
+		EXPECT_GE(b.a_impact, 0.0);
+		EXPECT_LE(b.a_impact, 90.0);
+		const auto f {formula.sample_birth(rng)};
+		EXPECT_EQ(f.a_impact, 60.0);
+	}
+}
+
+// With a yield that only the fast ions get (a step at 1.2 times the
+// formula's mean energy), the sheath model's yield is the flux-weighted
+// share of its samples above the step, and the ions picked for births
+// are all above it
+TEST_F(SputteringTable, SheathImpactsStep)
+{
+	auto opts {slab_wall_options("ymin", 10.0)};
+	opts.set_slab_flow(1e4);
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const double e0 {1.2 * (Sputtering::sheath_energy(20.0, 20.0, 5.4858e-4,
+		2.014, 1) + 40.0)};
+	write(step_table(e0, 0.5));
+	const Sputtering::YieldTable table(m_path);
+	const Sputtering::Source sheath(surface, bkg, table, opts,
+		Sheath::Model::brooks);
+	ASSERT_NE(sheath.impacts(), nullptr);
+	double above {};
+	for (const auto& s : sheath.impacts()->samples(0))
+		if (s.energy * 20.0 > e0) above += s.weight;
+	ASSERT_GT(above, 0.0);
+	EXPECT_NEAR(sheath.yield()[0], 0.5 * above, 1e-9);
+
+	pcg32 rng(9, 1);
+	for (int n {}; n < 200; ++n)
+		EXPECT_GT(sheath.sample_birth(rng).e_impact, e0);
+}
+
 // An atom absorbed at the slab wall lands on the element under it
 TEST(SlabWall, Deposition)
 {

@@ -550,13 +550,39 @@ and frame uses its grid point's samples.
     mean angles 30.40° and 31.51° against the main loop's 30.42° and
     31.50°, standard deviations within 0.12°. 2 to 4 seconds against 2
     to 5 minutes. Weighted by the flux, the means are 31.0° and 34.3°.
-- **D2. Table and the source.** `Sputtering::Source` collects the
-  (θ_B, Ti / Te, λ_D / ρ_s) its elements use, builds a grid over that
-  range at startup (log in λ_D / ρ_s) and runs the sampler on it in
-  parallel. Each element and frame averages Y over its grid point's
-  samples, weighted by the flux, for Y_eff; the ion for each birth (its
-  energy sets the Thompson cut-off) is drawn from the same samples
-  weighted by w Y. Γ is unchanged.
+- **D2. Table and the source.** Done:
+  - `Sheath::ImpactTable`: points on a grid of 0.5° in θ_B, 10% in
+    Ti / Te and factors of 2 in λ_D / ρ_s (θ_B held at 89.5° at most),
+    added only where an element and frame falls (`add`), then sampled
+    (`build`) with 2000 ions each and a seed from the point's grid
+    indices, so its samples don't depend on the run's other points.
+    Each point is sampled at its grid values with Te = 10 eV and B = 1 T
+    (n_e set by λ_D / ρ_s); energies are kept over Te and weights
+    normalized.
+  - `Sputtering::Source` takes the D⁺ impact model as a new constructor
+    argument (the formula by default; D3 adds the option). With a sheath
+    model, each element and frame gets its point from `make_params`
+    (with `sheath_fd` and `sheath_drop`), and Y_eff, the mean impact
+    energy and angle, and the share above the table are averages over
+    the point's samples weighted by their flux share, with energies times
+    the element's Te. Births draw the ion from those samples weighted by
+    w Y (O(2000) yield lookups a birth), so `Birth` now carries the
+    ion's angle too (`a_impact`). Elements with no field keep the
+    formula. Γ is unchanged. `Source::impact_angle` and `impacts`, and
+    the summary prints the mean angle and the table.
+  - The mean D⁺ energy is Ti higher than the formula's: the flux into
+    the sheath of a Maxwellian drifting at c_s carries m c_s² / 2 + 2.5 Ti
+    = 0.5 Te + 3 Ti on top of the drop, against the formula's
+    0.5 Te + 2 Ti. At Te = Ti = 20 eV, 128 eV against 107 eV (and
+    0.5 Te + 3 Ti predicts 126.8 eV).
+  - Tests: `SheathImpactTable.Points` and `ScalesWithTe` (a real sheath
+    at 40 eV and 3 T with a point's three numbers gives its energies
+    times 40 and its angles); `SputteringTable.SheathImpacts` (constant
+    yield gives Y₀ and the formula's rate exactly; one point on the slab;
+    angle between 5° and 70° with B 80° from the normal; energy within 3%
+    of the drop + 0.5 Te + 3 Ti) and `SheathImpactsStep` (a step yield
+    gives the flux share above it, and births only pick ions above
+    it).
 - **D3. Option and output.** `sput_impact_opt` = `"formula"` (now's
   behaviour, the default until D4 passes) or `"sheath"`, which uses
   `sheath_model`'s profile (and `sheath_fd`, `sheath_drop`) and stops
@@ -565,7 +591,7 @@ and frame uses its grid point's samples.
   grid and sample count; the start-of-run summary prints the mean angle.
 - **D4. Regression.** A constant yield gives Y_eff = Y₀ exactly; a yield
   linear in E and flat in angle gives back the mean impact energy
-  (within a few percent of 3.3 Te + 2 Ti for D at Ti = Te); at normal
+  (within a few percent of the drop + 0.5 Te + 3 Ti, see D2); at normal
   incidence the source matches `"formula"` with `sput_angle_val` = 0;
   the 45° and 60° histograms match Borodkina's. D on W at a few Te and
   field angles is printed, `"formula"` beside `"sheath"`.
