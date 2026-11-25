@@ -23,18 +23,13 @@ run today:
 
 | Feature | On a GPU run now | Where |
 |---|---|---|
-| More than one zone (SOLEDGE3X, HERMES) | Stops | `flan.cpp` (since G1; since G2 every kernel but the boundary check handles zones) |
-| Toroidal wedge (velocity rotation across the z ends) | Stops | `flan.cpp` (since G1) |
-| Field-aligned (zShift) interpolation, HERMES | On the device since G2, not reachable (multi-zone) | `Utilities::interp_aligned_flat` |
-| Ghost cells, zone crossings, `face_core`, `face_wall`, the `chi` wall mask | Not reachable (multi-zone) | `Boundary::check_bounds_cpu` |
-| `lcfs` z boundary (Gkeyll) | Stops | `crosscheck_options` |
 | Thermal force (heat-flux-skewed sampling) | Stops if the background has heat fluxes | `check_thermal_force` |
 | Sputtered source (`imp_source_opt = "sputter"`) | Stops | `flan.cpp` |
 | Deposition and prompt tallies, impact histograms | Not reachable (needs the source) | `Sputtering::Deposition` |
 | Sheath field and near-wall sub-steps | Left out, with a warning | `flan.cpp`, `Sheath::field_at`, `Boris::substep_cpu` |
 | Self-sputtering | Not reachable (needs the source) | `Sputtering::SelfSource::rebirth` |
 | `imp_iz_max_charge` (test option) | Stops | `flan.cpp` |
-| Boundary fates (`Boundary::Fates`) | All zeros | `main_loop` |
+| Boundary fates: `self_sputtered` | 0 (no self-sputtering) | `follow_impurities` |
 | `Slots` fields `prompt_by`, `generation` (`zone` is on the device since G1) | Host only | `slots.h` |
 
 Things that are host-side setup and need nothing on the GPU: reading the
@@ -61,9 +56,12 @@ startup), and saving the results.
   sub-cycling), OpenADAS ionization and recombination, the Boris push in
   curvilinear coordinates, absorbing/periodic/core boundaries, filling
   slots from the `imp_*start_opt` options, and the statistics.
-- Since G2, every kernel but the boundary check works in any zone, with
-  the plasma interpolated along the field line in zones with a zShift
-  table, and births in `imp_zone_start_val`.
+- Since G2, every kernel works in any zone, with the plasma interpolated
+  along the field line in zones with a zShift table, and births in
+  `imp_zone_start_val`. Since G3 the boundaries are the CPU's own
+  per-particle routines (`boundary_hd.h`), so SOLEDGE3X and HERMES runs,
+  toroidal wedges and the `lcfs` boundary run on the GPU, and the fates are
+  counted there.
 - One host thread per GPU, slots split between ranks and then GPUs.
 - Tests `*_cuda`, and the regression variants `z10_gpu` (friction) and
   `gradb_gpu` (drifts).
@@ -302,25 +300,56 @@ Every phase is checked three ways:
   the same as G1, `z10_gpu` has the same counts and velocity sums within
   2e-11 m/s. CPU and GPU `ctest` pass (except `MPITest`).
 
-**G3. Multi-zone boundaries.**
+**G3. Multi-zone boundaries.** Done.
 
-- A shared per-particle boundary routine (from the loop body of
-  `check_bounds_cpu`): absorbing and wall faces, crossings into another
-  zone (`max_crossings`), periodic faces, the wedge velocity rotation,
-  `core_face` (with the slot's RNG), the `lcfs` z boundary, and the `chi`
-  wall mask. The CPU loop calls it per particle; `check_bounds_kernel`
-  calls it per thread. Deposition hooks are left as no-ops until G5.
-- `Boundary::Fates` counted on the device (one counter per field,
-  `atomicAdd` on `unsigned long long`), summed into the host fates.
-- Remove the wedge and `lcfs` guards.
-- Tests: `test_boundary_cuda` with a list of positions crossing every
-  kind of face on the SOLEDGE3X and HERMES test grids and on a wedge,
-  against the CPU routine; `test_cross_zones` cases on the device.
-- End to end: `s3x_example` and `hermes_example` (point source, no
-  sputtering, thermal force off) on CPU and GPU; density by zone within
-  the Monte Carlo error, fates agree, `check_hermes_bkg.py` passes on the
-  GPU output. This is the first point where a SOLEDGE3X or HERMES run
-  works on the GPU.
+- `include/boundary_hd.h` (`FLAN_HD`) holds the per-particle boundary
+  routines, taken from the loop body of `check_bounds_cpu`: `time_bc`,
+  `check_faces` (absorbing, wall, core, `lcfs` and periodic faces,
+  crossings into another zone up to `max_crossings`, the turn of a
+  particle that goes around a toroidal wedge), `in_wall_cell` (the `chi`
+  wall mask) and `turn_velocity`, with the helpers `absorbing_bc`,
+  `periodic_bc`, `core_bc`, `lcfs_bc` and `core_face`. `core_face` uses the
+  slot's RNG and picks among the face's core zones in the same order as
+  before. The settings are a `BoundaryParams` (`Boundary::make_params`),
+  the same for both. `check_bounds_cpu` calls them per particle and does
+  the deposition and self-sputtering itself; `check_bounds_kernel` calls
+  them per thread. The GPU's own copies of the helpers are gone.
+- `ZonesView` has the core zones of each face (`core_offset`,
+  `core_zones`), and `BackgroundDevice` has `chi` (when the background has
+  one).
+- What happened to the particles is counted per thread in a `FateTally`
+  and added to `unsigned long long` counters on each GPU
+  (`IonizRecombWarningsDevice::fates`) with `atomicAdd`, only where
+  nonzero. `add_fates_from_device` adds them to the host's
+  `Boundary::Fates`, and `follow_impurities` prints and returns them as on
+  the CPU (`self_sputtered` stays 0 until G7). `Fates` moved to
+  `boundary_hd.h` so the CUDA files can use it without MPI.
+- The multi-zone, wedge and `lcfs` stops are gone.
+- Tests: `test_boundary_zones_cuda` puts particles over every zone and up
+  to 40% of its size past its faces (some past the last time) on the
+  SOLEDGE3X test mesh (crossings, absorbing, wall and core faces, `chi`),
+  the HERMES test grid (six zones, core faces, a wedge) and the slab with
+  a core x face, periodic y and `lcfs` z. It runs `check_bounds_cpu` one
+  particle at a time with slot i's GPU generator, `pcg32(seed + i, i)`, so
+  state, zone, position and velocity must agree to 1e-12 even after a
+  random core pick, and every fate count must be equal. With the GPU's
+  velocity turn left out, the HERMES case fails. `test_boundary_cuda` now
+  calls the shared helpers. The crossing cases of `test_cross_zones` are
+  covered by these, since crossings are now the same code on both.
+- Single zone unchanged: seeded `gradb` and `gradb_gpu` are bit for bit
+  the same as G2, `z10_gpu` within 1e-14 (atomic sums). CPU and GPU
+  `ctest` pass (except `MPITest`).
+- The CPU's walls through the shared routines: `reg_self_sputter` (y05,
+  y125, w_te20, w_te50), `reg_prompt_redep` (p01, p1) and `reg_drifts`
+  pass their checkers.
+- End to end, on the login node (one A100, 32 threads, shared): 4000 W
+  from a point in the main SOL of a HERMES background, and spread over
+  the near SOL zone of a SOLEDGE3X background, 2e-5 s, no sputtering, no
+  sheath, thermal force off. The impurity content of each zone and its
+  mean charge agree between CPU and GPU within the Monte Carlo error, as
+  do the fates, and `check_hermes_bkg.py` passes on the GPU output. The
+  main loop takes 2.5 min on the CPU and 8.7 s on the GPU (HERMES), and
+  4.9 min and 16 s (SOLEDGE3X).
 
 **G4. Thermal force.**
 

@@ -12,9 +12,12 @@ how HERMES backgrounds work in Flan. An example input is
 coupling was built, and the assumptions it makes about HERMES, are on the
 [HERMES Coupling Plan](../developer/hermes-coupling.md) page.
 
-!!! note "CPU only"
-    Only the CPU version of Flan can run HERMES backgrounds so far
-    (`use_gpu = "off"`).
+!!! note "GPUs"
+    HERMES backgrounds run on GPUs (`use_gpu = "cuda"`) as well as the CPU,
+    field-aligned interpolation and toroidal wedge included, except for the
+    thermal force (set `imp_thermal_force = "off"`), the target sputtering
+    and self-sputtering, which stop, and the sheath field, which a GPU run
+    goes without. These are CPU only so far.
 
 ## Files
 
@@ -232,4 +235,5 @@ the turbulence as statistically steady.
   time, with no time averaging.
 - BOUT++ runs: one run directory per background, and no split in z
   (`NZPE` = 1).
-- CPU only.
+- On GPUs, no thermal force, sputtering or sheath yet (see the note at the
+  top).

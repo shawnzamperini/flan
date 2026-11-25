@@ -114,6 +114,11 @@ namespace Background
 		copy_field(bkg_d.uY, m_uY, N_4D, "uY");
 		copy_field(bkg_d.uZ, m_uZ, N_4D, "uZ");
 
+		// The wall mask, for absorbing particles that end up inside the
+		// wall (check_bounds_kernel)
+		if (!m_chi.get_data().empty())
+			copy_field(bkg_d.chi, m_chi, N_3D, "chi");
+
 		// The tangent basis vectors (dX/dx, etc.) aren't used by any
 		// kernel, so they're left on the host to save memory
 
@@ -166,6 +171,7 @@ namespace Background
 		cudaFree(bkg_d.uX);      bkg_d.uX = nullptr;
 		cudaFree(bkg_d.uY);      bkg_d.uY = nullptr;
 		cudaFree(bkg_d.uZ);      bkg_d.uZ = nullptr;
+		cudaFree(bkg_d.chi);     bkg_d.chi = nullptr;
 
 		cudaFree(bkg_d.X);       bkg_d.X = nullptr;
 		cudaFree(bkg_d.Y);       bkg_d.Y = nullptr;

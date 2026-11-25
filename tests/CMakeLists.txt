@@ -154,11 +154,10 @@ if(ENABLE_CUDA)
 	add_executable(test_indices_cuda test_indices_cuda.cu)
 	add_executable(test_step_cuda test_step_cuda.cpp)
 	add_executable(test_stats_cuda test_stats_cuda.cpp)
+	add_executable(test_boundary_zones_cuda test_boundary_zones_cuda.cpp)
 
-	# These need to include the definitons in the executable since they call
-	# kernels
-	add_executable(test_boundary_cuda test_boundary_cuda.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/boundary.cu)
+	# The boundary routines are inline (boundary_hd.h)
+	add_executable(test_boundary_cuda test_boundary_cuda.cu)
 
 	# The stencils and zone functions are inline, so these only need the
 	# library for Background::to_device and Zones::to_device
@@ -174,8 +173,6 @@ if(ENABLE_CUDA)
 	# wrapper)
 	set_target_properties(test_trilinear_cuda PROPERTIES
 		CUDA_SEPARABLE_COMPILATION ON)
-	set_target_properties(test_boundary_cuda PROPERTIES
-		CUDA_SEPARABLE_COMPILATION ON)
 
 	target_link_libraries(test_fill_slots_cuda PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 	target_link_libraries(test_openadas_cuda PRIVATE flan gtest_main CUDA::cudart)
@@ -186,6 +183,8 @@ if(ENABLE_CUDA)
 	target_link_libraries(test_indices_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_step_cuda PRIVATE flan gtest_main CUDA::cudart)
 	target_link_libraries(test_stats_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
+	target_link_libraries(test_boundary_zones_cuda PRIVATE flan gtest_main
 		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
 	target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main
@@ -210,6 +209,7 @@ if(ENABLE_CUDA)
 	add_test(NAME IndicesCUDATest COMMAND test_indices_cuda)
 	add_test(NAME StepCUDATest COMMAND test_step_cuda)
 	add_test(NAME StatsCUDATest COMMAND test_stats_cuda)
+	add_test(NAME BoundaryZonesCUDATest COMMAND test_boundary_zones_cuda)
 	add_test(NAME BoundaryCUDATest COMMAND test_boundary_cuda)
 	add_test(NAME InterpolateCUDATest COMMAND test_interpolate_cuda)
 	add_test(NAME ZonesCUDATest COMMAND test_zones_cuda)

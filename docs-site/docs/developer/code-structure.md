@@ -178,6 +178,15 @@ CPU's `Utilities::trilinear_interpolate` and by the GPU interpolation
 stencils. New per-particle physics should be written this way, so there is
 only one version to keep up to date.
 
+The boundary conditions are shared whole: `include/boundary_hd.h` has the
+per-particle routines (`time_bc`, `check_faces`, `in_wall_cell`,
+`turn_velocity`) that `Boundary::check_bounds_cpu` and the GPU's
+`check_bounds_kernel` both call with the same `BoundaryParams`
+(`Boundary::make_params`). The CPU adds what needs host classes on top
+(deposition on the wall, self-sputtering). Each GPU counts what happened
+to its particles (`Boundary::Fates`) in device counters that
+`add_fates_from_device` reads after the run.
+
 Results from the two sides agree to rounding, not bit for bit: nvcc fuses
 `a + b * c` into one fused multiply-add, which rounds once instead of twice.
 A GPU run with a fixed `seed` is reproducible: the trajectories and counts

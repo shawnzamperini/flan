@@ -138,22 +138,6 @@ R"(
 	// The thermal force needs the heat fluxes and the CPU
 	Collisions::check_thermal_force(bkg, opts);
 
-	// The GPU's push, collisions and boundaries treat every particle as in
-	// one zone with no zones across its faces, and don't turn velocities
-	// that wrap around a toroidal wedge (Boundary::check_bounds_cpu)
-	if (opts.use_gpu_int() > 0 && bkg.get_zones().get_nzones() != 1)
-	{
-		Errors::fatal_error("The GPU doesn't handle backgrounds with more "
-			"than one zone yet (this one has "
-			+ std::to_string(bkg.get_zones().get_nzones()) + "). Set "
-			"use_gpu = \"off\".");
-	}
-	if (opts.use_gpu_int() > 0 && bkg.get_zones().any_wedge())
-	{
-		Errors::fatal_error("The GPU doesn't handle backgrounds that are a "
-			"toroidal wedge yet. Set use_gpu = \"off\".");
-	}
-
 	// The charge limit for tests is only applied on the CPU
 	if (opts.imp_iz_max_charge() >= 0 && opts.use_gpu_int() > 0)
 	{

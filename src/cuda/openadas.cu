@@ -14,6 +14,7 @@
 #include <cuda_runtime.h>
 
 #include "background_device.h"
+#include "boundary_hd.h"
 #include "openadas.h"
 #include "openadas_device.h"
 #include "pcg32.h"
@@ -328,6 +329,10 @@ namespace OpenADAS
 		cudaMemset(warnings_d.max_time, 0, sizeof(int));
 		cudaMemset(warnings_d.ioniz, 0, sizeof(int));
 		cudaMemset(warnings_d.recomb, 0, sizeof(int));
+		const std::size_t fates_size {Boundary::num_fate_indices
+			* sizeof(unsigned long long)};
+		cudaMalloc(&warnings_d.fates, fates_size);
+		cudaMemset(warnings_d.fates, 0, fates_size);
 		return warnings_d;
 	}
 
@@ -383,6 +388,8 @@ namespace OpenADAS
 		warnings_d.ioniz = nullptr;
 		cudaFree(warnings_d.recomb);
 		warnings_d.recomb = nullptr;
+		cudaFree(warnings_d.fates);
+		warnings_d.fates = nullptr;
 	}
 
 

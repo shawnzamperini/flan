@@ -137,7 +137,7 @@ backgrounds work and what isn't included.
 | `max_xbound_type` | string | `"absorbing"` | Boundary condition at the maximum x boundary. Valid values: `"absorbing"`, `"periodic"`, `"core"`. |
 | `min_ybound_type` | string | `"absorbing"` | Boundary condition at the minimum y boundary. Valid values: `"absorbing"`, `"periodic"`, `"core"`. |
 | `max_ybound_type` | string | `"absorbing"` | Boundary condition at the maximum y boundary. Valid values: `"absorbing"`, `"periodic"`, `"core"`. |
-| `min_zbound_type` | string | `"absorbing"` | Boundary condition at the minimum z boundary. Valid values: `"absorbing"`, `"periodic"`, `"core"`, `"lcfs"`. `"lcfs"` is periodic for particles inside the last closed flux surface (`x < lcfs_x`) and absorbing outside it (assumes x increases outward). It must be used on both z sides and is CPU-only for now. |
+| `min_zbound_type` | string | `"absorbing"` | Boundary condition at the minimum z boundary. Valid values: `"absorbing"`, `"periodic"`, `"core"`, `"lcfs"`. `"lcfs"` is periodic for particles inside the last closed flux surface (`x < lcfs_x`) and absorbing outside it (assumes x increases outward). It must be used on both z sides. |
 | `max_zbound_type` | string | `"absorbing"` | Boundary condition at the maximum z boundary. Valid values: `"absorbing"`, `"periodic"`, `"core"`, `"lcfs"`. See `min_zbound_type`. |
 | `lcfs_x` | float | `0.0` | x coordinate of the last closed flux surface. Required (must be inside the background x range) when the z boundaries are `"lcfs"`. |
 | `lcfs_y` | float | `0.0` | y coordinate of the last closed flux surface. |

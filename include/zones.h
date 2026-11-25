@@ -63,6 +63,8 @@ namespace Zones
 		std::vector<int> flags {};
 		std::vector<long long> z_shift_offset {};
 		std::vector<double> z_shift {};
+		std::vector<int> core_offset {};
+		std::vector<int> core_zones {};
 
 		FlatZones() = default;
 		FlatZones(const FlatZones& other);

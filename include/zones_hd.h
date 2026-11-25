@@ -124,6 +124,17 @@ namespace Zones
 
 		/// zShift tables of the zones that have one, one after the other
 		const double* z_shift;
+
+		/**
+		* Start of each kind of face's core zones in core_zones (num_faces
+		* + 1 values): the zones whose face f is a core face are
+		* core_zones[core_offset[f]] to core_zones[core_offset[f + 1] - 1],
+		* in increasing order (Zones::get_core_zones(face)).
+		*/
+		const int* core_offset;
+
+		/// Zones with a core face, grouped by face (see core_offset)
+		const int* core_zones;
 	};
 
 	/// Indices of the two cells whose centers bracket a coordinate

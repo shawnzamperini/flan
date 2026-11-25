@@ -58,6 +58,10 @@ namespace Background
 		double* uY;		///< Background flow Y component (m/s)
 		double* uZ;		///< Background flow Z component (m/s)
 
+		/// SOLEDGE3X wall mask chi, 3D (1 inside the wall), or nullptr if
+		/// the background has none
+		double* chi;
+
 		// Not allocated by to_device, so these are always nullptr
 		double* X;
 		double* Y;

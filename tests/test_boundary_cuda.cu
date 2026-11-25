@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <cuda_runtime.h>
 
-#include "boundary.cuh"
+#include "boundary_hd.h"
 #include "pcg32.h"
 
 
@@ -10,19 +10,19 @@ __global__
 void absorbing_bc_test_kernel(int* out)
 {
     // Case 1: max-bound, value >= bound → dead
-    out[0] = Boundary::absorbing_bc_gpu(5.0, 4.0, true);
+    out[0] = Boundary::absorbing_bc(5.0, 4.0, true);
 
     // Case 2: max-bound, value < bound → alive
-    out[1] = Boundary::absorbing_bc_gpu(3.0, 4.0, true);
+    out[1] = Boundary::absorbing_bc(3.0, 4.0, true);
 
     // Case 3: min-bound, value <= bound → dead
-    out[2] = Boundary::absorbing_bc_gpu(2.0, 3.0, false);
+    out[2] = Boundary::absorbing_bc(2.0, 3.0, false);
 
     // Case 4: min-bound, value > bound → alive
-    out[3] = Boundary::absorbing_bc_gpu(5.0, 3.0, false);
+    out[3] = Boundary::absorbing_bc(5.0, 3.0, false);
 
     // Case 5: buffer triggers early death
-    out[4] = Boundary::absorbing_bc_gpu(3.9, 4.0, true, 0.2);  // 3.9 + 0.2 >= 4.0 → dead
+    out[4] = Boundary::absorbing_bc(3.9, 4.0, true, 0.2);  // 3.9 + 0.2 >= 4.0 → dead
 }
 
 
@@ -34,15 +34,15 @@ void periodic_bc_test_kernel(double* out)
     const double amax = 10.0;
 
     // Case 1: inside bounds → unchanged
-    out[0] = Boundary::periodic_bc_gpu(5.0, amin, amax);
+    out[0] = Boundary::periodic_bc(5.0, amin, amax);
 
     // Case 2: above max → wrap high
     // 12 > 10 → wrap to 12 - (10 - 0) = 2
-    out[1] = Boundary::periodic_bc_gpu(12.0, amin, amax);
+    out[1] = Boundary::periodic_bc(12.0, amin, amax);
 
     // Case 3: below min → wrap low
     // -3 < 0 → wrap to -3 + (10 - 0) = 7
-    out[2] = Boundary::periodic_bc_gpu(-3.0, amin, amax);
+    out[2] = Boundary::periodic_bc(-3.0, amin, amax);
 }
 
 
@@ -72,7 +72,7 @@ void core_bc_test_kernel(double* out_a, double* out_b, double* out_c)
     double b1 = 0.0;
     double c1 = 0.0;
 
-    Boundary::core_bc_gpu(a1, b1, c1,
+    Boundary::core_bc(a1, b1, c1,
                 a_min, a_max, a_buffer,
                 b_min, b_max, b_buffer,
                 c_min, c_max, c_buffer,
@@ -90,7 +90,7 @@ void core_bc_test_kernel(double* out_a, double* out_b, double* out_c)
     double b2 = 1.0;
     double c2 = 150.0;
 
-    Boundary::core_bc_gpu(a2, b2, c2,
+    Boundary::core_bc(a2, b2, c2,
                 a_min, a_max, a_buffer,
                 b_min, b_max, b_buffer,
                 c_min, c_max, c_buffer,

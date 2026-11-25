@@ -474,6 +474,16 @@ namespace Zones
 			}
 		}
 
+		// The zones with a core face of each kind, for putting particles
+		// back in at the core (Boundary::core_face)
+		f.core_offset.push_back(0);
+		for (int face {}; face < num_faces; ++face)
+		{
+			for (const int zone : get_core_zones(static_cast<Face>(face)))
+				f.core_zones.push_back(zone);
+			f.core_offset.push_back(std::ssize(f.core_zones));
+		}
+
 		m_flat = std::move(f);
 		m_flat.refresh_view();
 	}
@@ -496,6 +506,8 @@ namespace Zones
 		, flags {other.flags}
 		, z_shift_offset {other.z_shift_offset}
 		, z_shift {other.z_shift}
+		, core_offset {other.core_offset}
+		, core_zones {other.core_zones}
 	{
 		refresh_view();
 	}
@@ -538,6 +550,8 @@ namespace Zones
 		m_view.flags = flags.data();
 		m_view.z_shift_offset = z_shift_offset.data();
 		m_view.z_shift = z_shift.data();
+		m_view.core_offset = core_offset.data();
+		m_view.core_zones = core_zones.data();
 	}
 
 	/**
@@ -1253,6 +1267,10 @@ namespace Zones
 			"Zones::to_device: zShift offsets");
 		d.z_shift = copy_to_device(m_flat.z_shift,
 			"Zones::to_device: zShift");
+		d.core_offset = copy_to_device(m_flat.core_offset,
+			"Zones::to_device: core offsets");
+		d.core_zones = copy_to_device(m_flat.core_zones,
+			"Zones::to_device: core zones");
 #else
 		(void)device_id;
 		Errors::fatal_error("Zones::to_device was called, but GPU support "
@@ -1290,6 +1308,8 @@ namespace Zones
 		release(v.flags);
 		release(v.z_shift_offset);
 		release(v.z_shift);
+		release(v.core_offset);
+		release(v.core_zones);
 #else
 		(void)v;
 		(void)device_id;

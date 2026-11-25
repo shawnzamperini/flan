@@ -10,8 +10,8 @@
 * back on a core face at a random location along it), periodic, or shared
 * with another zone (the particle moves into that zone). The time bounds are the first and
 * last background times, and the zone faces are the zone's outer cell
-* edges. The GPU version is in cuda/boundary.cu, and only handles a single
-* zone.
+* edges. The per-particle routines are in boundary_hd.h, shared with the
+* GPU version in cuda/boundary.cu.
 */
 #include <array>
 #include <cmath>
@@ -111,269 +111,27 @@ namespace Boundary
 	}
 
 	/**
-	* Checks if a value is outside an absorbing boundary.
+	* The settings of the boundary conditions for check_faces and the rest
+	* of boundary_hd.h, the same for the CPU and the GPU.
 	*
-	* max_bound = true means bound is a maximum and the check is
-	* a + buffer >= bound. max_bound = false means bound is a minimum and
-	* the check is a - buffer <= bound. The buffer makes the boundary
-	* trigger sooner, since the plasma can behave oddly right at the
-	* boundaries. Written without branches so it is SIMD friendly.
-	*
-	* @param a Value to check (e.g., the particle's x coordinate).
-	* @param bound Boundary value.
-	* @param max_bound If true, bound is a maximum. Otherwise it is a
-	*        minimum.
-	* @param buffer Distance the boundary is moved inward. Defaults to 0.
-	* @return 1 if the particle is outside the boundary (dead), else 0.
+	* @param bkg Background plasma, for the time bounds, the handedness and
+	*        whether there is a wall mask.
+	* @param opts Simulation options: tbound_type, the imp_*bound_buffer
+	*        options, lcfs_x and s3x_chi_absorb.
+	* @param chi The background's wall mask data, where the caller will use
+	*        it (on the host, or bkg_d.chi on a GPU). It's only kept if the
+	*        background has a mask and s3x_chi_absorb is on.
+	* @return The settings.
 	*/
-	int absorbing_bc(double a, double bound, bool max_bound,
-		double buffer)
+	BoundaryParams make_params(const Background::Background& bkg,
+		const Options::Options& opts, const double* chi)
 	{
-		// Compute both comparisons
-		const bool ge {(a + buffer) >= bound};  // for max-bound
-		const bool le {(a - buffer) <= bound};  // for min-bound
-
-		// Select the correct one using max_bound as a mask
-		const bool dead {max_bound ? ge : le};
-
-		// Returns 0 if alive, 1 if dead
-		return static_cast<int>(dead);
-	}
-
-	/**
-	* Applies a periodic boundary condition.
-	*
-	* A periodic boundary never kills a particle. A value above amax has
-	* the domain length (amax - amin) subtracted, and a value below amin has
-	* it added. Only a single wrap is done, so a particle is assumed to
-	* move less than one domain length per time step. Written without
-	* branches so it is SIMD friendly.
-	*
-	* @param a Value to check (e.g., the particle's y coordinate).
-	* @param amin Minimum of the domain.
-	* @param amax Maximum of the domain.
-	* @return The wrapped value, or a unchanged if it is inside the domain.
-	*/
-	double periodic_bc(double a, double amin, double amax)
-	{
-		const double L = amax - amin;
-
-		const double gt = (a > amax);   // wrap high, subtract L
-		const double lt = (a < amin);   // wrap low, add L
-
-		// Return new (or same) position
-		return a - gt * L + lt * L;
-	}
-
-	/**
-	* Applies a core boundary condition.
-	*
-	* The coordinate being checked is a, and b and c are the other two
-	* coordinates. If a is past the boundary (moved inward by a_buffer), a
-	* is put back on the buffered boundary, and b and c are moved to
-	* uniformly random values between their buffered minimums and
-	* maximums. This is like the particle entering the core and popping
-	* back out somewhere else along the core boundary. A residence time
-	* could be added if it was useful.
-	*
-	* @param[in,out] a Coordinate checked against the boundary.
-	* @param[in,out] b First of the other two coordinates.
-	* @param[in,out] c Second of the other two coordinates.
-	* @param a_min Minimum of a.
-	* @param a_max Maximum of a.
-	* @param a_buffer Distance the a boundary is moved inward.
-	* @param b_min Minimum of b.
-	* @param b_max Maximum of b.
-	* @param b_buffer Buffer on each side of the b range.
-	* @param c_min Minimum of c.
-	* @param c_max Maximum of c.
-	* @param c_buffer Buffer on each side of the c range.
-	* @param max_bound If true, check the a_max side. Otherwise check the
-	*        a_min side.
-	* @param rng Random number generator for this thread.
-	*/
-	void core_bc(double& a, double& b, double& c, double a_min,
-		double a_max, double a_buffer, double b_min, double b_max,
-		double b_buffer, double c_min, double c_max, double c_buffer, 
-		bool max_bound, pcg32& rng)
-	{
-		// Only check the boundary side we were called for, accounting for 
-		// a (symmetric) buffer to avoid artificial edge effects.
-		const bool hit = max_bound ? (a + a_buffer) >= a_max 
-			: (a - a_buffer) <= a_min;
-
-		if (hit)
-		{
-			a = max_bound ? a_max - a_buffer : a_min + a_buffer;
-
-			// Particle starts at random b/c locations (accounting for buffers)
-			const double b_lo = b_min + b_buffer;
-			const double b_hi = b_max - b_buffer;
-			b = b_lo + rng.next_double() * (b_hi - b_lo);
-
-			const double c_lo = c_min + c_buffer;
-			const double c_hi = c_max - c_buffer;
-			c = c_lo + rng.next_double() * (c_hi - c_lo);
-		}
-	}
-
-
-	/**
-	* Returns the twist-shift y offset, Delta y(x), for a particle on a
-	* closed field line that wraps across the z boundary.
-	*
-	* This is a hook for a future twist-shift implementation and currently
-	* always returns 0, so lcfs_bc does a plain periodic wrap in z. With a
-	* twist-shift, a closed field line leaving z_max re-enters at z_min at
-	* a different y, so Delta y(x) should match the shift Gkeyll used for
-	* the background (e.g., tabulated on the x grid from a user-supplied
-	* function and linearly interpolated here). The sign convention must
-	* also match Gkeyll's; see lcfs_bc for how the shift is applied.
-	*
-	* @param x Particle's x coordinate.
-	* @return Shift in y applied when wrapping from z_max to z_min (the
-	*         opposite sign is applied from z_min to z_max).
-	*/
-	double twist_shift_dy([[maybe_unused]] double x)
-	{
-		// TODO: Implement twist-shift. Returning 0 gives a plain periodic
-		// boundary in z.
-		return 0.0;
-	}
-
-	/**
-	* Applies a last closed flux surface (LCFS) boundary condition at one
-	* z boundary.
-	*
-	* Inside the LCFS (x < lcfs_x) field lines are closed, so the boundary
-	* is periodic: a particle past this z boundary is wrapped to the other
-	* side, and its y is shifted by y_shift (the twist-shift) and wrapped
-	* periodically in y. Outside the LCFS (x >= lcfs_x, the SOL) field
-	* lines end on a wall, so the boundary is absorbing, including the z
-	* buffer. A particle exactly at lcfs_x counts as SOL.
-	*
-	* ASSUMPTION: x increases outward (x < lcfs_x is the core side). This
-	* is true for the geometries currently used, but may not always be.
-	* If x ever increases inward, the core/SOL test here must be flipped.
-	*
-	* Only the side given by max_bound is checked. Crossing z_max adds
-	* y_shift to y, and crossing z_min subtracts it, so a particle that
-	* goes out and back returns to its original field line. The periodic
-	* wrap in z uses no buffer, the same as periodic_bc.
-	*
-	* @param[in,out] y Particle's y coordinate. Only changed by the
-	*        twist-shift on the core side.
-	* @param[in,out] z Particle's z coordinate. Wrapped on the core side.
-	* @param x Particle's x coordinate.
-	* @param lcfs_x x coordinate of the LCFS.
-	* @param y_min Minimum of y.
-	* @param y_max Maximum of y.
-	* @param z_min Minimum of z.
-	* @param z_max Maximum of z.
-	* @param z_buffer Distance the absorbing (SOL) z boundary is moved
-	*        inward.
-	* @param y_shift Twist-shift y offset, from twist_shift_dy. 0 gives a
-	*        plain periodic boundary.
-	* @param max_bound If true, check the z_max side. Otherwise check the
-	*        z_min side.
-	* @return 1 if the particle was absorbed (dead), else 0.
-	*/
-	int lcfs_bc(double& y, double& z, double x, double lcfs_x,
-		double y_min, double y_max, double z_min, double z_max,
-		double z_buffer, double y_shift, bool max_bound)
-	{
-		// Core side (closed field lines). Assumes x increases outward, see
-		// above.
-		if (x < lcfs_x)
-		{
-			const bool crossed {max_bound ? z > z_max : z < z_min};
-			if (crossed)
-			{
-				const double L {z_max - z_min};
-				z = max_bound ? z - L : z + L;
-
-				// Twist-shift. y is wrapped since the shift can push it
-				// out of the domain (y was already checked this step). With
-				// y_shift = 0 this leaves an in-domain y unchanged.
-				const double y_new {max_bound ? y + y_shift : y - y_shift};
-				y = periodic_bc(y_new, y_min, y_max);
-			}
-			return 0;
-		}
-
-		// SOL side (open field lines): absorbing
-		return absorbing_bc(z, max_bound ? z_max : z_min, max_bound,
-			z_buffer);
-	}
-
-	/**
-	* Puts a particle that hit a core face back in on a core face.
-	*
-	* The particle is put back on a core face of the same kind as the one
-	* it hit (e.g., any xmin core face). If there is only one such face,
-	* which is always the case for a single-zone background, core_bc puts
-	* it back on that face exactly as it always has. If there are several,
-	* as in a SOLEDGE3X core split across zones, one is picked at random,
-	* weighted by its number of cells, and the particle is moved to that
-	* zone before core_bc puts it on the face.
-	*
-	* @param pos Particle position (x, y, z), updated in place.
-	* @param zone Particle's zone, updated in place.
-	* @param face Core face the particle is being checked against.
-	* @param core_zones Zones with a core face of the same kind, from
-	*        Zones::Zones::get_core_zones(face).
-	* @param zones The zones.
-	* @param buffers Boundary buffers in x, y and z.
-	* @param rng Random number generator for this thread.
-	* @return True if the particle hit the core face and was put back.
-	*/
-	bool core_face(std::array<double, 3>& pos, int& zone,
-		const Zones::Face face, const std::vector<int>& core_zones,
-		const Zones::Zones& zones, const std::array<double, 3>& buffers,
-		pcg32& rng)
-	{
-		// a is the dimension normal to the face, b and c the other two
-		const int a {face / 2};
-		const int b {(a + 1) % 3};
-		const int c {(a + 2) % 3};
-		const bool max_bound {(face & 1) == 1};
-
-		// Same check core_bc makes
-		const bool hit {max_bound
-			? (pos[a] + buffers[a]) >= zones.get_max(zone, a)
-			: (pos[a] - buffers[a]) <= zones.get_min(zone, a)};
-
-		// Pick one of several core faces, but only if the particle hit
-		// this one. core_bc does the same check again below, but by then
-		// the particle is on the chosen face so it always passes.
-		if (core_zones.size() > 1)
-		{
-			if (!hit) return false;
-
-			// Weighted by the number of cells on the face
-			std::vector<double> weights {};
-			double total {};
-			for (const int z : core_zones)
-			{
-				total += static_cast<double>(zones.get_n(z, b))
-					* zones.get_n(z, c);
-				weights.push_back(total);
-			}
-			const double r {rng.next_double() * total};
-			std::size_t pick {};
-			while (pick < weights.size() - 1 && r >= weights[pick]) ++pick;
-
-			zone = core_zones[pick];
-			pos[a] = max_bound ? zones.get_max(zone, a)
-				: zones.get_min(zone, a);
-		}
-
-		core_bc(pos[a], pos[b], pos[c],
-			zones.get_min(zone, a), zones.get_max(zone, a), buffers[a],
-			zones.get_min(zone, b), zones.get_max(zone, b), buffers[b],
-			zones.get_min(zone, c), zones.get_max(zone, c), buffers[c],
-			max_bound, rng);
-		return hit;
+		const bool chi_absorb {!bkg.get_chi().get_data().empty()
+			&& opts.s3x_chi_absorb_int() == 1};
+		return {opts.tbound_type_int(), bkg.get_t_min(), bkg.get_t_max(),
+			{opts.imp_xbound_buffer(), opts.imp_ybound_buffer(),
+			opts.imp_zbound_buffer()}, opts.lcfs_x(), bkg.get_phi_sign(),
+			chi_absorb ? chi : nullptr};
 	}
 
 	/**
@@ -439,26 +197,12 @@ namespace Boundary
 		Sputtering::Deposition* deposition)
 	{
 		const Zones::Zones& zones {bkg.get_zones()};
-		const std::array<double, 3> buffers {opts.imp_xbound_buffer(),
-			opts.imp_ybound_buffer(), opts.imp_zbound_buffer()};
+		const Zones::ZonesView& view {zones.view()};
 
-		// Zones with a core face, for each kind of face
-		std::array<std::vector<int>, Zones::num_faces> core_zones {};
-		for (int f {}; f < Zones::num_faces; ++f)
-		{
-			core_zones[f] = zones.get_core_zones(static_cast<Zones::Face>(f));
-		}
-
-		// Handedness of (R, z, Z), for turning velocities on a wedge
-		const double phi_sign {bkg.get_phi_sign()};
-
-		// Far more crossings in one step than should ever happen
-		constexpr int max_crossings {8};
-
-		// SOLEDGE3X wall mask, if particles are absorbed by the wall
-		const auto& chi {bkg.get_chi()};
-		const bool chi_absorb {!chi.get_data().empty()
-			&& opts.s3x_chi_absorb_int() == 1};
+		// Everything the shared routines (boundary_hd.h) need besides the
+		// zones, the same as the GPU gets
+		const BoundaryParams params {make_params(bkg, opts,
+			bkg.get_chi().get_data().data())};
 
 		// Self-sputtering, if on: particles landing on a wall element can
 		// carry on as atoms they sputtered
@@ -486,47 +230,23 @@ namespace Boundary
 			// Skip dead particles
 			if (slots.state()[i] > 0) continue;
 
-			// --------------------
+			// What happens to this particle this step
+			FateTally tally {};
+
 			// Time boundary
-			// --------------------
-
-			// Maximum t: Absorbing boundary
-			if (opts.tbound_type_int() == 0)
+			double t {slots.t()[i]};
+			int state {time_bc(t, params, tally)};
+			slots.set_t(i, t);
+			if (state)
 			{
-				const int state {absorbing_bc(slots.t()[i], bkg.get_t_max(), 
-					true)};
 				slots.set_state(i, state);
-
-				// If dead (>0) we can skip the rest of the checks.
-				if (state)
-				{
-					++local.time_end;
-					continue;
-				}
+				++local.time_end;
+				continue;
 			}
-
-			// Maximum t: Periodic boundary
-			else if (opts.tbound_type_int() == 1)
-			{
-				// We check and overwrite each time here, even though hitting
-				// a BC is relatively rare. Despite this, this is still a very
-				// fast process since slots.t()[i] is loaded into L1, and 
-				// periodic_bc doesn't touch memory loads so the L1 cache never
-				// get evicted, so it's a very fast write.
-				slots.set_t(i, periodic_bc(slots.t()[i], bkg.get_t_min(), 
-					bkg.get_t_max()));
-			}
-
-			// --------------------
-			// Zone faces
-			// --------------------
 
 			// Work on local copies, written back at the end
-			std::array<double, 3> pos {slots.x()[i], slots.y()[i], 
-				slots.z()[i]};
+			double pos[3] {slots.x()[i], slots.y()[i], slots.z()[i]};
 			int zone {slots.zone()[i]};
-			int state {};
-			int crossings {};
 
 			// How far the particle was moved in toroidal angle by wrapping
 			// across z faces, which its velocity is turned by at the end
@@ -551,7 +271,9 @@ namespace Boundary
 				}
 				if (!r.alive) return false;
 
-				pos = {r.x, r.y, r.z};
+				pos[0] = r.x;
+				pos[1] = r.y;
+				pos[2] = r.z;
 				zone = r.zone;
 				turn = 0.0;		// the new velocity is at the new z
 				slots.set_xidx(i, r.i);
@@ -572,133 +294,53 @@ namespace Boundary
 				return true;
 			};
 
-			// Check each face in turn. Crossing into another zone starts
-			// over at the first face of the new zone.
-			int f {};
-			while (f < Zones::num_faces)
+			// The faces of its zone, and of any zones it crosses into
+			int wall_face {};
+			state = check_faces(view, params, pos, zone, turn, rng, tally,
+				wall_face);
+			if (tally.n[fate_runaway])
 			{
-				const auto face {static_cast<Zones::Face>(f)};
-				const int code {zones.get_face(zone, face)};
-				const int a {f / 2};
-				const bool max_bound {(f & 1) == 1};
-				const double lo {zones.get_min(zone, a)};
-				const double hi {zones.get_max(zone, a)};
-
-				if (code == Zones::face_absorbing || code == Zones::face_wall)
+				#pragma omp critical
 				{
-					state = absorbing_bc(pos[a], max_bound ? hi : lo, 
-						max_bound, buffers[a]);
-					if (state)
-					{
-						++(code == Zones::face_wall ? local.wall
-							: local.absorbed);
-						if (deposition != nullptr && code == Zones::face_wall)
-						{
-							const Sputtering::Impact impact {{slots.vX()[i],
-								slots.vY()[i], slots.vZ()[i]}, slots.mass()};
-							const long e {deposition->add_at_wall_face(zones,
-								zone, face, pos, slots.pt()[i], slots.q()[i],
-								slots.weight()[i], slots.prompt_by()[i],
-								&impact)};
-							const double z_wall {zones.get_face(zone,
-								Zones::zmin) == zone ? zones.wrap_z(zone,
-								pos[2]) : pos[2]};
-							if (self_sputter(e, impact, z_wall)) state = 0;
-						}
-						break;
-					}
+					std::cerr << "Warning! A particle crossed more than "
+						<< max_crossings << " zone faces in one step and "
+						"was absorbed. Check the zone connections or use a "
+						"smaller time step.\n";
 				}
+			}
 
-				else if (code == Zones::face_core)
-				{
-					local.core += core_face(pos, zone, face, core_zones[f],
-						zones, buffers, rng);
-				}
-
-				// LCFS: periodic inside lcfs_x, absorbing outside. Only z
-				// faces can be lcfs (checked when the zones are made), so
-				// a = 2 here and lcfs_bc gets y and z.
-				else if (code == Zones::face_lcfs)
-				{
-					state = lcfs_bc(pos[1], pos[2], pos[0], opts.lcfs_x(),
-						zones.get_min(zone, 1), zones.get_max(zone, 1), lo,
-						hi, buffers[a], twist_shift_dy(pos[0]), max_bound);
-					if (state)
-					{
-						++local.absorbed;
-						break;
-					}
-				}
-
-				// Periodic. Wrapping in z around a toroidal wedge moves the
-				// particle a wedge's width around the torus.
-				else if (code == zone)
-				{
-					const double before {pos[a]};
-					pos[a] = periodic_bc(pos[a], lo, hi);
-					if (a == 2 && zones.is_wedge(zone))
-						turn += pos[a] - before;
-				}
-
-				// Another zone, entered if past the face
-				else if (max_bound ? pos[a] > hi : pos[a] < lo)
-				{
-					if (++crossings > max_crossings)
-					{
-						#pragma omp critical
-						{
-							std::cerr << "Warning! A particle crossed more "
-								"than " << max_crossings << " zone faces in "
-								"one step and was absorbed. Check the zone "
-								"connections or use a smaller time step.\n";
-						}
-						state = 1;
-						++local.runaway;
-						break;
-					}
-
-					++local.crossings;
-					const double before {pos[a]};
-					pos[a] = max_bound 
-						? pos[a] - hi + zones.get_min(code, a)
-						: pos[a] - lo + zones.get_max(code, a);
-					if (a == 2 && zones.is_toroidal(zone)
-						&& zones.is_toroidal(code))
-					{
-						turn += pos[a] - before;
-					}
-					zone = code;
-					f = 0;
-					continue;
-				}
-
-				++f;
+			// Landed on a wall face: where on it, and maybe a
+			// self-sputtered atom carries on from there
+			if (state && wall_face >= 0 && deposition != nullptr)
+			{
+				const auto face {static_cast<Zones::Face>(wall_face)};
+				const Sputtering::Impact impact {{slots.vX()[i],
+					slots.vY()[i], slots.vZ()[i]}, slots.mass()};
+				const long e {deposition->add_at_wall_face(zones, zone, face,
+					{pos[0], pos[1], pos[2]}, slots.pt()[i], slots.q()[i],
+					slots.weight()[i], slots.prompt_by()[i], &impact)};
+				const double z_wall {zones.get_face(zone, Zones::zmin)
+					== zone ? zones.wrap_z(zone, pos[2]) : pos[2]};
+				if (self_sputter(e, impact, z_wall)) state = 0;
 			}
 
 			// Absorb particles that ended up in a cell inside the wall
-			if (chi_absorb && !state)
+			int idx[3] {};
+			if (params.chi != nullptr && !state
+				&& in_wall_cell(view, params.chi, zone, pos, idx))
 			{
-				const int xidx {Indices::get_nearest_cell_index_cpu(
-					zones.get_grid_x(zone), pos[0])};
-				const int yidx {Indices::get_nearest_cell_index_cpu(
-					zones.get_grid_y(zone), pos[1])};
-				const int zidx {Indices::get_nearest_cell_index_cpu(
-					zones.get_grid_z(zone), pos[2])};
-				if (chi(zone, xidx, yidx, zidx) >= 0.5)
+				state = 1;
+				++tally.n[fate_chi];
+				if (deposition != nullptr)
 				{
-					state = 1;
-					++local.chi;
-					if (deposition != nullptr)
-					{
-						const Sputtering::Impact impact {{slots.vX()[i],
-							slots.vY()[i], slots.vZ()[i]}, slots.mass()};
-						const long e {deposition->add_into_wall_cell(zone,
-							xidx, yidx, zidx, slots.zone()[i],
-							slots.xidx()[i], slots.yidx()[i], slots.pt()[i],
-							slots.q()[i], slots.weight()[i],
-							slots.prompt_by()[i], &impact)};
-						if (self_sputter(e, impact, pos[2])) state = 0;
-					}
+					const Sputtering::Impact impact {{slots.vX()[i],
+						slots.vY()[i], slots.vZ()[i]}, slots.mass()};
+					const long e {deposition->add_into_wall_cell(zone,
+						idx[0], idx[1], idx[2], slots.zone()[i],
+						slots.xidx()[i], slots.yidx()[i], slots.pt()[i],
+						slots.q()[i], slots.weight()[i],
+						slots.prompt_by()[i], &impact)};
+					if (self_sputter(e, impact, pos[2])) state = 0;
 				}
 			}
 
@@ -706,13 +348,11 @@ namespace Boundary
 			// around the torus
 			if (turn != 0.0)
 			{
-				const double ang {phi_sign * turn};
-				const double cs {std::cos(ang)};
-				const double sn {std::sin(ang)};
-				const double vX {slots.vX()[i]};
-				const double vY {slots.vY()[i]};
-				slots.set_vX(i, cs * vX - sn * vY);
-				slots.set_vY(i, sn * vX + cs * vY);
+				double vX {slots.vX()[i]};
+				double vY {slots.vY()[i]};
+				turn_velocity(vX, vY, params.phi_sign, turn);
+				slots.set_vX(i, vX);
+				slots.set_vY(i, vY);
 			}
 
 			// Write back
@@ -721,6 +361,13 @@ namespace Boundary
 			slots.set_y(i, pos[1]);
 			slots.set_z(i, pos[2]);
 			slots.set_zone(i, zone);
+
+			local.crossings += tally.n[fate_crossings];
+			local.absorbed += tally.n[fate_absorbed];
+			local.wall += tally.n[fate_wall];
+			local.chi += tally.n[fate_chi];
+			local.core += tally.n[fate_core];
+			local.runaway += tally.n[fate_runaway];
 
 		} // slot loop
 

@@ -178,8 +178,8 @@ vectors are Cartesian, so they have to turn with the toroidal angle.
   `Boundary::check_bounds_cpu` rotates (vX, vY) by phi_sign times the
   change in z. A particle put back in at the core keeps its velocity, as
   before.
-- The GPU doesn't rotate yet, so a wedge background stops with an error
-  there (only single-zone backgrounds run on the GPU so far anyway).
+- The GPU rotates the same way since GPU plan G3 (`Boundary::turn_velocity`
+  in `boundary_hd.h`, shared by both).
 - Checks: `test_wedge_cpu`, on the SOLEDGE3X test case as a quarter
   torus and as the whole torus: the ghost vectors match the
   axisymmetric field at their own angle, B interpolated on the two z

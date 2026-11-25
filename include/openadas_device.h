@@ -42,7 +42,8 @@ namespace OpenADAS
 	* Allocated once per GPU with alloc_warnings, incremented by
 	* ioniz_recomb_kernel (ioniz, recomb) and ImpurityTransport::step_kernel
 	* (max_time) every time step, read back with add_warnings_to_host at
-	* the end of the run and freed with free_warnings.
+	* the end of the run and freed with free_warnings. The boundary fates
+	* are kept here too, since they're per-GPU counters with the same life.
 	*/
 	struct IonizRecombWarningsDevice
 	{
@@ -53,6 +54,11 @@ namespace OpenADAS
 							///< recombination probability exceeded 1
 		int* max_time {};	///< Single int, number of particles killed
 							///< for exceeding imp_max_time
+
+		/// What happened to the particles at the boundaries
+		/// (Boundary::num_fate_indices values, see
+		/// Boundary::check_bounds_gpu and add_fates_from_device)
+		unsigned long long* fates {};
 	};  // IonizRecombWarningsDevice
 
 }  // namespace OpenADAS

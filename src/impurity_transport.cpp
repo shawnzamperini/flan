@@ -511,10 +511,10 @@ namespace ImpurityTransport
 	*
 	* What happens to a particle that crosses a boundary is set by the
 	* boundary type options (tbound_type, min_xbound_type, max_xbound_type,
-	* etc.). If GPU acceleration is on (use_gpu), Boundary::check_bounds_gpu
-	* is called with the boundary options unpacked from opts. Otherwise
-	* Boundary::check_bounds_cpu is called. The GPU branch only exists in
-	* CUDA builds.
+	* etc.) and the zones' face codes. If GPU acceleration is on (use_gpu),
+	* Boundary::check_bounds_gpu is called with the same settings
+	* (Boundary::make_params). Otherwise Boundary::check_bounds_cpu is
+	* called. The GPU branch only exists in CUDA builds.
 	*
 	* @param slots Host-side particle slots (used on the CPU path).
 	* @param slots_d Device-side particle slots (used on the GPU path).
@@ -526,6 +526,8 @@ namespace ImpurityTransport
 	*               path).
 	* @param fates Counts of what happened to particles at the boundaries,
 	*              added to on the CPU path only.
+	* @param warnings_d Device-side counters, whose fates are added to on
+	*        the GPU path.
 	* @param deposition Where absorbed particles land on the wall, added to
 	*                   if given (CPU path only).
 	*/
@@ -534,22 +536,22 @@ namespace ImpurityTransport
 		const Background::BackgroundDevice& bkg_d, 
 		const Options::Options& opts, std::vector<pcg32>& rngs, pcg32* rngs_d,
 		Boundary::Fates& fates,
+		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
 		Sputtering::Deposition* deposition = nullptr)
 	{
 
 #ifdef USE_CUDA
-		if (opts.use_gpu_int() > 0) 
+		if (opts.use_gpu_int() > 0)
 		{
-			// Defined in cuda/boundary.cu
-			Boundary::check_bounds_gpu(slots_d, bkg_d, 
-				opts.tbound_type_int(), 
-				opts.min_xbound_type_int(), opts.max_xbound_type_int(),
-				opts.min_ybound_type_int(), opts.max_ybound_type_int(),
-				opts.min_zbound_type_int(), opts.max_zbound_type_int(),
-				opts.imp_xbound_buffer(), opts.imp_ybound_buffer(),
-				opts.imp_zbound_buffer(), opts.lcfs_x(), rngs_d);
+			// Defined in cuda/boundary.cu. The fates are counted on the GPU
+			// (warnings_d.fates) and added to the host's after the run.
+			Boundary::check_bounds_gpu(slots_d, bkg_d,
+				Boundary::make_params(bkg, opts, bkg_d.chi), rngs_d,
+				warnings_d.fates);
 			return;
 		}
+#else
+		(void)warnings_d;
 #endif
 
 		// Defined in boundary.cpp
@@ -817,7 +819,8 @@ namespace ImpurityTransport
 	* @param sheath If given, the sheath field in front of the walls is
 	*               added to the push (CPU only).
 	* @return Counts of what happened to particles at the boundaries (CPU
-	*         path only, all zeros on the GPU path).
+	*         path only; on the GPU path they're counted on the device, in
+	*         warnings_d.fates, and this is all zeros).
 	*/
 	Boundary::Fates main_loop(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
@@ -895,7 +898,7 @@ namespace ImpurityTransport
 		// If for whatever reason the particle is started outside the grid,
 		// check bounds to make sure it doesn't cause any chaos.
 		check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, rngs_d,
-			fates, deposition);
+			fates, warnings_d, deposition);
 
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
@@ -983,7 +986,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Bounds));
 				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, 
-					rngs_d, fates, deposition);
+					rngs_d, fates, warnings_d, deposition);
 			}
 
 #ifdef DEBUG
@@ -1142,7 +1145,8 @@ namespace ImpurityTransport
 	* @param deposition If given, where absorbed particles land on the wall
 	*        is added to it. Only used on CPUs.
 	* @param fates_out If given, set to what happened to the particles,
-	*        summed over every rank, on rank 0 (CPU only).
+	*        summed over every rank, on rank 0. On GPUs, self_sputtered is
+	*        0, since self-sputtering is CPU only so far.
 	* @param sheath If given, the sheath field in front of the walls is
 	*        added to the push. Only used on CPUs.
 	* @return Impurity statistics accumulated from every particle followed
@@ -1354,6 +1358,7 @@ namespace ImpurityTransport
 				t.join();
 			}
 
+			Boundary::Fates gpu_fates {};
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
 				// Reduce GPU stats
@@ -1377,11 +1382,18 @@ namespace ImpurityTransport
 				// thread ever writes to ioniz_warnings/recomb_warnings.
 				OpenADAS::add_warnings_to_host(gpu_warnings[dev], 
 					ioniz_warnings, recomb_warnings, max_time_ctr);
+				Boundary::add_fates_from_device(gpu_warnings[dev].fates, dev,
+					gpu_fates);
 				OpenADAS::free_warnings(gpu_warnings[dev]);
 			}
 
 			print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
 				recomb_warnings);
+
+			// Sum the fates over the ranks, as on the CPU
+			gpu_fates.max_time = max_time_ctr;
+			const Boundary::Fates total {Boundary::print_fates(gpu_fates)};
+			if (fates_out != nullptr) *fates_out = total;
 			return imp_stats;
 		}
 
