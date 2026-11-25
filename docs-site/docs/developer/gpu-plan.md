@@ -514,9 +514,10 @@ Every phase is checked three ways:
   against GPU: identical source rate, redeposited 0.682 and 0.672,
   prompt 0.678 and 0.670, each zone's share, the fates and the mean
   charge, energy and angle on landing all within the Monte Carlo error.
-  The login node's GPU was in use by another process during these runs,
-  so their run times don't measure the code; the timing is left for a
-  compute-node run.
+  On a compute node (one A100 against 64 CPU threads) the main loop took
+  9.4 s on the GPU with the sheath, 6.5 s without it, and 31 s on the
+  CPU with it. The sheath regressions `brooks_a5_gpu` and
+  `borodkina_a5_gpu` took 3.2 s and 1.4 s there.
 
 **G7. Self-sputtering.**
 
