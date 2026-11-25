@@ -689,6 +689,8 @@ namespace ImpurityTransport
 	* @param rngs_d Device-side random number generators (used on the GPU
 	*               path).
 	* @param opts_d Device-side simulation options (used on the GPU path).
+	* @param skew_d Device-side counters for the thermal force's skewed
+	*        sampler (OpenADAS::IonizRecombWarningsDevice::skew, GPU path).
 	*/
 	void collision_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
@@ -696,7 +698,7 @@ namespace ImpurityTransport
 		Impurity::Statistics& imp_stats, 
 		ImpurityStats::StatisticsDevice& imp_stats_d, 
 		const double dt, std::vector<pcg32>& rngs, pcg32* rngs_d, 
-		const Options::OptionsDevice* opts_d)
+		const Options::OptionsDevice* opts_d, unsigned long long* skew_d)
 	{
 
 #ifdef USE_CUDA
@@ -705,14 +707,16 @@ namespace ImpurityTransport
 			// Defined in cuda/collision.cu. First call is for ions (the false)
 			Collisions::collision_gpu(slots_d, bkg_d, false, dt, imp_stats_d,
 				rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(), 
-				opts_d);
+				opts_d, skew_d);
 
 			// and the second for electrons (the true)
 			Collisions::collision_gpu(slots_d, bkg_d, true, dt, imp_stats_d,
 				rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(),
-				opts_d);
+				opts_d, skew_d);
 			return;
 		}
+#else
+		(void)skew_d;
 #endif
 
 		// The elec/ion distinction is done within
@@ -953,7 +957,7 @@ namespace ImpurityTransport
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Coll));
 				collision_wrapper(slots, slots_d, bkg, bkg_d, opts,
 					imp_stats, imp_stats_d, opts.imp_time_step(), rngs, rngs_d,
-					opts_d);
+					opts_d, warnings_d.skew);
 			}
 
 #ifdef DEBUG
@@ -1384,6 +1388,8 @@ namespace ImpurityTransport
 					ioniz_warnings, recomb_warnings, max_time_ctr);
 				Boundary::add_fates_from_device(gpu_warnings[dev].fates, dev,
 					gpu_fates);
+				Collisions::add_skew_counts(Collisions::skew_counts_from_device(
+					gpu_warnings[dev].skew, dev));
 				OpenADAS::free_warnings(gpu_warnings[dev]);
 			}
 

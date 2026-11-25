@@ -23,7 +23,6 @@ run today:
 
 | Feature | On a GPU run now | Where |
 |---|---|---|
-| Thermal force (heat-flux-skewed sampling) | Stops if the background has heat fluxes | `check_thermal_force` |
 | Sputtered source (`imp_source_opt = "sputter"`) | Stops | `flan.cpp` |
 | Deposition and prompt tallies, impact histograms | Not reachable (needs the source) | `Sputtering::Deposition` |
 | Sheath field and near-wall sub-steps | Left out, with a warning | `flan.cpp`, `Sheath::field_at`, `Boris::substep_cpu` |
@@ -62,6 +61,8 @@ startup), and saving the results.
   per-particle routines (`boundary_hd.h`), so SOLEDGE3X and HERMES runs,
   toroidal wedges and the `lcfs` boundary run on the GPU, and the fates are
   counted there.
+- Since G4 the thermal force (heat-flux-skewed sampling) runs on the GPU
+  with the CPU's sampler (`collisions_hd.h`).
 - One host thread per GPU, slots split between ranks and then GPUs.
 - Tests `*_cuda`, and the regression variants `z10_gpu` (friction) and
   `gradb_gpu` (drifts).
@@ -351,16 +352,44 @@ Every phase is checked three ways:
   main loop takes 2.5 min on the CPU and 8.7 s on the GPU (HERMES), and
   4.9 min and 16 s (SOLEDGE3X).
 
-**G4. Thermal force.**
+**G4. Thermal force.** Done.
 
-- The skewed sampler (`skew_factor`, `skew_bound`, the rejection loop
-  with the |eps| cap) as shared functions, used by `collision_cpu` and
-  the collision kernel. The heat fluxes go to the device with the
-  background. The skew counts become device counters, reduced like the
-  CPU ones.
-- Remove the GPU stop in `check_thermal_force`.
-- Regression: `reg_thermal_force` gets a `_gpu` variant; the HERMES
-  example with the thermal force on, CPU against GPU.
+- `include/collisions_hd.h` (`FLAN_HD`) holds the skew: `SkewCounts`,
+  `SkewShape`, `skew_eps`, `skew_at` (eps and the unit vector along B
+  from q_par and B, 0 where there's no heat flux or field),
+  `skew_factor`, `skew_bound` and the sampler `sample_bkg` (the rejection
+  loop with the |eps| cap). `skew_shape` and the push constants moved
+  there too, host only. `nanbu_coll` and `nanbu_coll_kernel` both call
+  them; the GPU's own unskewed sampler is gone, and draws the same
+  random numbers as before.
+- `BackgroundDevice` has `q_par_i` and `q_par_e` (when the background
+  has them), interpolated along the field line like ne, with B from the
+  stencil, as on the CPU. `OptionsDevice` has `imp_thermal_force`.
+- Each GPU counts the sampler's draws per species
+  (`IonizRecombWarningsDevice::skew`, `atomicAdd` where nonzero);
+  `skew_counts_from_device` reads them and `add_skew_counts` adds them to
+  the rank's, so `flan.cpp` reduces and prints them as before.
+- The GPU stop in `check_thermal_force` is gone.
+- Tests: `test_collisions_cuda` runs `collision_gpu` and `nanbu_coll` on
+  the same particles (the CPU one at a time with slot i's GPU
+  generator) on the slab with strong heat fluxes (eps 0.3, electrons
+  sub-cycled) and on the HERMES test grid (conduction heat fluxes, six
+  zones), for ions and electrons: velocities agree to 1e-9 of the speed,
+  and every sampler count is equal. With the GPU skew turned off, both
+  fail. `ThermalForce.Checks` now expects no stop on the GPU.
+- `reg_thermal_force z10_gpu` passes `check_collisions.py` like `z10`
+  (drift and coefficients within the statistical error of the CPU run,
+  and the same share of draws clipped); its main loop takes 48 s
+  against 10 min on 32 CPU threads.
+- Seeded `gradb_gpu` is bit for bit the same as G3 and `z10_gpu`
+  (friction) within 2e-14. CPU and GPU `ctest` pass (except `MPITest`).
+- End to end, the G3 HERMES case with the thermal force on: zone
+  contents, mean charges, fates and sampler counts agree between CPU
+  and GPU within the Monte Carlo error, and `check_hermes_bkg.py` passes.
+  The rejection sampling makes the GPU main loop about twice as long as
+  without the thermal force (16 s against 8.7 s; 2.6 min on the CPU),
+  since a warp waits for its slowest thread and the strongly skewed ions
+  need about 7 draws per sample there.
 
 **G5. Sputtered source and deposition.**
 

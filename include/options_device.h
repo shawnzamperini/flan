@@ -34,6 +34,8 @@ namespace Options
 											///< sub-step
 		int imp_coll_subcycle_cap;	///< Largest number of sub-steps per
 									///< collision (1 = no sub-cycling)
+		int imp_thermal_force;	///< 1 to skew the colliding background
+								///< particles by the heat fluxes
 
 		// Starting time and position. Each opt_int is 0 for single_value
 		// (start at *_val), 1 for range (uniform between *range_min and

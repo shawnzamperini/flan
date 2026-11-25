@@ -5,7 +5,7 @@ tungsten) through a plasma background from Gkeyll, SOLEDGE3X, or the
 built-in slab, with Boris pushes, Nanbu Coulomb collisions (including the
 thermal force via heat-flux-skewed sampling), OpenADAS ionization and
 recombination, and a sputtered source from RustBCA yields. C++23 with
-OpenMP and MPI; optional CUDA (no thermal force, sputtering or sheath on the GPU yet).
+OpenMP and MPI; optional CUDA (no sputtering or sheath on the GPU yet).
 
 Licensed GA noncommercial. Other codes (e.g. OpenEdge, GPLv3) may be used
 for ideas only: never copy their code.

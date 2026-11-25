@@ -56,34 +56,13 @@ namespace Collisions
 		// electrons [1], summed at the end of each nanbu_coll call (see
 		// SkewCounts)
 		std::array<SkewCounts, 2> g_skew_counts {};
-
-		// Largest |eps| used. The skew is an expansion meant for small
-		// eps, and at |eps| = 1 it is already negative over a few percent
-		// of the Maxwellian; anything larger is treated as 1 (and counted).
-		constexpr double max_eps {1.0};
 	}
 
 	/**
 	* Samples the velocity of a background particle from a drifting
-	* Maxwellian, skewed by a parallel heat flux if eps isn't 0.
-	*
-	* Unskewed (eps = 0): each component is the flow velocity plus a
-	* normally distributed number times the thermal speed v_th =
-	* sqrt(T / m). We call this thermal sampling of the background
-	* velocity. Nothing is counted, and the random numbers are the same as
-	* before the skew was added, so results without a heat flux haven't
-	* changed.
-	*
-	* Skewed (eps != 0): the distribution is f = f_M [1 + eps w_par
-	* (a + b w^2 + c w^4)] (see skew_factor and skew_shape), sampled by
-	* rejection: draw w = (v - u) / v_th from the unskewed Maxwellian, with
-	* w_par = w . b, and accept it with probability max(F, 0) / M, where F
-	* is the skew factor and M = skew_bound(eps, shape) >= F. Accepted
-	* draws are distributed as f_M max(F, 0), the skewed distribution with
-	* its negative parts set to 0 (clipped). Clipping removes a little of
-	* the heat flux when the skew is strong: with the ion shape, under 1%
-	* at eps = 0.07 and about 14% at eps = 0.3. On average M draws are
-	* needed per sample.
+	* Maxwellian, skewed by a parallel heat flux if eps isn't 0. The
+	* sampling is sample_bkg's (collisions_hd.h), which the GPU uses too;
+	* this takes the components of b separately and returns a tuple.
 	*
 	* @param T Temperature of the background species (eV).
 	* @param uX Cartesian X flow velocity of the background species (m/s).
@@ -107,53 +86,10 @@ namespace Collisions
 		const double bX, const double bY, const double bZ, pcg32& rng,
 		SkewCounts& counts)
 	{
-		const double v_th {std::sqrt(T * Constants::ev_to_j / m)};  // m/s
-
-		// Unskewed: a single draw from the drifting Maxwellian
-		if (eps == 0.0)
-		{
-			const double wX {rng.normal(0.0, 1.0)};
-			const double wY {rng.normal(0.0, 1.0)};
-			const double wZ {rng.normal(0.0, 1.0)};
-			return std::make_tuple(uX + v_th * wX, uY + v_th * wY,
-				uZ + v_th * wZ);
-		}
-
-		// Skewed: rejection sampling
-		counts.samples++;
-		double e {eps};
-		if (std::abs(e) > max_eps)
-		{
-			e = std::copysign(max_eps, e);
-			counts.eps_capped++;
-		}
-		const double M {skew_bound(e, shape)};
-
-		while (true)
-		{
-			counts.draws++;
-			const double wX {rng.normal(0.0, 1.0)};
-			const double wY {rng.normal(0.0, 1.0)};
-			const double wZ {rng.normal(0.0, 1.0)};
-			const double w_par {wX * bX + wY * bY + wZ * bZ};
-			const double w_sq {wX * wX + wY * wY + wZ * wZ};
-			const double F {skew_factor(e, w_par, w_sq, shape)};
-
-			bool accept {};
-			if (F <= 0.0) counts.negative++;
-			else if (F > M)
-			{
-				counts.above_bound++;
-				accept = true;
-			}
-			else accept = rng.next_double() * M < F;
-
-			if (accept)
-			{
-				return std::make_tuple(uX + v_th * wX, uY + v_th * wY,
-					uZ + v_th * wZ);
-			}
-		}
+		const double b[3] {bX, bY, bZ};
+		const BkgVelocity v {sample_bkg(T, uX, uY, uZ, m, eps, shape, b,
+			rng, counts)};
+		return std::make_tuple(v.vX, v.vY, v.vZ);
 	}
 
 	/// Counts from the skewed sampler on this rank for collisions with
@@ -163,6 +99,26 @@ namespace Collisions
 
 	/// Sets the skewed sampler's counts back to 0, for both species
 	void reset_skew_counts() {g_skew_counts = {};}
+
+	/**
+	* Adds counts from elsewhere (the GPUs, see
+	* Collisions::skew_counts_from_device) to this rank's, so they're
+	* reduced and printed with them.
+	*
+	* @param counts Counts for ions [0] and electrons [1].
+	*/
+	void add_skew_counts(const std::array<SkewCounts, 2>& counts)
+	{
+		for (int s {}; s < 2; ++s)
+		{
+			SkewCounts& total {g_skew_counts[s]};
+			total.samples += counts[s].samples;
+			total.draws += counts[s].draws;
+			total.negative += counts[s].negative;
+			total.above_bound += counts[s].above_bound;
+			total.eps_capped += counts[s].eps_capped;
+		}
+	}
 
 	/**
 	* Sums the skewed sampler's counts over every MPI rank.
@@ -212,9 +168,6 @@ namespace Collisions
 	*     isn't included. This keeps "on" a safe default.
 	*   - With only one of q_par_i and q_par_e, the run stops: half a
 	*     thermal force would be easy to mistake for the whole one.
-	*   - With heat fluxes on the GPU, the run stops, since the GPU
-	*     collisions don't sample the skew yet and would quietly leave the
-	*     thermal force out.
 	*   - With the collisions off, there's nothing for the skew to act
 	*     through, so a warning is printed.
 	* With imp_thermal_force = "off", nothing is checked.
@@ -251,12 +204,6 @@ namespace Collisions
 			Errors::fatal_error(std::string("imp_thermal_force = \"on\" "
 				"needs both parallel heat fluxes, but the background only "
 				"has ") + (have_i ? "q_par_i" : "q_par_e") + ".");
-		}
-		if (opts.use_gpu_int() > 0)
-		{
-			Errors::fatal_error("imp_thermal_force = \"on\" only runs on "
-				"the CPU for now. Set use_gpu = \"off\", or "
-				"imp_thermal_force = \"off\" to run on the GPU without it.");
 		}
 		if (opts.imp_collisions_int() != 1)
 		{
@@ -783,18 +730,14 @@ namespace Collisions
 					: bkg.interp_q_par_i(zone, t, x, y, z)};
 				if (q_par != 0.0)
 				{
-					eps = skew_eps(q_par, ne, T, mass_kg);
-					bX = bkg.interp_4d(bkg.get_bX(), zone, t, x, y, z);
-					bY = bkg.interp_4d(bkg.get_bY(), zone, t, x, y, z);
-					bZ = bkg.interp_4d(bkg.get_bZ(), zone, t, x, y, z);
-					const double B {std::sqrt(bX * bX + bY * bY + bZ * bZ)};
-					if (B > 0.0)
-					{
-						bX /= B;
-						bY /= B;
-						bZ /= B;
-					}
-					else eps = 0.0;
+					double b[3] {};
+					eps = skew_at(q_par, ne, T, mass_kg,
+						bkg.interp_4d(bkg.get_bX(), zone, t, x, y, z),
+						bkg.interp_4d(bkg.get_bY(), zone, t, x, y, z),
+						bkg.interp_4d(bkg.get_bZ(), zone, t, x, y, z), b);
+					bX = b[0];
+					bY = b[1];
+					bZ = b[2];
 				}
 			}
 

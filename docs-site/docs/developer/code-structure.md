@@ -187,6 +187,13 @@ per-particle routines (`time_bc`, `check_faces`, `in_wall_cell`,
 to its particles (`Boundary::Fates`) in device counters that
 `add_fates_from_device` reads after the run.
 
+The thermal force's sampler is shared the same way: `Collisions::sample_bkg`
+and the skew helpers (`skew_at`, `skew_factor`, `skew_bound`) are in
+`include/collisions_hd.h`, called by `nanbu_coll` and `nanbu_coll_kernel`.
+The GPU's sampler counts go to device counters and are added to the
+host's (`skew_counts_from_device`, `add_skew_counts`), so they're reduced
+and printed together.
+
 Results from the two sides agree to rounding, not bit for bit: nvcc fuses
 `a + b * c` into one fused multiply-add, which rounds once instead of twice.
 A GPU run with a fixed `seed` is reproducible: the trajectories and counts

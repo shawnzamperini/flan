@@ -46,6 +46,7 @@ namespace Options
 
 		opts_h.imp_coll_subcycle_target = m_imp_coll_subcycle_target;
 		opts_h.imp_coll_subcycle_cap    = m_imp_coll_subcycle_cap;
+		opts_h.imp_thermal_force        = m_imp_thermal_force_int;
 
 		opts_h.imp_mass_amu   = m_imp_mass_amu;
 

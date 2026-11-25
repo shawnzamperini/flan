@@ -15,6 +15,7 @@
 
 #include "background_device.h"
 #include "boundary_hd.h"
+#include "collisions_hd.h"
 #include "openadas.h"
 #include "openadas_device.h"
 #include "pcg32.h"
@@ -333,6 +334,10 @@ namespace OpenADAS
 			* sizeof(unsigned long long)};
 		cudaMalloc(&warnings_d.fates, fates_size);
 		cudaMemset(warnings_d.fates, 0, fates_size);
+		const std::size_t skew_size {2 * Collisions::num_skew_counts
+			* sizeof(unsigned long long)};
+		cudaMalloc(&warnings_d.skew, skew_size);
+		cudaMemset(warnings_d.skew, 0, skew_size);
 		return warnings_d;
 	}
 
@@ -390,6 +395,8 @@ namespace OpenADAS
 		warnings_d.recomb = nullptr;
 		cudaFree(warnings_d.fates);
 		warnings_d.fates = nullptr;
+		cudaFree(warnings_d.skew);
+		warnings_d.skew = nullptr;
 	}
 
 

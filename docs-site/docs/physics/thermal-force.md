@@ -21,9 +21,12 @@ it works.
 
 !!! note "Where it is available"
     The thermal force needs the parallel heat fluxes of the background.
-    Flan currently gets them from SOLEDGE3X backgrounds only, and with them
-    the collisions run on the CPU only. For other backgrounds a warning at
-    the start of the run says the thermal force isn't included.
+    Flan gets them from SOLEDGE3X plasma files with the fluxes on the phi
+    faces, from HERMES backgrounds (calculated from the conduction,
+    `hermes_heat_flux = "conduction"`) and from the slab
+    (`slab_heat_flux_i` and `_e`). It runs on the CPU and the GPU, with the
+    same sampler. For other backgrounds a warning at the start of the run
+    says the thermal force isn't included.
 
 ## Where the force comes from
 
@@ -357,7 +360,6 @@ What Flan does in each situation:
 - **A few percent low.** Even with sub-cycling the force is somewhat
   below the fluid value, and more so where the cap on sub-steps is
   reached. See [The time step](#the-time-step).
-- **SOLEDGE3X and CPU only**, for now.
 
 ## References
 

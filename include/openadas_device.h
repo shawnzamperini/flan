@@ -59,6 +59,11 @@ namespace OpenADAS
 		/// (Boundary::num_fate_indices values, see
 		/// Boundary::check_bounds_gpu and add_fates_from_device)
 		unsigned long long* fates {};
+
+		/// Counts from the thermal force's skewed sampler, ions then
+		/// electrons (2 Collisions::num_skew_counts values, see
+		/// Collisions::skew_counts_from_device)
+		unsigned long long* skew {};
 	};  // IonizRecombWarningsDevice
 
 }  // namespace OpenADAS

@@ -14,10 +14,10 @@ coupling was built, and the assumptions it makes about HERMES, are on the
 
 !!! note "GPUs"
     HERMES backgrounds run on GPUs (`use_gpu = "cuda"`) as well as the CPU,
-    field-aligned interpolation and toroidal wedge included, except for the
-    thermal force (set `imp_thermal_force = "off"`), the target sputtering
-    and self-sputtering, which stop, and the sheath field, which a GPU run
-    goes without. These are CPU only so far.
+    field-aligned interpolation, toroidal wedge and thermal force included,
+    except for the target sputtering and self-sputtering, which stop, and
+    the sheath field, which a GPU run goes without. These are CPU only so
+    far.
 
 ## Files
 
@@ -235,5 +235,4 @@ the turbulence as statistically steady.
   time, with no time averaging.
 - BOUT++ runs: one run directory per background, and no split in z
   (`NZPE` = 1).
-- On GPUs, no thermal force, sputtering or sheath yet (see the note at the
-  top).
+- On GPUs, no sputtering or sheath yet (see the note at the top).

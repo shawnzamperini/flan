@@ -114,6 +114,13 @@ namespace Background
 		copy_field(bkg_d.uY, m_uY, N_4D, "uY");
 		copy_field(bkg_d.uZ, m_uZ, N_4D, "uZ");
 
+		// The heat fluxes, for the thermal force (only if the background
+		// has them, see Collisions::check_thermal_force)
+		if (!m_q_par_i.get_data().empty())
+			copy_field(bkg_d.q_par_i, m_q_par_i, N_4D, "q_par_i");
+		if (!m_q_par_e.get_data().empty())
+			copy_field(bkg_d.q_par_e, m_q_par_e, N_4D, "q_par_e");
+
 		// The wall mask, for absorbing particles that end up inside the
 		// wall (check_bounds_kernel)
 		if (!m_chi.get_data().empty())
@@ -172,6 +179,8 @@ namespace Background
 		cudaFree(bkg_d.uY);      bkg_d.uY = nullptr;
 		cudaFree(bkg_d.uZ);      bkg_d.uZ = nullptr;
 		cudaFree(bkg_d.chi);     bkg_d.chi = nullptr;
+		cudaFree(bkg_d.q_par_i); bkg_d.q_par_i = nullptr;
+		cudaFree(bkg_d.q_par_e); bkg_d.q_par_e = nullptr;
 
 		cudaFree(bkg_d.X);       bkg_d.X = nullptr;
 		cudaFree(bkg_d.Y);       bkg_d.Y = nullptr;

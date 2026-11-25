@@ -58,6 +58,11 @@ namespace Background
 		double* uY;		///< Background flow Y component (m/s)
 		double* uZ;		///< Background flow Z component (m/s)
 
+		/// Parallel ion and electron heat fluxes (W/m^2), for the thermal
+		/// force, or nullptr if the background has none
+		double* q_par_i;
+		double* q_par_e;
+
 		/// SOLEDGE3X wall mask chi, 3D (1 inside the wall), or nullptr if
 		/// the background has none
 		double* chi;
