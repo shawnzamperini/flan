@@ -887,10 +887,14 @@ namespace Impurity
 		std::vector<double> s_h (N);
 		std::vector<double> charge_h (N);
 
-		// Previous errors could cause this to hang, unsure how to handle
-		// this yet
+		// Wait for the kernels to finish, so an error from one of them is
+		// reported here rather than by the copies below
 		cudaError_t err = cudaDeviceSynchronize();
-		printf("sync: %s\n", cudaGetErrorString(err));
+		if (err != cudaSuccess)
+		{
+			std::cerr << "Error on GPU #" << device_id << " before copying "
+				"the statistics: " << cudaGetErrorString(err) << "\n";
+		}
 
 		// Copy over from GPU to host
 		std::cout << "Copying data from GPU #" << device_id << " (N = " 
