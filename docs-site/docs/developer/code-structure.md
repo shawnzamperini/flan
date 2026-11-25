@@ -163,6 +163,26 @@ The physics is the same either way. The two versions are kept as close to
 each other as possible, so a change to one usually needs the same change in
 the other.
 
+### Code shared by the CPU and GPU
+
+Per-particle math that doesn't need the host classes can be written once and
+called from both sides. Mark the function `FLAN_HD` (`include/host_device.h`):
+nvcc compiles it for the host and the device, and the host compiler sees an
+ordinary function. Shared functions are `inline` (or templates) in headers
+named `*_hd.h`, take plain values, pointers and sizes rather than
+`std::vector` or the host classes, and don't throw, allocate or print. The
+CPU function keeps its interface and calls the shared one inside. For
+example, `Utilities::trilinear_box` (`include/utilities_hd.h`) is used by the
+CPU's `Utilities::trilinear_interpolate` and by the GPU interpolation
+stencils. New per-particle physics should be written this way, so there is
+only one version to keep up to date.
+
+Results from the two sides agree to rounding, not bit for bit: nvcc fuses
+`a + b * c` into one fused multiply-add, which rounds once instead of twice.
+A GPU run with a fixed `seed` is reproducible: the trajectories and counts
+are the same every time, and sums made with `atomicAdd` (the statistics)
+differ only by rounding, since the order of the additions varies.
+
 ### CPU (OpenMP)
 
 The CPU versions loop over the slots with `#pragma omp parallel for`. Each

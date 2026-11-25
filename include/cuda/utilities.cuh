@@ -6,8 +6,9 @@
 * @brief Small math and indexing helpers used in CUDA kernels.
 *
 * These are the device versions of helpers in utilities.h and vectors.h:
-* vector products, neighbor and flattened array indices, and linear,
-* bilinear and trilinear interpolation. Everything is inline (or a
+* vector products, neighbor and flattened array indices, and linear and
+* bilinear interpolation (trilinear is in utilities_hd.h, shared with the
+* CPU). Everything is inline (or a
 * template) so it can be used in any kernel without separate compilation.
 */
 #include <cmath>
@@ -280,67 +281,7 @@ namespace Utilities
 		return vx0 + ty * (vx1 - vx0);
 	}
 
-
-	/**
-	* Trilinearly interpolates between the 8 corners of a box at (x, y, z).
-	*
-	* The box has one corner at (x0, y0, z0) and the opposite one at
-	* (x0 + dx, y0 + dy, z0 + dz). dx, dy and dz can be negative, so x0
-	* doesn't have to be the low corner. Corner values are named by
-	* offset, e.g., v100 is at (x0 + dx, y0, z0). The weights are clamped to
-	* [0, 1], so points outside the box get the value on the nearest face
-	* instead of being extrapolated.
-	*
-	* @param x0 x coordinate of the origin corner.
-	* @param y0 y coordinate of the origin corner.
-	* @param z0 z coordinate of the origin corner.
-	* @param dx Box size in x. Must not be 0.
-	* @param dy Box size in y. Must not be 0.
-	* @param dz Box size in z. Must not be 0.
-	* @param v000 Value at (x0, y0, z0).
-	* @param v100 Value at (x0 + dx, y0, z0).
-	* @param v010 Value at (x0, y0 + dy, z0).
-	* @param v110 Value at (x0 + dx, y0 + dy, z0).
-	* @param v001 Value at (x0, y0, z0 + dz).
-	* @param v101 Value at (x0 + dx, y0, z0 + dz).
-	* @param v011 Value at (x0, y0 + dy, z0 + dz).
-	* @param v111 Value at (x0 + dx, y0 + dy, z0 + dz).
-	* @param x x coordinate of the point.
-	* @param y y coordinate of the point.
-	* @param z z coordinate of the point.
-	* @return Interpolated value at (x, y, z).
-	*/
-	__device__ inline 
-	double trilinear_interpolate(
-		const double x0, const double y0, const double z0, 
-		const double dx, const double dy, const double dz,
-		const double v000, const double v100, const double v010, 
-		const double v110, const double v001, const double v101, 
-		const double v011, const double v111,
-		const double x, const double y, const double z)
-	{
-		// Normalized coordinates, in [0, 1] inside the box
-		double tx = (x - x0) / dx;  // dx = x1 - x0
-		double ty = (y - y0) / dy;
-		double tz = (z - z0) / dz;
-
-		// Prevent extrapolation beyond cell boundaries.
-		tx = fmin(1.0, fmax(0.0, tx));
-		ty = fmin(1.0, fmax(0.0, ty));
-		tz = fmin(1.0, fmax(0.0, tz));
-
-		// Interpolate along x for the four lower/upper face corners
-		const double c00 = v000 + tx * (v100 - v000);
-		const double c01 = v001 + tx * (v101 - v001);
-		const double c10 = v010 + tx * (v110 - v010);
-		const double c11 = v011 + tx * (v111 - v011);
-
-		// Interpolate along y for the lower and upper edges
-		const double c0 = c00 + ty * (c10 - c00);
-		const double c1 = c01 + ty * (c11 - c01);
-
-		// Interpolate along z and return
-		return c0 + tz * (c1 - c0);
-	}
+	// trilinear interpolation is Utilities::trilinear_box in
+	// utilities_hd.h, shared with the CPU
 
 }

@@ -447,7 +447,8 @@ namespace Slots
 	* The per-particle arrays are allocated and copied, except iters,
 	* which are not stored on the device. The work arrays used by the GPU
 	* kernels (all_dead, num_dead and dead_indices) are also
-	* allocated, and all_dead is initialized to false. If GPU support was not
+	* allocated, and all_dead is initialized to false. The work space for
+	* listing the dead slots (select_temp) is left to fill_slots_gpu. If GPU support was not
 	* compiled in, an error is printed and an empty SlotsDevice is returned.
 	*
 	* @param device_id ID of the GPU to allocate the memory on.
@@ -493,6 +494,10 @@ namespace Slots
 		cudaMalloc(&slots_d.all_dead, sizeof(bool));
 		cudaMalloc(&slots_d.num_dead, sizeof(int));
 		cudaMalloc(&slots_d.dead_indices, m_N * sizeof(int));
+
+		// Sized and allocated by fill_slots_gpu the first time
+		slots_d.select_temp = nullptr;
+		slots_d.select_temp_bytes = 0;
 
 		// Copy to device
 		cudaMemcpy(slots_d.pt, m_pt.data(), m_N * sizeof(double), 
@@ -646,6 +651,7 @@ namespace Slots
 		cudaFree(slots_d.all_dead);
 		cudaFree(slots_d.num_dead);
 		cudaFree(slots_d.dead_indices);
+		cudaFree(slots_d.select_temp);
 
 		slots_d.pt = nullptr;
 		slots_d.t = nullptr;
@@ -669,6 +675,8 @@ namespace Slots
 		slots_d.all_dead = nullptr;
 		slots_d.num_dead = nullptr;
 		slots_d.dead_indices = nullptr;
+		slots_d.select_temp = nullptr;
+		slots_d.select_temp_bytes = 0;
 #endif
 		return;
 	}

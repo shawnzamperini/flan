@@ -5,15 +5,19 @@
 *        checking if every slot is dead.
 *
 * GPU version of the slot routines in slots.cpp. Each time step, the
-* indices of the dead slots are gathered into a compact list with a
-* warp-level stream compaction, and then one thread per dead slot creates a
-* new particle there, as long as there are particles left to launch. New
+* indices of the dead slots are listed in increasing order
+* (cub::DeviceSelect), and then one thread per dead slot creates a new
+* particle there, as long as there are particles left to launch. New
 * particles start according to the imp_*start_opt and imp_temp_start_opt
 * options.
 */
 #include <cstdio>
 
+#include <cub/device/device_select.cuh>
+#include <thrust/iterator/counting_iterator.h>
+
 #include "background_device.h"
+#include "errors.h"
 #include "options_device.h"
 #include "pcg32.h"
 #include "slots.cuh"
@@ -231,111 +235,26 @@ namespace Slots
 
 	
 	/**
-	* Kernel that gathers the indices of every dead slot into a compact
-	* list.
-	*
-	* This is a warp-level stream compaction. Each warp votes on which of
-	* its lanes hold a dead slot (__ballot_sync), lane 0 reserves room for
-	* that many indices in dead_indices with a single atomicAdd on
-	* num_dead, and each dead lane then writes its slot index at its offset
-	* within the warp's reserved block. Using one atomic per warp instead of
-	* one per thread keeps contention low. The order of the indices between
-	* warps is not deterministic.
-	*
-	* @param state State of each slot, where 0 is alive and anything else
-	*        is dead.
-	* @param dead_indices Output list of dead slot indices. Must be able to
-	*        hold N indices.
-	* @param num_dead Device counter of dead slots. Must be zeroed before
-	*        the launch. Holds the number of dead slots afterward.
-	* @param N Number of slots.
+	* Predicate for cub::DeviceSelect::If: true for the index of a dead
+	* slot (state not 0).
 	*/
-	__global__ void compact_dead_slots(const int* __restrict__ state,
-		int* __restrict__ dead_indices, int* __restrict__ num_dead, int N)
+	struct IsDead
 	{
-		// Global thread index
-		int tid  = blockIdx.x * blockDim.x + threadIdx.x;
+		const int* state;	///< State of each slot, 0 if alive
 
-		// Thread position within its warp (lane within warp)
-		int lane = threadIdx.x & 31;  // This is essentially thread % 32
-
-		// Active mask for this warp. Tells us which lanes are active.
-		// This returns a bitwise mask in a 32-bit integer. For
-		// example, if mask = 0b00000000_00000000_00000000_11101111, this 
-		// means lanes 0, 1, 2, 3, 5, 6, 7 are active and 4, 8-31 are inactive.
-		// Really just relevant for the final warp if slots doesn't equally
-		// divide by 32. We need this for the warp-level intrinsics below.
-		unsigned int mask {__activemask()};
-
-		// Is this thread in range?
-		bool in_range {(tid < N)};
-
-		// Is this slot dead (state > 0)?
-		bool is_dead {false};
-		if (in_range) is_dead = (state[tid] != 0);
-
-		// Warp-wide vote: which lanes are dead? Similar to activemask, this
-		// returns a 32-bit bitwise mask indicating the lanes where
-		// is_dead=true. It only evaluates this for active lanes, as set in
-		// mask. For example, say our active lanes are:
-		//       mask = 0b00000000_00000000_00000000_11101111
-		//                                           TFT FFTT  <- is_dead values
-		// Then we'd get:
-		//  dead_mask = 0b00000000_00000000_00000000_10100011
-		unsigned int dead_mask = __ballot_sync(mask, is_dead);
-
-		// Number of dead lanes in this warp (popc = population count). This 
-		// just counts the number of 1's in dead_mask. Following the above
-		// example, we'd get 4 for this.
-		int warp_dead_count = __popc(dead_mask);
-
-		// No dead slots in this warp, nothing to do
-		if (warp_dead_count == 0) return;
-
-		// Compute this lane's offset among dead lanes in the warp
-		// Mask of dead lanes with index < lane
-		// First, 1u << lane creates a 32-bit mask with a single bit at position
-		// lane. So if lane = 16, then
-		//   1u << lane = 0b00000000_00000001_00000000_00000000
-		// Then subtracting 1 from this turns it into a mask with all bits
-		// below our bit equal to 1;
-		//   (1u << lane - 1) = 0b00000000_00000000_11111111_11111111
-		// Then we perform a bitwise & with dead_mask which keeps only the 
-		// dead bits below this lane. For our example from above,
-		//  dead_mask = 0b00000000_00000000_00000000_10100011
-		//              0b00000000_00000000_11111111_11111111
-		//  lane_mask = 0b00000000_00000000_00000000_10100011
-		// Finally, lane_offset is the sum of all the 1's, lane_offset = 4.
-		// This is used in calculating the index in dead_indices that we will 
-		// place the dead slot index in, done below.
-		unsigned int lane_mask = dead_mask & ((1u << lane) - 1);
-		int lane_offset = __popc(lane_mask);
-
-		// Let lane 0 reserve space in the global dead_indices array
-		// atomicAdd returns the original value of num_dead, which we assign
-		// to warp_base. Continuing our example where warp_dead_count=4, if
-		// we just say num_dead was 10 going into this, then after
-		// num_dead = 14 and warp_base = 10. Therefore when we get down to
-		// dead_indices, we will know that this warp "owns" (will only be
-		// indexing into) indices 10, 11, 12, 13, where each lane knows which
-		// index it will do via lane_offset.
-		int warp_base = 0;
-		if (lane == 0) warp_base = atomicAdd(num_dead, warp_dead_count);
-
-		// Broadcast warp_base to all lanes so that every lane in this warp 
-		// knows where in dead_indices to start from
-		warp_base = __shfl_sync(mask, warp_base, 0);
-
-		// If this lane is dead, write its global index into the compacted array
-		if (is_dead) dead_indices[warp_base + lane_offset] = tid;
-	}
+		/**
+		* @param i Slot index.
+		* @return true if slot i is dead.
+		*/
+		__device__ bool operator()(const int i) const {return state[i] != 0;}
+	};
 
 
 	/**
 	* Kernel that fills dead slots with new particles.
 	*
 	* One thread handles one entry of the dead slot list from
-	* compact_dead_slots, so only the first min(num_dead, rem_parts) dead
+	* fill_slots_gpu, so only the first min(num_dead, rem_parts) dead
 	* slots are filled. Each creates a new particle with
 	* make_new_particle_cuda and writes it into the slot, marking it alive.
 	* The cell indices are set to 0 here and assigned afterward by
@@ -421,10 +340,18 @@ namespace Slots
 	* Replaces dead particles with new ones, as long as there are particles
 	* left to launch.
 	*
-	* Runs compact_dead_slots to gather the dead slot indices, copies the
-	* number of dead slots back to the host (which waits for the kernel to
-	* finish), and then launches fill_slots_kernel with one thread per dead
-	* slot. Both use blocks of 256 threads. The fill kernel launch is
+	* Lists the dead slot indices in increasing order with
+	* cub::DeviceSelect::If, copies the number of dead slots back to the
+	* host (which waits for the selection to finish), and then launches
+	* fill_slots_kernel with one thread per dead slot, in blocks of 256
+	* threads.
+	*
+	* The order matters when there are more dead slots than particles left
+	* to launch: only the first rem_parts get a particle, and each slot has
+	* its own random number generator. An order that is the same every run
+	* (unlike one from atomics) makes a GPU run reproducible, so changes to
+	* the code can be checked bit for bit. The selection's work space is
+	* allocated here the first time and kept in slots_d. The fill kernel launch is
 	* asynchronous, except in DEBUG builds, where it waits for the kernel to
 	* finish and prints any error. The number of filled slots is
 	* min(rem_parts, num_dead), so the counts are updated on the host
@@ -446,15 +373,24 @@ namespace Slots
 		// Each slot is assigned to a specific GPU where its data lies
 		cudaSetDevice(slots_d.device_id);
 
-		// Reset number of dead slots to zero
-		cudaMemset(slots_d.num_dead, 0, sizeof(*slots_d.num_dead));
-
-		// Fill in dead_indices with just the slots indices that have dead
-		// particles.
-		int blockSize = 256;
-		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
-		compact_dead_slots<<<gridSize, blockSize>>>(slots_d.state,
-			slots_d.dead_indices, slots_d.num_dead, slots_d.N);
+		// List the indices of the dead slots, in increasing order, in
+		// dead_indices, and their number in num_dead. The first call (with
+		// no work space) only gives the size of the work space needed.
+		const thrust::counting_iterator<int> slot_index(0);
+		const IsDead is_dead {slots_d.state};
+		std::size_t temp_bytes {};
+		cub::DeviceSelect::If(nullptr, temp_bytes, slot_index,
+			slots_d.dead_indices, slots_d.num_dead, slots_d.N, is_dead);
+		if (temp_bytes > slots_d.select_temp_bytes)
+		{
+			cudaFree(slots_d.select_temp);
+			Errors::check_cuda(cudaMalloc(&slots_d.select_temp, temp_bytes),
+				"fill_slots_gpu: allocating the work space");
+			slots_d.select_temp_bytes = temp_bytes;
+		}
+		cub::DeviceSelect::If(slots_d.select_temp, slots_d.select_temp_bytes,
+			slot_index, slots_d.dead_indices, slots_d.num_dead, slots_d.N,
+			is_dead);
 
 		// Read back num_dead
 		int num_dead = 0;

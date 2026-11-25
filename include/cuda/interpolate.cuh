@@ -19,6 +19,7 @@
 
 #include "device_constants.cuh"
 #include "utilities.cuh"
+#include "utilities_hd.h"
 
 
 namespace Interpolate
@@ -299,7 +300,8 @@ namespace Interpolate
 	* Trilinearly interpolates a 3D field at (x, y, z).
 	*
 	* The field values at the 8 stencil corners are passed to
-	* trilinear_interpolate, which clamps the weights to [0, 1], so there
+	* trilinear_box (utilities_hd.h, shared with the CPU), which clamps
+	* the weights to [0, 1], so there
 	* is no extrapolation past the box of cell centers.
 	*
 	* @param field Flattened 3D field on the device.
@@ -329,7 +331,7 @@ namespace Interpolate
 
 		// Trilinear interpolation within the spatial cell defined
 		// by the stencil.
-		return  Utilities::trilinear_interpolate(s.x0, s.y0, s.z0,
+		return  Utilities::trilinear_box(s.x0, s.y0, s.z0,
 				s.dx, s.dy, s.dz, verts0[0], verts0[4], verts0[2], verts0[6],
 				verts0[1], verts0[5], verts0[3], verts0[7], x, y, z);
 
@@ -378,13 +380,13 @@ namespace Interpolate
 		// Trilinear interpolation at the particle location for this
 		// field component, comp0, and then comp1 is the same just
 		// at the next time index. I've lined the indices of v up with
-		// the corresponding ones from the trilinear_interpolate 
+		// the corresponding ones from the trilinear_box 
 		// signature.
-		const double comp0 = Utilities::trilinear_interpolate(s.x0, s.y0, s.z0,
+		const double comp0 = Utilities::trilinear_box(s.x0, s.y0, s.z0,
 				s.dx, s.dy, s.dz, verts0[0], verts0[4], verts0[2], verts0[6],
 				verts0[1], verts0[5], verts0[3], verts0[7], x, y, z);
 
-		const double comp1 = Utilities::trilinear_interpolate(s.x0, s.y0, s.z0,
+		const double comp1 = Utilities::trilinear_box(s.x0, s.y0, s.z0,
 				s.dx, s.dy, s.dz, verts1[0], verts1[4], verts1[2], verts1[6],
 				verts1[1], verts1[5], verts1[3], verts1[7], x, y, z);
 

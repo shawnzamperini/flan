@@ -4,6 +4,8 @@
 */
 #pragma once
 
+#include <cstddef>
+
 namespace Slots
 {
 	/**
@@ -49,5 +51,9 @@ namespace Slots
 		int* dead_indices;	///< Indices of the dead slots, size N
 		int* num_dead;		///< Single value, number of entries in
 							///< dead_indices
+		void* select_temp;	///< Work space for cub::DeviceSelect, which
+							///< lists the dead slots (allocated by
+							///< fill_slots_gpu when first needed)
+		std::size_t select_temp_bytes;	///< Size of select_temp in bytes
 	};
 }

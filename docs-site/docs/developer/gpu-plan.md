@@ -120,16 +120,46 @@ Every phase is checked three ways:
 
 ## Phases
 
-**G0. Baseline.**
+**G0. Baseline.** Done.
 
-- Build `build_gpu` from the branch; all `*_cuda` tests and the existing
-  `z10_gpu` and `gradb_gpu` variants pass.
-- Time a single-zone GPU run (slab and Gkeyll) by main loop section
-  (`Timer`), as the reference for G1.
-- Add the `FLAN_HD` macro (`include/host_device.h`) and move one small
-  routine over (e.g. `trilinear_interpolate`) to check the build in both
-  directories and the docs' Doxygen preprocessing (`PREDEFINED` in
-  `mkdocs.yml`).
+- `build_gpu` from the branch: every `*_cuda` test passes, and so do
+  `z10_gpu` and `gradb_gpu` (`check_collisions.py`, `check_drifts.py`).
+  `MPITest` needs `srun`, so it was not run.
+- The `FLAN_HD` macro (`include/host_device.h`, on `__CUDACC__`, not
+  `USE_CUDA`, since a GPU build's `.cpp` files go through the host
+  compiler) and the first shared function, `Utilities::trilinear_box`
+  (`include/utilities_hd.h`). The CPU's `trilinear_interpolate` calls it
+  with `x1 - x0`, and the GPU stencils call it with their signed box sizes,
+  so neither side's arithmetic changed: `gradb` and `gradb_gpu` give the
+  same output bit for bit as before. The GPU copy in
+  `cuda/utilities.cuh` is gone. A NaN weight (a box of size 0) is now
+  clamped to 0 on both sides; before, the CPU kept the NaN.
+  `test_trilinear_cuda` compares the device with the host on random boxes
+  of both signs, points outside the box and boxes of size 0.
+- The device and host don't agree bit for bit, only to rounding: nvcc
+  fuses `a + t * (b - a)` into a fused multiply-add. So CPU against GPU is
+  always a comparison to rounding (deterministic tests) or within the
+  Monte Carlo error (runs), as decision 7 says.
+- GPU runs weren't reproducible, even with a fixed `seed`.
+  `compact_dead_slots` listed the dead slots in an order set by atomics,
+  and when there are more dead slots than particles left to launch, that
+  order decides which slots (each with its own random number generator)
+  get them. Replaced by `cub::DeviceSelect::If` over the slot indices,
+  which lists them in increasing order; its work space is kept in
+  `SlotsDevice::select_temp`. Two `z10_gpu` runs with a fixed seed now
+  have the same counts, and the velocity sums differ by about 1e-11 m/s
+  (the order of the statistics' `atomicAdd`s). This is what makes
+  G1 checkable: a refactor that doesn't change the arithmetic must give
+  the same counts and the same sums to rounding. The regression cases
+  don't set `seed`, so these checks use copies with one.
+- Timing on the login node's A100 is not a baseline: other users' jobs
+  kept it at 100%, and `gradb_gpu` (one particle, 10⁴ steps) took 88 s,
+  nearly all in the two host syncs per step (fill slots and the all-dead
+  check), against 3 s on 16 CPU threads. `z10_gpu` (collisions) took
+  9.3 s against 7.6 minutes on 16 CPU threads. Single-zone timings for
+  G1 must come from a GPU compute node.
+- `mkdocs.yml`: `FLAN_HD=` in Doxygen's `PREDEFINED` (mkdocs isn't
+  installed here, so not built).
 
 **G1. Zones on the device.**
 

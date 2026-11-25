@@ -14,6 +14,7 @@
 #include "flan_types.h"
 #include "mpi.h"
 #include "utilities.h"
+#include "utilities_hd.h"
 #include "vectors.h"
 #include "zones.h"
 
@@ -193,7 +194,8 @@ namespace Utilities
 	* corners. Interpolation weights are clamped to the range [0, 1]
 	* to prevent extrapolation beyond the cell boundaries. As a result,
 	* points outside the cell return the value on the nearest cell face,
-	* edge, or corner.
+	* edge, or corner. The work is done by trilinear_box (utilities_hd.h),
+	* which the GPU interpolation uses too.
 	*
 	* Corner indexing follows the usual convention:
 	*
@@ -233,30 +235,8 @@ namespace Utilities
 		const double v011, const double v111,
 		const double x, const double y, const double z)
 	{
-		// Normalized coordinates in [0,1]
-		double tx = (x - x0) / (x1 - x0);
-		double ty = (y - y0) / (y1 - y0);
-		double tz = (z - z0) / (z1 - z0);
-
-		// Prevent extrapolating past the cell center values on the edges of 
-		// the grid. If we don't do this, we can get some pretty incorrect 
-		// values.
-		tx = std::clamp(tx, 0.0, 1.0);
-		ty = std::clamp(ty, 0.0, 1.0);
-		tz = std::clamp(tz, 0.0, 1.0);
-
-		// Interpolate along x for the four lower/upper face corners
-		const double c00 = v000 + tx * (v100 - v000);
-		const double c01 = v001 + tx * (v101 - v001);
-		const double c10 = v010 + tx * (v110 - v010);
-		const double c11 = v011 + tx * (v111 - v011);
-
-		// Interpolate along y for the lower and upper edges
-		const double c0 = c00 + ty * (c10 - c00);
-		const double c1 = c01 + ty * (c11 - c01);
-
-		// Interpolate along z and return
-		return c0 + tz * (c1 - c0);
+		return trilinear_box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0,
+			v000, v100, v010, v110, v001, v101, v011, v111, x, y, z);
 	}
 
 

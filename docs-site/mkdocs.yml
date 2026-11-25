@@ -84,7 +84,7 @@ plugins:
             EXTRACT_ALL: True
             ENABLE_PREPROCESSING: True
             MACRO_EXPANSION: True
-            PREDEFINED: "USE_CUDA __global__= __device__= __host__= __forceinline__="
+            PREDEFINED: "USE_CUDA FLAN_HD= __global__= __device__= __host__= __forceinline__="
             # Don't publish the source code itself, only the documentation
             XML_PROGRAMLISTING: False
             SOURCE_BROWSER: False
