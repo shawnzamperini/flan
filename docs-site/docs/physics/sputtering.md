@@ -12,9 +12,8 @@ a HERMES background, or off a wall face of the slab background. The
 sheath's electric field pulls the ions they become back to the wall
 ([The sheath](#the-sheath)), and with `sput_self = "on"` the impurities
 landing on the wall sputter more of it
-([Self-sputtering](#self-sputtering)). The sputtered source, where
-atoms land back on the wall and the sheath field run on GPUs as well as
-the CPU; self-sputtering is CPU only so far. How it
+([Self-sputtering](#self-sputtering)). All of this runs on GPUs
+as well as the CPU. How it
 was built and checked is in the
 [Sheath and Self-Sputtering Plan](../developer/sheath-plan.md).
 
@@ -1064,8 +1063,6 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
 - **Sputtered atoms' distributions.** The Thompson energy and cosine
   angle distributions are the usual approximations. RustBCA could give the
   real distributions for each impact energy and angle instead.
-- **The GPU.** The sheath field and self-sputtering don't run on the GPU
-  yet. The sputtered source and the deposition tallies do.
 
 ## References
 

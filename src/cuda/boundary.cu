@@ -12,8 +12,9 @@
 * particles is counted on the device (add_fates_from_device reads it).
 * Where absorbed atoms land on the wall is tallied on the device with the
 * routines shared with the CPU (sputtering_hd.h), and added to the host's
-* tallies after the run (Sputtering::Deposition::add_from_device).
-* Self-sputtering is CPU only so far.
+* tallies after the run (Sputtering::Deposition::add_from_device). A
+* particle landing on an element can carry on as an atom it sputtered
+* (Sputtering::rebirth, the CPU's routine), with its slot's generator.
 */
 #include <cstdio>
 
@@ -62,12 +63,18 @@ namespace Boundary
 	* @param dep Deposition tallies on the device, added to where atoms
 	*        land on the wall, if deposit is true.
 	* @param deposit Whether to tally the deposition.
+	* @param self Self-sputtering on the device, used if self_on is true
+	*        (with deposit): a particle landing on an element can carry on
+	*        as an atom it sputtered.
+	* @param self_on Whether self-sputtering is on.
+	* @param avalanche Set to 1 if a chain reached sput_self_max_gen.
 	*/
 	__global__
 	void check_bounds_kernel(Slots::SlotsDevice slots_d,
 		const Background::BackgroundDevice bkg_d, const BoundaryParams p,
 		pcg32* rngs_d, unsigned long long* fates_d,
-		const Sputtering::DepositionView dep, const bool deposit)
+		const Sputtering::DepositionView dep, const bool deposit,
+		const Sputtering::SelfView self, const bool self_on, int* avalanche)
 	{
 		const int i = blockIdx.x * blockDim.x + threadIdx.x;
 		if (i >= slots_d.N) return;
@@ -95,12 +102,55 @@ namespace Boundary
 			// any turn, as on the CPU)
 			const double v[3] {slots_d.vX[i], slots_d.vY[i], slots_d.vZ[i]};
 
-			// Landed on a wall face: where on it
+			// Self-sputtering off element e, which the particle just landed
+			// on at (pos[0], pos[1], z_wall), as check_bounds_cpu's
+			// self_sputter: if it carries on as an atom it sputtered, the
+			// slot gets that atom and true is returned
+			auto self_sputter = [&](const long e, const double z_wall)
+			{
+				if (!self_on || e < 0) return false;
+				const double hit[3] {pos[0], pos[1], z_wall};
+				const Sputtering::Rebirth r {Sputtering::rebirth(self,
+					static_cast<std::size_t>(e), slots_d.tidx[i], hit, v,
+					slots_d.mass, slots_d.q[i], slots_d.weight[i],
+					slots_d.generation[i], rngs_d[i], DeviceAdd {})};
+				if (r.avalanche) atomicExch(avalanche, 1);
+				if (!r.alive) return false;
+
+				pos[0] = r.x;
+				pos[1] = r.y;
+				pos[2] = r.z;
+				zone = r.zone;
+				turn = 0.0;		// the new velocity is at the new z
+				slots_d.xidx[i] = r.i;
+				slots_d.yidx[i] = r.j;
+				slots_d.zidx[i] = r.k;
+				slots_d.vX[i] = r.vX;
+				slots_d.vY[i] = r.vY;
+				slots_d.vZ[i] = r.vZ;
+				slots_d.vx[i] = 0.0;	// set by the next Boris update
+				slots_d.vy[i] = 0.0;
+				slots_d.vz[i] = 0.0;
+				slots_d.q[i] = 0;
+				slots_d.weight[i] = r.weight;
+				slots_d.pt[i] = 0.0;	// time since its own sputtering
+				slots_d.prompt_by[i] = -1.0;
+				slots_d.generation[i] += 1;
+				++tally.n[fate_self_sputtered];
+				return true;
+			};
+
+			// Landed on a wall face: where on it, and maybe a
+			// self-sputtered atom carries on from there
 			if (state && wall_face >= 0 && deposit)
 			{
-				Sputtering::add_at_wall_face(dep, zones, zone, wall_face, pos,
-					slots_d.pt[i], slots_d.q[i], slots_d.weight[i],
-					slots_d.prompt_by[i], v, slots_d.mass, DeviceAdd {});
+				const long e {Sputtering::add_at_wall_face(dep, zones, zone,
+					wall_face, pos, slots_d.pt[i], slots_d.q[i],
+					slots_d.weight[i], slots_d.prompt_by[i], v, slots_d.mass,
+					DeviceAdd {})};
+				const double z_wall {Zones::face(zones, zone, Zones::zmin)
+					== zone ? Zones::wrap_z(zones, zone, pos[2]) : pos[2]};
+				if (self_sputter(e, z_wall)) state = 0;
 			}
 
 			// Absorb particles that ended up in a cell inside the wall, and
@@ -114,11 +164,12 @@ namespace Boundary
 				++tally.n[fate_chi];
 				if (deposit)
 				{
-					Sputtering::add_into_wall_cell(dep, zone, idx[0], idx[1],
-						idx[2], slots_d.zone[i], slots_d.xidx[i],
-						slots_d.yidx[i], slots_d.pt[i], slots_d.q[i],
-						slots_d.weight[i], slots_d.prompt_by[i], v,
-						slots_d.mass, DeviceAdd {});
+					const long e {Sputtering::add_into_wall_cell(dep, zone,
+						idx[0], idx[1], idx[2], slots_d.zone[i],
+						slots_d.xidx[i], slots_d.yidx[i], slots_d.pt[i],
+						slots_d.q[i], slots_d.weight[i], slots_d.prompt_by[i],
+						v, slots_d.mass, DeviceAdd {})};
+					if (self_sputter(e, pos[2])) state = 0;
 				}
 			}
 
@@ -172,18 +223,26 @@ namespace Boundary
 	*        OpenADAS::IonizRecombWarningsDevice::fates), or nullptr.
 	* @param dep_d Deposition tallies on this GPU
 	*        (Sputtering::Deposition::to_device), or nullptr to not tally.
+	* @param self_d Self-sputtering on this GPU
+	*        (Sputtering::SelfSource::to_device), or nullptr for none.
+	*        Needs dep_d.
 	*/
 	void check_bounds_gpu(Slots::SlotsDevice& slots_d,
 		const Background::BackgroundDevice& bkg_d, const BoundaryParams& p,
 		pcg32* rngs_d, unsigned long long* fates_d,
-		const Sputtering::DepositionDevice* dep_d)
+		const Sputtering::DepositionDevice* dep_d,
+		const Sputtering::SelfDevice* self_d)
 	{
 		const int blockSize {256};
 		const int gridSize {(slots_d.N + blockSize - 1) / blockSize};
 		const bool deposit {dep_d != nullptr && dep_d->device_id >= 0};
+		const bool self_on {deposit && self_d != nullptr
+			&& self_d->device_id >= 0};
 		check_bounds_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, p,
 			rngs_d, fates_d, deposit ? dep_d->view
-			: Sputtering::DepositionView {}, deposit);
+			: Sputtering::DepositionView {}, deposit, self_on ? self_d->view
+			: Sputtering::SelfView {}, self_on, self_on ? self_d->avalanche
+			: nullptr);
 
 #ifdef DEBUG
 		cudaError_t err {cudaDeviceSynchronize()};
@@ -219,6 +278,8 @@ namespace Boundary
 		fates.core += static_cast<long long>(n[fate_core]);
 		fates.time_end += static_cast<long long>(n[fate_time_end]);
 		fates.runaway += static_cast<long long>(n[fate_runaway]);
+		fates.self_sputtered += static_cast<long long>(
+			n[fate_self_sputtered]);
 	}
 
 }  // namespace Boundary

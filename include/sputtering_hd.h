@@ -5,11 +5,12 @@
 * @brief Starting sputtered atoms and tallying where they land, shared by
 *        the CPU and the GPU (see host_device.h).
 *
-* Sputtering::Source::sample_birth and Sputtering::Deposition's
-* add_into_wall_cell and add_at_wall_face (sputtering.cpp) call these on
-* views of their own data; the GPU calls them on device copies of the same
-* data (SourceDevice, DepositionDevice). So a GPU run starts atoms and
-* tallies their landings the same way as a CPU run.
+* Sputtering::Source::sample_birth, Sputtering::Deposition's
+* add_into_wall_cell and add_at_wall_face, and SelfSource::rebirth
+* (sputtering.cpp) call these on views of their own data; the GPU calls
+* them on device copies of the same data (SourceDevice, DepositionDevice,
+* SelfDevice). So a GPU run starts atoms, tallies their landings and
+* self-sputters the same way as a CPU run.
 *
 * Views hold plain pointers and sizes, never std::vector, so they can be
 * copied to a kernel as they are. The tallies are added to with an adder
@@ -757,6 +758,273 @@ namespace Sputtering
 		add(&d.scalars[dep_wall_face], weight);
 		return -1;
 	}
+
+	// -----------------------------------------------------------------
+	// Self-sputtering
+	// -----------------------------------------------------------------
+
+	/**
+	* The energy and angle an impurity hits the wall with, for the
+	* self-sputtering yield (see self_impact).
+	*/
+	struct SelfImpact
+	{
+		double energy {};	///< Impact energy (eV)
+		double angle {};	///< Angle from the element's normal (degrees)
+	};
+
+	/**
+	* The energy and angle an impurity hits a wall element with, for the
+	* self-sputtering yield.
+	*
+	* With the sheath field in the push (phi_wall = 0 here), the particle
+	* has already been accelerated through the sheath, so both come from
+	* its velocity. Without it, an ion of charge q still falls through the
+	* sheath before it hits, gaining q phi_wall, the same assumption as for
+	* the D+ ions of the source. That energy is added to its motion along
+	* the normal, v_n' = sqrt(v_n^2 + 2 q e phi_wall / m), since the
+	* sheath's field is along the normal, and the angle is from there. A
+	* particle moving away from the wall when it was absorbed (possible
+	* when the staircase's face and the element's normal differ) is taken
+	* to hit it with its speed along the normal.
+	*
+	* @param v Cartesian velocity (m/s), 3 values.
+	* @param mass Mass (kg).
+	* @param n The element's unit normal, into the plasma, 3 values.
+	* @param q Charge.
+	* @param phi_wall Sheath drop to add (V), 0 with the sheath field on.
+	* @return Impact energy (eV) and angle from the normal (degrees).
+	*/
+	FLAN_HD inline SelfImpact self_impact(const double* v, const double mass,
+		const double* n, const int q, const double phi_wall)
+	{
+		const double v2 {v[0] * v[0] + v[1] * v[1] + v[2] * v[2]};
+		const double v_n {std::fabs(v[0] * n[0] + v[1] * n[1] + v[2] * n[2])};
+		const double v_t2 {std::fmax(v2 - v_n * v_n, 0.0)};
+		double v_n2 {v_n * v_n};
+		if (q > 0 && phi_wall > 0.0)
+			v_n2 += 2.0 * q * Constants::ev_to_j * phi_wall / mass;
+
+		SelfImpact out {};
+		out.energy = 0.5 * mass * (v_t2 + v_n2) / Constants::ev_to_j;
+		out.angle = std::atan2(std::sqrt(v_t2), std::sqrt(v_n2)) * 180.0
+			/ Constants::pi;
+		return out;
+	}
+
+	/**
+	* Russian roulette on a weight.
+	*
+	* A weight at or above min_weight is kept. Below it, the particle
+	* carries on with min_weight with probability weight / min_weight and
+	* ends otherwise, so the expected weight is unchanged while particles
+	* of little weight are followed less often.
+	*
+	* @param weight The weight (atoms/s).
+	* @param min_weight Weight below which roulette is played. 0 or less
+	*        turns it off.
+	* @param u Uniform random number in [0, 1).
+	* @return The new weight, 0 if the particle ends.
+	*/
+	FLAN_HD inline double roulette(const double weight,
+		const double min_weight, const double u)
+	{
+		if (!(weight > 0.0)) return 0.0;
+		if (!(min_weight > 0.0) || weight >= min_weight) return weight;
+		return u * min_weight < weight ? min_weight : 0.0;
+	}
+
+	/**
+	* A particle that landed on the wall and carries on as one of the atoms
+	* it sputtered (rebirth). If alive is false it ends there, redeposited,
+	* and nothing else is set.
+	*/
+	struct Rebirth
+	{
+		bool alive {};			///< Carries on as a sputtered atom
+		bool avalanche {};		///< Ended at sput_self_max_gen
+		int zone {};			///< Zone it starts in
+		double x {};			///< Computational x
+		double y {};			///< Computational y
+		double z {};			///< Computational z
+		int i {};				///< x index of its cell
+		int j {};				///< y index of its cell
+		int k {};				///< z index of its cell
+		double vX {};			///< Cartesian velocity (m/s)
+		double vY {};
+		double vZ {};
+		double weight {};		///< New weight (atoms/s)
+	};
+
+	/// Indices of SelfSource's scalar tallies in SelfView::scalars. The
+	/// counts are kept as doubles too, so the GPU can add to them with
+	/// atomicAdd like the rest (exact up to 2^53).
+	enum SelfScalar
+	{
+		self_landed,		///< Rate landing on elements
+		self_total,			///< Self-sputtered rate, sum of w Y
+		self_energy_sum,	///< Sum of w E over the landings
+		self_angle_sum,		///< Sum of w angle
+		self_roulette_lost,	///< Rate ended by roulette
+		self_num_below,		///< Landings below the yield's threshold
+		self_num_above,		///< Landings past the table's highest energy
+		num_self_scalars
+	};
+
+	/**
+	* Self-sputtering (SelfSource) as flat arrays: the source's elements,
+	* plasma cells and sheath drops it starts atoms from, the impurity on
+	* the wall's yield table, and the tallies, added to as particles land.
+	*/
+	struct SelfView
+	{
+		ElementsView el {};				///< The surface elements
+		const double* cell_bounds {};	///< x_lo, x_hi, y_lo, y_hi per
+										///< element
+		const double* phi_wall {};		///< Sheath drop (V) per frame and
+										///< element (frame-major)
+		int nframes {};					///< Frames of phi_wall
+		YieldView table {};				///< Impurity on the wall material
+		double energy_max {};			///< The table's highest energy (eV)
+		double lambda {};				///< Largest energy fraction the
+										///< impurity can give a wall atom
+		double imp_mass_kg {};			///< Mass of the impurity (kg)
+		double phi_sign {1.0};			///< Handedness of (R, phi, Z)
+		double min_weight {};			///< Roulette below this (atoms/s)
+		int max_gen {};					///< Generation that stops the run
+		bool sheath_on {};				///< Push includes the sheath field
+
+		double* self {};		///< Self-sputtered rate per element
+		double* gen_weight {};	///< Weight carried on into each generation
+								///< (max_gen + 1 values)
+		double* gen_landed {};	///< Weight landing on elements from each
+								///< generation (max_gen + 1 values)
+		double* scalars {};		///< num_self_scalars values
+	};
+
+	/**
+	* What a particle that landed on element e does next: sputters more
+	* atoms and carries on as one of them, or ends (see
+	* SelfSource::rebirth for the steps). The random numbers are drawn in
+	* the same order on the CPU and the GPU: the roulette, the Thompson
+	* energy, then the two for the direction.
+	*
+	* @param s Self-sputtering.
+	* @param e Index of the element it landed on.
+	* @param frame Its background frame (Slots::Slots::tidx).
+	* @param pos Its computational position (x, y, z) when absorbed, z
+	*        already wrapped into its zone if periodic.
+	* @param v Its Cartesian velocity (m/s), 3 values.
+	* @param mass Its mass (kg).
+	* @param q Its charge.
+	* @param weight Its weight (atoms/s).
+	* @param generation How many times it was self-sputtered before.
+	* @param rng Random number generator: the calling thread's on the
+	*        CPU, the slot's on the GPU.
+	* @param add Adder, add(double* p, double value).
+	* @return What it does next.
+	*/
+	template <typename Add>
+	FLAN_HD inline Rebirth rebirth(const SelfView& s, const std::size_t e,
+		const int frame, const double* pos, const double* v,
+		const double mass, const int q, const double weight,
+		const int generation, pcg32& rng, const Add& add)
+	{
+		const std::size_t n_elem {s.el.n};
+		const int t {frame < 0 ? 0 : (frame > s.nframes - 1 ? s.nframes - 1
+			: frame)};
+		const double phi_wall {s.sheath_on ? 0.0
+			: s.phi_wall[static_cast<std::size_t>(t) * n_elem + e]};
+
+		// 1. Energy and angle, at the place it hit (held to the element's
+		// toroidal extent)
+		const double z {std::fmin(std::fmax(pos[2], std::fmin(
+			s.el.phi_min[e], s.el.phi_max[e])), std::fmax(s.el.phi_min[e],
+			s.el.phi_max[e]))};
+		double n[3];
+		element_normal(s.el, e, z, s.phi_sign, n);
+		const SelfImpact hit {self_impact(v, mass, n, q, phi_wall)};
+
+		// 2. Yield, and the tallies of the landing
+		const double y {get_yield(s.table, hit.energy, hit.angle)};
+		const double w_new {weight * y};
+		const int g {generation < 0 ? 0 : (generation > s.max_gen
+			? s.max_gen : generation)};
+		add(&s.scalars[self_landed], weight);
+		add(&s.gen_landed[g], weight);
+		add(&s.scalars[self_energy_sum], weight * hit.energy);
+		add(&s.scalars[self_angle_sum], weight * hit.angle);
+		add(&s.self[e], w_new);
+		add(&s.scalars[self_total], w_new);
+		if (!(y > 0.0)) add(&s.scalars[self_num_below], 1.0);
+		if (hit.energy > s.energy_max) add(&s.scalars[self_num_above], 1.0);
+
+		// 3. Roulette
+		Rebirth r {};
+		const double w {roulette(w_new, s.min_weight, rng.next_double())};
+		if (!(w > 0.0))
+		{
+			if (w_new > 0.0) add(&s.scalars[self_roulette_lost], w_new);
+			return r;
+		}
+		if (generation + 1 > s.max_gen)
+		{
+			r.avalanche = true;
+			return r;
+		}
+		add(&s.gen_weight[generation + 1], w);
+
+		// 4. The atom: where it hit, just inside the plasma cell
+		constexpr double inset {1e-3};
+		const double x_lo {s.cell_bounds[4 * e]};
+		const double x_hi {s.cell_bounds[4 * e + 1]};
+		const double y_lo {s.cell_bounds[4 * e + 2]};
+		const double y_hi {s.cell_bounds[4 * e + 3]};
+		r.x = std::fmin(std::fmax(pos[0], x_lo), x_hi);
+		r.y = std::fmin(std::fmax(pos[1], y_lo), y_hi);
+		switch (s.el.face[e])
+		{
+			case Zones::xmin: r.x = x_lo + inset * (x_hi - x_lo); break;
+			case Zones::xmax: r.x = x_hi - inset * (x_hi - x_lo); break;
+			case Zones::ymin: r.y = y_lo + inset * (y_hi - y_lo); break;
+			default: r.y = y_hi - inset * (y_hi - y_lo); break;
+		}
+		r.z = z;
+		r.zone = s.el.zone[e];
+		r.i = s.el.i[e];
+		r.j = s.el.j[e];
+		r.k = s.el.k[e];
+
+		// Its energy and direction
+		const double e_atom {sample_thompson(s.table.target_Es,
+			s.lambda * hit.energy, rng.next_double())};
+		const double speed {std::sqrt(2.0 * e_atom * Constants::ev_to_j
+			/ s.imp_mass_kg)};
+		const double u1 {rng.next_double()};
+		const double u2 {rng.next_double()};
+		double d[3];
+		cosine_direction(n, u1, u2, d);
+		r.vX = speed * d[0];
+		r.vY = speed * d[1];
+		r.vZ = speed * d[2];
+		r.weight = w;
+		r.alive = true;
+		return r;
+	}
+
+	/**
+	* Self-sputtering on a GPU (SelfSource::to_device): the lookups copied
+	* and the tallies zeroed, on that device, plus a flag set if a chain
+	* reached sput_self_max_gen. Added back to the host with
+	* SelfSource::add_from_device and freed with free_self.
+	*/
+	struct SelfDevice
+	{
+		int device_id {-1};		///< GPU the arrays are on, -1 for none
+		SelfView view {};		///< Self-sputtering, with device pointers
+		int* avalanche {};		///< Set to 1 by the boundary kernel if a
+								///< chain reached sput_self_max_gen
+	};
 
 	/**
 	* A source copied to a GPU (Source::to_device): the view's arrays are

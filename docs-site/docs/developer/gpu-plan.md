@@ -16,19 +16,19 @@ need the most particles (sputtered sources on SOLEDGE3X walls and HERMES
 targets, with the sheath and self-sputtering) are the ones that can't use
 the GPUs.
 
-## What the GPU can't do now
+## What the GPU couldn't do
 
-Each item below is either stopped with an error or left out of a GPU
-run today:
+Each item below was stopped with an error or left out of a GPU run when
+this plan was written. All of them run now; the table says since when:
 
 | Feature | On a GPU run now | Where |
 |---|---|---|
 | Sputtered source (`imp_source_opt = "sputter"`) | Runs (since G5) | `sputtering_hd.h`, `cuda/slots.cu` |
 | Deposition and prompt tallies, impact histograms | Run (since G5) | `sputtering_hd.h`, `cuda/boundary.cu` |
 | Sheath field and near-wall sub-steps | Runs (since G6) | `sheath_hd.h`, `cuda/boris.cu` |
-| Self-sputtering (`sput_self`) | Stops (since G5) | `flan.cpp`, `Sputtering::SelfSource::rebirth` |
+| Self-sputtering (`sput_self`) | Runs (since G7) | `sputtering_hd.h`, `cuda/boundary.cu` |
 | `imp_iz_max_charge` (test option) | Runs (since G5) | `cuda/openadas.cu` |
-| Boundary fates: `self_sputtered` | 0 (no self-sputtering) | `follow_impurities` |
+| Boundary fates: `self_sputtered` | Counted (since G7) | `cuda/boundary.cu` |
 | `Slots` fields `prompt_by`, `generation` | On the device since G5 (`zone` since G1) | `slots_device.h` |
 
 Things that are host-side setup and need nothing on the GPU: reading the
@@ -67,11 +67,13 @@ startup), and saving the results.
   the deposition tallies run on the GPU with the CPU's routines
   (`sputtering_hd.h`).
 - Since G6 the sheath field and the near-wall sub-steps run on the GPU
-  with the CPU's routines (`sheath_hd.h`).
+  with the CPU's routines (`sheath_hd.h`), and since G7 self-sputtering
+  (`rebirth` in `sputtering_hd.h`). Every feature now runs on the GPU.
 - One host thread per GPU, slots split between ranks and then GPUs.
 - Tests `*_cuda`, and the regression variants `z10_gpu` (friction and
   thermal force), `gradb_gpu` (drifts) and `p01_gpu`, `p1_gpu`, and
-  any sheath case followed by `_gpu` (prompt redeposition).
+  any sheath case followed by `_gpu` (prompt redeposition), and any
+  `reg_self_sputter` case followed by `_gpu`.
 
 ## Approach
 
@@ -519,19 +521,55 @@ Every phase is checked three ways:
   CPU with it. The sheath regressions `brooks_a5_gpu` and
   `borodkina_a5_gpu` took 3.2 s and 1.4 s there.
 
-**G7. Self-sputtering.**
+**G7. Self-sputtering.** Done.
 
-- `SelfSourceDevice`: the W-on-W yield table, the per-element parameters
-  it needs from the source, the minimum weight, the maximum generation,
-  and the tallies (`m_self`, `m_gen_weight`, `m_gen_landed`, the sums and
-  counts) as device arrays and counters.
-- `rebirth` as a shared function called from the boundary routine,
-  with Russian roulette from the slot's RNG. A device flag for the
-  avalanche (`sput_self_max_gen`), read after the step, stops the run as
-  on the CPU.
-- Regression: `_gpu` variants of `reg_self_sputter` (`y05`, `y125`).
-  End to end: the HERMES target case with self-sputtering, CPU against
-  GPU.
+- `include/sputtering_hd.h` has `SelfImpact`, `self_impact`,
+  `roulette`, `Rebirth`, and `rebirth` on a `SelfView`: the source's
+  elements, cell bounds and floating drops, the impurity-on-wall yield
+  table, the settings (Lambda, mass, roulette weight, generation limit,
+  sheath on or off) and the tallies, added to through the adder as the
+  deposition's are. `SelfSource::rebirth` is now a call of it on
+  `SelfSource::view`. `SelfSource`'s scalar tallies became one array
+  (`SelfScalar`), the two counts kept as doubles so `atomicAdd` works on
+  them; the CPU results are unchanged (`test_sputtering_cpu`, and the
+  CPU runs of `reg_self_sputter` pass `check_self_sputter.py`).
+- `SelfSource::to_device` copies the lookups to a GPU with zeroed
+  tallies and an avalanche flag (`SelfDevice`); `add_from_device` adds
+  the tallies to the host's after the run, and `free_self` frees them.
+  Each GPU has its own copy in `follow_impurities`.
+- `check_bounds_kernel` calls `rebirth` with the slot's generator at
+  both landing sites (wall face and wall cell), and the new atom takes
+  over the slot as on the CPU. `Boundary::FateIndex` has
+  `fate_self_sputtered`, counted on the GPU. A chain that reaches
+  `sput_self_max_gen` sets the flag; `check_bounds_wrapper` reads it
+  after each step (only with self-sputtering on) and stops the run with
+  the CPU's message (`Boundary::avalanche_error`), from that GPU's
+  tallies (`self_stats_from_device`). The stop in `flan.cpp` is gone.
+- Tests: `test_self_sputter_cuda` runs the boundary step with
+  self-sputtering on 4000 or so tungsten particles past their zones'
+  faces, with weights around the source particles' (so roulette is
+  played) and speeds on both sides of the W on W threshold, against
+  `check_bounds_cpu` one particle at a time on slot i's generator: on
+  the HERMES test grid's targets without the sheath field (drop added)
+  and in the SOLEDGE3X test mesh's wall cells with it. Every slot (the
+  new atoms included), the self-sputtering and deposition tallies, and
+  the self-sputtered count agree to rounding. A third test checks the
+  avalanche flag is raised at the generation limit and not one below.
+  With the GPU's rebirth or its flag turned off, the tests covering it
+  fail.
+- `reg_self_sputter` has `<variant>_gpu`. `y05_gpu` and `y125_gpu` pass
+  every check of `check_self_sputter.py`, like the CPU runs (T / S 0.414
+  and 2.83 on the GPU, 0.415 and 2.77 on the CPU, each against its own
+  f0 and f1 within 1e-4), and `w_te20_gpu` (sheath field on, full
+  ionization, RustBCA's W on W) agrees with the CPU in mean charge,
+  impact energy, angle and yield. Each took 3 to 4 s on the GPU against
+  110 to 165 s on 16 CPU threads.
+- End to end, the HERMES targets as the source with the `"borodkina"`
+  sheath and W on W self-sputtering, CPU against GPU: identical source
+  rate; redeposition, prompt fractions, each zone's share, the fates and
+  the landing charge, energy and angle within the Monte Carlo error; the
+  self-sputtered rate 0.0200 of the source on the CPU, and 0.0186 to
+  0.0202 over four GPU seeds.
 
 **G8. Performance and memory.**
 

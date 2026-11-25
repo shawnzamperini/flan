@@ -8,8 +8,8 @@ input is `regression/s3x_example.cpp`, and the options are listed under
 
 !!! note "GPUs"
     SOLEDGE3X backgrounds run on GPUs (`use_gpu = "cuda"`) as well as the
-    CPU, thermal force, sputtered source and sheath field included, except
-    for self-sputtering, which stops. It is CPU only so far.
+    CPU, thermal force, sputtered source, sheath field and
+    self-sputtering included.
 
 ## Files
 

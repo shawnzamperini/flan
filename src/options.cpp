@@ -1047,8 +1047,7 @@ namespace Options
 	* Borodkina and Tsvetkov's; both split the drop the same way. The
 	* default is "brooks". It only does anything on a background with wall
 	* surfaces (as for imp_source_opt = "sputter"), and is left out on
-	* other backgrounds. CPU only: a GPU run goes without it, with a
-	* warning.
+	* other backgrounds.
 	*
 	* Valid values are "off", "brooks" and "borodkina". An invalid value
 	* prints an error and leaves the option unchanged. Also sets the
@@ -2611,7 +2610,7 @@ namespace Options
 	* (self-sputtering). The particle carries on as one of the atoms it
 	* sputtered, with its weight multiplied by the yield from the
 	* sput_self_table_file table (see Sputtering::SelfSource). Needs
-	* imp_source_opt = "sputter". CPU only: a GPU run with it stops.
+	* imp_source_opt = "sputter".
 	*
 	* Valid values are "off" and "on"; anything else stops the run
 	* (check_input). Also sets the control integer returned by

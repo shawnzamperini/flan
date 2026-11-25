@@ -58,8 +58,9 @@ namespace Boundary
 	/**
 	* What can happen to a particle at the boundaries in one step, as
 	* indices into FateTally::n and the GPU's counters (the fields of
-	* Fates, without self_sputtered, which only the CPU has so far, and
-	* max_time, which is counted while stepping).
+	* Fates, without max_time, which is counted while stepping).
+	* self_sputtered is counted here only by the GPU; the CPU counts it in
+	* check_bounds_cpu.
 	*/
 	enum FateIndex : int
 	{
@@ -70,6 +71,7 @@ namespace Boundary
 		fate_core,			///< Put back in at a core face
 		fate_time_end,		///< Reached the end of the background time
 		fate_runaway,		///< Absorbed after too many crossings
+		fate_self_sputtered,	///< Carried on as a self-sputtered atom
 		num_fate_indices
 	};
 

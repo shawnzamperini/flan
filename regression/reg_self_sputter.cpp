@@ -34,6 +34,8 @@
 *            on ("brooks") at B 2 degrees to the wall. Printed by the
 *            checker beside the yield at the energies the landing charges
 *            fall through, not checked.
+*   <variant>_gpu  Any of the above on the GPU, checked (or printed) the
+*            same way.
 *
 * The constant-yield runs are p1 of reg_prompt_redep (B = 2 T, n_e =
 * 3e18 m^-3, Te = Ti = 20 eV, B at 0.01 degrees to the wall, no electric
@@ -180,8 +182,16 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	const std::string variant {argc > 1 ? argv[1] : ""};
-	Inputs inpts {base_inputs(variant)};
+	const std::string name {argc > 1 ? argv[1] : ""};
+	Inputs inpts {base_inputs(name)};
+
+	// <variant>_gpu: the same case on the GPU
+	std::string variant {name};
+	if (variant.ends_with("_gpu"))
+	{
+		variant.resize(variant.size() - 4);
+		inpts["use_gpu"] = "cuda";
+	}
 
 	// Constant yields, from make_self_tables.py
 	if (variant == "y05" || variant == "y125")
@@ -217,7 +227,7 @@ int main(int argc, char* argv[])
 	else
 	{
 		std::cerr << "Usage: reg_self_sputter <variant>, with <variant> one "
-			"of y05, y125, w_te<Te>\n";
+			"of y05, y125, w_te<Te>, or any of these followed by _gpu\n";
 		MPI_Finalize();
 		return 1;
 	}

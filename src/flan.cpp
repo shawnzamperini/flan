@@ -228,11 +228,6 @@ R"(
 	std::optional<Sputtering::SelfSource> self {};
 	if (opts.sput_self_int() == 1)
 	{
-		if (opts.use_gpu_int() > 0)
-		{
-			Errors::fatal_error("sput_self = \"on\" only runs on the CPU "
-				"for now. Set use_gpu = \"off\".");
-		}
 		if (!source)
 		{
 			Errors::fatal_error("sput_self = \"on\" needs the sputtered "

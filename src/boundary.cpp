@@ -381,19 +381,39 @@ namespace Boundary
 		// steady state to find
 		if (avalanche)
 		{
-			std::ostringstream msg;
-			msg << "A particle was self-sputtered "
-				<< opts.sput_self_max_gen() << " times (sput_self_max_gen). "
-				"This looks like a self-sputtering avalanche: each atom "
-				"landing on the wall sputters, on average, about as many "
-				"atoms as come back, so the self-sputtered rate has no "
-				"steady value. Multiplication along the chains so far: "
-				<< self->chain_multiplication() << ", mean yield "
-				<< self->mean_yield() << " at a mean impact energy of "
-				<< self->mean_energy() << " eV.";
-			Errors::fatal_error(msg.str());
+			avalanche_error(opts.sput_self_max_gen(),
+				self->chain_multiplication(), self->mean_yield(),
+				self->mean_energy());
 		}
 	}  // check_bounds_cpu
+
+	/**
+	* Stops the run after a chain of self-sputtering went on for
+	* sput_self_max_gen generations: the multiplication is at or near 1,
+	* so the self-sputtered rate has no steady value to find. Called by
+	* check_bounds_cpu and, for the GPU, check_bounds_wrapper.
+	*
+	* @param max_gen sput_self_max_gen.
+	* @param chain_multiplication Multiplication along the chains so far
+	*        (SelfSource::chain_multiplication).
+	* @param mean_yield Mean yield of the landings so far.
+	* @param mean_energy Their mean impact energy (eV).
+	*/
+	[[noreturn]] void avalanche_error(const int max_gen,
+		const double chain_multiplication, const double mean_yield,
+		const double mean_energy)
+	{
+		std::ostringstream msg;
+		msg << "A particle was self-sputtered " << max_gen << " times "
+			"(sput_self_max_gen). This looks like a self-sputtering "
+			"avalanche: each atom landing on the wall sputters, on "
+			"average, about as many atoms as come back, so the "
+			"self-sputtered rate has no steady value. Multiplication along "
+			"the chains so far: " << chain_multiplication << ", mean yield "
+			<< mean_yield << " at a mean impact energy of " << mean_energy
+			<< " eV.";
+		Errors::fatal_error(msg.str());
+	}
 
 	/**
 	* check_bounds_cpu without keeping the counts of what happened to the

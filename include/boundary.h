@@ -40,4 +40,7 @@ namespace Boundary
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
 		std::vector<pcg32>& rngs);
+
+	[[noreturn]] void avalanche_error(int max_gen,
+		double chain_multiplication, double mean_yield, double mean_energy);
 }

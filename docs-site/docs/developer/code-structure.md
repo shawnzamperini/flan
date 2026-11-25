@@ -101,8 +101,7 @@ Then each pass through the loop runs these steps, in order:
 The loop ends once every slot is dead and no particles are left to launch.
 
 A sputtered source and the sheath hook into these steps
-(`src/sputtering.cpp`, `src/sheath.cpp`); all but self-sputtering on the
-GPU too:
+(`src/sputtering.cpp`, `src/sheath.cpp`), on the GPU too:
 
 - `Slots::fill_slots_cpu` starts new particles from
   `Sputtering::Source::sample_birth`, and `fill_slots_gpu` from the same
@@ -122,7 +121,11 @@ GPU too:
   `Sputtering::SelfSource`, whose `rebirth` turns the particle into a
   self-sputtered atom in place, so it carries on in the same slot with a
   new weight. A runaway chain is noted inside the parallel loop and stops
-  the run after it.
+  the run after it (`Boundary::avalanche_error`). On the GPU the kernel
+  calls the same routine on a device copy (`SelfSource::to_device`) with
+  the slot's generator, sets a device flag for a runaway chain, which
+  `check_bounds_wrapper` reads after each step, and the tallies are added
+  to the host's after the run (`SelfSource::add_from_device`).
 
 The physics of each step is described in
 [Impurity Transport](../physics/impurity-transport.md),
@@ -189,16 +192,16 @@ The boundary conditions are shared whole: `include/boundary_hd.h` has the
 per-particle routines (`time_bc`, `check_faces`, `in_wall_cell`,
 `turn_velocity`) that `Boundary::check_bounds_cpu` and the GPU's
 `check_bounds_kernel` both call with the same `BoundaryParams`
-(`Boundary::make_params`). The CPU adds self-sputtering on top, which
-needs host classes. Each GPU counts what happened
+(`Boundary::make_params`). Each GPU counts what happened
 to its particles (`Boundary::Fates`) in device counters that
 `add_fates_from_device` reads after the run.
 
 Sputtering is shared through `include/sputtering_hd.h`: flat views of
 the surface elements, the yield table, the source and the deposition
 tallies (`ElementsView`, `YieldView`, `SourceView`, `DepositionView`),
-`sample_birth`, and the deposition routines `add_at_wall_face` and
-`add_into_wall_cell`. The wall cells and wall faces with elements are
+`sample_birth`, the deposition routines `add_at_wall_face` and
+`add_into_wall_cell`, and self-sputtering's `rebirth` on a `SelfView`
+(with `self_impact` and `roulette`). The wall cells and wall faces with elements are
 sorted keys searched by bisection, rather than hash maps, so the device
 can search the same arrays. The tallies are added to through an adder
 passed in: `omp atomic` on the CPU, `atomicAdd` on the GPU.

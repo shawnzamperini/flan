@@ -2208,41 +2208,10 @@ namespace Sputtering
 	SelfImpact self_impact(const std::array<double, 3>& v, const double mass,
 		const std::array<double, 3>& n, const int q, const double phi_wall)
 	{
-		const double v2 {v[0] * v[0] + v[1] * v[1] + v[2] * v[2]};
-		const double v_n {std::abs(v[0] * n[0] + v[1] * n[1] + v[2] * n[2])};
-		const double v_t2 {std::max(v2 - v_n * v_n, 0.0)};
-		double v_n2 {v_n * v_n};
-		if (q > 0 && phi_wall > 0.0)
-			v_n2 += 2.0 * q * Constants::ev_to_j * phi_wall / mass;
-
-		SelfImpact out {};
-		out.energy = 0.5 * mass * (v_t2 + v_n2) / Constants::ev_to_j;
-		out.angle = std::atan2(std::sqrt(v_t2), std::sqrt(v_n2)) * 180.0
-			/ Constants::pi;
-		return out;
+		return self_impact(v.data(), mass, n.data(), q, phi_wall);
 	}
 
-	/**
-	* Russian roulette on a weight.
-	*
-	* A weight at or above min_weight is kept. Below it, the particle
-	* carries on with min_weight with probability weight / min_weight and
-	* ends otherwise, so the expected weight is unchanged while particles
-	* of little weight are followed less often.
-	*
-	* @param weight The weight (atoms/s).
-	* @param min_weight Weight below which roulette is played. 0 or less
-	*        turns it off.
-	* @param u Uniform random number in [0, 1).
-	* @return The new weight, 0 if the particle ends.
-	*/
-	double roulette(const double weight, const double min_weight,
-		const double u)
-	{
-		if (!(weight > 0.0)) return 0.0;
-		if (!(min_weight > 0.0) || weight >= min_weight) return weight;
-		return u * min_weight < weight ? min_weight : 0.0;
-	}
+	// roulette is in sputtering_hd.h, shared with the GPU
 
 	/**
 	* Sets up self-sputtering off the source's surface elements.
@@ -2345,98 +2314,39 @@ namespace Sputtering
 		const std::array<double, 3>& pos, const Impact& impact, const int q,
 		const double weight, const int generation, pcg32& rng)
 	{
-		const Surface& surface {m_source->surface()};
-		const SurfaceElement& el {surface.elements()[e]};
-		const std::size_t n_elem {surface.size()};
-		const int t {std::clamp(frame, 0, m_source->nframes() - 1)};
-		const double phi_wall {m_sheath_on ? 0.0
-			: m_source->phi_wall()[t * n_elem + e]};
+		return Sputtering::rebirth(view(), e, frame, pos.data(),
+			impact.v.data(), impact.mass, q, weight, generation, rng,
+			OmpAdd {});
+	}
 
-		// 1. Energy and angle
-		const double z {std::clamp(pos[2], std::min(el.phi_min, el.phi_max),
-			std::max(el.phi_min, el.phi_max))};
-		const std::array<double, 3> n {el.normal_xyz(z, m_phi_sign)};
-		const SelfImpact hit {self_impact(impact.v, impact.mass, n, q,
-			phi_wall)};
-
-		// 2. Yield
-		const double y {m_table.get_yield(hit.energy, hit.angle)};
-		const double w_new {weight * y};
-		#pragma omp atomic
-		m_landed += weight;
-		#pragma omp atomic
-		m_gen_landed[std::clamp(generation, 0, m_max_gen)] += weight;
-		#pragma omp atomic
-		m_energy_sum += weight * hit.energy;
-		#pragma omp atomic
-		m_angle_sum += weight * hit.angle;
-		#pragma omp atomic
-		m_self[e] += w_new;
-		#pragma omp atomic
-		m_self_total += w_new;
-		if (!(y > 0.0))
-		{
-			#pragma omp atomic
-			++m_num_below;
-		}
-		if (hit.energy > m_table.energy_max())
-		{
-			#pragma omp atomic
-			++m_num_above;
-		}
-
-		// 3. Roulette
-		Rebirth r {};
-		const double w {roulette(w_new, m_min_weight, rng.next_double())};
-		if (!(w > 0.0))
-		{
-			if (w_new > 0.0)
-			{
-				#pragma omp atomic
-				m_roulette_lost += w_new;
-			}
-			return r;
-		}
-		if (generation + 1 > m_max_gen)
-		{
-			r.avalanche = true;
-			return r;
-		}
-		#pragma omp atomic
-		m_gen_weight[generation + 1] += w;
-
-		// 4. The atom: where it hit, just inside the plasma cell
-		constexpr double inset {1e-3};
-		const auto& [x_lo, x_hi, y_lo, y_hi] {m_source->cell_bounds()[e]};
-		r.x = std::clamp(pos[0], x_lo, x_hi);
-		r.y = std::clamp(pos[1], y_lo, y_hi);
-		switch (el.face)
-		{
-			case Zones::xmin: r.x = x_lo + inset * (x_hi - x_lo); break;
-			case Zones::xmax: r.x = x_hi - inset * (x_hi - x_lo); break;
-			case Zones::ymin: r.y = y_lo + inset * (y_hi - y_lo); break;
-			default: r.y = y_hi - inset * (y_hi - y_lo); break;
-		}
-		r.z = z;
-		r.zone = el.zone;
-		r.i = el.i;
-		r.j = el.j;
-		r.k = el.k;
-
-		// Its energy and direction
-		const double e_atom {sample_thompson(m_table.target_Es(),
-			m_lambda * hit.energy, rng.next_double())};
-		const double speed {std::sqrt(2.0 * e_atom * Constants::ev_to_j
-			/ m_imp_mass_kg)};
-		const double u1 {rng.next_double()};
-		const double u2 {rng.next_double()};
-		const auto d {cosine_direction(n, u1, u2)};
-		r.vX = speed * d[0];
-		r.vY = speed * d[1];
-		r.vZ = speed * d[2];
-		r.weight = w;
-		r.alive = true;
-		return r;
+	/**
+	* Self-sputtering as flat arrays, pointing into this object's and the
+	* source's own data, for the routine shared with the GPU (rebirth in
+	* sputtering_hd.h).
+	*
+	* @return The view.
+	*/
+	SelfView SelfSource::view()
+	{
+		const SourceView src {m_source->view()};
+		SelfView v {};
+		v.el = src.el;
+		v.cell_bounds = src.cell_bounds;
+		v.phi_wall = m_source->phi_wall().data();
+		v.nframes = m_source->nframes();
+		v.table = m_table.view();
+		v.energy_max = m_table.energy_max();
+		v.lambda = m_lambda;
+		v.imp_mass_kg = m_imp_mass_kg;
+		v.phi_sign = m_phi_sign;
+		v.min_weight = m_min_weight;
+		v.max_gen = m_max_gen;
+		v.sheath_on = m_sheath_on;
+		v.self = m_self.data();
+		v.gen_weight = m_gen_weight.data();
+		v.gen_landed = m_gen_landed.data();
+		v.scalars = m_scalars.data();
+		return v;
 	}
 
 	/**
@@ -2459,18 +2369,10 @@ namespace Sputtering
 		sum(m_self);
 		sum(m_gen_weight);
 		sum(m_gen_landed);
-		std::vector<double> scalars {m_landed, m_self_total, m_energy_sum,
-			m_angle_sum, m_roulette_lost, static_cast<double>(m_num_below),
-			static_cast<double>(m_num_above)};
+		std::vector<double> scalars(m_scalars.begin(), m_scalars.end());
 		sum(scalars);
 		if (rank != root) return;
-		m_landed = scalars[0];
-		m_self_total = scalars[1];
-		m_energy_sum = scalars[2];
-		m_angle_sum = scalars[3];
-		m_roulette_lost = scalars[4];
-		m_num_below = static_cast<long long>(scalars[5]);
-		m_num_above = static_cast<long long>(scalars[6]);
+		std::copy(scalars.begin(), scalars.end(), m_scalars.begin());
 	}
 
 	/**
@@ -2495,17 +2397,28 @@ namespace Sputtering
 		{return m_gen_weight;}
 	const std::vector<double>& SelfSource::generation_landed() const
 		{return m_gen_landed;}
-	double SelfSource::self_total() const {return m_self_total;}
-	double SelfSource::landed() const {return m_landed;}
+	double SelfSource::self_total() const
+		{return m_scalars[Sputtering::self_total];}
+	double SelfSource::landed() const {return m_scalars[self_landed];}
 	double SelfSource::mean_yield() const
-		{return m_landed > 0.0 ? m_self_total / m_landed : 0.0;}
+	{
+		return landed() > 0.0 ? m_scalars[Sputtering::self_total] / landed()
+			: 0.0;
+	}
 	double SelfSource::mean_energy() const
-		{return m_landed > 0.0 ? m_energy_sum / m_landed : 0.0;}
+	{
+		return landed() > 0.0 ? m_scalars[self_energy_sum] / landed() : 0.0;
+	}
 	double SelfSource::mean_angle() const
-		{return m_landed > 0.0 ? m_angle_sum / m_landed : 0.0;}
-	double SelfSource::roulette_lost() const {return m_roulette_lost;}
-	long long SelfSource::num_below_threshold() const {return m_num_below;}
-	long long SelfSource::num_above_table() const {return m_num_above;}
+	{
+		return landed() > 0.0 ? m_scalars[self_angle_sum] / landed() : 0.0;
+	}
+	double SelfSource::roulette_lost() const
+		{return m_scalars[self_roulette_lost];}
+	long long SelfSource::num_below_threshold() const
+		{return std::llround(m_scalars[self_num_below]);}
+	long long SelfSource::num_above_table() const
+		{return std::llround(m_scalars[self_num_above]);}
 	///@}
 
 	/**
@@ -2520,11 +2433,24 @@ namespace Sputtering
 	*/
 	double SelfSource::chain_multiplication() const
 	{
+		return Sputtering::chain_multiplication(m_gen_weight);
+	}
+
+	/**
+	* The multiplication along the chains from the weight carried into
+	* each generation (see SelfSource::chain_multiplication).
+	*
+	* @param gen_weight Weight carried into each generation, 0 to
+	*        sput_self_max_gen.
+	* @return The multiplication, 0 if nothing was self-sputtered.
+	*/
+	double chain_multiplication(const std::vector<double>& gen_weight)
+	{
 		double from1 {};
-		for (std::size_t g {1}; g < m_gen_weight.size(); ++g)
-			from1 += m_gen_weight[g];
+		for (std::size_t g {1}; g < gen_weight.size(); ++g)
+			from1 += gen_weight[g];
 		if (!(from1 > 0.0)) return 0.0;
-		return (from1 - m_gen_weight[1]) / from1;
+		return (from1 - gen_weight[1]) / from1;
 	}
 
 	/**
@@ -2543,15 +2469,16 @@ namespace Sputtering
 	void SelfSource::print_summary(std::ostream& os,
 		const double source_rate) const
 	{
-		os << "Self-sputtering: " << m_self_total << " atoms/s";
+		const double total {self_total()};
+		os << "Self-sputtering: " << total << " atoms/s";
 		if (source_rate > 0.0)
 		{
-			os << ", " << m_self_total / source_rate << " times the D+ "
-				"source\n  Multiplication " << m_self_total / (source_rate
-				+ m_self_total) << " (along the chains "
+			os << ", " << total / source_rate << " times the D+ "
+				"source\n  Multiplication " << total / (source_rate
+				+ total) << " (along the chains "
 				<< chain_multiplication() << ")";
 		}
-		os << "\n  Landing on elements " << m_landed << " atoms/s, mean "
+		os << "\n  Landing on elements " << landed() << " atoms/s, mean "
 			"yield " << mean_yield() << ", impact energy " << mean_energy()
 			<< " eV, angle from the normal " << mean_angle() << " degrees"
 			<< (m_sheath_on ? "" : " (with the sheath drop added)") << "\n";
@@ -2563,11 +2490,11 @@ namespace Sputtering
 			if (m_gen_weight[g] > 0.0) deepest = static_cast<int>(g);
 		}
 		os << "  Carried on " << carried << " atoms/s, down to generation "
-			<< deepest << "; " << m_roulette_lost << " atoms/s ended by "
+			<< deepest << "; " << roulette_lost() << " atoms/s ended by "
 			"roulette\n";
-		if (m_num_above > 0)
+		if (num_above_table() > 0)
 		{
-			os << "  Warning! " << m_num_above << " landings were past the "
+			os << "  Warning! " << num_above_table() << " landings were past the "
 				"self-sputtering table's highest energy (" << m_table
 				.energy_max() << " eV), where its yield there was used.\n";
 		}
@@ -2876,5 +2803,164 @@ namespace Sputtering
 		free_gpu(d.scalars);
 #endif
 		dep_d = {};
+	}
+
+	/**
+	* Copies self-sputtering to a GPU, with empty tallies, for the boundary
+	* kernel to self-sputter with the same routine as the CPU (rebirth in
+	* sputtering_hd.h).
+	*
+	* @param device_id GPU to put it on.
+	* @return The copy, to add back with add_from_device and free with
+	*         free_self. Without CUDA, an empty one.
+	*/
+	SelfDevice SelfSource::to_device(const int device_id)
+	{
+		SelfDevice out {};
+#ifdef USE_CUDA
+		Errors::check_cuda(cudaSetDevice(device_id),
+			"SelfSource::to_device");
+		// Only the lookups and settings are copied; the tallies start at 0
+		const SelfView h {view()};
+		const std::size_t n_elem {h.el.n};
+		SelfView& d {out.view};
+		d = h;
+		d.el = elements_to_gpu(h.el);
+		d.cell_bounds = copy_to_gpu(h.cell_bounds, 4 * n_elem,
+			"self-sputtering");
+		d.phi_wall = copy_to_gpu(h.phi_wall, m_source->phi_wall().size(),
+			"self-sputtering");
+		d.table.log_energy = copy_to_gpu(h.table.log_energy,
+			h.table.n_energy, "self-sputtering table");
+		d.table.angle = copy_to_gpu(h.table.angle, h.table.n_angle,
+			"self-sputtering table");
+		d.table.yield = copy_to_gpu(h.table.yield, static_cast<std::size_t>(
+			h.table.n_energy) * h.table.n_angle, "self-sputtering table");
+		d.self = zeros_on_gpu(m_self.size(), "self-sputtering");
+		d.gen_weight = zeros_on_gpu(m_gen_weight.size(), "self-sputtering");
+		d.gen_landed = zeros_on_gpu(m_gen_landed.size(), "self-sputtering");
+		d.scalars = zeros_on_gpu(num_self_scalars, "self-sputtering");
+		Errors::check_cuda(cudaMalloc(&out.avalanche, sizeof(int)),
+			"SelfSource::to_device");
+		Errors::check_cuda(cudaMemset(out.avalanche, 0, sizeof(int)),
+			"SelfSource::to_device");
+		out.device_id = device_id;
+#else
+		(void)device_id;
+#endif
+		return out;
+	}
+
+	/**
+	* Adds a GPU's tallies (SelfSource::to_device, added to by the boundary
+	* kernel) to these. Blocks until the GPU's kernels are done.
+	*
+	* @param self_d The GPU's copy.
+	*/
+	void SelfSource::add_from_device(const SelfDevice& self_d)
+	{
+#ifdef USE_CUDA
+		if (self_d.device_id < 0) return;
+		Errors::check_cuda(cudaSetDevice(self_d.device_id),
+			"SelfSource::add_from_device");
+		const SelfView& d {self_d.view};
+		auto add = [](std::vector<double>& to, const double* from)
+		{
+			const std::vector<double> v {copy_from_gpu(from, to.size(),
+				"SelfSource::add_from_device")};
+			for (std::size_t n {}; n < to.size(); ++n) to[n] += v[n];
+		};
+		add(m_self, d.self);
+		add(m_gen_weight, d.gen_weight);
+		add(m_gen_landed, d.gen_landed);
+		const std::vector<double> scalars {copy_from_gpu(d.scalars,
+			num_self_scalars, "SelfSource::add_from_device")};
+		for (std::size_t n {}; n < num_self_scalars; ++n)
+			m_scalars[n] += scalars[n];
+#else
+		(void)self_d;
+#endif
+	}
+
+	/**
+	* Frees self-sputtering on a GPU (SelfSource::to_device).
+	*
+	* @param self_d The copy. Left empty.
+	*/
+	void free_self(SelfDevice& self_d)
+	{
+#ifdef USE_CUDA
+		if (self_d.device_id < 0) return;
+		cudaSetDevice(self_d.device_id);
+		SelfView& d {self_d.view};
+		free_elements(d.el);
+		free_gpu(d.cell_bounds);
+		free_gpu(d.phi_wall);
+		free_gpu(d.table.log_energy);
+		free_gpu(d.table.angle);
+		free_gpu(d.table.yield);
+		free_gpu(d.self);
+		free_gpu(d.gen_weight);
+		free_gpu(d.gen_landed);
+		free_gpu(d.scalars);
+		cudaFree(self_d.avalanche);
+#endif
+		self_d = {};
+	}
+
+	/**
+	* Whether a chain on a GPU reached sput_self_max_gen (the boundary
+	* kernel sets the flag). Read after each boundary step, as the CPU
+	* checks after its own, so the run stops at the same point. Blocks
+	* until the GPU's kernels are done.
+	*
+	* @param self_d Self-sputtering on the GPU.
+	* @return True if there was an avalanche.
+	*/
+	/**
+	* The multiplication along the chains, mean yield and mean impact
+	* energy of a GPU's self-sputtering so far, for the avalanche message.
+	* Blocks until the GPU's kernels are done.
+	*
+	* @param self_d Self-sputtering on the GPU.
+	* @return Those, as SelfSource's accessors would give them.
+	*/
+	SelfStats self_stats_from_device(const SelfDevice& self_d)
+	{
+		SelfStats out {};
+#ifdef USE_CUDA
+		if (self_d.device_id < 0) return out;
+		Errors::check_cuda(cudaSetDevice(self_d.device_id),
+			"Sputtering::self_stats_from_device");
+		const SelfView& d {self_d.view};
+		const std::vector<double> gen {copy_from_gpu(d.gen_weight,
+			static_cast<std::size_t>(d.max_gen) + 1,
+			"Sputtering::self_stats_from_device")};
+		const std::vector<double> sc {copy_from_gpu(d.scalars,
+			num_self_scalars, "Sputtering::self_stats_from_device")};
+		out.chain_multiplication = chain_multiplication(gen);
+		if (sc[self_landed] > 0.0)
+		{
+			out.mean_yield = sc[self_total] / sc[self_landed];
+			out.mean_energy = sc[self_energy_sum] / sc[self_landed];
+		}
+#else
+		(void)self_d;
+#endif
+		return out;
+	}
+
+	bool avalanche_on_device(const SelfDevice& self_d)
+	{
+#ifdef USE_CUDA
+		if (self_d.device_id < 0 || self_d.avalanche == nullptr) return false;
+		int flag {};
+		Errors::check_cuda(cudaMemcpy(&flag, self_d.avalanche, sizeof(int),
+			cudaMemcpyDeviceToHost), "Sputtering::avalanche_on_device");
+		return flag != 0;
+#else
+		(void)self_d;
+		return false;
+#endif
 	}
 }

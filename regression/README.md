@@ -50,7 +50,7 @@ for v in gyration exb polarization gradb curvature gradb_gpu; do
     <build dir>/reg_drifts $v
 done
 export OPENADAS_ROOT=<directory with scd50/ and acd50/>
-for v in p01 p03 p1 p3 p10 b4 full drop0 brooks_ref p01_gpu p1_gpu; do
+for v in p01 p03 p1 p3 p10 b4 full drop0 brooks_ref p01_gpu p1_gpu drop0_gpu; do
     <build dir>/reg_prompt_redep $v
 done
 for m in brooks borodkina; do for a in 2 5 10 20; do
@@ -67,7 +67,9 @@ for te in 20 50 100; do for a in 60 85; do
     <build dir>/reg_sheath_impacts dw_te${te}_a${a}_formula
 done; done
 python <flan>/regression/make_self_tables.py
-for v in y05 y125 w_te20 w_te50; do <build dir>/reg_self_sputter $v; done
+for v in y05 y125 w_te20 w_te50 y05_gpu y125_gpu w_te20_gpu; do
+    <build dir>/reg_self_sputter $v
+done
 ```
 
 Leave out the `_gpu` variants without a GPU. The collision runs

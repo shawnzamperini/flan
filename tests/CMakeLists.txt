@@ -157,6 +157,7 @@ if(ENABLE_CUDA)
 	add_executable(test_boundary_zones_cuda test_boundary_zones_cuda.cpp)
 	add_executable(test_collisions_cuda test_collisions_cuda.cpp)
 	add_executable(test_sputtering_cuda test_sputtering_cuda.cpp)
+	add_executable(test_self_sputter_cuda test_self_sputter_cuda.cpp)
 	add_executable(test_sheath_cuda test_sheath_cuda.cpp)
 
 	# The boundary routines are inline (boundary_hd.h)
@@ -195,6 +196,10 @@ if(ENABLE_CUDA)
 		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
 	target_compile_definitions(test_sputtering_cuda PRIVATE
 		FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+	target_link_libraries(test_self_sputter_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
+	target_compile_definitions(test_self_sputter_cuda PRIVATE
+		FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 	target_link_libraries(test_sheath_cuda PRIVATE flan gtest_main
 		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
 	target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main)
@@ -223,6 +228,7 @@ if(ENABLE_CUDA)
 	add_test(NAME BoundaryZonesCUDATest COMMAND test_boundary_zones_cuda)
 	add_test(NAME CollisionsCUDATest COMMAND test_collisions_cuda)
 	add_test(NAME SputteringCUDATest COMMAND test_sputtering_cuda)
+	add_test(NAME SelfSputterCUDATest COMMAND test_self_sputter_cuda)
 	add_test(NAME SheathCUDATest COMMAND test_sheath_cuda)
 	add_test(NAME BoundaryCUDATest COMMAND test_boundary_cuda)
 	add_test(NAME InterpolateCUDATest COMMAND test_interpolate_cuda)

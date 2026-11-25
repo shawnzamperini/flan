@@ -452,46 +452,30 @@ namespace Sputtering
 
 		void print_summary(std::ostream& os, double source_rate) const;
 	};
-	/**
-	* The energy and angle an impurity hits the wall with, for the
-	* self-sputtering yield (see self_impact).
-	*/
+
+	void free_self(SelfDevice& self_d);
+
+	bool avalanche_on_device(const SelfDevice& self_d);
+
+	/// What the avalanche message reports of a GPU's chains
+	struct SelfStats
+	{
+		double chain_multiplication {};
+		double mean_yield {};
+		double mean_energy {};		///< eV
+	};
+
+	SelfStats self_stats_from_device(const SelfDevice& self_d);
+
+	double chain_multiplication(const std::vector<double>& gen_weight);
 	void free_source(SourceDevice& source_d);
 
 	void free_deposition(DepositionDevice& dep_d);
 
-	struct SelfImpact
-	{
-		double energy {};	///< Impact energy (eV)
-		double angle {};	///< Angle from the element's normal (degrees)
-	};
-
+	// SelfImpact, roulette, Rebirth and the shared rebirth are in
+	// sputtering_hd.h. This takes arrays, for the CPU's callers.
 	SelfImpact self_impact(const std::array<double, 3>& v, double mass,
 		const std::array<double, 3>& n, int q, double phi_wall);
-
-	double roulette(double weight, double min_weight, double u);
-
-	/**
-	* A particle that landed on the wall and carries on as one of the atoms
-	* it sputtered (SelfSource::rebirth). If alive is false it ends there,
-	* redeposited, and nothing else is set.
-	*/
-	struct Rebirth
-	{
-		bool alive {};			///< Carries on as a sputtered atom
-		bool avalanche {};		///< Ended at sput_self_max_gen
-		int zone {};			///< Zone it starts in
-		double x {};			///< Computational x
-		double y {};			///< Computational y
-		double z {};			///< Computational z
-		int i {};				///< x index of its cell
-		int j {};				///< y index of its cell
-		int k {};				///< z index of its cell
-		double vX {};			///< Cartesian velocity (m/s)
-		double vY {};
-		double vZ {};
-		double weight {};		///< New weight (atoms/s)
-	};
 
 	/**
 	* Self-sputtering: impurities landing on a wall element sputter more
@@ -522,13 +506,10 @@ namespace Sputtering
 		std::vector<double> m_gen_landed {};	///< Weight landing on
 												///< elements from each
 												///< generation
-		double m_landed {};				///< Rate landing on elements
-		double m_self_total {};			///< Self-sputtered rate, sum w Y
-		double m_energy_sum {};			///< Sum of w E, landed on elements
-		double m_angle_sum {};			///< Sum of w angle
-		double m_roulette_lost {};		///< Rate ended by roulette
-		long long m_num_below {};		///< Landings below threshold
-		long long m_num_above {};		///< Landings past the table's end
+		/// The rates, sums and counts (SelfScalar), in one array so the
+		/// routine shared with the GPU (rebirth in sputtering_hd.h) adds
+		/// to them the same way
+		std::array<double, num_self_scalars> m_scalars {};
 
 	public:
 
@@ -542,6 +523,12 @@ namespace Sputtering
 			double weight, int generation, pcg32& rng);
 
 		void reduce(int root);
+
+		SelfView view();
+
+		SelfDevice to_device(int device_id);
+
+		void add_from_device(const SelfDevice& self_d);
 
 		const YieldTable& table() const;
 		double min_weight() const;
