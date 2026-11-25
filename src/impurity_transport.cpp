@@ -437,25 +437,31 @@ namespace ImpurityTransport
 	* @param opts Simulation options.
 	* @param dt Time step to advance the velocities by (s).
 	* @param sheath If given, the sheath field in front of the walls is
-	*        added to the background's (CPU only).
+	*        added to the background's (CPU path).
 	* @param nsub If given (with sheath), set to each particle's number of
 	*        sub-steps near the wall, and those with more than one are
-	*        pushed and moved by Boris::substep_cpu (CPU only).
+	*        pushed and moved by Boris::substep_cpu. On the GPU path, given
+	*        (any vector) to sub-step there too, into slots_d.nsub.
+	* @param sheath_d The sheath on this GPU (GPU path), or nullptr.
 	*/
 	void boris_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
 		const double dt, const Sheath::Sheath* sheath = nullptr,
-		std::vector<int>* nsub = nullptr)
+		std::vector<int>* nsub = nullptr,
+		const Sheath::SheathDevice* sheath_d = nullptr)
 	{
 
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
 			// Defined in cuda/boris.cu
-			Boris::update_velocity_gpu(slots_d, bkg_d, dt);
+			Boris::update_velocity_gpu(slots_d, bkg_d, dt, sheath_d,
+				nsub != nullptr);
 			return;
 		}
+#else
+		(void)sheath_d;
 #endif
 
 		if (sheath != nullptr && nsub != nullptr)
@@ -590,7 +596,8 @@ namespace ImpurityTransport
 	* @param max_time_ctr Counter of particles that exceeded the maximum
 	*                     allowed time (CPU path only).
 	* @param nsub If given, the particles sub-stepped near a wall this step
-	*        (nsub[i] > 1), which are already moved (CPU path only).
+	*        (nsub[i] > 1), which are already moved. On the GPU path, given
+	*        if they were sub-stepped there (slots_d.nsub is then set).
 	*/
 	void step_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
@@ -604,7 +611,8 @@ namespace ImpurityTransport
 		if (opts.use_gpu_int() > 0) 
 		{
 			// Defined in impurity_transport.cu
-			step_gpu(slots_d, opts.imp_time_step(), opts_d, warnings_d.max_time);
+			step_gpu(slots_d, opts.imp_time_step(), opts_d, warnings_d.max_time,
+				nsub != nullptr);
 			return;
 		}
 #endif
@@ -834,6 +842,7 @@ namespace ImpurityTransport
 	* @param source_d Sputtered source on the device (GPU only), or
 	*                 nullptr.
 	* @param dep_d Deposition tallies on the device (GPU only), or nullptr.
+	* @param sheath_d The sheath on the device (GPU only), or nullptr.
 	* @return Counts of what happened to particles at the boundaries (CPU
 	*         path only; on the GPU path they're counted on the device, in
 	*         warnings_d.fates, and this is all zeros).
@@ -855,7 +864,8 @@ namespace ImpurityTransport
 		Sputtering::Deposition* deposition = nullptr,
 		const Sheath::Sheath* sheath = nullptr,
 		const Sputtering::SourceDevice* source_d = nullptr,
-		const Sputtering::DepositionDevice* dep_d = nullptr)
+		const Sputtering::DepositionDevice* dep_d = nullptr,
+		const Sheath::SheathDevice* sheath_d = nullptr)
 	{
 
 		// Rank and number of processes
@@ -926,14 +936,17 @@ namespace ImpurityTransport
 		// at t - dt/2. So we still need to push the particle velocity
 		// back by half a time step.
 		boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
-			-opts.imp_time_step() / 2.0, sheath);
+			-opts.imp_time_step() / 2.0, sheath, nullptr, sheath_d);
 
 		// Record starting position in statistics arrays
 		record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
 			opts.imp_time_step());
 
-		// Sub-steps of each particle near a wall (with the sheath field)
+		// Sub-steps of each particle near a wall (with the sheath field;
+		// on the GPU they're in slots_d.nsub)
 		std::vector<int> nsub {};
+		const bool substep {sheath != nullptr || (sheath_d != nullptr
+			&& sheath_d->device_id >= 0)};
 
 		// Begin loop
 		bool all_dead {false};
@@ -982,7 +995,8 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Boris));
 				boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
-					opts.imp_time_step(), sheath, sheath ? &nsub : nullptr);
+					opts.imp_time_step(), sheath, substep ? &nsub : nullptr,
+					sheath_d);
 			}
 
 #ifdef DEBUG
@@ -993,7 +1007,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Step));
 				step_wrapper(slots, slots_d, bkg, bkg_d, opts, opts_d, 
-					warnings_d, max_time_ctr, sheath ? &nsub : nullptr);
+					warnings_d, max_time_ctr, substep ? &nsub : nullptr);
 			}
 
 #ifdef DEBUG
@@ -1104,6 +1118,7 @@ namespace ImpurityTransport
 	*                     allowed time.
 	* @param source_d Sputtered source on this GPU, or nullptr.
 	* @param dep_d Deposition tallies on this GPU, or nullptr.
+	* @param sheath_d The sheath on this GPU, or nullptr.
 	*/
 	void gpu_worker(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
@@ -1119,7 +1134,8 @@ namespace ImpurityTransport
 		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d,
 		int& max_time_ctr, const Sputtering::SourceDevice* source_d,
-		const Sputtering::DepositionDevice* dep_d)
+		const Sputtering::DepositionDevice* dep_d,
+		const Sheath::SheathDevice* sheath_d)
 	{
 		// Not used, so just dummying
 		std::vector<pcg32> rngs;
@@ -1128,7 +1144,8 @@ namespace ImpurityTransport
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, opts_d, timer, 
 			ioniz_warnings, recomb_warnings, warnings_d, rngs, rngs_d, 
-			max_time_ctr, nullptr, nullptr, nullptr, source_d, dep_d);
+			max_time_ctr, nullptr, nullptr, nullptr, source_d, dep_d,
+			sheath_d);
 	}
 
 #endif
@@ -1162,14 +1179,13 @@ namespace ImpurityTransport
 	* @param timer Timer that accumulates the time spent in each step.
 	* @param source Sputtered source to start particles from, or nullptr
 	*        (the default) to start them from the imp_*start_opt options.
-	*        Only used on CPUs.
 	* @param deposition If given, where absorbed particles land on the wall
 	*        is added to it.
 	* @param fates_out If given, set to what happened to the particles,
 	*        summed over every rank, on rank 0. On GPUs, self_sputtered is
 	*        0, since self-sputtering is CPU only so far.
 	* @param sheath If given, the sheath field in front of the walls is
-	*        added to the push. Only used on CPUs.
+	*        added to the push, with near-wall sub-steps.
 	* @return Impurity statistics accumulated from every particle followed
 	*         on this rank.
 	*/
@@ -1307,6 +1323,7 @@ namespace ImpurityTransport
 			std::vector<Timer::Timer> gpu_timers;
 			std::vector<Sputtering::SourceDevice> gpu_sources(num_gpus);
 			std::vector<Sputtering::DepositionDevice> gpu_deps(num_gpus);
+			std::vector<Sheath::SheathDevice> gpu_sheaths(num_gpus);
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
 				// The sputtered source and the deposition tallies, if
@@ -1316,6 +1333,8 @@ namespace ImpurityTransport
 					gpu_sources[dev] = source->to_device(dev, opts.imp_num());
 				if (deposition != nullptr)
 					gpu_deps[dev] = deposition->to_device(dev);
+				if (sheath != nullptr)
+					gpu_sheaths[dev] = sheath->to_device(dev);
 
 				gpu_slots.push_back(slots.to_device(dev));
 				gpu_stats.push_back(imp_stats.to_device(dev));
@@ -1383,7 +1402,8 @@ namespace ImpurityTransport
 					std::ref(gpu_rngs[dev]), std::ref(gpu_opts[dev]), 
 					std::ref(max_time_ctr),
 					source != nullptr ? &gpu_sources[dev] : nullptr,
-					deposition != nullptr ? &gpu_deps[dev] : nullptr);
+					deposition != nullptr ? &gpu_deps[dev] : nullptr,
+					sheath != nullptr ? &gpu_sheaths[dev] : nullptr);
 			}
 
 			// Wait for all threads to finish
@@ -1426,6 +1446,7 @@ namespace ImpurityTransport
 					deposition->add_from_device(gpu_deps[dev]);
 				Sputtering::free_deposition(gpu_deps[dev]);
 				Sputtering::free_source(gpu_sources[dev]);
+				Sheath::free_sheath(gpu_sheaths[dev]);
 			}
 
 			print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 

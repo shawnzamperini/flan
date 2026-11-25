@@ -493,6 +493,7 @@ namespace Slots
 		cudaMalloc(&slots_d.state, m_N * sizeof(int));
 		cudaMalloc(&slots_d.prompt_by, m_N * sizeof(double));
 		cudaMalloc(&slots_d.generation, m_N * sizeof(int));
+		cudaMalloc(&slots_d.nsub, m_N * sizeof(int));
 		cudaMalloc(&slots_d.all_dead, sizeof(bool));
 		cudaMalloc(&slots_d.num_dead, sizeof(int));
 		cudaMalloc(&slots_d.dead_indices, m_N * sizeof(int));
@@ -665,6 +666,7 @@ namespace Slots
 		cudaFree(slots_d.state);
 		cudaFree(slots_d.prompt_by);
 		cudaFree(slots_d.generation);
+		cudaFree(slots_d.nsub);
 		cudaFree(slots_d.all_dead);
 		cudaFree(slots_d.num_dead);
 		cudaFree(slots_d.dead_indices);
@@ -692,6 +694,7 @@ namespace Slots
 		slots_d.state = nullptr;
 		slots_d.prompt_by = nullptr;
 		slots_d.generation = nullptr;
+		slots_d.nsub = nullptr;
 		slots_d.all_dead = nullptr;
 		slots_d.num_dead = nullptr;
 		slots_d.dead_indices = nullptr;

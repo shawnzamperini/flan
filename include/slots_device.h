@@ -51,6 +51,9 @@ namespace Slots
 							///< wall is prompt, below 0 for none (see
 							///< Slots::prompt_by)
 		int* generation;	///< Times self-sputtered (Slots::generation)
+		int* nsub;			///< Near-wall sub-steps of each slot this step
+							///< (set when the sheath is on, see
+							///< Boris::update_velocity_gpu)
 
 		// Work arrays for the kernels that refill dead slots (see slots.cu)
 		bool* all_dead;		///< Single value, true if every slot is dead

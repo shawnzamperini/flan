@@ -101,8 +101,8 @@ Then each pass through the loop runs these steps, in order:
 The loop ends once every slot is dead and no particles are left to launch.
 
 A sputtered source and the sheath hook into these steps
-(`src/sputtering.cpp`, `src/sheath.cpp`); the source and the deposition
-on the GPU too, the sheath and self-sputtering on the CPU only:
+(`src/sputtering.cpp`, `src/sheath.cpp`); all but self-sputtering on the
+GPU too:
 
 - `Slots::fill_slots_cpu` starts new particles from
   `Sputtering::Source::sample_birth`, and `fill_slots_gpu` from the same
@@ -110,7 +110,10 @@ on the GPU too, the sheath and self-sputtering on the CPU only:
 - `Boris::update_velocity_cpu` adds `Sheath::field_at` to the
   interpolated E. Particles that can reach the sheath field this step
   are pushed in sub-steps by `Boris::substep_cpu`, and the plain push and
-  `step_cpu` skip them.
+  `step_cpu` skip them. The field, the sub-step count and the nearest wall
+  element are shared with the GPU (`sheath_hd.h`, on a `SheathView`);
+  `Boris::update_velocity_gpu` counts the sub-steps into `slots_d.nsub`,
+  and its `substep_kernel` is `substep_cpu` per thread.
 - `Boundary::check_bounds_cpu` puts absorbed particles on their wall
   element with `Sputtering::Deposition`, passing their impact energy and
   angle. `check_bounds_kernel` does the same into tallies on the device
@@ -199,6 +202,15 @@ tallies (`ElementsView`, `YieldView`, `SourceView`, `DepositionView`),
 sorted keys searched by bisection, rather than hash maps, so the device
 can search the same arrays. The tallies are added to through an adder
 passed in: `omp atomic` on the CPU, `atomicAdd` on the GPU.
+
+The sheath is shared through `include/sheath_hd.h`: `Model`, `Params`,
+the profiles (`potential`, `field`, `range`) and the sub-step count, and
+a `SheathView` of the wall elements and their `Params` per frame, with
+the plasma cells next to the wall as sorted keys and each one's elements
+in CSR form. `distance`, `field_at` and `substeps` on a view are what
+`Sheath::Sheath`'s members call, and what the GPU's push
+(`Boris::push_one` in `cuda/boris.cu`) and `substep_kernel` call on a
+device copy (`Sheath::to_device`, freed with `free_sheath`).
 
 The thermal force's sampler is shared the same way: `Collisions::sample_bkg`
 and the skew helpers (`skew_at`, `skew_factor`, `skew_bound`) are in

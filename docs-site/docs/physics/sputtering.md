@@ -12,9 +12,9 @@ a HERMES background, or off a wall face of the slab background. The
 sheath's electric field pulls the ions they become back to the wall
 ([The sheath](#the-sheath)), and with `sput_self = "on"` the impurities
 landing on the wall sputter more of it
-([Self-sputtering](#self-sputtering)). The sputtered source and where
-atoms land back on the wall run on GPUs as well as the CPU; the sheath
-field and self-sputtering are CPU only so far. How it
+([Self-sputtering](#self-sputtering)). The sputtered source, where
+atoms land back on the wall and the sheath field run on GPUs as well as
+the CPU; self-sputtering is CPU only so far. How it
 was built and checked is in the
 [Sheath and Self-Sputtering Plan](../developer/sheath-plan.md).
 
@@ -675,9 +675,6 @@ to $10^{-8}$ s.
 
 ### What it leaves out
 
-- **The GPU.** A GPU run goes without the sheath field, with a warning
-  (the impact energies and angles for the source still come from it,
-  since the test ions are pushed on the CPU).
 - **Secondary electron emission**, which would lower the drop.
 
 ## Self-sputtering

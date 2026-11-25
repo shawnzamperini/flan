@@ -40,11 +40,11 @@
 *                          README): how much the sheath raises the prompt
 *                          fraction, and how much that depends on the
 *                          profile. Printed, not checked.
-*   <variant>_gpu          Any of the above without the sheath (p01 to
-*                          p10, b4, full), on the GPU: the source, the
-*                          ionization with its charge limit and prompt
-*                          window, and the deposition tallies run there,
-*                          and are checked the same way.
+*   <variant>_gpu          Any of the cases here, on the GPU: the source,
+*                          the ionization with its charge limit and prompt
+*                          window, the deposition tallies, and the sheath
+*                          field with its near-wall sub-steps run there,
+*                          and are checked (or printed) the same way.
 *   brooks_ref             Brooks' reference case (1990, Table 1): D-T at
 *                          75 eV, 1e20 m^-3, B = 5 T at 87 degrees from the
 *                          normal, his f_D = 0.25 and 3 Te drop
@@ -272,18 +272,8 @@ int main(int argc, char* argv[])
 	{
 		std::cerr << "Usage: reg_prompt_redep <variant>, with <variant> one "
 			"of p01, p03, p1, p3, p10, b4, full, drop0, brooks_a<angle>, "
-			"borodkina_a<angle>, brooks_ref, or one without the sheath "
-			"followed by _gpu\n";
-		MPI_Finalize();
-		return 1;
-	}
-
-	// The sheath field isn't on the GPU yet
-	if (variant != name
-		&& std::get<std::string>(inpts["sheath_model"]) != "off")
-	{
-		std::cerr << "The _gpu variants are for the cases without the "
-			"sheath.\n";
+			"borodkina_a<angle>, brooks_ref, or any of these followed by "
+			"_gpu\n";
 		MPI_Finalize();
 		return 1;
 	}

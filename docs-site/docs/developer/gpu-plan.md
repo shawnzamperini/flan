@@ -25,7 +25,7 @@ run today:
 |---|---|---|
 | Sputtered source (`imp_source_opt = "sputter"`) | Runs (since G5) | `sputtering_hd.h`, `cuda/slots.cu` |
 | Deposition and prompt tallies, impact histograms | Run (since G5) | `sputtering_hd.h`, `cuda/boundary.cu` |
-| Sheath field and near-wall sub-steps | Left out, with a warning | `flan.cpp`, `Sheath::field_at`, `Boris::substep_cpu` |
+| Sheath field and near-wall sub-steps | Runs (since G6) | `sheath_hd.h`, `cuda/boris.cu` |
 | Self-sputtering (`sput_self`) | Stops (since G5) | `flan.cpp`, `Sputtering::SelfSource::rebirth` |
 | `imp_iz_max_charge` (test option) | Runs (since G5) | `cuda/openadas.cu` |
 | Boundary fates: `self_sputtered` | 0 (no self-sputtering) | `follow_impurities` |
@@ -66,10 +66,12 @@ startup), and saving the results.
 - Since G5 the sputtered source, the charge limit, the prompt window and
   the deposition tallies run on the GPU with the CPU's routines
   (`sputtering_hd.h`).
+- Since G6 the sheath field and the near-wall sub-steps run on the GPU
+  with the CPU's routines (`sheath_hd.h`).
 - One host thread per GPU, slots split between ranks and then GPUs.
 - Tests `*_cuda`, and the regression variants `z10_gpu` (friction and
-  thermal force), `gradb_gpu` (drifts) and `p01_gpu`, `p1_gpu` (prompt
-  redeposition).
+  thermal force), `gradb_gpu` (drifts) and `p01_gpu`, `p1_gpu`, and
+  any sheath case followed by `_gpu` (prompt redeposition).
 
 ## Approach
 
@@ -458,26 +460,63 @@ Every phase is checked three ways:
   small difference of large numbers, and agrees only as well as the
   redeposition does (to about 0.005 of the source per zone).
 
-**G6. Sheath field and sub-steps.**
+**G6. Sheath field and sub-steps.** Done.
 
-- `Sheath::SheathDevice`: the elements (normal, face point, thickness),
-  `Params` per frame and element, and the cell-to-elements map flattened
-  from the `unordered_map` to CSR (a sorted key array searched by
-  binary search, or a per-cell offset array over the zones' cells if
-  memory allows; G0's sizes decide).
-- `potential`, `field`, `Sheath::distance`, `field_at` and `substeps` as
-  shared functions. The Boris kernel adds the field; the step kernel and
-  a device version of `Boris::substep_cpu` run the sub-steps per thread.
-- A particle near the wall can take up to `max_substeps` (20000)
-  sub-steps, and its warp waits for it. First do the straightforward
-  per-thread loop and measure (G0's timer plus `nsys`). If the near-wall
-  particles dominate, move them to a separate kernel after a compaction
-  pass (decision 4).
-- Remove the warning in `flan.cpp`; the GPU runs with `sheath_model` as
-  set.
-- Regressions: `_gpu` variants of `reg_sheath_angles` and
-  `reg_prompt_redep` with the sheath. End to end: the HERMES target case
-  with the sheath, CPU against GPU, and the run time.
+- `include/sheath_hd.h` (`FLAN_HD`) holds `Model`, `Params`, the
+  profiles (`potential`, `field`, `range`), the sub-step count, and a
+  `SheathView`: the wall elements as flat arrays (zone, face, the cell's
+  extent across the face, thickness, normal), `Params` per frame and
+  element, and the plasma cells next to the wall as sorted keys with
+  each one's elements in CSR form, searched by bisection. `distance`,
+  `field_at` and `substeps` on a view replace the bodies of
+  `Sheath::Sheath`'s members, which now call them, so the CPU and the GPU
+  find the same element and field. `Sheath::to_device` copies the arrays
+  to a GPU (`SheathDevice`, freed with `free_sheath`); each GPU gets its
+  own copy in `follow_impurities`.
+- `cuda/boris.cu`: the push of one particle is a device function
+  (`push_one`, the GPU's `push_one_cpu`) that adds the sheath field to
+  the interpolated E. With the sheath on, `update_velocity_gpu` runs
+  `count_substeps_kernel` (into the new `SlotsDevice::nsub`), the plain
+  push of the rest, and `substep_kernel`, `Boris::substep_cpu` per
+  thread: the half-kick, the sub-steps with the cell updated in the zone,
+  and the kick to the crossing point for a particle that leaves the grid.
+  `step_kernel` advances only the time of a sub-stepped particle. The
+  half step back at the start adds the field without sub-steps, as on
+  the CPU. `flan.cpp` builds the sheath for GPU runs too; the warning is
+  gone.
+- Decision 4's per-thread loop was kept. On the HERMES targets every
+  sub-stepped particle took 2 sub-steps (about 150 to 230 particles per
+  step of 4000), and the count, push and sub-step kernels together took
+  about 8 s of a 20000-step run, measured with CUDA events on a GPU
+  another process was using. No compaction pass is needed for this; G8
+  profiles the full cases.
+- Tests: `test_sheath_cuda` pushes 3000 particles (some neutral) placed
+  in the cells next to the wall, on the slab wall with `"brooks"` and on
+  the HERMES test grid's targets with `"borodkina"`, once with the field
+  alone and once through the full near-wall step. Sub-step counts agree
+  exactly, velocities and positions to 1e-8 after up to hundreds of
+  sub-steps. With the GPU's sheath field or its sub-steps turned off,
+  both tests fail. `test_sheath_cpu` and the CPU sheath regressions
+  are unchanged.
+- `reg_prompt_redep`'s `_gpu` suffix now takes the sheath cases. On the
+  GPU, `drop0_gpu` passes `check_redeposition.py` (0.591, against 0.587
+  on the CPU and Fussmann's 0.587); `brooks_a2`, `brooks_a5`,
+  `borodkina_a2` and `borodkina_a5` agree with the CPU within the Monte
+  Carlo error in prompt fraction, charge, impact energy and angle; so
+  does `brooks_ref` (impact energy 104 eV, angle 13 degrees, on both).
+  Each run took 2 to 23 s on the GPU against 20 to 127 s on 16 CPU
+  threads. A `_gpu` variant of `reg_sheath_angles` was left out: it calls
+  the push routines itself rather than running `flan()`, so it would need
+  CUDA in the regression build; `test_sheath_cuda` compares the same
+  kernels with the CPU on the same slab wall, and the `reg_prompt_redep`
+  cases run the GPU's loop with the sheath.
+- End to end, the HERMES targets as the source with `"borodkina"`, CPU
+  against GPU: identical source rate, redeposited 0.682 and 0.672,
+  prompt 0.678 and 0.670, each zone's share, the fates and the mean
+  charge, energy and angle on landing all within the Monte Carlo error.
+  The login node's GPU was in use by another process during these runs,
+  so their run times don't measure the code; the timing is left for a
+  compute-node run.
 
 **G7. Self-sputtering.**
 

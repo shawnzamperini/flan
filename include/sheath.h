@@ -13,64 +13,18 @@
 #include <vector>
 
 #include "background.h"
+#include "sheath_hd.h"
 #include "sputtering.h"
 
 namespace Sheath
 {
-	/// Which profile the potential has (the sheath_model option)
-	enum class Model : int
-	{
-		off = 0,		///< No sheath field
-		brooks = 1,		///< Brooks' two exponentials
-		borodkina = 2	///< Borodkina and Tsvetkov's analytic profile
-	};
-
-	/**
-	* The sheath in front of one wall element in one time frame: what the
-	* potential and its field at a distance from the wall depend on. Made
-	* by make_params from the plasma next to the wall.
-	*
-	* Potentials are relative to the plasma at the entrance of the
-	* magnetic presheath, so they are 0 far from the wall and phi_wall
-	* (negative) at it. lam_* are those potentials over Te (e phi / Te),
-	* and xi_* and L_mps distances over the Debye length, as in Borodkina
-	* and Tsvetkov (2015).
-	*/
-	struct Params
-	{
-		double te {};		///< Electron temperature (eV)
-		double ti {};		///< Ion temperature (eV)
-		double bmag {};		///< Field strength (T)
-		double ion_mass_amu {};	///< Main ion mass (amu)
-		double phi_wall {};	///< Potential at the wall, the floating drop (V)
-		double f_d {};		///< Share of the drop in the Debye sheath
-		double lambda_d {};	///< Electron Debye length (m)
-		double rho_s {};	///< Ion sound gyroradius c_s / Omega_i (m)
-		double theta {};	///< Angle between B and the wall's normal (rad)
-
-		// Borodkina and Tsvetkov's profile
-		double lam_w {};	///< e phi_wall / Te
-		double lam_mps {};	///< e phi / Te at the presheath/Debye boundary
-		double a {};		///< Decay rate of the Debye layer (1 / lambda_d)
-		double q {};		///< Amplitude of the Debye layer (Q)
-		double xi_mps {};	///< Presheath/Debye boundary (lambda_d)
-		double l_mps {};	///< Decay length of the presheath (lambda_d)
-		bool debye {};		///< There is a Debye layer (below the critical
-							///< angle)
-	};
 
 	Params make_params(double te, double ti, double ne, double bmag,
 		double cos_theta, double elec_mass_amu, double ion_mass_amu,
 		double f_d = -1.0, double drop_te = -1.0);
 
-	double potential(const Params& p, Model model, double d);
-
-	double field(const Params& p, Model model, double d);
-
-	double range(const Params& p, Model model, double n_scales = 28.0);
-
-	int substeps(const Params& p, Model model, double d, double speed,
-		double q_over_m, double dt);
+	// Model, Params, potential, field, range and substeps are in
+	// sheath_hd.h, shared with the GPU
 
 	/// One test ion that hit the wall (sample_impacts)
 	struct ImpactSample
@@ -169,10 +123,10 @@ namespace Sheath
 	public:
 		/// Most a sub-step may move a particle, in local field scale
 		/// lengths
-		static constexpr double substep_frac {0.02};
+		static constexpr double substep_frac {::Sheath::substep_frac};
 
 		/// Most sub-steps in one time step
-		static constexpr int max_substeps {20000};
+		static constexpr int max_substeps {::Sheath::max_substeps};
 
 	private:
 		Model m_model {Model::off};
@@ -199,9 +153,26 @@ namespace Sheath
 		/// Params for each frame and element, frame-major
 		std::vector<Params> m_params {};
 
-		/// Elements of each plasma cell next to the wall
-		std::unordered_map<std::uint64_t, std::vector<std::size_t>>
-			m_cells {};
+		/// The elements as flat arrays, for SheathView
+		struct Flat
+		{
+			std::vector<int> zone {};
+			std::vector<int> face {};
+			std::vector<double> lo {};
+			std::vector<double> hi {};
+			std::vector<double> thickness {};
+			std::vector<double> n_R {};
+			std::vector<double> n_Z {};
+			std::vector<int> cartesian {};
+		} m_flat {};
+
+		/// Plasma cells next to the wall, sorted by cell_key, and the
+		/// elements of each (m_cell_start[c] to [c + 1] in m_cell_elems,
+		/// in element order). Sorted arrays rather than a hash map, so the
+		/// GPU searches the same ones.
+		std::vector<std::uint64_t> m_cell_keys {};
+		std::vector<int> m_cell_start {};
+		std::vector<int> m_cell_elems {};
 
 		int m_num_thin {};	///< Elements whose cell is thinner than the
 							///< sheath
@@ -234,5 +205,11 @@ namespace Sheath
 			double dt) const;
 
 		void print_summary(std::ostream& os) const;
+
+		SheathView view() const;
+
+		SheathDevice to_device(int device_id) const;
 	};
+
+	void free_sheath(SheathDevice& sheath_d);
 }

@@ -201,36 +201,24 @@ R"(
 
 	// The sheath field in front of the walls, from the same wall surface
 	// as the sputtered source (or its own if there's no source). It's on
-	// by default, so a background without walls just goes without, and on
-	// the GPU (where it isn't written yet) it's left out with a warning.
+	// by default, so a background without walls just goes without. On the
+	// GPU each device gets a copy (Sheath::to_device).
 	std::optional<Sheath::Sheath> sheath {};
 	if (opts.sheath_model_int() > 0 && (source
 		|| Sputtering::has_surfaces(bkg)))
 	{
-		if (opts.use_gpu_int() > 0)
-		{
-			if (rank == 0)
-			{
-				std::cout << "Warning! The sheath field (sheath_model = \""
-					<< opts.sheath_model() << "\") only runs on the CPU for "
-					"now, so this GPU run goes without it.\n";
-			}
-		}
+		const auto model {static_cast<Sheath::Model>(
+			opts.sheath_model_int())};
+		if (source) sheath.emplace(source->surface(), bkg, model,
+			opts.sheath_fd(), opts.sheath_drop());
 		else
 		{
-			const auto model {static_cast<Sheath::Model>(
-				opts.sheath_model_int())};
-			if (source) sheath.emplace(source->surface(), bkg, model,
-				opts.sheath_fd(), opts.sheath_drop());
-			else
-			{
-				const Sputtering::Surface surface(bkg,
-					opts.sput_max_wall_dist());
-				sheath.emplace(surface, bkg, model, opts.sheath_fd(),
-					opts.sheath_drop());
-			}
-			if (rank == 0) sheath->print_summary(std::cout);
+			const Sputtering::Surface surface(bkg,
+				opts.sput_max_wall_dist());
+			sheath.emplace(surface, bkg, model, opts.sheath_fd(),
+				opts.sheath_drop());
 		}
+		if (rank == 0) sheath->print_summary(std::cout);
 	}
 
 	// Self-sputtering: impurities landing on the wall sputter more atoms

@@ -120,9 +120,12 @@ namespace ImpurityTransport
 	*        imp_max_time.
 	* @param[in,out] max_time_ctr_d Device counter of particles killed for
 	*        exceeding imp_max_time. Incremented atomically.
+	* @param nsub If given, particles with nsub[i] > 1 were already moved
+	*        by Boris's substep_kernel: only their times are advanced.
 	*/
 	__global__ void step_kernel(Slots::SlotsDevice slots_d, const double dt, 
-		const Options::OptionsDevice* opts_d, int* max_time_ctr_d)
+		const Options::OptionsDevice* opts_d, int* max_time_ctr_d,
+		const int* nsub)
 	{
 		// Global index
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -135,9 +138,12 @@ namespace ImpurityTransport
 
 		slots_d.pt[i] += dt;
 		slots_d.t[i] += dt;
-		slots_d.x[i] += slots_d.vx[i] * dt;
-		slots_d.y[i] += slots_d.vy[i] * dt;
-		slots_d.z[i] += slots_d.vz[i] * dt;
+		if (nsub == nullptr || nsub[i] <= 1)
+		{
+			slots_d.x[i] += slots_d.vx[i] * dt;
+			slots_d.y[i] += slots_d.vy[i] * dt;
+			slots_d.z[i] += slots_d.vz[i] * dt;
+		}
 
 		// Check if maximum allowed time has been exceeded, setting to
 		// dead if so and incrementing counter
@@ -164,16 +170,20 @@ namespace ImpurityTransport
 	* @param[in,out] max_time_ctr_d Device counter of particles killed for
 	*        exceeding imp_max_time, e.g. the max_time member of
 	*        OpenADAS::IonizRecombWarningsDevice.
+	* @param substepped True if the particles near the wall were
+	*        sub-stepped this step (slots_d.nsub is set), so they aren't
+	*        moved again.
 	*/
 	void step_gpu(Slots::SlotsDevice& slots_d, const double dt,
-		const Options::OptionsDevice* opts_d, int* max_time_ctr_d)
+		const Options::OptionsDevice* opts_d, int* max_time_ctr_d,
+		const bool substepped)
 	{
 		// Block and grid size
 		int blockSize = 256;
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 
 		step_kernel<<<gridSize, blockSize>>>(slots_d, dt, opts_d, 
-			max_time_ctr_d);
+			max_time_ctr_d, substepped ? slots_d.nsub : nullptr);
 
 #ifdef DEBUG
 		// Check for errors

@@ -15,9 +15,8 @@ coupling was built, and the assumptions it makes about HERMES, are on the
 !!! note "GPUs"
     HERMES backgrounds run on GPUs (`use_gpu = "cuda"`) as well as the CPU,
     field-aligned interpolation, toroidal wedge, thermal force and target
-    sputtering included, except for self-sputtering, which stops, and the
-    sheath field, which a GPU run goes without. These are CPU only so
-    far.
+    sputtering and the sheath field included, except for self-sputtering,
+    which stops. It is CPU only so far.
 
 ## Files
 
