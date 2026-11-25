@@ -158,6 +158,29 @@ Every phase is checked three ways:
   check), against 3 s on 16 CPU threads. `z10_gpu` (collisions) took
   9.3 s against 7.6 minutes on 16 CPU threads. Single-zone timings for
   G1 must come from a GPU compute node.
+- Baseline on a GPU node (4 A100-SXM4-80GB, one rank, 64 OpenMP
+  threads for the CPU runs, every GPU run on all 4 GPUs), the main loop
+  ("Following impurities") with a fixed seed:
+
+    | Case | CPU | GPU |
+    |---|---|---|
+    | `gradb` (1 particle, 10⁴ steps) | 2.08 s | 2.61 s |
+    | `z10` (friction, collisions) | 63 s | 2.83 s |
+    | Gkeyll, W over the whole volume, collisions and ionization, 50 frames, 1e5 particles | 90.6 s | 3.74 s |
+    | Same, 1e6 particles | — | 10.3 s |
+
+  The Gkeyll CPU and GPU runs agree (summed density 1812.0 and 1811.7,
+  1815.5 with 1e6). Reading the background took 11.7 minutes in the
+  first run, which converts the Gkeyll files into
+  `bkg_from_pgkyl_*.bin`, and 1 s in the later ones, which load that. G1 is checked against these totals with the same job
+  (`$SCRATCH/flan_gpu/g0_node/timing.sbatch`).
+- Two things about timing GPU runs, for G8: the per-section times in the
+  timer summary are launch times, since the launches are asynchronous,
+  and the kernels' time shows up at the first sync ("Filling slots",
+  "Checking particle state"); only the total is a real time. And with
+  several GPUs the four threads add into one timer, so the sections sum
+  to more than the total. Setting `CUDA_VISIBLE_DEVICES` before `srun`
+  didn't limit a run to one GPU (`srun --gpus=1` would).
 - `mkdocs.yml`: `FLAN_HD=` in Doxygen's `PREDEFINED` (mkdocs isn't
   installed here, so not built).
 
