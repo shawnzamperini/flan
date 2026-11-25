@@ -24,7 +24,8 @@ namespace Indices
 	* range of vec return the index of the first or last element.
 	*
 	* @tparam T Floating-point data type of the array and value.
-	* @param vec Sorted array of values, e.g., the background times (d_t).
+	* @param vec Sorted array of values, e.g., the background times
+	*        (BackgroundDevice::times).
 	* @param N Length of vec.
 	* @param value Value to find the nearest index for.
 	* @return Index of the nearest value in vec.
@@ -78,9 +79,8 @@ namespace Indices
 	* outside the grid return the index of the first or last cell.
 	*
 	* @tparam T Floating-point data type of the grid edges and value.
-	* @param grid_edges Sorted grid edges, e.g., d_grid_x.
-	* @param N Number of grid edges, one more than the number of cells
-	*        (e.g., bkg_d.xdim + 1).
+	* @param grid_edges Sorted grid edges.
+	* @param N Number of grid edges, one more than the number of cells.
 	* @param value Value to find the containing cell for.
 	* @return Index of the cell containing value, between 0 and N - 2.
 	*/

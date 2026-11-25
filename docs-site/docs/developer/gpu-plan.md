@@ -23,8 +23,8 @@ run today:
 
 | Feature | On a GPU run now | Where |
 |---|---|---|
-| More than one zone (SOLEDGE3X, HERMES) | Stops | `Background::to_device` calls `check_single_zone` |
-| Toroidal wedge (velocity rotation across the z ends) | Stops | `Background::to_device` |
+| More than one zone (SOLEDGE3X, HERMES) | Stops | `flan.cpp` (since G1; the data copies, the kernels don't cross zones) |
+| Toroidal wedge (velocity rotation across the z ends) | Stops | `flan.cpp` (since G1) |
 | Field-aligned (zShift) interpolation, HERMES | Not reachable (multi-zone) | `Utilities::interp_aligned`, `push_one_cpu` |
 | Ghost cells, zone crossings, `face_core`, `face_wall`, the `chi` wall mask | Not reachable (multi-zone) | `Boundary::check_bounds_cpu` |
 | `lcfs` z boundary (Gkeyll) | Stops | `crosscheck_options` |
@@ -35,7 +35,7 @@ run today:
 | Self-sputtering | Not reachable (needs the source) | `Sputtering::SelfSource::rebirth` |
 | `imp_iz_max_charge` (test option) | Stops | `flan.cpp` |
 | Boundary fates (`Boundary::Fates`) | All zeros | `main_loop` |
-| `Slots` fields `zone`, `prompt_by`, `generation` | Host only | `slots.h` |
+| `Slots` fields `prompt_by`, `generation` (`zone` is on the device since G1) | Host only | `slots.h` |
 
 Things that are host-side setup and need nothing on the GPU: reading the
 backgrounds (Gkeyll, SOLEDGE3X, both HERMES formats), the field-aligned
@@ -47,13 +47,14 @@ startup), and saving the results.
 ## What the GPU has now
 
 - Device structs of raw pointers for the background, slots, statistics,
-  OpenADAS and options (see [Code Structure](code-structure.md)). The
-  background's 1-D grids (times, cell centers and edges) are in constant
-  memory, `MAX_1D = 500` each, so only one background fits on a GPU.
-- The background data on the device is a single zone with no ghost cells,
-  which has the same layout as a `Vector4D`. A `ZonedVector` is already
-  flat (zone after zone, with per-zone offsets and strides), so the
-  multi-zone data can be copied as it is.
+  OpenADAS and options (see [Code Structure](code-structure.md)). Before
+  G1 the background's 1-D grids (times, cell centers and edges) were in
+  constant memory, `MAX_1D = 500` each, so only one background fit on a
+  GPU; G1 moved them to global memory with the rest of the zones.
+- Before G1 the background data on the device was a single zone with no
+  ghost cells, which has the same layout as a `Vector4D`. A `ZonedVector`
+  is already flat (zone after zone, with per-zone offsets and strides),
+  so G1 copies the multi-zone data as it is.
 - Interpolation through an 8- or 16-point stencil built once per particle
   per step (`include/cuda/interpolate.cuh`), clamped at the grid's edges.
 - Kernels for every main loop step, with the Nanbu collisions (including
@@ -184,27 +185,54 @@ Every phase is checked three ways:
 - `mkdocs.yml`: `FLAN_HD=` in Doxygen's `PREDEFINED` (mkdocs isn't
   installed here, so not built).
 
-**G1. Zones on the device.**
+**G1. Zones on the device.** Done except the timing on a GPU node.
 
-- `Zones::ZonesDevice` (`include/zones_device.h`): per-zone nx, ny, nz,
-  the ghost width, the offsets of each zone's centers and edges in flat
-  arrays, the face codes (`num_faces` per zone), the toroidal, Cartesian
-  and wedge flags, zShift offsets and table, and the `ZonedVector`
-  offsets and strides (all fields share one layout per background, so
-  one set). `Zones::to_device`/`free_zones`.
-- `BackgroundDevice` holds a `ZonesDevice` and the flat `ZonedVector`
-  data, ghosts included. Remove `check_single_zone` and the constant
-  memory from `Background::to_device`.
-- `SlotsDevice` gains `zone`.
-- Shared `FLAN_HD` versions of `Zones::center`, `neighbor_index` and
-  `bracket` (index finding with ghosts), used by the CPU too.
-- Every kernel takes its zone from the slot. Single-zone behaviour is
-  unchanged: GPU runs of the slab and Gkeyll cases give the same results
-  as on main (bit for bit if the arithmetic didn't change order, otherwise
-  within rounding), and run no slower than G0.
-- Tests: `test_zones_cuda` (centers, neighbor indices and brackets on the
-  SOLEDGE3X and HERMES test grids against the CPU), `test_interpolate_cuda`
-  extended to several zones with ghosts.
+- One struct for the host and the device instead of a separate
+  `ZonesDevice`: `Zones::ZonesView` (`include/zones_hd.h`) holds per-zone
+  nx, ny, nz, the ghost width, the face codes (`num_faces` per zone), the
+  centers (with the ghost cells' centers, NaN past a boundary face) and
+  edges of every zone in flat arrays with per-zone offsets, the
+  `ZonedVector` zone offsets (one set per background, since every field
+  has the same layout), the toroidal, Cartesian and wedge flags, and the
+  zShift tables. `Zones` keeps a host copy (`FlatZones`, rebuilt by every
+  function that changes the zones; copying a `Zones` points the copy's
+  view at its own arrays), `Zones::view` returns it, and
+  `Zones::to_device`/`free_zones` copy it to a GPU and free it. The face
+  codes and `Face` moved to `zones_hd.h` with it.
+- Shared `FLAN_HD` functions on a view: `cell_index`, `neighbor_index`,
+  `bracket`, `center` and `flat_index`. The CPU's `Zones::neighbor_index`
+  and `Zones::bracket` call them, and `Zones::center` reads the same
+  table within the ghost width (and steps across faces past it, as
+  before). The table is filled by the old stepping code, so the CPU's
+  values didn't change.
+- `BackgroundDevice` holds the view, the times and their bounds in global
+  memory, and the fields as the flat `ZonedVector` data, ghosts included.
+  `to_device` checks every field it copies has the size the zones and
+  times give. `device_constants.cu`/`.cuh` and `MAX_1D` are gone. The
+  multi-zone and wedge stops moved from `to_device` to `flan.cpp`, so
+  tests can copy any background; they come out in G2 and G3.
+- `SlotsDevice::zone`, copied both ways. GPU births go in zone 0 until
+  G2 (`imp_zone_start_val`), with the range and cell from the zone's
+  edges. Every kernel takes its zone from the slot: the stencils
+  (`build_stencil_3d`/`4d` take a zone, and store a zone/frame base plus
+  int offsets per corner instead of 16 flat ints), the cell finding, the
+  births, and the (still single-zone) boundary kernel's bounds.
+- Tests: `test_zones_cuda` (cells, neighbors, brackets and centers on the
+  device against the host for 20000 points on three zones with uneven
+  cells, a neighbor thinner than the ghost width, periodic, core and wall
+  faces; ghost centers against `Zones::center`; `flat_index` against
+  `ZonedVector::calc_index`), and `test_interpolate_cuda` rewritten: the
+  slab case, and two zones with ghost cells where 4000 points interpolate
+  through the shared face exactly and agree with the CPU's `interp_ne`.
+  The SOLEDGE3X and HERMES test grids are written with HDF5, which the
+  `.cu` tests can't include, so the zones are built in the test.
+- Single zone unchanged: with a fixed seed, `z10_gpu` has the same counts
+  as G0 and its velocity sums differ by about 1e-11 m/s (as two G0 runs
+  do); `gradb_gpu` and `gradb` are bit for bit the same as G0. CPU and GPU
+  `ctest` pass (except `MPITest`, which needs `srun`).
+- Timing: the G0 job again, `$SCRATCH/flan_gpu/g1_node/timing.sbatch`
+  (same cases and configuration, plus one Gkeyll 1e6 run with
+  `srun --gpus=1`), not yet run.
 
 **G2. Multi-zone push, collisions, ionization and statistics.**
 

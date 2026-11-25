@@ -185,8 +185,7 @@ namespace Slots
 	* Returns the index of the zone each particle is in.
 	*
 	* The cell indices and computational coordinates are relative to this
-	* zone. Only kept on the host: the GPU only supports single-zone
-	* backgrounds, so to_device doesn't copy it and to_host leaves it at 0.
+	* zone. Copied to and from the GPU with the rest of the slot.
 	*
 	* @return Vector of length N() with one entry per slot.
 	*/
@@ -477,6 +476,7 @@ namespace Slots
 		cudaMalloc(&slots_d.x, m_N * sizeof(double));
 		cudaMalloc(&slots_d.y, m_N * sizeof(double));
 		cudaMalloc(&slots_d.z, m_N * sizeof(double));
+		cudaMalloc(&slots_d.zone, m_N * sizeof(int));
 		cudaMalloc(&slots_d.tidx, m_N * sizeof(int));
 		cudaMalloc(&slots_d.xidx, m_N * sizeof(int));
 		cudaMalloc(&slots_d.yidx, m_N * sizeof(int));
@@ -509,6 +509,8 @@ namespace Slots
 		cudaMemcpy(slots_d.y, m_y.data(), m_N * sizeof(double), 
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.z, m_z.data(), m_N * sizeof(double), 
+			cudaMemcpyHostToDevice);
+		cudaMemcpy(slots_d.zone, m_zone.data(), m_N * sizeof(int), 
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.tidx, m_tidx.data(), m_N * sizeof(int), 
 			cudaMemcpyHostToDevice);
@@ -579,6 +581,8 @@ namespace Slots
 			cudaMemcpyDeviceToHost);
 		cudaMemcpy(slots.m_z.data(), slots_d.z, slots_d.N * sizeof(double), 
 			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_zone.data(), slots_d.zone,
+			slots_d.N * sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(slots.m_vx.data(), slots_d.vx, slots_d.N * sizeof(double), 
 			cudaMemcpyDeviceToHost);
 		cudaMemcpy(slots.m_vy.data(), slots_d.vy, slots_d.N * sizeof(double), 
@@ -634,6 +638,7 @@ namespace Slots
 		cudaFree(slots_d.x);
 		cudaFree(slots_d.y);
 		cudaFree(slots_d.z);
+		cudaFree(slots_d.zone);
 		cudaFree(slots_d.tidx);
 		cudaFree(slots_d.xidx);
 		cudaFree(slots_d.yidx);
@@ -658,6 +663,7 @@ namespace Slots
 		slots_d.x = nullptr;
 		slots_d.y = nullptr;
 		slots_d.z = nullptr;
+		slots_d.zone = nullptr;
 		slots_d.tidx = nullptr;
 		slots_d.xidx = nullptr;
 		slots_d.yidx = nullptr;

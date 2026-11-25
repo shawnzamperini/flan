@@ -202,15 +202,25 @@ the GPU into plain structs of device pointers:
 | Host side | Device side | Copied with |
 |---|---|---|
 | `Background::Background` | `Background::BackgroundDevice` | `Background::to_device` |
+| `Zones::Zones` | `Zones::ZonesView` (inside `BackgroundDevice`) | `Zones::to_device` |
 | `Slots::Slots` | `Slots::SlotsDevice` | `Slots::to_device` |
 | `Impurity::Statistics` | `ImpurityStats::StatisticsDevice` | `Statistics::to_device` |
 | `OpenADAS::OpenADAS` | `OpenADAS::OpenADASDevice` | `OpenADAS::to_device` |
 | `Options::Options` | `Options::OptionsDevice*` (only the options kernels use) | `Options::to_device` |
 
-Each has a matching `free_*` function. The background's times, cell centers,
-cell edges and bounds are small and read by nearly every kernel, so they go in
-GPU *constant memory* instead (`src/cuda/device_constants.cu`). Constant memory
-is shared by everything on a GPU, so only one background can be on each GPU.
+Each has a matching `free_*` function. Everything is in global memory, so
+any number of backgrounds can be on one GPU.
+
+The zones' grids live in nested `std::vector`s in `Zones::Zones`, which
+kernels can't use. `Zones::ZonesView` (`include/zones_hd.h`) holds the same
+grids as flat arrays (every zone's values one after another, with per-zone
+offsets), the face codes, the ghost cell centers and the `ZonedVector`
+offsets. `Zones` rebuilds its host view whenever the zones change
+(`Zones::view`), and `Zones::to_device` copies it to a GPU. The functions in
+`zones_hd.h` (`cell_index`, `neighbor_index`, `bracket`, `center`,
+`flat_index`) take either, so the CPU and the GPU find a particle's cell and
+interpolation stencil with the same code. Each slot carries its zone
+(`SlotsDevice::zone`), and the kernels pass it to these functions.
 
 With several GPUs, `follow_impurities` copies everything to each GPU and runs
 `main_loop` on each in its own `std::thread` (`gpu_worker`). Counters that the
@@ -230,9 +240,12 @@ are interpolated trilinearly in space and linearly in time.
 The background and statistics arrays are `Vectors::Vector4D`s with dimensions
 (t, x, y, z), and the geometry arrays are `Vectors::Vector3D`s with dimensions
 (x, y, z). Both store the data as one flattened vector in row-major order, so
-the last index varies fastest. The same layout is used on the GPU
-(`Utilities::calc_4d_index_cuda`) and in the netCDF output, so the data is
-copied as is between them.
+the last index varies fastest. A background with zones keeps its fields in
+`Vectors::ZonedVector`s: each zone in the same row-major order, ghost cells
+included, one zone after another. A single zone without ghost cells has the
+same layout as a `Vector4D`. The GPU uses the same layout
+(`Zones::flat_index`), and so does the netCDF output, so the data is copied as
+is between them.
 
 ## Namespaces
 

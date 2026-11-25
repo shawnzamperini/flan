@@ -3,25 +3,20 @@
 *
 * @brief GPU definitions of Background::to_device and free_bkg.
 *
-* The background is split between two kinds of GPU memory:
-*
-* - Constant memory: the times, cell centers, cell edges and simulation
-*   bounds. These are small and are written to the __constant__ variables in
-*   device_constants.cu. They don't belong to the BackgroundDevice.
-* - Global memory: the plasma and field data and the basis vectors. These
-*   are allocated with cudaMalloc, and their pointers are held in the
-*   returned BackgroundDevice.
+* The times, the zones' grids (Zones::to_device) and the plasma and field
+* data and basis vectors are all copied to global memory, and their
+* pointers are held in the returned BackgroundDevice. The fields are
+* copied as the flat data of the host's ZonedVectors, ghost cells
+* included.
 *
 * CPU-only builds use the placeholder versions in background.cpp instead.
 */
 #include <cuda_runtime.h>
-#include <sstream>
+#include <string>
 
 #include "background.h"
 #include "background_device.h"
 #include "errors.h"
-
-#include "device_constants.cuh"
 
 
 namespace Background
@@ -30,18 +25,14 @@ namespace Background
 	/**
 	* Copies the background to a GPU.
 	*
-	* The times, cell centers, cell edges and simulation bounds are copied
-	* to constant memory (see device_constants.cu), and the 3D and 4D arrays
-	* are allocated and copied to global memory. Constant memory is per GPU,
-	* so each GPU gets its own copy. Constant memory is shared by everything
-	* on a GPU, though, so only one background can be on each GPU at a time.
-	* Copying a second one to the same GPU overwrites the constant memory of
-	* the first.
+	* Everything goes to global memory: the times, the zones' grids (see
+	* Zones::to_device) and the 3D and 4D arrays, as the flat data of their
+	* ZonedVectors. Each GPU gets its own copy, and any number of
+	* backgrounds can be on one GPU.
 	*
-	* Stops the run with Errors::fatal_error if the background has more
-	* than one zone, which the GPU doesn't handle yet, or if a dimension is
-	* too big for the constant memory arrays (see MAX_1D in
-	* device_constants.cuh).
+	* Any background can be copied, but the GPU's push, collisions and
+	* boundaries don't handle more than one zone or a toroidal wedge yet
+	* (GPU plan G2 and G3), so a run stops before that (flan.cpp).
 	*
 	* @param device_id ID of the GPU to copy to.
 	* @return The device-side background. Its pointers are to global memory
@@ -55,229 +46,75 @@ namespace Background
 
 		bkg_d.device_id = device_id;
 
-		// The GPU only handles a single zone so far. A single zone without
-		// ghost cells has the same layout as a Vector4D, so its data is
-		// copied as-is.
-		check_single_zone("Background::to_device");
-
-		// The GPU boundary check doesn't turn velocities that wrap around
-		// a toroidal wedge (see Boundary::check_bounds_cpu)
-		if (m_zones.any_wedge())
-		{
-			Errors::fatal_error("The GPU doesn't handle backgrounds that "
-				"are a toroidal wedge yet. Turn use_gpu off.");
-		}
-		const int dim2 {m_zones.get_nx(0)};
-		const int dim3 {m_zones.get_ny(0)};
-		const int dim4 {m_zones.get_nz(0)};
-		const auto& x = m_zones.get_x(0);
-		const auto& y = m_zones.get_y(0);
-		const auto& z = m_zones.get_z(0);
-		const auto& grid_x = m_zones.get_grid_x(0);
-		const auto& grid_y = m_zones.get_grid_y(0);
-		const auto& grid_z = m_zones.get_grid_z(0);
-
-		// The times, cell centers and cell edges go in constant memory
-		// arrays of size MAX_1D (see device_constants.cuh). If a dimension
-		// doesn't fit, the copies below would write past the end of the
-		// arrays, so stop the run. The cell edges have dim + 1 values, so
-		// the spatial dimensions must be less than MAX_1D. dim1 is the time
-		// dimension, which has no edges, so it can equal MAX_1D.
-		if (m_dim1 > MAX_1D || dim2+1 > MAX_1D
-			|| dim3+1 > MAX_1D || dim4+1 > MAX_1D)
-		{
-			std::ostringstream msg;
-			msg << "MAX_1D is too small. Increase it in "
-				<< "include/cuda/device_constants.cuh.\n"
-				<< "  dim1 = " << m_dim1 << " (must be <= MAX_1D)\n"
-				<< "  dim2 = " << dim2 << " (must be < MAX_1D)\n"
-				<< "  dim3 = " << dim3 << " (must be < MAX_1D)\n"
-				<< "  dim4 = " << dim4 << " (must be < MAX_1D)\n"
-				<< "  MAX_1D = " << MAX_1D;
-			Errors::fatal_error(msg.str());
-		}
+		Errors::check_cuda(cudaSetDevice(device_id), "Background::to_device");
 
 		bkg_d.tdim = m_dim1;
-		bkg_d.xdim = dim2;
-		bkg_d.ydim = dim3;
-		bkg_d.zdim = dim4;
+		bkg_d.t_min = m_t_min;
+		bkg_d.t_max = m_t_max;
+		Errors::check_cuda(cudaMalloc(&bkg_d.times, m_dim1 * sizeof(double)),
+			"Background::to_device: times");
+		cudaMemcpy(bkg_d.times, m_times.data(), m_dim1 * sizeof(double),
+			cudaMemcpyHostToDevice);
+		bkg_d.zones = m_zones.to_device(device_id);
 
-		int N_3D {dim2 * dim3 * dim4};
-		int N_4D {m_dim1 * dim2 * dim3 * dim4};
-
-		cudaSetDevice(device_id);
-
-		// -----------------------------------
-		// Constant memory copies
-		// -----------------------------------
-
-		// These arrays are small and read by nearly every kernel, so they're
-		// kept in constant memory, which is cached. They're defined in
-		// device_constants.cu, and cudaMemcpyToSymbol copies into them on
-		// the current GPU. The copies assume BkgFPType is double.
-		cudaMemcpyToSymbol(d_t, m_times.data(), m_dim1 * sizeof(double));
-		cudaMemcpyToSymbol(d_x, x.data(), dim2 * sizeof(double));
-		cudaMemcpyToSymbol(d_y, y.data(), dim3 * sizeof(double));
-		cudaMemcpyToSymbol(d_z, z.data(), dim4 * sizeof(double));
-		cudaMemcpyToSymbol(d_grid_x, grid_x.data(), (dim2+1) 
-			* sizeof(double));
-		cudaMemcpyToSymbol(d_grid_y, grid_y.data(), (dim3+1) 
-			* sizeof(double));
-		cudaMemcpyToSymbol(d_grid_z, grid_z.data(), (dim4+1) 
-			* sizeof(double));
-
-		// cudaMemcpyToSymbol copies from a host address, so for scalars we
-		// pass the address of a local variable. The x, y and z bounds are
-		// the outer cell edges, the same as the CPU uses.
-		const double t_min {m_t_min};
-		const double t_max {m_t_max};
-		const double x_min {grid_x.front()};
-		const double x_max {grid_x.back()};
-		const double y_min {grid_y.front()};
-		const double y_max {grid_y.back()};
-		const double z_min {grid_z.front()};
-		const double z_max {grid_z.back()};
-		cudaMemcpyToSymbol(d_t_min, &t_min, sizeof(double));
-		cudaMemcpyToSymbol(d_t_max, &t_max, sizeof(double));
-		cudaMemcpyToSymbol(d_x_min, &x_min, sizeof(double));
-		cudaMemcpyToSymbol(d_x_max, &x_max, sizeof(double));
-		cudaMemcpyToSymbol(d_y_min, &y_min, sizeof(double));
-		cudaMemcpyToSymbol(d_y_max, &y_max, sizeof(double));
-		cudaMemcpyToSymbol(d_z_min, &z_min, sizeof(double));
-		cudaMemcpyToSymbol(d_z_max, &z_max, sizeof(double));
+		// Sizes of the 3D and 4D arrays, ghost cells included (the last
+		// zone offset is the total)
+		const std::size_t N_3D {m_zones.view().cell_offset[
+			m_zones.get_nzones()]};
+		const std::size_t N_4D {static_cast<std::size_t>(m_dim1) * N_3D};
 
 		// -----------------------------------
 		// Global memory allocation and copies
 		// -----------------------------------
 
+		// Allocates a device array and copies a field into it. Every
+		// field to_device copies must be loaded and shaped like the zones
+		// (geometry with 1 frame, plasma with tdim), since the kernels
+		// index them all with the same layout.
+		auto copy_field = [](double*& dst, const auto& field,
+			const std::size_t n, const char* name)
+		{
+			if (field.get_data().size() != n)
+			{
+				Errors::fatal_error(std::string("Background::to_device: ")
+					+ name + " has " + std::to_string(field.get_data().size())
+					+ " values, but the zones and times need "
+					+ std::to_string(n) + ".");
+			}
+			Errors::check_cuda(cudaMalloc(&dst, n * sizeof(double)), name);
+			Errors::check_cuda(cudaMemcpy(dst, field.get_data().data(),
+				n * sizeof(double), cudaMemcpyHostToDevice), name);
+		};
+
 		// Reciprocal basis vectors (grad x, grad y, grad z), 3D
-		cudaMalloc(&bkg_d.dxdX, N_3D * sizeof(double));
-		cudaMalloc(&bkg_d.dxdY, N_3D * sizeof(double));
-		cudaMalloc(&bkg_d.dxdZ, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dxdX, m_dxdX.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(bkg_d.dxdY, m_dxdY.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(bkg_d.dxdZ, m_dxdZ.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dydX, N_3D * sizeof(double));
-		cudaMalloc(&bkg_d.dydY, N_3D * sizeof(double));
-		cudaMalloc(&bkg_d.dydZ, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dydX, m_dydX.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(bkg_d.dydY, m_dydY.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(bkg_d.dydZ, m_dydZ.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dzdX, N_3D * sizeof(double));
-		cudaMalloc(&bkg_d.dzdY, N_3D * sizeof(double));
-		cudaMalloc(&bkg_d.dzdZ, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dzdX, m_dzdX.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(bkg_d.dzdY, m_dzdY.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(bkg_d.dzdZ, m_dzdZ.get_data().data(), N_3D 
-			* sizeof(double), cudaMemcpyHostToDevice);
+		copy_field(bkg_d.dxdX, m_dxdX, N_3D, "dxdX");
+		copy_field(bkg_d.dxdY, m_dxdY, N_3D, "dxdY");
+		copy_field(bkg_d.dxdZ, m_dxdZ, N_3D, "dxdZ");
+		copy_field(bkg_d.dydX, m_dydX, N_3D, "dydX");
+		copy_field(bkg_d.dydY, m_dydY, N_3D, "dydY");
+		copy_field(bkg_d.dydZ, m_dydZ, N_3D, "dydZ");
+		copy_field(bkg_d.dzdX, m_dzdX, N_3D, "dzdX");
+		copy_field(bkg_d.dzdY, m_dzdY, N_3D, "dzdY");
+		copy_field(bkg_d.dzdZ, m_dzdZ, N_3D, "dzdZ");
 
 		// Plasma and field data, 4D
-		cudaMalloc(&bkg_d.ne, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.ne, m_ne.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
+		copy_field(bkg_d.ne, m_ne, N_4D, "ne");
+		copy_field(bkg_d.te, m_te, N_4D, "te");
+		copy_field(bkg_d.ti, m_ti, N_4D, "ti");
+		copy_field(bkg_d.bX, m_bX, N_4D, "bX");
+		copy_field(bkg_d.bY, m_bY, N_4D, "bY");
+		copy_field(bkg_d.bZ, m_bZ, N_4D, "bZ");
+		copy_field(bkg_d.bmag, m_bmag, N_4D, "bmag");
+		copy_field(bkg_d.eX, m_eX, N_4D, "eX");
+		copy_field(bkg_d.eY, m_eY, N_4D, "eY");
+		copy_field(bkg_d.eZ, m_eZ, N_4D, "eZ");
+		copy_field(bkg_d.emag, m_emag, N_4D, "emag");
+		copy_field(bkg_d.uX, m_uX, N_4D, "uX");
+		copy_field(bkg_d.uY, m_uY, N_4D, "uY");
+		copy_field(bkg_d.uZ, m_uZ, N_4D, "uZ");
 
-		cudaMalloc(&bkg_d.te, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.te, m_te.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.ti, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.ti, m_ti.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.bX, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.bX, m_bX.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.bY, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.bY, m_bY.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.bZ, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.bZ, m_bZ.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.bmag, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.bmag, m_bmag.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.eX, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.eX, m_eX.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.eY, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.eY, m_eY.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.eZ, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.eZ, m_eZ.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.emag, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.emag, m_emag.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.uX, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.uX, m_uX.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.uY, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.uY, m_uY.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.uZ, N_4D * sizeof(double));
-		cudaMemcpy(bkg_d.uZ, m_uZ.get_data().data(), N_4D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		// Tangent basis vectors (dX/dx, etc.), 3D
-		// These aren't actually used anywhere so commenting them out to save
-		// memeory, but if they become useful just uncomment this section out.
-		/*
-		cudaMalloc(&bkg_d.dXdx, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dXdx, m_dXdx.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dYdx, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dYdx, m_dYdx.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dZdx, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dZdx, m_dZdx.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dXdy, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dXdy, m_dXdy.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dYdy, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dYdy, m_dYdy.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dZdy, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dZdy, m_dZdy.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dXdz, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dXdz, m_dXdz.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dYdz, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dYdz, m_dYdz.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-
-		cudaMalloc(&bkg_d.dZdz, N_3D * sizeof(double));
-		cudaMemcpy(bkg_d.dZdz, m_dZdz.get_data().data(), N_3D * sizeof(double), 
-			cudaMemcpyHostToDevice);
-		*/
+		// The tangent basis vectors (dX/dx, etc.) aren't used by any
+		// kernel, so they're left on the host to save memory
 
 		return bkg_d;
 
@@ -291,9 +128,7 @@ namespace Background
 	/**
 	* Frees the global memory arrays of a device-side background.
 	*
-	* Each pointer is set to nullptr after it's freed. The constant memory
-	* variables (d_t, d_x, etc.) are not freed, since constant memory is
-	* allocated statically.
+	* Each pointer is set to nullptr after it's freed.
 	*
 	* @param bkg_d Device-side background from Background::to_device.
 	* @param device_id ID of the GPU the background is on.
@@ -305,8 +140,8 @@ namespace Background
 
 		cudaSetDevice(device_id);
 
-		// Free only the pointers that live in global memory. The constant
-		// memory variables are static and can't be freed.
+		cudaFree(bkg_d.times);   bkg_d.times = nullptr;
+		Zones::free_zones(bkg_d.zones, device_id);
 
 		cudaFree(bkg_d.ne);      bkg_d.ne = nullptr;
 		cudaFree(bkg_d.te);      bkg_d.te = nullptr;

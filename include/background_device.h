@@ -4,38 +4,31 @@
 */
 #pragma once
 
+#include "zones_hd.h"
+
 namespace Background
 {
 	/**
 	* Device-side copy of a Background, made by Background::to_device and
 	* freed with free_bkg.
 	*
-	* The pointers are to global memory on the GPU. The 4D arrays are
-	* flattened as (t, x, y, z) and indexed with calc_4d_index_cuda, and the
-	* 3D arrays as (x, y, z) and indexed with calc_3d_index_cuda (see
-	* cuda/utilities.cuh). Vector components are in physical (Cartesian) X,
-	* Y and Z.
-	*
-	* The times, cell centers, cell edges and simulation bounds aren't held
-	* here. They're in constant memory as the global variables d_t, d_x,
-	* d_grid_x, d_x_min, etc. (see cuda/device_constants.cuh).
+	* The pointers are to global memory on the GPU. The fields are the flat
+	* data of the host's ZonedVectors (zone after zone, ghost cells
+	* included), so a value is found with Zones::flat_index on zones, with
+	* dim1 = tdim for the 4D (t, x, y, z) fields and dim1 = 1 for the 3D
+	* (x, y, z) ones. Vector components are in physical (Cartesian) X, Y and
+	* Z.
 	*/
 	struct BackgroundDevice
 	{
 		int device_id;	///< ID of the GPU the arrays are on
 		int tdim;		///< Number of background times
-		int xdim;		///< Number of cells in x
-		int ydim;		///< Number of cells in y
-		int zdim;		///< Number of cells in z
+		double t_min;	///< First background time (s)
+		double t_max;	///< Last background time (s)
+		double* times;	///< Background times (s), tdim values
 
-		// Kept in constant memory instead, see cuda/device_constants.cuh
-		//double* times;
-		//double* x;
-		//double* y;
-		//double* z;
-		//double* grid_x;
-		//double* grid_y;
-		//double* grid_z;
+		/// The zones' grids, on the device (Zones::to_device)
+		Zones::ZonesView zones;
 
 		// Plasma and field data, 4D
 		double* ne;		///< Electron density (m^-3)

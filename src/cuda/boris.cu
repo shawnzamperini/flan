@@ -68,6 +68,7 @@ namespace Boris
 		int xidx {slots_d.xidx[i]};
 		int yidx {slots_d.yidx[i]};
 		int zidx {slots_d.zidx[i]};
+		const int zone {slots_d.zone[i]};
 
 		double t {slots_d.t[i]};
 		double x {slots_d.x[i]};
@@ -88,9 +89,9 @@ namespace Boris
 
 		// Create stencils for interpolation
 		Interpolate::InterpolationStencil stencil_3d
-			{Interpolate::build_stencil_3d(bkg_d, xidx, yidx, zidx, x, y, z)};
+			{Interpolate::build_stencil_3d(bkg_d, zone, xidx, yidx, zidx, x, y, z)};
 		Interpolate::InterpolationStencil stencil_4d
-			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, t, x, 
+			{Interpolate::build_stencil_4d(bkg_d, zone, tidx, xidx, yidx, zidx, t, x, 
 			y, z)};
 
 		// Interpolate reciprocal basis vectors

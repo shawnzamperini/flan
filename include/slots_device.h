@@ -30,6 +30,8 @@ namespace Slots
 		double* x;			///< Computational x coordinate
 		double* y;			///< Computational y coordinate
 		double* z;			///< Computational z coordinate
+		int* zone;			///< Zone the particle is in. The coordinates
+							///< and cell indices are in this zone.
 		int* tidx;			///< Nearest background time index
 		int* xidx;			///< x index of the containing grid cell
 		int* yidx;			///< y index of the containing grid cell

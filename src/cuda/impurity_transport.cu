@@ -15,8 +15,8 @@
 #include "options_device.h"
 #include "pcg32.h"
 #include "slots_device.h"
+#include "zones_hd.h"
 
-#include "device_constants.cuh"
 #include "indices.cuh"
 #include "utilities.cuh"
 
@@ -28,13 +28,13 @@ namespace ImpurityTransport
 	* alive particle, one thread per slot.
 	*
 	* The time index is the nearest background time frame, and the x, y
-	* and z indices are the cells containing the particle (see
-	* indices.cuh). Dead slots are skipped.
+	* and z indices are the cells containing the particle in its zone.
+	* Dead slots are skipped.
 	*
 	* @param[in,out] slots_d Particle slots on the device. tidx, xidx, yidx
 	*        and zidx are updated.
-	* @param bkg_d Background plasma on the device, used for the grid
-	*        dimensions.
+	* @param bkg_d Background plasma on the device, used for the times and
+	*        the zones' grids.
 	*/
 	__global__ void find_containing_cell_kernel(Slots::SlotsDevice slots_d, 
 		const Background::BackgroundDevice bkg_d)
@@ -49,16 +49,16 @@ namespace ImpurityTransport
 		// If particle isn't alive then skip
 		if (slots_d.state[i] > 0) return;
 
-		// d_t is in constant memory, see device_constants.cuh
-		int tidx {Indices::get_nearest_index_cuda(d_t, bkg_d.tdim, 
-			slots_d.t[i])};
-
-		// Likewise for the cell edges, which have dim + 1 values
-		int xidx {Indices::get_nearest_cell_index_cuda(d_grid_x, bkg_d.xdim+1, 
+		// Nearest background time, and the cell containing the particle in
+		// its zone (the same search as the CPU's, see zones_hd.h)
+		const int zone {slots_d.zone[i]};
+		const int tidx {Indices::get_nearest_index_cuda(bkg_d.times,
+			bkg_d.tdim, slots_d.t[i])};
+		const int xidx {Zones::cell_index(bkg_d.zones, zone, 0,
 			slots_d.x[i])};
-		int yidx {Indices::get_nearest_cell_index_cuda(d_grid_y, bkg_d.ydim+1, 
+		const int yidx {Zones::cell_index(bkg_d.zones, zone, 1,
 			slots_d.y[i])};
-		int zidx {Indices::get_nearest_cell_index_cuda(d_grid_z, bkg_d.zdim+1, 
+		const int zidx {Zones::cell_index(bkg_d.zones, zone, 2,
 			slots_d.z[i])};
 
 		// Update indices

@@ -16,15 +16,16 @@ namespace Slots
 	*
 	* t is in s, x, y and z are computational coordinates, vx, vy and vz
 	* are computational velocities, vX, vY and vZ are Cartesian velocities
-	* (m/s), weight is the particle weight, the idx members are the time and
-	* cell indices and q is the charge state.
+	* (m/s), weight is the particle weight, zone is the zone it starts in,
+	* the idx members are the time and cell indices (in that zone) and q is
+	* the charge state.
 	*/
 	struct ParticleInitDevice {
 		double t, x, y, z;
 		double vx, vy, vz;
 		double vX, vY, vZ;
 		double weight;
-		int tidx, xidx, yidx, zidx, q;
+		int zone, tidx, xidx, yidx, zidx, q;
 	};
 
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,

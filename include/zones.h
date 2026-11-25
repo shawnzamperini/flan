@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "vectors.h"
+#include "zones_hd.h"
 
 #ifndef __CUDACC__
 #include "mpi.h"
@@ -18,44 +19,6 @@
 
 namespace Zones
 {
-	/**
-	* Faces of a zone. The order matches the rows of the SOLEDGE3X neighbors
-	* array (psi-, psi+, theta-, theta+, phi-, phi+), and the opposite face
-	* of f is f ^ 1.
-	*/
-	enum Face : int
-	{
-		xmin,
-		xmax,
-		ymin,
-		ymax,
-		zmin,
-		zmax,
-		num_faces
-	};
-
-	/// Face code for a face where particles are absorbed
-	inline constexpr int face_absorbing {-1};
-
-	/// Face code for a face where particles are put back in at the core
-	inline constexpr int face_core {-2};
-
-	/**
-	* Face code for a material surface, such as a divertor target. Particles
-	* are absorbed there the same as at an absorbing face, but are counted
-	* separately. -4 rather than -3, since -3 is SOLEDGE3X's code for its
-	* outer psi boundary, which is an absorbing face in Flan.
-	*/
-	inline constexpr int face_wall {-4};
-
-	/**
-	* Face code for a z face of a single-zone (Gkeyll) background that is a
-	* last closed flux surface boundary (bound type "lcfs"): periodic for
-	* particles inside lcfs_x (closed field lines) and absorbing outside it
-	* (see Boundary::lcfs_bc). Only z faces can have it.
-	*/
-	inline constexpr int face_lcfs {-5};
-
 	/// A cell of a zone. i, j and k may be ghost cell indices.
 	struct Cell
 	{
@@ -76,6 +39,43 @@ namespace Zones
 	{
 		Cell ghost {};
 		std::vector<Cell> sources {};
+	};
+
+	/**
+	* The flat arrays behind the host's ZonesView (see Zones::view), built
+	* from the nested vectors in Zones whenever the zones change.
+	*
+	* Copying one points the copy's view at the copy's own arrays. Moving
+	* one keeps the arrays' buffers, so the view stays valid.
+	*/
+	class FlatZones
+	{
+	public:
+		int nzones {};
+		int ghost {};
+		std::array<std::vector<int>, 3> n {};
+		std::vector<int> faces {};
+		std::array<std::vector<int>, 3> center_offset {};
+		std::array<std::vector<double>, 3> centers {};
+		std::array<std::vector<int>, 3> edge_offset {};
+		std::array<std::vector<double>, 3> edges {};
+		std::vector<std::size_t> cell_offset {};
+		std::vector<int> flags {};
+		std::vector<long long> z_shift_offset {};
+		std::vector<double> z_shift {};
+
+		FlatZones() = default;
+		FlatZones(const FlatZones& other);
+		FlatZones& operator=(const FlatZones& other);
+		FlatZones(FlatZones&& other) noexcept = default;
+		FlatZones& operator=(FlatZones&& other) noexcept = default;
+
+		void refresh_view();
+
+		const ZonesView& view() const {return m_view;}
+
+	private:
+		ZonesView m_view {};	///< Pointers into the arrays above
 	};
 
 	/**
@@ -121,6 +121,13 @@ namespace Zones
 		/// Every ghost cell and its sources, built by fill_ghosts the first
 		/// time it's needed and cleared whenever the zones change
 		mutable std::vector<GhostCell> m_ghost_cells {};
+
+		/// The grids as flat arrays, for view() and to_device
+		FlatZones m_flat {};
+
+		void rebuild_flat();
+
+		double step_to_center(const int zone, const int dim, int i) const;
 
 		bool in_range(const Cell& cell, const int dim) const;
 
@@ -198,6 +205,10 @@ namespace Zones
 
 		double center(const int zone, const int dim, int i) const;
 
+		const ZonesView& view() const;
+
+		ZonesView to_device(int device_id) const;
+
 		int neighbor_index(const int zone, const int dim, const double coord,
 			const int idx) const;
 
@@ -245,4 +256,6 @@ namespace Zones
 	};
 
 	int face_from_bound_type(const int bound_type, const int zone);
+
+	void free_zones(ZonesView& v, int device_id);
 }

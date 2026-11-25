@@ -22,8 +22,8 @@
 #include "pcg32.h"
 #include "slots.cuh"
 #include "slots_device.h"
+#include "zones_hd.h"
 
-#include "device_constants.cuh"
 #include "indices.cuh"
 #include "interpolate.cuh"
 
@@ -113,6 +113,7 @@ namespace Slots
 	* @param x Starting computational x coordinate.
 	* @param y Starting computational y coordinate.
 	* @param z Starting computational z coordinate.
+	* @param zone Zone the particle starts in.
 	* @param tidx Index of the nearest background time frame.
 	* @param xidx x index of the grid cell containing the particle.
 	* @param yidx y index of the grid cell containing the particle.
@@ -124,8 +125,8 @@ namespace Slots
 	__device__
 	Vec3d get_birth_vXYZ(const Background::BackgroundDevice bkg_d, 
 		const double t, const double x, const double y, const double z, 
-		const int tidx, const int xidx, const int yidx, const int zidx, 
-		pcg32& rng, const Options::OptionsDevice* opts_d)
+		const int zone, const int tidx, const int xidx, const int yidx,
+		const int zidx, pcg32& rng, const Options::OptionsDevice* opts_d)
 	{
 		// Start at input temperature value
 		double start_temp {};
@@ -139,7 +140,7 @@ namespace Slots
 		else if (opts_d->imp_temp_start_opt_int == 1)
 		{
 			Interpolate::InterpolationStencil stencil_4d
-				{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, 
+				{Interpolate::build_stencil_4d(bkg_d, zone, tidx, xidx, yidx, zidx, 
 				t, x, y, z)};
 
 			start_temp = Interpolate::interpolate_field_4d(bkg_d.ti, 
@@ -193,29 +194,39 @@ namespace Slots
 
 		ParticleInitDevice p;
 
-		// Create a new particle based on input options.
-		// d_x_min/max, etc. are defined in device_constants.cuh
+		// Particles start in zone 0. imp_zone_start_val comes with
+		// multi-zone backgrounds on the GPU (GPU plan G2).
+		const Zones::ZonesView& zones {bkg_d.zones};
+		p.zone = 0;
+		const double* gx {Zones::zone_edges(zones, p.zone, 0)};
+		const double* gy {Zones::zone_edges(zones, p.zone, 1)};
+		const double* gz {Zones::zone_edges(zones, p.zone, 2)};
+
+		// Create a new particle based on input options. The full range is
+		// the zone's outer cell edges.
 		p.t = get_birth_val_cuda(opts_d->tstart_opt_int, opts_d->tstart_val, 
-			opts_d->trange_min, opts_d->trange_max, d_t_min, d_t_max, rng);
+			opts_d->trange_min, opts_d->trange_max, bkg_d.t_min,
+			bkg_d.t_max, rng);
 		p.x = get_birth_val_cuda(opts_d->xstart_opt_int, opts_d->xstart_val, 
-			opts_d->xrange_min, opts_d->xrange_max, d_x_min, d_x_max, rng);
+			opts_d->xrange_min, opts_d->xrange_max, gx[0],
+			gx[zones.n[0][p.zone]], rng);
 		p.y = get_birth_val_cuda(opts_d->ystart_opt_int, opts_d->ystart_val, 
-			opts_d->yrange_min, opts_d->yrange_max, d_y_min, d_y_max, rng);
+			opts_d->yrange_min, opts_d->yrange_max, gy[0],
+			gy[zones.n[1][p.zone]], rng);
 		p.z = get_birth_val_cuda(opts_d->zstart_opt_int, opts_d->zstart_val, 
-			opts_d->zrange_min, opts_d->zrange_max, d_z_min, d_z_max, rng);
+			opts_d->zrange_min, opts_d->zrange_max, gz[0],
+			gz[zones.n[2][p.zone]], rng);
 
 		// Get indices, same process as in impurity_transport.cu
-		p.tidx = Indices::get_nearest_index_cuda(d_t, bkg_d.tdim, p.t);
-		p.xidx = Indices::get_nearest_cell_index_cuda(d_grid_x, bkg_d.xdim+1, 
-			p.x);
-		p.yidx = Indices::get_nearest_cell_index_cuda(d_grid_y, bkg_d.ydim+1, 
-			p.y);
-		p.zidx = Indices::get_nearest_cell_index_cuda(d_grid_z, bkg_d.zdim+1, 
-			p.z);
+		p.tidx = Indices::get_nearest_index_cuda(bkg_d.times, bkg_d.tdim,
+			p.t);
+		p.xidx = Zones::cell_index(zones, p.zone, 0, p.x);
+		p.yidx = Zones::cell_index(zones, p.zone, 1, p.y);
+		p.zidx = Zones::cell_index(zones, p.zone, 2, p.z);
 
 		// Get starting vX, vY, vZ into struct
-		Vec3d vXYZ {get_birth_vXYZ(bkg_d, p.t, p.x, p.y, p.z, p.tidx, p.xidx, 
-			p.yidx, p.zidx, rng, opts_d)};
+		Vec3d vXYZ {get_birth_vXYZ(bkg_d, p.t, p.x, p.y, p.z, p.zone, p.tidx,
+			p.xidx, p.yidx, p.zidx, rng, opts_d)};
 		p.vX = vXYZ.x;
 		p.vY = vXYZ.y;
 		p.vZ = vXYZ.z;
@@ -304,6 +315,7 @@ namespace Slots
 		slots_d.weight[i] = p.weight;
 
 		slots_d.q[i] = p.q;
+		slots_d.zone[i] = p.zone;
 
 		// These get assigned in find_containing_cell_gpu
 		slots_d.tidx[i] = 0;

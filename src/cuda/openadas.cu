@@ -251,6 +251,7 @@ namespace OpenADAS
 		int xidx {slots_d.xidx[i]};
 		int yidx {slots_d.yidx[i]};
 		int zidx {slots_d.zidx[i]};
+		const int zone {slots_d.zone[i]};
 
 		double t {slots_d.t[i]};
 		double x {slots_d.x[i]};
@@ -262,7 +263,7 @@ namespace OpenADAS
 
 		// Get interpolation stencil at this location for 4D arrays
 		Interpolate::InterpolationStencil stencil_4d 
-			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, t, x, 
+			{Interpolate::build_stencil_4d(bkg_d, zone, tidx, xidx, yidx, zidx, t, x, 
 			y, z)};
 
 		// Interpolate ne, Te at the particle location

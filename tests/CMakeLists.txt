@@ -157,27 +157,18 @@ if(ENABLE_CUDA)
 	# These need to include the definitons in the executable since they call
 	# kernels
 	add_executable(test_boundary_cuda test_boundary_cuda.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/boundary.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/device_constants.cu)
+		${PROJECT_SOURCE_DIR}/src/cuda/boundary.cu)
 
-	# So tricky. We have to compile with background.cu here so that we don't
-	# use the flan library version of it, otherwise we end up with two
-	# different versions of device_constants (d_x, etc.), which results in
-	# undefined behavior. This occurs whenever to_device is used while needing
-	# device_constants. Wish I didn't put myself in this situation, but unsure
-	# how to fix it.
-	add_executable(test_interpolate_cuda
-		test_interpolate_cuda.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/device_constants.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/background.cu)
+	# The stencils and zone functions are inline, so these only need the
+	# library for Background::to_device and Zones::to_device
+	add_executable(test_interpolate_cuda test_interpolate_cuda.cu)
+	add_executable(test_zones_cuda test_zones_cuda.cu)
 
 	# Test executables that call specific CUDA functions (instead of via a
 	# wrapper)
 	set_target_properties(test_trilinear_cuda PROPERTIES
 		CUDA_SEPARABLE_COMPILATION ON)
 	set_target_properties(test_boundary_cuda PROPERTIES
-		CUDA_SEPARABLE_COMPILATION ON)
-	set_target_properties(test_interpolate_cuda PROPERTIES
 		CUDA_SEPARABLE_COMPILATION ON)
 
 	target_link_libraries(test_fill_slots_cuda PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
@@ -188,13 +179,15 @@ if(ENABLE_CUDA)
 	target_link_libraries(test_indices_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_step_cuda PRIVATE flan gtest_main CUDA::cudart)
 	target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main)
-	target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main)
+	target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main
+		CUDA::cudart)
+	target_link_libraries(test_zones_cuda PRIVATE flan gtest_main
+		CUDA::cudart)
 
 	# When testing the CUDA kernel directly, no wrapper, we need to link
 	# against CUDA runtime.
 	target_link_libraries(test_trilinear_cuda PRIVATE flan gtest_main CUDA::cudart)
 	target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main CUDA::cudart)
-	#target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main CUDA::cudart)
 
 	# Register with CTest
 	add_test(NAME BorisCUDATest COMMAND test_boris_cuda)
@@ -207,6 +200,7 @@ if(ENABLE_CUDA)
 	add_test(NAME StepCUDATest COMMAND test_step_cuda)
 	add_test(NAME BoundaryCUDATest COMMAND test_boundary_cuda)
 	add_test(NAME InterpolateCUDATest COMMAND test_interpolate_cuda)
+	add_test(NAME ZonesCUDATest COMMAND test_zones_cuda)
 
 endif()
 

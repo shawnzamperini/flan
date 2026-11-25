@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <numbers>
 #include <string>
 #include <utility>
@@ -26,13 +27,19 @@
 #include "vectors.h"
 #include "zones.h"
 
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
+#endif
+
 namespace Zones
 {
 	/**
 	* Creates an empty Zones with no zones and no ghost cells.
 	*/
 	Zones::Zones()
-	{}
+	{
+		rebuild_flat();
+	}
 
 	/**
 	* Creates an empty Zones whose zones will have ghost cells.
@@ -48,6 +55,7 @@ namespace Zones
 			Errors::fatal_error("Zones was given a negative number of ghost "
 				"cells (" + std::to_string(ghost) + ").");
 		}
+		rebuild_flat();
 	}
 
 	/**
@@ -76,6 +84,7 @@ namespace Zones
 		m_grid_z.push_back(std::move(grid_z));
 		for (auto& faces : m_faces) faces.push_back(face_absorbing);
 		m_ghost_cells.clear();
+		rebuild_flat();
 
 		return get_nzones() - 1;
 	}
@@ -92,6 +101,7 @@ namespace Zones
 	{
 		m_faces[face][zone] = code;
 		m_ghost_cells.clear();
+		rebuild_flat();
 	}
 
 	/**
@@ -278,7 +288,13 @@ namespace Zones
 	* max(this zone) + (center - min(other zone)). This works for any cell
 	* widths, and steps through neighbors thinner than the ghost width the
 	* same way resolve_cell does. A ghost cell past a boundary (absorbing,
-	* core or wall) face has no center, which stops the run with Errors::fatal_error.
+	* core or wall) face has no center, which stops the run with
+	* Errors::fatal_error.
+	*
+	* Within the ghost width the center comes from the table in the flat
+	* arrays (Zones::center in zones_hd.h, which the GPU uses too). Further
+	* out it's found by stepping across faces (step_to_center), which is
+	* also how the table is filled.
 	*
 	* @param zone Zone index.
 	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
@@ -287,9 +303,30 @@ namespace Zones
 	*/
 	double Zones::center(const int zone, const int dim, int i) const
 	{
-		// Interior cell
-		if (i >= 0 && i < get_n(zone, dim)) return get_centers(zone, dim)[i];
+		const bool in_table {i >= -m_ghost && i < get_n(zone, dim) + m_ghost};
+		const double c {in_table ? ::Zones::center(m_flat.view(), zone, dim, i)
+			: step_to_center(zone, dim, i)};
+		if (std::isnan(c))
+		{
+			Errors::fatal_error("Zone " + std::to_string(zone) + " has "
+				"no cell center at ghost index " + std::to_string(i)
+				+ ", since it's past a boundary face.");
+		}
+		return c;
+	}
 
+	/**
+	* Finds a cell center in a zone's frame by stepping across the zone's
+	* faces (see center).
+	*
+	* @param zone Zone index.
+	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
+	* @param i Cell index, which may be a ghost cell index.
+	* @return Coordinate of the cell center, or NaN if it's past a boundary
+	*         face (or a face to a zone that hasn't been added yet).
+	*/
+	double Zones::step_to_center(const int zone, const int dim, int i) const
+	{
 		// Step across faces, adding up how far each zone's frame is
 		// shifted from the next
 		double shift {};
@@ -298,12 +335,8 @@ namespace Zones
 		{
 			const bool past_max {i >= get_n(z, dim)};
 			const int code {m_faces[2 * dim + past_max][z]};
-			if (code < 0)
-			{
-				Errors::fatal_error("Zone " + std::to_string(zone) + " has "
-					"no cell center at ghost index " + std::to_string(i)
-					+ ", since it's past a boundary face.");
-			}
+			if (code < 0 || code >= get_nzones())
+				return std::numeric_limits<double>::quiet_NaN();
 
 			if (past_max)
 			{
@@ -331,7 +364,8 @@ namespace Zones
 	* face is shared with another zone (or periodic), the ghost cell (-1 or
 	* the number of cells) is returned, so interpolation continues into the
 	* zone across the face. Without ghost cells this is exactly
-	* Utilities::get_neighbor_index.
+	* Utilities::get_neighbor_index. The work is done by
+	* Zones::neighbor_index in zones_hd.h, which the GPU uses too.
 	*
 	* @param zone Zone the particle is in.
 	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
@@ -342,23 +376,7 @@ namespace Zones
 	int Zones::neighbor_index(const int zone, const int dim,
 		const double coord, const int idx) const
 	{
-		const auto& centers {get_centers(zone, dim)};
-		if (m_ghost > 0)
-		{
-			const int n {static_cast<int>(centers.size())};
-			const double dx_from_center {coord - centers[idx]};
-			if (idx == 0 && dx_from_center <= 0.0
-				&& m_faces[2 * dim][zone] >= 0)
-			{
-				return -1;
-			}
-			if (idx == n - 1 && dx_from_center > 0.0
-				&& m_faces[2 * dim + 1][zone] >= 0)
-			{
-				return n;
-			}
-		}
-		return Utilities::get_neighbor_index(coord, centers, idx);
+		return ::Zones::neighbor_index(m_flat.view(), zone, dim, coord, idx);
 	}
 
 	/**
@@ -370,7 +388,8 @@ namespace Zones
 	* at the edge of a zone with ghost cells. Past the first or last center,
 	* if that face is shared with another zone (or periodic), the pair is
 	* the ghost cell and the edge cell, so interpolation continues into the
-	* zone across the face.
+	* zone across the face. The work is done by Zones::bracket in
+	* zones_hd.h, which the GPU uses too.
 	*
 	* @param zone Zone the point is in.
 	* @param dim Dimension: 0 = x, 1 = y, 2 = z.
@@ -381,16 +400,144 @@ namespace Zones
 	std::pair<int, int> Zones::bracket(const int zone, const int dim,
 		const double coord) const
 	{
-		const auto& centers {get_centers(zone, dim)};
-		if (m_ghost > 0)
+		const IndexPair p {::Zones::bracket(m_flat.view(), zone, dim, coord)};
+		return {p.lo, p.hi};
+	}
+
+	/**
+	* The zones as flat arrays on the host, for the functions in zones_hd.h.
+	* The view is valid until the zones next change.
+	*
+	* @return The view.
+	*/
+	const ZonesView& Zones::view() const {return m_flat.view();}
+
+	/**
+	* Rebuilds the flat arrays (m_flat) from the nested vectors. Called
+	* whenever the zones change, so view() is always current.
+	*
+	* Ghost cell centers come from step_to_center, so they're the same
+	* values center() gave before there was a table. A face to a zone that
+	* hasn't been added yet gives NaN until the zones are complete.
+	*/
+	void Zones::rebuild_flat()
+	{
+		FlatZones f {};
+		const int nzones {get_nzones()};
+		f.nzones = nzones;
+		f.ghost = m_ghost;
+
+		const std::array<const std::vector<std::vector<double>>*, 3> edges
+			{&m_grid_x, &m_grid_y, &m_grid_z};
+		for (int dim {}; dim < 3; ++dim)
 		{
-			const int n {static_cast<int>(centers.size())};
-			if (coord < centers.front() && m_faces[2 * dim][zone] >= 0)
-				return {-1, 0};
-			if (coord > centers.back() && m_faces[2 * dim + 1][zone] >= 0)
-				return {n - 1, n};
+			for (int zone {}; zone < nzones; ++zone)
+			{
+				const int n {get_n(zone, dim)};
+				f.n[dim].push_back(n);
+				f.center_offset[dim].push_back(std::ssize(f.centers[dim]));
+				for (int i {-m_ghost}; i < n + m_ghost; ++i)
+					f.centers[dim].push_back(step_to_center(zone, dim, i));
+				f.edge_offset[dim].push_back(std::ssize(f.edges[dim]));
+				const auto& e {(*edges[dim])[zone]};
+				f.edges[dim].insert(f.edges[dim].end(), e.begin(), e.end());
+			}
 		}
-		return Utilities::bracket_indices(centers, coord);
+
+		f.cell_offset.push_back(0);
+		for (int zone {}; zone < nzones; ++zone)
+		{
+			for (int face {}; face < num_faces; ++face)
+				f.faces.push_back(m_faces[face][zone]);
+
+			std::size_t cells {1};
+			for (int dim {}; dim < 3; ++dim)
+			{
+				cells *= static_cast<std::size_t>(get_n(zone, dim)
+					+ 2 * m_ghost);
+			}
+			f.cell_offset.push_back(f.cell_offset.back() + cells);
+
+			f.flags.push_back((is_toroidal(zone) ? flag_toroidal : 0)
+				| (is_cartesian(zone) ? flag_cartesian : 0)
+				| (is_wedge(zone) ? flag_wedge : 0));
+
+			if (has_z_shift(zone))
+			{
+				f.z_shift_offset.push_back(std::ssize(f.z_shift));
+				f.z_shift.insert(f.z_shift.end(), m_z_shift[zone].begin(),
+					m_z_shift[zone].end());
+			}
+			else
+			{
+				f.z_shift_offset.push_back(-1);
+			}
+		}
+
+		m_flat = std::move(f);
+		m_flat.refresh_view();
+	}
+
+	/**
+	* Copies the flat arrays and points this copy's view at them.
+	*
+	* @param other FlatZones to copy.
+	*/
+	FlatZones::FlatZones(const FlatZones& other)
+		: nzones {other.nzones}
+		, ghost {other.ghost}
+		, n {other.n}
+		, faces {other.faces}
+		, center_offset {other.center_offset}
+		, centers {other.centers}
+		, edge_offset {other.edge_offset}
+		, edges {other.edges}
+		, cell_offset {other.cell_offset}
+		, flags {other.flags}
+		, z_shift_offset {other.z_shift_offset}
+		, z_shift {other.z_shift}
+	{
+		refresh_view();
+	}
+
+	/**
+	* Copies the flat arrays and points this view at them.
+	*
+	* @param other FlatZones to copy.
+	* @return This.
+	*/
+	FlatZones& FlatZones::operator=(const FlatZones& other)
+	{
+		if (this != &other)
+		{
+			FlatZones copy {other};
+			*this = std::move(copy);
+		}
+		return *this;
+	}
+
+	/**
+	* Points the view at the arrays. Needed after the arrays are built or
+	* copied, since a std::vector's buffer moves when it's copied or
+	* reallocated.
+	*/
+	void FlatZones::refresh_view()
+	{
+		m_view.nzones = nzones;
+		m_view.ghost = ghost;
+		for (int dim {}; dim < 3; ++dim)
+		{
+			m_view.n[dim] = n[dim].data();
+			m_view.center_offset[dim] = center_offset[dim].data();
+			m_view.centers[dim] = centers[dim].data();
+			m_view.edge_offset[dim] = edge_offset[dim].data();
+			m_view.edges[dim] = edges[dim].data();
+		}
+		m_view.faces = faces.data();
+		m_view.cell_offset = cell_offset.data();
+		m_view.flags = flags.data();
+		m_view.z_shift_offset = z_shift_offset.data();
+		m_view.z_shift = z_shift.data();
 	}
 
 	/**
@@ -870,6 +1017,7 @@ namespace Zones
 		if (std::ssize(m_z_shift) < get_nzones())
 			m_z_shift.resize(get_nzones());
 		m_z_shift[zone] = std::move(table);
+		rebuild_flat();
 	}
 
 	/**
@@ -947,6 +1095,7 @@ namespace Zones
 		if (std::ssize(m_toroidal) < get_nzones())
 			m_toroidal.resize(get_nzones());
 		m_toroidal[zone] = 1;
+		rebuild_flat();
 	}
 
 	/**
@@ -977,6 +1126,7 @@ namespace Zones
 		if (std::ssize(m_cartesian) < get_nzones())
 			m_cartesian.resize(get_nzones());
 		m_cartesian[zone] = 1;
+		rebuild_flat();
 	}
 
 	/**
@@ -1048,6 +1198,106 @@ namespace Zones
 		Utilities::mpi_broadcast_vector(m_toroidal, 0, comm);
 		Utilities::mpi_broadcast_vector(m_cartesian, 0, comm);
 		m_ghost_cells.clear();
+		rebuild_flat();
+	}
+
+#ifdef USE_CUDA
+	namespace
+	{
+		/**
+		* Copies a vector to a new array on the current GPU.
+		*
+		* @param v Values to copy.
+		* @param what What the values are, for the error message.
+		* @return Device pointer, or nullptr if v is empty.
+		*/
+		template <typename T>
+		const T* copy_to_device(const std::vector<T>& v, const char* what)
+		{
+			if (v.empty()) return nullptr;
+			T* d {};
+			Errors::check_cuda(cudaMalloc(&d, v.size() * sizeof(T)), what);
+			Errors::check_cuda(cudaMemcpy(d, v.data(), v.size() * sizeof(T),
+				cudaMemcpyHostToDevice), what);
+			return d;
+		}
+	}
+#endif
+
+	/**
+	* Copies the flat arrays (view()) to a GPU.
+	*
+	* @param device_id ID of the GPU to copy to.
+	* @return The same view with pointers to the GPU's copies, to be freed
+	*         with free_zones. Stops the run if GPU support wasn't compiled
+	*         in.
+	*/
+	ZonesView Zones::to_device(int device_id) const
+	{
+		ZonesView d {m_flat.view()};
+#ifdef USE_CUDA
+		Errors::check_cuda(cudaSetDevice(device_id), "Zones::to_device");
+		for (int dim {}; dim < 3; ++dim)
+		{
+			d.n[dim] = copy_to_device(m_flat.n[dim], "Zones::to_device: n");
+			d.center_offset[dim] = copy_to_device(m_flat.center_offset[dim],
+				"Zones::to_device: center offsets");
+			d.centers[dim] = copy_to_device(m_flat.centers[dim],
+				"Zones::to_device: centers");
+			d.edge_offset[dim] = copy_to_device(m_flat.edge_offset[dim],
+				"Zones::to_device: edge offsets");
+			d.edges[dim] = copy_to_device(m_flat.edges[dim],
+				"Zones::to_device: edges");
+		}
+		d.faces = copy_to_device(m_flat.faces, "Zones::to_device: faces");
+		d.cell_offset = copy_to_device(m_flat.cell_offset,
+			"Zones::to_device: cell offsets");
+		d.flags = copy_to_device(m_flat.flags, "Zones::to_device: flags");
+		d.z_shift_offset = copy_to_device(m_flat.z_shift_offset,
+			"Zones::to_device: zShift offsets");
+		d.z_shift = copy_to_device(m_flat.z_shift,
+			"Zones::to_device: zShift");
+#else
+		(void)device_id;
+		Errors::fatal_error("Zones::to_device was called, but GPU support "
+			"wasn't compiled in.");
+#endif
+		return d;
+	}
+
+	/**
+	* Frees the GPU arrays of a view from Zones::to_device and sets its
+	* pointers to nullptr. Does nothing without GPU support.
+	*
+	* @param v View from Zones::to_device.
+	* @param device_id ID of the GPU it's on.
+	*/
+	void free_zones(ZonesView& v, int device_id)
+	{
+#ifdef USE_CUDA
+		cudaSetDevice(device_id);
+		auto release = [](auto*& p)
+		{
+			cudaFree(const_cast<void*>(static_cast<const void*>(p)));
+			p = nullptr;
+		};
+		for (int dim {}; dim < 3; ++dim)
+		{
+			release(v.n[dim]);
+			release(v.center_offset[dim]);
+			release(v.centers[dim]);
+			release(v.edge_offset[dim]);
+			release(v.edges[dim]);
+		}
+		release(v.faces);
+		release(v.cell_offset);
+		release(v.flags);
+		release(v.z_shift_offset);
+		release(v.z_shift);
+#else
+		(void)v;
+		(void)device_id;
+#endif
 	}
 
 	/**
