@@ -431,7 +431,8 @@ namespace Collisions
 	* Coulomb collisions with one background species using the Nanbu model.
 	*
 	* One thread handles one slot, and dead particles are skipped. ne, Te
-	* (and Ti for ions) are interpolated at the particle location and held
+	* (and Ti for ions) are interpolated at the particle location (along
+	* the field line in a zone with a zShift table) and held
 	* at or above min_ne, min_te and min_ti. Then s, A and chi are calculated
 	* and the velocity is updated with nanbu_post_coll_cuda. Since this
 	* happens after the Boris update, the updated velocity is v at n+1/2. A
@@ -502,11 +503,12 @@ namespace Collisions
 			{Interpolate::build_stencil_4d(bkg_d, zone, tidx, xidx, yidx, zidx, t, x, 
 			y, z)};
 
-		// Interpolate to get background flow at particle location
-		double ne {Interpolate::interpolate_field_4d(bkg_d.ne, 
-			stencil_4d, t, x, y, z)};
-		double Te {Interpolate::interpolate_field_4d(bkg_d.te, 
-			stencil_4d, t, x, y, z)};
+		// ne and Te at the particle (along the field line in a zone with a
+		// zShift table, as Background::interp_ne on the CPU)
+		double ne {Interpolate::interp_plasma(bkg_d, bkg_d.ne, stencil_4d,
+			zone, t, x, y, z)};
+		double Te {Interpolate::interp_plasma(bkg_d, bkg_d.te, stencil_4d,
+			zone, t, x, y, z)};
 
 		// Don't let them go below zero. This can happen near the edge of grids.
 		ne = fmax(ne, opts_d->min_ne);
@@ -524,8 +526,8 @@ namespace Collisions
 		else
 		{
 			mass_kg = ion_mass_amu * Constants::amu_to_kg;	
-			T = Interpolate::interpolate_field_4d(bkg_d.ti, stencil_4d, t, x, 
-				y, z);
+			T = Interpolate::interp_plasma(bkg_d, bkg_d.ti, stencil_4d, zone,
+				t, x, y, z);
 			T = fmax(opts_d->min_ti, T);
 		}
 
@@ -534,12 +536,12 @@ namespace Collisions
 		// are calculated once, before the sub-steps.
 		const double s_coeff {nanbu_s_coeff_cuda(q, T, Te, ne, slots_d.mass,
 			mass_kg)};
-		const double uX {Interpolate::interpolate_field_4d(bkg_d.uX, 
-			stencil_4d, t, x, y, z)};
-		const double uY {Interpolate::interpolate_field_4d(bkg_d.uY, 
-			stencil_4d, t, x, y, z)};
-		const double uZ {Interpolate::interpolate_field_4d(bkg_d.uZ, 
-			stencil_4d, t, x, y, z)};
+		double u[3];
+		Interpolate::interp_plasma_vec3(bkg_d, bkg_d.uX, bkg_d.uY, bkg_d.uZ,
+			stencil_4d, zone, t, x, y, z, u);
+		const double uX {u[0]};
+		const double uY {u[1]};
+		const double uZ {u[2]};
 
 		// Sub-cycling. Nanbu's model collides the impurity with ONE
 		// background particle per call. The friction force comes mostly
@@ -584,11 +586,9 @@ namespace Collisions
 		/*
 		if (!elec)
 		{
-			int Nx {stats_d.Nx};
-			int Ny {stats_d.Ny};
-			int Nz {stats_d.Nz};
-			int idx {slots_d.tidx[i] * (Nx * Ny * Nz) + slots_d.xidx[i] 
-				* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
+			const std::size_t idx {ImpurityStats::index(stats_d, zone,
+				slots_d.tidx[i], slots_d.xidx[i], slots_d.yidx[i],
+				slots_d.zidx[i])};
 			double p_w_dt {slots_d.weight[i] * dt_sub};  // Change to float
 
 			atomicAdd(&stats_d.s[idx], s * p_w_dt);

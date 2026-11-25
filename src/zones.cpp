@@ -1040,9 +1040,8 @@ namespace Zones
 	*/
 	double Zones::z_shift(const int zone, const int i, const int j) const
 	{
-		const int ny {get_ny(zone) + 2 * m_ghost};
-		return m_z_shift[zone][static_cast<std::size_t>(i + m_ghost) * ny
-			+ j + m_ghost];
+		// The shared version (zones_hd.h), which the GPU uses
+		return ::Zones::z_shift(m_flat.view(), zone, i, j);
 	}
 
 	/**
@@ -1065,11 +1064,8 @@ namespace Zones
 	*/
 	double Zones::wrap_z(const int zone, const double z) const
 	{
-		const double lo {m_grid_z[zone].front()};
-		const double period {z_period(zone)};
-		double w {std::fmod(z - lo, period)};
-		if (w < 0.0) w += period;
-		return lo + w;
+		// The shared version (zones_hd.h), which the GPU uses
+		return ::Zones::wrap_z(m_flat.view(), zone, z);
 	}
 
 	/**

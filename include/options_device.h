@@ -59,6 +59,9 @@ namespace Options
 		double zrange_min;		///< imp_zrange_min
 		double zrange_max;		///< imp_zrange_max
 
+		int zone_start;			///< Zone particles start in, from 0
+								///< (imp_zone_start_val - 1)
+
 		double imp_max_time;	///< Maximum time a particle is followed (s)
 
 		// Copied, but not read by any kernel yet

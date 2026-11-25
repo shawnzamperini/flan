@@ -153,6 +153,7 @@ if(ENABLE_CUDA)
 	add_executable(test_trilinear_cuda test_trilinear_cuda.cu)
 	add_executable(test_indices_cuda test_indices_cuda.cu)
 	add_executable(test_step_cuda test_step_cuda.cpp)
+	add_executable(test_stats_cuda test_stats_cuda.cpp)
 
 	# These need to include the definitons in the executable since they call
 	# kernels
@@ -164,6 +165,11 @@ if(ENABLE_CUDA)
 	add_executable(test_interpolate_cuda test_interpolate_cuda.cu)
 	add_executable(test_zones_cuda test_zones_cuda.cu)
 
+	# The kernel is in a .cu file of its own, so the test itself is compiled
+	# by the host compiler and can read the multi-zone test backgrounds
+	add_executable(test_plasma_interp_cuda test_plasma_interp_cuda.cpp
+		plasma_interp_kernel.cu)
+
 	# Test executables that call specific CUDA functions (instead of via a
 	# wrapper)
 	set_target_properties(test_trilinear_cuda PROPERTIES
@@ -174,15 +180,20 @@ if(ENABLE_CUDA)
 	target_link_libraries(test_fill_slots_cuda PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 	target_link_libraries(test_openadas_cuda PRIVATE flan gtest_main CUDA::cudart)
 	target_link_libraries(test_all_dead_cuda PRIVATE flan gtest_main)
-	target_link_libraries(test_boris_cuda PRIVATE flan gtest_main)
+	target_link_libraries(test_boris_cuda PRIVATE flan gtest_main
+		netcdf-cxx4 netcdf hdf5)
 	target_link_libraries(test_neighbor_index_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_indices_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_step_cuda PRIVATE flan gtest_main CUDA::cudart)
+	target_link_libraries(test_stats_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
 	target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main
 		CUDA::cudart)
 	target_link_libraries(test_zones_cuda PRIVATE flan gtest_main
 		CUDA::cudart)
+	target_link_libraries(test_plasma_interp_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5)
 
 	# When testing the CUDA kernel directly, no wrapper, we need to link
 	# against CUDA runtime.
@@ -198,9 +209,11 @@ if(ENABLE_CUDA)
 	add_test(NAME NeighborIndexCUDATest COMMAND test_neighbor_index_cuda)
 	add_test(NAME IndicesCUDATest COMMAND test_indices_cuda)
 	add_test(NAME StepCUDATest COMMAND test_step_cuda)
+	add_test(NAME StatsCUDATest COMMAND test_stats_cuda)
 	add_test(NAME BoundaryCUDATest COMMAND test_boundary_cuda)
 	add_test(NAME InterpolateCUDATest COMMAND test_interpolate_cuda)
 	add_test(NAME ZonesCUDATest COMMAND test_zones_cuda)
+	add_test(NAME PlasmaInterpCUDATest COMMAND test_plasma_interp_cuda)
 
 endif()
 

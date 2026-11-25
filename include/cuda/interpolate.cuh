@@ -18,11 +18,18 @@
 * The neighbors and centers come from the functions in zones_hd.h, the
 * same ones the CPU uses, so the stencil is the CPU's (Boris::interp_recp
 * and interp_tang).
+*
+* Plasma quantities (ne, Te, Ti, the flow and E) are interpolated with
+* interp_plasma and interp_plasma_vec3, which in a zone with a zShift table
+* (a shifted-metric HERMES grid) interpolate along the field line instead,
+* as Background::interp_ne and interp_vec3 do on the CPU. The geometry and
+* B always use the stencil.
 */
 #include <cstddef>
 
 #include "background_device.h"
 
+#include "interp_hd.h"
 #include "utilities.cuh"
 #include "utilities_hd.h"
 #include "zones_hd.h"
@@ -311,4 +318,81 @@ namespace Interpolate
 		return comp0 + (comp1 - comp0) * ((t - s.t0) / s.frame_dt);
 
 	} // interpolate_field_4d
+
+
+	/**
+	* Interpolates a plasma quantity (ne, Te, Ti, |E|, ...) at a point.
+	*
+	* In a zone with a zShift table the quantity is stretched along the
+	* field line, so it is interpolated along it (Utilities::
+	* interp_aligned_flat, shared with the CPU's Background::interp_4d with
+	* aligned = true). Elsewhere the stencil is used, as interpolate_field_4d.
+	*
+	* @param bkg_d Background plasma on the device.
+	* @param field Flattened 4D field on the device.
+	* @param s Stencil from build_stencil_4d, built at this point. Unused in
+	*        a zone with a zShift table.
+	* @param zone Zone the point is in.
+	* @param t Time of the point (s).
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @return Interpolated value.
+	*/
+	__device__ __forceinline__
+	double interp_plasma(const Background::BackgroundDevice& bkg_d,
+		const double* __restrict__ field, const InterpolationStencil& s,
+		const int zone, double t, double x, double y, double z)
+	{
+		if (Zones::has_z_shift(bkg_d.zones, zone))
+		{
+			const double* fields[1] {field};
+			double out[1];
+			Utilities::interp_aligned_flat<double, 1>(fields, bkg_d.zones,
+				bkg_d.times, bkg_d.tdim, zone, t, x, y, z, 0.0, out);
+			return out[0];
+		}
+		return interpolate_field_4d(field, s, t, x, y, z);
+	}
+
+
+	/**
+	* Interpolates a Cartesian vector of the plasma (the flow or E) at a
+	* point.
+	*
+	* In a zone with a zShift table the vector is interpolated along the
+	* field line, each sample rotated to the point's toroidal angle (as
+	* Background::interp_vec3 on the CPU). Elsewhere each component is
+	* interpolated with the stencil.
+	*
+	* @param bkg_d Background plasma on the device.
+	* @param fX X component, flattened 4D field on the device.
+	* @param fY Y component.
+	* @param fZ Z component.
+	* @param s Stencil from build_stencil_4d, built at this point.
+	* @param zone Zone the point is in.
+	* @param t Time of the point (s).
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @param[out] out The X, Y and Z components.
+	*/
+	__device__ __forceinline__
+	void interp_plasma_vec3(const Background::BackgroundDevice& bkg_d,
+		const double* fX, const double* fY, const double* fZ,
+		const InterpolationStencil& s, const int zone, double t, double x,
+		double y, double z, double out[3])
+	{
+		if (Zones::has_z_shift(bkg_d.zones, zone))
+		{
+			const double* fields[3] {fX, fY, fZ};
+			Utilities::interp_aligned_flat<double, 3>(fields, bkg_d.zones,
+				bkg_d.times, bkg_d.tdim, zone, t, x, y, z, bkg_d.phi_sign,
+				out);
+			return;
+		}
+		out[0] = interpolate_field_4d(fX, s, t, x, y, z);
+		out[1] = interpolate_field_4d(fY, s, t, x, y, z);
+		out[2] = interpolate_field_4d(fZ, s, t, x, y, z);
+	}
 }

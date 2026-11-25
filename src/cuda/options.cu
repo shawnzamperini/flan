@@ -78,6 +78,7 @@ namespace Options
 		opts_h.lcfs_y         = m_lcfs_y;
 		opts_h.lcfs_z         = m_lcfs_z;
 
+		opts_h.zone_start     = m_imp_zone_start_val - 1;
 		opts_h.init_charge    = m_imp_init_charge;
 
 		opts_h.imp_temp_start_opt_int = m_imp_temp_start_opt_int;

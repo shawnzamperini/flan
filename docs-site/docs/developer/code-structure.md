@@ -57,7 +57,8 @@ MPI must be initialized before `flan()` is called, and every rank calls it.
    `axisym_mesh.cpp`. A reader for a shifted-metric grid (HERMES) also
    gives each zone a `zShift` table (`Zones::set_z_shift`). With it,
    plasma quantities are interpolated along the field line
-   (`Utilities::interp_aligned`, through `Background::interp_4d` with
+   (`Utilities::interp_aligned`, shared with the GPU through
+   `interp_hd.h`, called by `Background::interp_4d` with
    `aligned` set and `Background::interp_vec3`) and y derivatives are
    taken along it (`Axisym::aligned_dfdy`, `Axisym::grad_par`). B and the
    geometry are always interpolated at fixed z. Both readers mark their
@@ -221,6 +222,9 @@ offsets. `Zones` rebuilds its host view whenever the zones change
 `flat_index`) take either, so the CPU and the GPU find a particle's cell and
 interpolation stencil with the same code. Each slot carries its zone
 (`SlotsDevice::zone`), and the kernels pass it to these functions.
+`StatisticsDevice` holds the statistics' flat `ZonedVector` data with each
+zone's offset and size, and `ImpurityStats::index` finds a particle's entry in
+its zone, as `ZonedVector::calc_index` does on the CPU.
 
 With several GPUs, `follow_impurities` copies everything to each GPU and runs
 `main_loop` on each in its own `std::thread` (`gpu_worker`). Counters that the
@@ -234,6 +238,14 @@ common operation in the main loop. On the GPU it's done by building a
 *stencil* once per particle (`Interpolate::build_stencil_4d`, in
 `include/cuda/interpolate.cuh`) and reusing it for every field. The fields
 are interpolated trilinearly in space and linearly in time.
+
+In a zone with a `zShift` table (a shifted-metric HERMES grid), the plasma
+(ne, Te, Ti, the flow and E) is interpolated along the field line instead.
+The kernels call `Interpolate::interp_plasma` and `interp_plasma_vec3`, which
+use the stencil in other zones and `Utilities::interp_aligned_flat`
+(`include/interp_hd.h`) in these. The CPU's `Utilities::interp_aligned`
+calls the same function, so the two follow the field line the same way. B
+and the geometry always use the stencil.
 
 ## Data layout
 

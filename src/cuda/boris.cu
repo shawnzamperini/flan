@@ -46,6 +46,10 @@ namespace Boris
 	* the reciprocal basis vectors, which are interpolated in space only
 	* with the 3D stencil and are not rescaled.
 	*
+	* In a zone with a zShift table, E (and |E|) are interpolated along the
+	* field line instead (Interpolate::interp_plasma_vec3), as in
+	* push_one_cpu.
+	*
 	* @param slots_d Particle slots on the device. The Cartesian and
 	*        computational velocities are updated in place.
 	* @param bkg_d Background plasma on the device.
@@ -161,6 +165,24 @@ namespace Boris
 		{
 			E[j] = E[j] * E[3] / Edenom * Emask;
 			B[j] = B[j] * B[3] / Bdenom * Bmask;
+		}
+
+		// In a zone with a zShift table (a shifted-metric grid), E is
+		// stretched along the field line like the rest of the plasma, so
+		// it is interpolated along the field line instead, and rescaled to
+		// the |E| interpolated the same way (as push_one_cpu). B is
+		// axisymmetric and keeps the stencil's value.
+		if (Zones::has_z_shift(bkg_d.zones, zone))
+		{
+			double e[3];
+			Interpolate::interp_plasma_vec3(bkg_d, bkg_d.eX, bkg_d.eY,
+				bkg_d.eZ, stencil_4d, zone, t, x, y, z, e);
+			const double emag {Interpolate::interp_plasma(bkg_d, bkg_d.emag,
+				stencil_4d, zone, t, x, y, z)};
+			const double e_len {sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2])};
+			const double scale {e_len > 0.0 ? emag / e_len : 0.0};
+			for (int j {}; j < 3; ++j) E[j] = e[j] * scale;
+			E[3] = emag;
 		}
 
 		// Store in local variables for convenience

@@ -143,8 +143,8 @@ namespace Slots
 				{Interpolate::build_stencil_4d(bkg_d, zone, tidx, xidx, yidx, zidx, 
 				t, x, y, z)};
 
-			start_temp = Interpolate::interpolate_field_4d(bkg_d.ti, 
-				stencil_4d, t, x, y, z);
+			start_temp = Interpolate::interp_plasma(bkg_d, bkg_d.ti,
+				stencil_4d, zone, t, x, y, z);
 
 			// Limit to minimum value
 			start_temp = fmax(start_temp, opts_d->min_ti);
@@ -173,7 +173,9 @@ namespace Slots
 	/**
 	* Creates a new particle based on the input options.
 	*
-	* The starting t, x, y and z come from get_birth_val_cuda, the indices
+	* The particle starts in zone imp_zone_start_val (as
+	* Slots::make_new_particle on the CPU), and its starting t, x, y and z
+	* come from get_birth_val_cuda in that zone's coordinates, the indices
 	* of the nearest time frame and the containing grid cell are found, and
 	* the starting Cartesian velocity comes from get_birth_vXYZ. The
 	* computational velocities are left at zero, since they are set on the
@@ -194,10 +196,11 @@ namespace Slots
 
 		ParticleInitDevice p;
 
-		// Particles start in zone 0. imp_zone_start_val comes with
-		// multi-zone backgrounds on the GPU (GPU plan G2).
+		// The zone the particle is born in (imp_zone_start_val, numbered
+		// from 1 in the input). The starting position is in that zone's
+		// coordinates.
 		const Zones::ZonesView& zones {bkg_d.zones};
-		p.zone = 0;
+		p.zone = opts_d->zone_start;
 		const double* gx {Zones::zone_edges(zones, p.zone, 0)};
 		const double* gy {Zones::zone_edges(zones, p.zone, 1)};
 		const double* gz {Zones::zone_edges(zones, p.zone, 2)};
@@ -317,11 +320,12 @@ namespace Slots
 		slots_d.q[i] = p.q;
 		slots_d.zone[i] = p.zone;
 
-		// These get assigned in find_containing_cell_gpu
-		slots_d.tidx[i] = 0;
-		slots_d.xidx[i] = 0;
-		slots_d.yidx[i] = 0;
-		slots_d.zidx[i] = 0;
+		// The time frame and cell of the birth, as fill_slots_cpu (the
+		// main loop finds them again with find_containing_cell_gpu)
+		slots_d.tidx[i] = p.tidx;
+		slots_d.xidx[i] = p.xidx;
+		slots_d.yidx[i] = p.yidx;
+		slots_d.zidx[i] = p.zidx;
 
 		// Mark slot alive
 		slots_d.state[i] = 0;

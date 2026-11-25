@@ -56,6 +56,7 @@ namespace Background
 		cudaMemcpy(bkg_d.times, m_times.data(), m_dim1 * sizeof(double),
 			cudaMemcpyHostToDevice);
 		bkg_d.zones = m_zones.to_device(device_id);
+		bkg_d.phi_sign = m_phi_sign;
 
 		// Sizes of the 3D and 4D arrays, ghost cells included (the last
 		// zone offset is the total)

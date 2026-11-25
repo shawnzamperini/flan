@@ -23,9 +23,9 @@ run today:
 
 | Feature | On a GPU run now | Where |
 |---|---|---|
-| More than one zone (SOLEDGE3X, HERMES) | Stops | `flan.cpp` (since G1; the data copies, the kernels don't cross zones) |
+| More than one zone (SOLEDGE3X, HERMES) | Stops | `flan.cpp` (since G1; since G2 every kernel but the boundary check handles zones) |
 | Toroidal wedge (velocity rotation across the z ends) | Stops | `flan.cpp` (since G1) |
-| Field-aligned (zShift) interpolation, HERMES | Not reachable (multi-zone) | `Utilities::interp_aligned`, `push_one_cpu` |
+| Field-aligned (zShift) interpolation, HERMES | On the device since G2, not reachable (multi-zone) | `Utilities::interp_aligned_flat` |
 | Ghost cells, zone crossings, `face_core`, `face_wall`, the `chi` wall mask | Not reachable (multi-zone) | `Boundary::check_bounds_cpu` |
 | `lcfs` z boundary (Gkeyll) | Stops | `crosscheck_options` |
 | Thermal force (heat-flux-skewed sampling) | Stops if the background has heat fluxes | `check_thermal_force` |
@@ -61,6 +61,9 @@ startup), and saving the results.
   sub-cycling), OpenADAS ionization and recombination, the Boris push in
   curvilinear coordinates, absorbing/periodic/core boundaries, filling
   slots from the `imp_*start_opt` options, and the statistics.
+- Since G2, every kernel but the boundary check works in any zone, with
+  the plasma interpolated along the field line in zones with a zShift
+  table, and births in `imp_zone_start_val`.
 - One host thread per GPU, slots split between ranks and then GPUs.
 - Tests `*_cuda`, and the regression variants `z10_gpu` (friction) and
   `gradb_gpu` (drifts).
@@ -210,7 +213,7 @@ Every phase is checked three ways:
   `to_device` checks every field it copies has the size the zones and
   times give. `device_constants.cu`/`.cuh` and `MAX_1D` are gone. The
   multi-zone and wedge stops moved from `to_device` to `flan.cpp`, so
-  tests can copy any background; they come out in G2 and G3.
+  tests can copy any background; they come out in G3.
 - `SlotsDevice::zone`, copied both ways. GPU births go in zone 0 until
   G2 (`imp_zone_start_val`), with the range and cell from the zone's
   edges. Every kernel takes its zone from the slot: the stencils
@@ -251,19 +254,53 @@ Every phase is checked three ways:
   sums within 1e-11 m/s. The Gkeyll 1e6 runs on one and four GPUs write
   the same file, so the 4-GPU 1e6 output wasn't compared.
 
-**G2. Multi-zone push, collisions, ionization and statistics.**
+**G2. Multi-zone push, collisions, ionization and statistics.** Done.
 
-- Interpolation stencils per zone, using ghost cells at zone edges as
-  the CPU does.
-- Field-aligned interpolation on the device: a shared version of
-  `Utilities::interp_aligned` (scalars, and vectors rotated per cell
-  frame), used in the Boris push where the zone has a zShift.
-- Boris (`interp_recp`, `interp_tang` per zone), collisions and
-  ionization/recombination with the zone.
-- `StatisticsDevice` per zone (flat `ZonedVector` layout), and
-  `fill_slots_gpu` starting in `imp_zone_start_val`.
-- Tests: the push of one particle on a HERMES test grid against
-  `push_one_cpu`, aligned and not (`test_boris_cuda`).
+- The stencils were already per zone with ghost cells at shared faces
+  (G1). What G2 adds is field-aligned interpolation on the device:
+  `Utilities::interp_aligned_flat` (`include/interp_hd.h`, `FLAN_HD`) does
+  the work of `Utilities::interp_aligned` on the fields' flat data,
+  scalars and vectors (each sample rotated from its cell's toroidal angle
+  to the point's), and the CPU's `interp_aligned` now calls it. It needs
+  `has_z_shift`, `z_shift` and `wrap_z` on a `ZonesView`, which moved to
+  `zones_hd.h` (the CPU's `Zones::z_shift` and `wrap_z` call them), and
+  `bracket_sorted` for the times. `BackgroundDevice` has `phi_sign`.
+- `Interpolate::interp_plasma` and `interp_plasma_vec3`
+  (`cuda/interpolate.cuh`): the shared aligned interpolation in a zone with
+  a zShift table, the stencil elsewhere. Used for ne, Te, Ti and the flow in
+  the collision kernel, ne and Te in ionization/recombination, Ti in the
+  births (`imp_temp_start_opt = "main_ion"`), and E and |E| in the Boris
+  kernel, which rescales the aligned E to the aligned |E| as
+  `push_one_cpu` does. B and the basis vectors keep the stencil, as on the
+  CPU. (`interp_tang` isn't used by either push, so there's nothing to
+  port.)
+- `StatisticsDevice` is per zone: the flat `ZonedVector` data (no ghost
+  cells) with each zone's offset and nx, ny, nz on the device, indexed with
+  `ImpurityStats::index`. `to_device` and `add_stats_device` no longer go
+  through the single-zone `get_dim2`.
+- Births start in `imp_zone_start_val` (`OptionsDevice::zone_start`), and
+  `fill_slots_kernel` writes the birth's time frame and cell into the slot
+  as the CPU does, instead of zeros (the main loop finds them again right
+  after anyway).
+- The multi-zone stop in `flan.cpp` stays until G3: every kernel but the
+  boundary check now handles zones, and a particle leaving its zone needs
+  the boundary routine.
+- Tests, all on the HERMES test grid (six zones with zShift, toroidal) and
+  the SOLEDGE3X test mesh (three zones, no zShift), with particles spread
+  over every zone (`tests/multizone_cases.h`):
+  `test_boris_cuda` (`update_velocity_gpu` against `update_velocity_cpu`,
+  Cartesian and computational velocities to 1e-10 of their largest
+  values; with the aligned E turned off on the GPU the HERMES case is off
+  by 1e-5 to 1e-4), `test_plasma_interp_cuda` (ne, Te, Ti, |E| and the flow
+  through `interp_plasma` against `Background::interp_ne` etc., to
+  1e-11; its kernel is in `plasma_interp_kernel.cu`, so the test itself is
+  compiled by the host compiler and can write the test files), and
+  `test_stats_cuda` (`record_stats_gpu` against `record_stats_cpu`, equal
+  counts and sums to 1e-12; births in zone 3 of the SOLEDGE3X mesh stay
+  in it, with the right cells, and spread over it).
+- Single zone unchanged: seeded `gradb` and `gradb_gpu` are bit for bit
+  the same as G1, `z10_gpu` has the same counts and velocity sums within
+  2e-11 m/s. CPU and GPU `ctest` pass (except `MPITest`).
 
 **G3. Multi-zone boundaries.**
 

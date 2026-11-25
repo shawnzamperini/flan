@@ -30,6 +30,10 @@ namespace Background
 		/// The zones' grids, on the device (Zones::to_device)
 		Zones::ZonesView zones;
 
+		/// +1 if (R, z, Z) is right handed, -1 if not, for rotating
+		/// vectors in toroidal zones (Background::get_phi_sign)
+		double phi_sign;
+
 		// Plasma and field data, 4D
 		double* ne;		///< Electron density (m^-3)
 		double* te;		///< Electron temperature (eV)

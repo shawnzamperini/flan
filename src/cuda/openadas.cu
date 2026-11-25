@@ -267,10 +267,12 @@ namespace OpenADAS
 			y, z)};
 
 		// Interpolate ne, Te at the particle location
-		const double ne {Interpolate::interpolate_field_4d(bkg_d.ne,
-				stencil_4d, t, x, y, z)};
-		const double te {Interpolate::interpolate_field_4d(bkg_d.te,
-				stencil_4d, t, x, y, z)};
+		// Along the field line in a zone with a zShift table, as
+		// Background::interp_ne on the CPU
+		const double ne {Interpolate::interp_plasma(bkg_d, bkg_d.ne,
+			stencil_4d, zone, t, x, y, z)};
+		const double te {Interpolate::interp_plasma(bkg_d, bkg_d.te,
+			stencil_4d, zone, t, x, y, z)};
 
 		// Variables to store ionization/recombination probabilities
 		float ioniz_prob {};

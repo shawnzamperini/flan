@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include <cmath>
 #include <cstddef>
 
 #include "host_device.h"
@@ -310,6 +311,54 @@ namespace Zones
 		const int hi {left < n - 1 ? left : n - 1};
 		const int lo {hi - 1 > 0 ? hi - 1 : 0};
 		return {lo, hi};
+	}
+
+	/**
+	* @param v The zones.
+	* @param zone Zone to check.
+	* @return True if the zone has a zShift table (see Zones::set_z_shift).
+	*/
+	FLAN_HD inline bool has_z_shift(const ZonesView& v, const int zone)
+	{
+		return v.z_shift_offset[zone] >= 0;
+	}
+
+	/**
+	* A zone's zShift at a cell (see Zones::z_shift). The zone must have a
+	* table.
+	*
+	* @param v The zones.
+	* @param zone Zone of the cell.
+	* @param i x index of the cell, which may be a ghost index.
+	* @param j y index of the cell, which may be a ghost index.
+	* @return zShift (radians of z).
+	*/
+	FLAN_HD inline double z_shift(const ZonesView& v, const int zone,
+		const int i, const int j)
+	{
+		const long long py {v.n[1][zone] + 2 * v.ghost};
+		return v.z_shift[v.z_shift_offset[zone]
+			+ static_cast<long long>(i + v.ghost) * py + j + v.ghost];
+	}
+
+	/**
+	* Wraps a z coordinate into a zone's z range, for a zone that is
+	* periodic in z (see Zones::wrap_z).
+	*
+	* @param v The zones.
+	* @param zone Zone whose range to wrap into.
+	* @param z Coordinate to wrap, any number of periods away.
+	* @return z plus a whole number of periods, in [z_min, z_min + period).
+	*/
+	FLAN_HD inline double wrap_z(const ZonesView& v, const int zone,
+		const double z)
+	{
+		const double* e {zone_edges(v, zone, 2)};
+		const double lo {e[0]};
+		const double period {e[v.n[2][zone]] - lo};
+		double w {std::fmod(z - lo, period)};
+		if (w < 0.0) w += period;
+		return lo + w;
 	}
 
 	/**
