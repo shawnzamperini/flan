@@ -22,6 +22,7 @@
 #include "slots_device.h"
 
 
+#include "constants.h"
 #include "interpolate.cuh"
 #include "utilities.cuh"
 
@@ -232,12 +233,14 @@ namespace OpenADAS
 	*        greater than 1.
 	* @param d_recomb_warnings Device counter of recombination
 	*        probabilities greater than 1.
+	* @param max_charge Highest charge particles can ionize to
+	*        (imp_iz_max_charge), below 0 for the atomic number.
 	*/
 	__global__ void ioniz_recomb_kernel(Slots::SlotsDevice slots_d, 
 		const Background::BackgroundDevice bkg_d, 
 		OpenADASDevice oa_ioniz_d, 
 		OpenADASDevice oa_recomb_d, const float dt, pcg32* rngs_d, 
-		int* d_ioniz_warnings, int* d_recomb_warnings)
+		int* d_ioniz_warnings, int* d_recomb_warnings, const int max_charge)
 	{
 		// Global index
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -260,8 +263,11 @@ namespace OpenADAS
 		double y {slots_d.y[i]};
 		double z {slots_d.z[i]};
 
+		// Highest charge it can ionize to: the atomic number, or
+		// max_charge if that is lower (as OpenADAS::ioniz_recomb)
 		int q {slots_d.q[i]};
-		int Z {slots_d.Z};
+		int Z {max_charge >= 0 && max_charge < slots_d.Z ? max_charge
+			: slots_d.Z};
 
 		// Get interpolation stencil at this location for 4D arrays
 		Interpolate::InterpolationStencil stencil_4d 
@@ -305,6 +311,18 @@ namespace OpenADAS
 		// Clever branchless way to adjust the charge
 		const int dq = ionize - recomb;
 		slots_d.q[i] = q + dq;
+
+		// First ionization from neutral: start the prompt window, one
+		// singly charged gyroperiod from now (as OpenADAS::ioniz_recomb)
+		if (q == 0 && dq == 1 && slots_d.prompt_by[i] < 0.0)
+		{
+			const double B {Interpolate::interpolate_field_4d(bkg_d.bmag,
+				stencil_4d, t, x, y, z)};
+			const double e_over_m {-Constants::charge_e / slots_d.mass};
+			const double pt {slots_d.pt[i]};
+			slots_d.prompt_by[i] = B > 0.0 ? pt + 2.0 * Constants::pi
+				/ (e_over_m * B) : pt;
+		}
 	}
 
 
@@ -422,12 +440,15 @@ namespace OpenADAS
 	* @param dt Time step (s).
 	* @param warnings_d Device-side warning counters from alloc_warnings.
 	* @param rngs_d Random number generators on the device, one per slot.
+	* @param max_charge Highest charge particles can ionize to
+	*        (imp_iz_max_charge), below 0 for the atomic number.
 	*/
 	void ioniz_recomb_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d,
 		const OpenADASDevice& oa_ioniz_d, 
 		const OpenADASDevice& oa_recomb_d, const double dt,
-		const IonizRecombWarningsDevice& warnings_d, pcg32* rngs_d)
+		const IonizRecombWarningsDevice& warnings_d, pcg32* rngs_d,
+		const int max_charge)
 	{
 		// Block and grid size
 		int blockSize = 256;
@@ -435,7 +456,7 @@ namespace OpenADAS
 
 		ioniz_recomb_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, 
 			oa_ioniz_d, oa_recomb_d, dt, rngs_d, warnings_d.ioniz, 
-			warnings_d.recomb);
+			warnings_d.recomb, max_charge);
 
 #ifdef DEBUG
 		// Check for errors

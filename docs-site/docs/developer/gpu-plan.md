@@ -23,13 +23,13 @@ run today:
 
 | Feature | On a GPU run now | Where |
 |---|---|---|
-| Sputtered source (`imp_source_opt = "sputter"`) | Stops | `flan.cpp` |
-| Deposition and prompt tallies, impact histograms | Not reachable (needs the source) | `Sputtering::Deposition` |
+| Sputtered source (`imp_source_opt = "sputter"`) | Runs (since G5) | `sputtering_hd.h`, `cuda/slots.cu` |
+| Deposition and prompt tallies, impact histograms | Run (since G5) | `sputtering_hd.h`, `cuda/boundary.cu` |
 | Sheath field and near-wall sub-steps | Left out, with a warning | `flan.cpp`, `Sheath::field_at`, `Boris::substep_cpu` |
-| Self-sputtering | Not reachable (needs the source) | `Sputtering::SelfSource::rebirth` |
-| `imp_iz_max_charge` (test option) | Stops | `flan.cpp` |
+| Self-sputtering (`sput_self`) | Stops (since G5) | `flan.cpp`, `Sputtering::SelfSource::rebirth` |
+| `imp_iz_max_charge` (test option) | Runs (since G5) | `cuda/openadas.cu` |
 | Boundary fates: `self_sputtered` | 0 (no self-sputtering) | `follow_impurities` |
-| `Slots` fields `prompt_by`, `generation` (`zone` is on the device since G1) | Host only | `slots.h` |
+| `Slots` fields `prompt_by`, `generation` | On the device since G5 (`zone` since G1) | `slots_device.h` |
 
 Things that are host-side setup and need nothing on the GPU: reading the
 backgrounds (Gkeyll, SOLEDGE3X, both HERMES formats), the field-aligned
@@ -63,9 +63,13 @@ startup), and saving the results.
   counted there.
 - Since G4 the thermal force (heat-flux-skewed sampling) runs on the GPU
   with the CPU's sampler (`collisions_hd.h`).
+- Since G5 the sputtered source, the charge limit, the prompt window and
+  the deposition tallies run on the GPU with the CPU's routines
+  (`sputtering_hd.h`).
 - One host thread per GPU, slots split between ranks and then GPUs.
-- Tests `*_cuda`, and the regression variants `z10_gpu` (friction) and
-  `gradb_gpu` (drifts).
+- Tests `*_cuda`, and the regression variants `z10_gpu` (friction and
+  thermal force), `gradb_gpu` (drifts) and `p01_gpu`, `p1_gpu` (prompt
+  redeposition).
 
 ## Approach
 
@@ -391,28 +395,68 @@ Every phase is checked three ways:
   since a warp waits for its slowest thread and the strongly skewed ions
   need about 7 draws per sample there.
 
-**G5. Sputtered source and deposition.**
+**G5. Sputtered source and deposition.** Done.
 
-- `Sputtering::SourceDevice`: the CDF over (frame, element), each
-  element's zone, cell bounds, normal, impact angle and the frame
-  windows, the yield table's Thompson parameters, and for
-  `sput_impact_opt = "sheath"` the impact table's samples flattened (one
-  array of samples, offsets per point). `sample_birth` becomes a shared
-  function, so the CPU and GPU draw births the same way. `fill_slots_gpu`
-  uses it when a source is given, with the weight `source_rate / imp_num`.
-- `SlotsDevice` gains `prompt_by` and `generation`.
-- `Sputtering::DepositionDevice`: per-element rates, prompt rates and
-  charges, impact energy and angle histograms, added to with
-  `atomicAdd` in the boundary routine (`add_at_wall_face`,
-  `add_into_wall_cell` as shared functions writing into plain arrays).
-  Copied back and added to the host `Deposition` after the run.
-- `imp_iz_max_charge` on the device (one option field and a check in the
-  ionization kernel), so the prompt redeposition cases run on the GPU.
-- Remove the stops in `flan.cpp`.
-- Regressions: `_gpu` variants of `reg_prompt_redep` (sheath off) and
-  `reg_sheath_impacts`. End to end: the HERMES target source, sheath off,
-  CPU against GPU (source rate identical, redeposition and net erosion
-  within the Monte Carlo error).
+- `include/sputtering_hd.h` (`FLAN_HD`) holds flat views of the surface
+  elements, the yield table, the thermal quadrature, the source and the
+  deposition tallies (`ElementsView`, `YieldView`, `Quadrature`,
+  `SourceView`, `DepositionView`), and the routines `get_yield`,
+  `sample_impact_energy`, `sample_thompson`, `cosine_direction`,
+  `sample_birth`, `add_impact`, `add_lifetime_and_charge`,
+  `add_into_wall_cell` and `add_at_wall_face`. `Surface`, `YieldTable`,
+  `Source` and `Deposition` give views of their own data (`view()`) and
+  call these, so the CPU and the GPU start atoms and tally their landings
+  the same way. Where the CPU built a cumulative array to pick from
+  (impact samples, quadrature nodes), the shared code forms the running
+  sum twice instead, which picks the same entry and allocates nothing.
+- `Deposition` keeps its wall cells and wall faces as sorted keys with
+  their elements (searched by bisection) in place of hash maps, so the
+  device searches the same arrays; the scalar tallies are one array. The
+  tallies are added to through an adder passed to the shared routines:
+  `omp atomic` on the CPU, `atomicAdd` on the GPU.
+- `Source::to_device` copies the source's arrays to a GPU
+  (`SourceDevice`, with the weight `source_rate / imp_num`);
+  `fill_slots_gpu` starts atoms from it with `sample_birth`, neutral, with
+  no prompt window. `Deposition::to_device` makes empty tallies on a GPU
+  with the lookups and bins (`DepositionDevice`); `check_bounds_kernel`
+  adds to them at wall faces and in wall cells, and
+  `Deposition::add_from_device` adds them to the host's after the run,
+  before the ranks' tallies are reduced. Each GPU has its own copies.
+- `SlotsDevice` has `prompt_by` and `generation`. The ionization kernel
+  takes `imp_iz_max_charge` and starts the prompt window on the first
+  ionization from neutral, with |B| from the stencil, as on the CPU.
+- The stops on the sputtered source, `imp_iz_max_charge` and `slab_wall`
+  are gone; `sput_self` now stops on the GPU (G7).
+- Tests: `test_sputtering_cuda` compares, with the CPU run one particle
+  at a time on slot i's GPU generator: births from the HERMES test
+  grid's targets (impact energy from the formula) and from the SOLEDGE3X
+  test mesh's staircase (impact samples from the sheath), the ionization
+  step with a charge limit and prompt windows, and the deposition tallies
+  at the HERMES targets and in the SOLEDGE3X wall cells. Births and
+  charges agree to rounding, the tallies to 1e-12. With any of the GPU
+  routines turned off (births, charge limit, prompt window, either
+  deposition routine), the tests covering it fail. The CPU results are unchanged
+  (`test_sputtering_cpu` and the CPU wall regressions pass).
+- `reg_prompt_redep` has `<variant>_gpu` for the cases without the
+  sheath; `p01_gpu` and `p1_gpu` pass `check_redeposition.py` like the
+  CPU runs (prompt fraction 0.978 and 0.590 on the GPU, 0.976 and 0.586
+  on the CPU, against Fussmann's 0.977 and 0.587), with a main loop of
+  about 1 s against 23 s and 86 s on 16 CPU threads. A `_gpu` variant of
+  `reg_sheath_impacts` was left out: that case checks only the source,
+  which is computed on the host for either path, and the births from
+  impact samples are compared directly in `test_sputtering_cuda`.
+- End to end, the HERMES targets as the source, sheath off, CPU against
+  GPU: the source rate is identical, and the redeposited and prompt
+  fractions, each zone's share of the redeposition, the fates and the
+  mean charge, energy and angle on landing agree within the Monte Carlo
+  error. Main loop 7 s on the GPU against 1.6 min on 32 CPU threads.
+  The same with the SOLEDGE3X wall (staircase elements, atoms absorbed
+  in wall cells): identical source, 98.8% and 98.7% redeposited, each
+  zone's share within the Monte Carlo error; main loop 10.5 s on the
+  GPU against 39 s on the CPU, where most atoms land within a
+  microsecond. With nearly every atom coming back, the net erosion is a
+  small difference of large numbers, and agrees only as well as the
+  redeposition does (to about 0.005 of the source per zone).
 
 **G6. Sheath field and sub-steps.**
 

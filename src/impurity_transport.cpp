@@ -360,14 +360,16 @@ namespace ImpurityTransport
 	* @param bkg_d Device-side background plasma (used on the GPU path).
 	* @param source Sputtered source to start particles from, or nullptr
 	*               to start them from the imp_*start_opt options (CPU
-	*               path only).
+	*               path).
+	* @param source_d The same on the device (GPU path), or nullptr.
 	*/
 	void fill_slots_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		int& rem_parts, const Background::Background& bkg, 
 		Options::Options& opts, int& alive_slots, std::vector<pcg32>& rngs,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d, 
 		const Background::BackgroundDevice& bkg_d,
-		const Sputtering::Source* source = nullptr)
+		const Sputtering::Source* source = nullptr,
+		const Sputtering::SourceDevice* source_d = nullptr)
 	{
 
 #ifdef USE_CUDA
@@ -375,9 +377,11 @@ namespace ImpurityTransport
 		{
 			// Defined in cuda/slots.cu
 			Slots::fill_slots_gpu(slots_d, rem_parts, alive_slots, rngs_d, 
-				opts_d, bkg_d);
+				opts_d, bkg_d, source_d);
 			return;
 		}
+#else
+		(void)source_d;
 #endif
 
 		// Defined in slots.cpp
@@ -529,7 +533,8 @@ namespace ImpurityTransport
 	* @param warnings_d Device-side counters, whose fates are added to on
 	*        the GPU path.
 	* @param deposition Where absorbed particles land on the wall, added to
-	*                   if given (CPU path only).
+	*                   if given (CPU path).
+	* @param dep_d The same tallies on the device (GPU path), or nullptr.
 	*/
 	void check_bounds_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
@@ -537,21 +542,24 @@ namespace ImpurityTransport
 		const Options::Options& opts, std::vector<pcg32>& rngs, pcg32* rngs_d,
 		Boundary::Fates& fates,
 		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
-		Sputtering::Deposition* deposition = nullptr)
+		Sputtering::Deposition* deposition = nullptr,
+		const Sputtering::DepositionDevice* dep_d = nullptr)
 	{
 
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0)
 		{
-			// Defined in cuda/boundary.cu. The fates are counted on the GPU
-			// (warnings_d.fates) and added to the host's after the run.
+			// Defined in cuda/boundary.cu. The fates and the deposition are
+			// counted on the GPU (warnings_d.fates, dep_d) and added to the
+			// host's after the run.
 			Boundary::check_bounds_gpu(slots_d, bkg_d,
 				Boundary::make_params(bkg, opts, bkg_d.chi), rngs_d,
-				warnings_d.fates);
+				warnings_d.fates, dep_d);
 			return;
 		}
 #else
 		(void)warnings_d;
+		(void)dep_d;
 #endif
 
 		// Defined in boundary.cpp
@@ -654,7 +662,8 @@ namespace ImpurityTransport
 		{
 			// Defined in openadas.cu
 			OpenADAS::ioniz_recomb_gpu(slots_d, bkg_d, oa_ioniz_d, oa_recomb_d, 
-				opts.imp_time_step(), warnings_d, rngs_d);
+				opts.imp_time_step(), warnings_d, rngs_d,
+				opts.imp_iz_max_charge());
 			return;
 		}
 #endif
@@ -817,11 +826,14 @@ namespace ImpurityTransport
 	*                     allowed time.
 	* @param source Sputtered source to start particles from, or nullptr
 	*               to start them from the imp_*start_opt options (CPU
-	*               only).
+	*               path; source_d on the GPU).
 	* @param deposition Where absorbed particles land on the wall, added to
-	*                   if given (CPU only).
+	*                   if given (CPU path; dep_d on the GPU).
 	* @param sheath If given, the sheath field in front of the walls is
 	*               added to the push (CPU only).
+	* @param source_d Sputtered source on the device (GPU only), or
+	*                 nullptr.
+	* @param dep_d Deposition tallies on the device (GPU only), or nullptr.
 	* @return Counts of what happened to particles at the boundaries (CPU
 	*         path only; on the GPU path they're counted on the device, in
 	*         warnings_d.fates, and this is all zeros).
@@ -841,7 +853,9 @@ namespace ImpurityTransport
 		std::vector<pcg32>& rngs, pcg32* rngs_d, int& max_time_ctr,
 		const Sputtering::Source* source = nullptr,
 		Sputtering::Deposition* deposition = nullptr,
-		const Sheath::Sheath* sheath = nullptr)
+		const Sheath::Sheath* sheath = nullptr,
+		const Sputtering::SourceDevice* source_d = nullptr,
+		const Sputtering::DepositionDevice* dep_d = nullptr)
 	{
 
 		// Rank and number of processes
@@ -897,12 +911,12 @@ namespace ImpurityTransport
 		// the progress print out in the loop
 		int alive_slots {};
 		fill_slots_wrapper(slots, slots_d, rem_parts, bkg, opts, alive_slots, 
-			rngs, rngs_d, opts_d, bkg_d, source);
+			rngs, rngs_d, opts_d, bkg_d, source, source_d);
 
 		// If for whatever reason the particle is started outside the grid,
 		// check bounds to make sure it doesn't cause any chaos.
 		check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, rngs_d,
-			fates, warnings_d, deposition);
+			fates, warnings_d, deposition, dep_d);
 
 		// Find starting grid index
 		find_containing_cell_wrapper(slots, slots_d, bkg, bkg_d, opts);
@@ -990,7 +1004,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Bounds));
 				check_bounds_wrapper(slots, slots_d, bkg, bkg_d, opts, rngs, 
-					rngs_d, fates, warnings_d, deposition);
+					rngs_d, fates, warnings_d, deposition, dep_d);
 			}
 
 #ifdef DEBUG
@@ -1001,7 +1015,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::FillSlots));
 				fill_slots_wrapper(slots, slots_d, rem_parts, bkg, opts, 
-					alive_slots, rngs, rngs_d, opts_d, bkg_d, source);
+					alive_slots, rngs, rngs_d, opts_d, bkg_d, source, source_d);
 			}
 
 #ifdef DEBUG
@@ -1088,6 +1102,8 @@ namespace ImpurityTransport
 	* @param opts_d Device-side simulation options for this GPU.
 	* @param max_time_ctr Counter of particles that exceeded the maximum
 	*                     allowed time.
+	* @param source_d Sputtered source on this GPU, or nullptr.
+	* @param dep_d Deposition tallies on this GPU, or nullptr.
 	*/
 	void gpu_worker(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
@@ -1102,7 +1118,8 @@ namespace ImpurityTransport
 		int& recomb_warnings, 
 		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d,
-		int& max_time_ctr)
+		int& max_time_ctr, const Sputtering::SourceDevice* source_d,
+		const Sputtering::DepositionDevice* dep_d)
 	{
 		// Not used, so just dummying
 		std::vector<pcg32> rngs;
@@ -1111,7 +1128,7 @@ namespace ImpurityTransport
 		main_loop(slots, slots_d, bkg, bkg_d, imp_stats, imp_stats_d, oa_ioniz, 
 			oa_ioniz_d, oa_recomb, oa_recomb_d, opts, opts_d, timer, 
 			ioniz_warnings, recomb_warnings, warnings_d, rngs, rngs_d, 
-			max_time_ctr);
+			max_time_ctr, nullptr, nullptr, nullptr, source_d, dep_d);
 	}
 
 #endif
@@ -1147,7 +1164,7 @@ namespace ImpurityTransport
 	*        (the default) to start them from the imp_*start_opt options.
 	*        Only used on CPUs.
 	* @param deposition If given, where absorbed particles land on the wall
-	*        is added to it. Only used on CPUs.
+	*        is added to it.
 	* @param fates_out If given, set to what happened to the particles,
 	*        summed over every rank, on rank 0. On GPUs, self_sputtered is
 	*        0, since self-sputtering is CPU only so far.
@@ -1288,8 +1305,18 @@ namespace ImpurityTransport
 			std::vector<pcg32*> gpu_rngs;
 			std::vector<OpenADAS::IonizRecombWarningsDevice> gpu_warnings;
 			std::vector<Timer::Timer> gpu_timers;
+			std::vector<Sputtering::SourceDevice> gpu_sources(num_gpus);
+			std::vector<Sputtering::DepositionDevice> gpu_deps(num_gpus);
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
+				// The sputtered source and the deposition tallies, if
+				// there are any: each GPU starts its atoms from its own
+				// copy of the source and tallies its own landings
+				if (source != nullptr)
+					gpu_sources[dev] = source->to_device(dev, opts.imp_num());
+				if (deposition != nullptr)
+					gpu_deps[dev] = deposition->to_device(dev);
+
 				gpu_slots.push_back(slots.to_device(dev));
 				gpu_stats.push_back(imp_stats.to_device(dev));
 				gpu_bkgs.push_back(bkg.to_device(dev));
@@ -1354,7 +1381,9 @@ namespace ImpurityTransport
 					std::ref(ioniz_warnings), std::ref(recomb_warnings), 
 					std::ref(gpu_warnings[dev]),
 					std::ref(gpu_rngs[dev]), std::ref(gpu_opts[dev]), 
-					std::ref(max_time_ctr));
+					std::ref(max_time_ctr),
+					source != nullptr ? &gpu_sources[dev] : nullptr,
+					deposition != nullptr ? &gpu_deps[dev] : nullptr);
 			}
 
 			// Wait for all threads to finish
@@ -1391,6 +1420,12 @@ namespace ImpurityTransport
 				Collisions::add_skew_counts(Collisions::skew_counts_from_device(
 					gpu_warnings[dev].skew, dev));
 				OpenADAS::free_warnings(gpu_warnings[dev]);
+
+				// Where this GPU's atoms landed on the wall
+				if (deposition != nullptr)
+					deposition->add_from_device(gpu_deps[dev]);
+				Sputtering::free_deposition(gpu_deps[dev]);
+				Sputtering::free_source(gpu_sources[dev]);
 			}
 
 			print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 

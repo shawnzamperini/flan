@@ -12,7 +12,9 @@ a HERMES background, or off a wall face of the slab background. The
 sheath's electric field pulls the ions they become back to the wall
 ([The sheath](#the-sheath)), and with `sput_self = "on"` the impurities
 landing on the wall sputter more of it
-([Self-sputtering](#self-sputtering)). All of this is CPU only. How it
+([Self-sputtering](#self-sputtering)). The sputtered source and where
+atoms land back on the wall run on GPUs as well as the CPU; the sheath
+field and self-sputtering are CPU only so far. How it
 was built and checked is in the
 [Sheath and Self-Sputtering Plan](../developer/sheath-plan.md).
 
@@ -420,7 +422,8 @@ at $c_s$, which the formula counts only through $T_e$.
   than the hot ones, so the total isn't affected.
 - Only D$^+$ (the background's ion species) sputters, and the sheath
   model's drop has no secondary electron emission.
-- CPU only, like the rest of sputtering.
+- The test ions are pushed on the CPU, before the impurities are
+  followed, whether those are followed on the CPU or the GPU.
 
 ### Output
 
@@ -672,8 +675,9 @@ to $10^{-8}$ s.
 
 ### What it leaves out
 
-- **The GPU.** Sputtering is CPU only, and a GPU run goes without the
-  sheath, with a warning.
+- **The GPU.** A GPU run goes without the sheath field, with a warning
+  (the impact energies and angles for the source still come from it,
+  since the test ions are pushed on the CPU).
 - **Secondary electron emission**, which would lower the drop.
 
 ## Self-sputtering
@@ -1063,8 +1067,8 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
 - **Sputtered atoms' distributions.** The Thompson energy and cosine
   angle distributions are the usual approximations. RustBCA could give the
   real distributions for each impact energy and angle instead.
-- **CPU only.** Sputtering, the sheath and self-sputtering don't run on
-  the GPU yet.
+- **The GPU.** The sheath field and self-sputtering don't run on the GPU
+  yet. The sputtered source and the deposition tallies do.
 
 ## References
 

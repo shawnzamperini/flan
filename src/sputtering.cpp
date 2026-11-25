@@ -189,6 +189,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "mpi.h"
@@ -202,6 +203,10 @@
 #include "sheath.h"
 #include "sputtering.h"
 #include "zones.h"
+
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
+#endif
 
 
 namespace Sputtering
@@ -342,27 +347,26 @@ namespace Sputtering
 	*/
 	double YieldTable::get_yield(double energy, double angle) const
 	{
-		if (!(energy >= m_energy_min)) return 0.0;
+		return Sputtering::get_yield(view(), energy, angle);
+	}
 
-		const double log_energy {std::min(std::log10(energy),
-			m_log_energy.back())};
-		angle = std::clamp(angle, m_angle.front(), m_angle.back());
-
-		const std::size_t i {lower_index(m_log_energy, log_energy)};
-		const std::size_t j {lower_index(m_angle, angle)};
-		const double fe {(log_energy - m_log_energy[i])
-			/ (m_log_energy[i + 1] - m_log_energy[i])};
-		const double fa {(angle - m_angle[j])
-			/ (m_angle[j + 1] - m_angle[j])};
-
-		const std::size_t na {m_angle.size()};
-		const double y00 {m_yield[i * na + j]};
-		const double y01 {m_yield[i * na + j + 1]};
-		const double y10 {m_yield[(i + 1) * na + j]};
-		const double y11 {m_yield[(i + 1) * na + j + 1]};
-
-		return (1.0 - fe) * ((1.0 - fa) * y00 + fa * y01)
-			+ fe * ((1.0 - fa) * y10 + fa * y11);
+	/**
+	* The table as flat arrays, for the routines shared with the GPU
+	* (sputtering_hd.h). The pointers are into this table's own vectors.
+	*
+	* @return The view.
+	*/
+	YieldView YieldTable::view() const
+	{
+		YieldView v {};
+		v.n_energy = static_cast<int>(m_log_energy.size());
+		v.n_angle = static_cast<int>(m_angle.size());
+		v.log_energy = m_log_energy.data();
+		v.angle = m_angle.data();
+		v.yield = m_yield.data();
+		v.energy_min = m_energy_min;
+		v.target_Es = m_target_Es;
+		return v;
 	}
 
 	/**
@@ -517,6 +521,52 @@ namespace Sputtering
 				"HERMES backgrounds have, or a slab background with a wall "
 				"(slab_wall). This background has none of these.");
 		}
+		build_flat();
+	}
+
+	/**
+	* Copies the elements into flat arrays, one per field, for
+	* ElementsView (the routines shared with the GPU take plain arrays).
+	*/
+	void Surface::build_flat()
+	{
+		m_flat = {};
+		for (const SurfaceElement& el : m_elements)
+		{
+			m_flat.zone.push_back(el.zone);
+			m_flat.i.push_back(el.i);
+			m_flat.j.push_back(el.j);
+			m_flat.k.push_back(el.k);
+			m_flat.face.push_back(static_cast<int>(el.face));
+			m_flat.n_R.push_back(el.n_R);
+			m_flat.n_Z.push_back(el.n_Z);
+			m_flat.phi_min.push_back(el.phi_min);
+			m_flat.phi_max.push_back(el.phi_max);
+			m_flat.cartesian.push_back(el.cartesian ? 1 : 0);
+		}
+	}
+
+	/**
+	* The elements as flat arrays (see build_flat), pointing into this
+	* surface's own vectors.
+	*
+	* @return The view.
+	*/
+	ElementsView Surface::view() const
+	{
+		ElementsView v {};
+		v.n = m_elements.size();
+		v.zone = m_flat.zone.data();
+		v.i = m_flat.i.data();
+		v.j = m_flat.j.data();
+		v.k = m_flat.k.data();
+		v.face = m_flat.face.data();
+		v.n_R = m_flat.n_R.data();
+		v.n_Z = m_flat.n_Z.data();
+		v.phi_min = m_flat.phi_min.data();
+		v.phi_max = m_flat.phi_max.data();
+		v.cartesian = m_flat.cartesian.data();
+		return v;
 	}
 
 	/**
@@ -964,27 +1014,41 @@ namespace Sputtering
 		* smooth integrand, but the yield has a kink at threshold (it's 0
 		* below), where it converges badly. The midpoint rule doesn't care.
 		*
-		* @return Pairs of (x, weight), made the first time it's called.
+		* @return The nodes x and weights, made the first time it's called.
 		*/
-		const std::vector<std::array<double, 2>>& thermal_quadrature()
+		struct QuadratureNodes
 		{
-			static const std::vector<std::array<double, 2>> nodes {[]
+			std::vector<double> x {};	///< Energy over Ti
+			std::vector<double> w {};	///< Weight
+		};
+
+		const QuadratureNodes& thermal_quadrature()
+		{
+			static const QuadratureNodes nodes {[]
 			{
 				constexpr int n {300};
 				constexpr double x_max {30.0};
 				const double dx {x_max / n};
-				std::vector<std::array<double, 2>> q(n);
+				QuadratureNodes q {};
 				double total {};
 				for (int i {}; i < n; ++i)
 				{
 					const double x {(i + 0.5) * dx};
-					q[i] = {x, x * std::exp(-x) * dx};
-					total += q[i][1];
+					q.x.push_back(x);
+					q.w.push_back(x * std::exp(-x) * dx);
+					total += q.w.back();
 				}
-				for (auto& node : q) node[1] /= total;
+				for (double& w : q.w) w /= total;
 				return q;
 			}()};
 			return nodes;
+		}
+
+		/// The thermal quadrature as a Quadrature view
+		Quadrature quadrature_view()
+		{
+			const QuadratureNodes& q {thermal_quadrature()};
+			return {static_cast<int>(q.x.size()), q.x.data(), q.w.data()};
 		}
 	}
 
@@ -1007,8 +1071,11 @@ namespace Sputtering
 		const double e_sheath, const double ti, const double angle)
 	{
 		EffectiveYield out {};
-		for (const auto& [x, w] : thermal_quadrature())
+		const QuadratureNodes& q {thermal_quadrature()};
+		for (std::size_t n {}; n < q.x.size(); ++n)
 		{
+			const double x {q.x[n]};
+			const double w {q.w[n]};
 			const double energy {e_sheath + x * ti};
 			out.yield += w * table.get_yield(energy, angle);
 			if (energy > table.energy_max()) out.frac_above += w;
@@ -1283,6 +1350,21 @@ namespace Sputtering
 		if (m_impacts)
 		{
 			m_impacts->build();
+
+			// The samples flattened, for SourceView
+			m_sample_offset.assign(1, 0);
+			for (std::size_t p {}; p < m_impacts->size(); ++p)
+			{
+				for (const auto& smp : m_impacts->samples(
+					static_cast<int>(p)))
+				{
+					m_sample_energy.push_back(smp.energy);
+					m_sample_angle.push_back(smp.angle);
+					m_sample_weight.push_back(smp.weight);
+				}
+				m_sample_offset.push_back(static_cast<int>(
+					m_sample_energy.size()));
+			}
 
 			// Energy bins of 20 a decade from 0.01 eV to 100 keV
 			constexpr int per_decade {20};
@@ -1600,46 +1682,11 @@ namespace Sputtering
 	double sample_impact_energy(const YieldTable& table, const double e_sheath,
 		const double ti, const double angle, const double u)
 	{
-		const auto& nodes {thermal_quadrature()};
-		std::vector<double> cdf(nodes.size());
-		double total {};
-		for (std::size_t n {}; n < nodes.size(); ++n)
-		{
-			const auto& [x, w] {nodes[n]};
-			total += w * table.get_yield(e_sheath + x * ti, angle);
-			cdf[n] = total;
-		}
-		if (!(total > 0.0)) return e_sheath + 2.0 * ti;
-
-		const std::size_t n {static_cast<std::size_t>(std::upper_bound(
-			cdf.begin(), cdf.end(), u * total) - cdf.begin())};
-		const std::size_t pick {std::min(n, nodes.size() - 1)};
-		return e_sheath + nodes[pick][0] * ti;
+		return Sputtering::sample_impact_energy(table.view(),
+			quadrature_view(), e_sheath, ti, angle, u);
 	}
 
-	/**
-	* Picks the energy of a sputtered atom from the Thompson distribution,
-	* cut off at e_max.
-	*
-	* The Thompson distribution is f(E) ~ E / (E + e_b)^3, with e_b the
-	* surface binding energy. Its cumulative distribution is
-	* F(E) = E^2 / (E + e_b)^2, so with u' = u F(e_max), solving F(E) = u'
-	* gives E = e_b sqrt(u') / (1 - sqrt(u')), which is exactly distributed
-	* as f(E) between 0 and e_max.
-	*
-	* @param e_b Surface binding energy (eV), > 0.
-	* @param e_max Largest energy (eV). If it isn't > 0, e_b is returned.
-	* @param u Uniform random number in [0, 1).
-	* @return Energy of the sputtered atom (eV).
-	*/
-	double sample_thompson(const double e_b, const double e_max,
-		const double u)
-	{
-		if (!(e_max > 0.0)) return e_b;
-		const double f_max {e_max * e_max / ((e_max + e_b) * (e_max + e_b))};
-		const double s {std::sqrt(u * f_max)};
-		return e_b * s / (1.0 - s);
-	}
+	// sample_thompson is in sputtering_hd.h, shared with the GPU
 
 	/**
 	* Picks a direction from a cosine distribution about a unit normal.
@@ -1657,34 +1704,8 @@ namespace Sputtering
 	std::array<double, 3> cosine_direction(const std::array<double, 3>& n,
 		const double u1, const double u2)
 	{
-		using Vec3 = std::array<double, 3>;
-		auto cross = [](const Vec3& a, const Vec3& b) -> Vec3
-		{
-			return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
-				a[0] * b[1] - a[1] * b[0]};
-		};
-
-		// A perpendicular to n: cross it with the axis it's least along
-		Vec3 axis {0.0, 0.0, 0.0};
-		const int least {std::abs(n[0]) <= std::abs(n[1])
-			? (std::abs(n[0]) <= std::abs(n[2]) ? 0 : 2)
-			: (std::abs(n[1]) <= std::abs(n[2]) ? 1 : 2)};
-		axis[least] = 1.0;
-		Vec3 t1 {cross(n, axis)};
-		const double len {std::sqrt(t1[0] * t1[0] + t1[1] * t1[1]
-			+ t1[2] * t1[2])};
-		for (double& c : t1) c /= len;
-		const Vec3 t2 {cross(n, t1)};
-
-		const double cos_th {std::sqrt(u1)};
-		const double sin_th {std::sqrt(1.0 - u1)};
-		const double az {2.0 * Constants::pi * u2};
-		Vec3 d {};
-		for (int c {}; c < 3; ++c)
-		{
-			d[c] = cos_th * n[c] + sin_th * (std::cos(az) * t1[c]
-				+ std::sin(az) * t2[c]);
-		}
+		std::array<double, 3> d {};
+		Sputtering::cosine_direction(n.data(), u1, u2, d.data());
 		return d;
 	}
 
@@ -1707,125 +1728,58 @@ namespace Sputtering
 			Errors::fatal_error("Can't start sputtered atoms, since nothing "
 				"is sputtered (the source is 0 everywhere).");
 		}
+		return Sputtering::sample_birth(view(), rng);
+	}
 
-		// 1. Frame and element, in proportion to the atoms they sputter
-		const double r {rng.next_double() * m_cdf.back()};
-		const std::size_t idx {std::min(static_cast<std::size_t>(
-			std::upper_bound(m_cdf.begin(), m_cdf.end(), r) - m_cdf.begin()),
-			m_cdf.size() - 1)};
-		const std::size_t n_elem {size()};
-		Birth b {};
-		b.frame = static_cast<int>(idx / n_elem);
-		b.element = idx % n_elem;
-		const SurfaceElement& el {m_surface.elements()[b.element]};
-		b.zone = el.zone;
-
-		// Time, uniform in the frame's window
-		b.t = m_frame_lo[b.frame] + rng.next_double()
-			* (m_frame_hi[b.frame] - m_frame_lo[b.frame]);
-
-		// 2. Place: uniform along the face, just inside the plasma cell
-		constexpr double inset {1e-3};
-		const auto& [x_lo, x_hi, y_lo, y_hi] {m_cell_bounds[b.element]};
-		const double ux {rng.next_double()};
-		switch (el.face)
-		{
-			case Zones::xmin:
-				b.x = x_lo + inset * (x_hi - x_lo);
-				b.y = y_lo + ux * (y_hi - y_lo);
-				break;
-			case Zones::xmax:
-				b.x = x_hi - inset * (x_hi - x_lo);
-				b.y = y_lo + ux * (y_hi - y_lo);
-				break;
-			case Zones::ymin:
-				b.x = x_lo + ux * (x_hi - x_lo);
-				b.y = y_lo + inset * (y_hi - y_lo);
-				break;
-			default:	// ymax
-				b.x = x_lo + ux * (x_hi - x_lo);
-				b.y = y_hi - inset * (y_hi - y_lo);
-				break;
-		}
-		b.z = el.phi_min + rng.next_double() * (el.phi_max - el.phi_min);
-
-		// 3. Energy (and angle) of the ion that sputtered it: from the
-		// impact samples of the element's point, weighted by their share
-		// of the flux times their yield, or from the formula at
-		// sput_angle_val
-		if (m_point[idx] >= 0)
-		{
-			const auto& smp {m_impacts->samples(m_point[idx])};
-			std::vector<double> cdf(smp.size());
-			double total {};
-			for (std::size_t k {}; k < smp.size(); ++k)
-			{
-				total += smp[k].weight * m_table.get_yield(smp[k].energy
-					* m_te[idx], smp[k].angle);
-				cdf[k] = total;
-			}
-			if (total > 0.0)
-			{
-				const std::size_t k {std::min(static_cast<std::size_t>(
-					std::upper_bound(cdf.begin(), cdf.end(),
-					rng.next_double() * total) - cdf.begin()),
-					smp.size() - 1)};
-				b.e_impact = smp[k].energy * m_te[idx];
-				b.a_impact = smp[k].angle;
-			}
-			else
-			{
-				b.e_impact = m_energy[idx];
-				b.a_impact = m_impact_angle[idx];
-			}
-		}
-		else
-		{
-			b.e_impact = sample_impact_energy(m_table, m_e_sheath[idx],
-				m_ti[idx], m_angle, rng.next_double());
-			b.a_impact = m_angle;
-		}
-
-		// 4. Energy of the atom, Thompson cut off at Lambda E_ion
-		b.e_atom = sample_thompson(m_table.target_Es(),
-			m_lambda * b.e_impact, rng.next_double());
-		const double speed {std::sqrt(2.0 * b.e_atom * Constants::ev_to_j
-			/ m_imp_mass_kg)};
-
-		// 5. Direction: cosine about the normal at the atom's phi
-		const std::array<double, 3> n {el.normal_xyz(b.z, m_phi_sign)};
-		const double u1 {rng.next_double()};
-		const double u2 {rng.next_double()};
-		const auto d {cosine_direction(n, u1, u2)};
-		b.vX = speed * d[0];
-		b.vY = speed * d[1];
-		b.vZ = speed * d[2];
-		return b;
+	/**
+	* What sample_birth needs, as flat arrays pointing into this source's
+	* own vectors (and its surface's and yield table's), for the routine
+	* shared with the GPU.
+	*
+	* @return The view.
+	*/
+	SourceView Source::view() const
+	{
+		SourceView v {};
+		v.el = m_surface.view();
+		v.table = m_table.view();
+		v.quad = quadrature_view();
+		v.n_idx = m_cdf.size();
+		v.cdf = m_cdf.data();
+		v.frame_lo = m_frame_lo.data();
+		v.frame_hi = m_frame_hi.data();
+		static_assert(sizeof(std::array<double, 4>) == 4 * sizeof(double));
+		v.cell_bounds = m_cell_bounds.empty() ? nullptr
+			: m_cell_bounds.front().data();
+		v.e_sheath = m_e_sheath.data();
+		v.ti = m_ti.data();
+		v.te = m_te.data();
+		v.energy = m_energy.data();
+		v.impact_angle = m_impact_angle.data();
+		v.point = m_point.data();
+		v.sample_offset = m_sample_offset.data();
+		v.sample_energy = m_sample_energy.data();
+		v.sample_angle = m_sample_angle.data();
+		v.sample_weight = m_sample_weight.data();
+		v.angle = m_angle;
+		v.lambda = m_lambda;
+		v.imp_mass_kg = m_imp_mass_kg;
+		v.phi_sign = m_phi_sign;
+		return v;
 	}
 
 	namespace
 	{
-		/// Packs a cell's zone and indices into one key (each is far less
-		/// than 2^16)
-		std::uint64_t cell_key(const int zone, const int i, const int j,
-			const int k)
+		/// Adds to a CPU tally from inside OpenMP loops, for the routines
+		/// shared with the GPU (which add with atomicAdd)
+		struct OmpAdd
 		{
-			auto u = [](int v) {return static_cast<std::uint64_t>(v) & 0xffff;};
-			return (u(zone) << 48) | (u(i) << 32) | (u(j) << 16) | u(k);
-		}
-
-		/**
-		* Packs the cell of a zone's wall face an element is on into one
-		* key: the zone, the face, the cell's index along the face (j for
-		* an x face, i for a y face) and its toroidal cell. Its own map, so
-		* it can't clash with cell_key.
-		*/
-		std::uint64_t wall_face_key(const int zone, const Zones::Face face,
-			const int i, const int j, const int k)
-		{
-			const bool x_face {face == Zones::xmin || face == Zones::xmax};
-			return cell_key(zone, static_cast<int>(face), x_face ? j : i, k);
-		}
+			void operator()(double* p, const double value) const
+			{
+				#pragma omp atomic
+				*p += value;
+			}
+		};
 	}
 
 	/**
@@ -1836,13 +1790,16 @@ namespace Sputtering
 	* an atom absorbed in that wall cell can be put on one of them. Each
 	* element on a wall face of its zone (a target) is found instead by its
 	* zone, face, cell along the face and toroidal cell, so an atom
-	* absorbed at that face can be put on it (add_at_wall_face). The time
-	* since birth is binned in 10 bins per decade from 1e-10 s to 1e-1 s
-	* (shorter and longer times go in the first and last bins), and the
-	* charge from 0 to the atomic number.
+	* absorbed at that face can be put on it (add_at_wall_face). Both are
+	* kept as sorted keys (cell_key, wall_face_key) searched by bisection,
+	* which works the same on the GPU. The time since birth is binned in 10
+	* bins per decade from 1e-10 s to 1e-1 s (shorter and longer times go
+	* in the first and last bins), and the charge from 0 to the atomic
+	* number.
 	*
 	* @param surface The surface elements. It has to outlive this object.
 	* @param atomic_number Atomic number of the impurity.
+	* @param phi_sign Handedness of (R, phi, Z), for the impact angles.
 	*/
 	Deposition::Deposition(const Surface& surface, const int atomic_number,
 		const double phi_sign)
@@ -1855,17 +1812,51 @@ namespace Sputtering
 		m_angle(90, 0.0),
 		m_element_energy(surface.size(), 0.0)
 	{
+		// (key, element) pairs, sorted by key and then element, so each
+		// wall cell's elements stay in element order (the first is the
+		// default pick, as before)
+		std::vector<std::pair<std::uint64_t, int>> cells {};
+		std::vector<std::pair<std::uint64_t, int>> faces {};
 		for (std::size_t e {}; e < surface.size(); ++e)
 		{
 			const SurfaceElement& el {surface.elements()[e]};
+			const int ie {static_cast<int>(e)};
 			if (el.on_wall_face())
 			{
-				m_wall_faces[wall_face_key(el.zone, el.face, el.i, el.j,
-					el.k)] = e;
+				faces.emplace_back(wall_face_key(el.zone,
+					static_cast<int>(el.face), el.i, el.j, el.k), ie);
 				continue;
 			}
-			m_wall_cells[cell_key(el.wall_zone, el.wall_i, el.wall_j, el.k)]
-				.push_back(e);
+			cells.emplace_back(cell_key(el.wall_zone, el.wall_i, el.wall_j,
+				el.k), ie);
+		}
+		std::sort(cells.begin(), cells.end());
+		std::sort(faces.begin(), faces.end());
+
+		for (const auto& [key, e] : cells)
+		{
+			if (m_wall_cell_keys.empty() || m_wall_cell_keys.back() != key)
+			{
+				m_wall_cell_keys.push_back(key);
+				m_wall_cell_start.push_back(static_cast<int>(
+					m_wall_cell_elems.size()));
+			}
+			m_wall_cell_elems.push_back(e);
+		}
+		m_wall_cell_start.push_back(static_cast<int>(
+			m_wall_cell_elems.size()));
+
+		// One element per wall face cell; a later one with the same key
+		// replaced the earlier in the map this used to be, so keep the last
+		for (const auto& [key, e] : faces)
+		{
+			if (!m_wall_face_keys.empty() && m_wall_face_keys.back() == key)
+			{
+				m_wall_face_elems.back() = e;
+				continue;
+			}
+			m_wall_face_keys.push_back(key);
+			m_wall_face_elems.push_back(e);
 		}
 
 		constexpr int per_decade {10};
@@ -1884,100 +1875,65 @@ namespace Sputtering
 	}
 
 	/**
-	* Adds an absorbed particle's impact energy and angle to the tallies.
+	* The lookups and tallies as flat arrays, pointing into this object's
+	* own vectors, for the routines shared with the GPU
+	* (sputtering_hd.h). Adding through the view adds to this object.
 	*
-	* The energy is its kinetic energy, 0.5 m v^2. The angle is from the
-	* element's normal, with the normal at the particle's toroidal angle z
-	* (or the element's own on a Cartesian zone); it's only added when the
-	* particle landed on an element. Energies outside the bins go in the
-	* first or last. Called from inside OpenMP loops, so the adds are
-	* atomic.
-	*
-	* @param impact The particle's velocity and mass, or nullptr to add
-	*        nothing.
-	* @param el The element it landed on, or nullptr.
-	* @param z Its toroidal angle (its z coordinate).
-	* @param weight Its weight (atoms/s).
-	* @param e Index of el.
+	* @return The view.
 	*/
-	void Deposition::add_impact(const Impact* impact,
-		const SurfaceElement* el, const double z, const double weight,
-		const std::size_t e)
+	DepositionView Deposition::view()
 	{
-		if (impact == nullptr) return;
-		const auto& v {impact->v};
-		const double v2 {v[0] * v[0] + v[1] * v[1] + v[2] * v[2]};
-		const double energy {0.5 * impact->mass * v2 / Constants::ev_to_j};
-		const std::size_t nbins {m_energy.size()};
-		std::size_t bin {static_cast<std::size_t>(std::upper_bound(
-			m_energy_edges.begin(), m_energy_edges.end(), energy)
-			- m_energy_edges.begin())};
-		bin = bin == 0 ? 0 : std::min(bin - 1, nbins - 1);
-		#pragma omp atomic
-		m_energy[bin] += weight;
-		#pragma omp atomic
-		m_energy_sum += weight * energy;
-		#pragma omp atomic
-		m_energy_weight += weight;
-
-		if (el == nullptr || !(v2 > 0.0)) return;
-		#pragma omp atomic
-		m_element_energy[e] += weight * energy;
-
-		// The normal points into the plasma, the velocity into the wall
-		const auto n {el->normal_xyz(z, m_phi_sign)};
-		const double c {std::clamp(-(v[0] * n[0] + v[1] * n[1] + v[2]
-			* n[2]) / std::sqrt(v2), -1.0, 1.0)};
-		const double angle {std::acos(std::abs(c)) * 180.0
-			/ Constants::pi};
-		const int abin {std::clamp(static_cast<int>(angle), 0,
-			static_cast<int>(m_angle.size()) - 1)};
-		#pragma omp atomic
-		m_angle[abin] += weight;
-		#pragma omp atomic
-		m_angle_sum += weight * angle;
-		#pragma omp atomic
-		m_angle_weight += weight;
+		DepositionView d {};
+		d.el = m_surface->view();
+		d.phi_sign = m_phi_sign;
+		d.n_wall_cells = m_wall_cell_keys.size();
+		d.wall_cell_keys = m_wall_cell_keys.data();
+		d.wall_cell_start = m_wall_cell_start.data();
+		d.wall_cell_elems = m_wall_cell_elems.data();
+		d.n_wall_faces = m_wall_face_keys.size();
+		d.wall_face_keys = m_wall_face_keys.data();
+		d.wall_face_elems = m_wall_face_elems.data();
+		d.n_lifetime = static_cast<int>(m_lifetime.size());
+		d.lifetime_edges = m_lifetime_edges.data();
+		d.n_energy = static_cast<int>(m_energy.size());
+		d.energy_edges = m_energy_edges.data();
+		d.n_angle = static_cast<int>(m_angle.size());
+		d.n_charge = static_cast<int>(m_charge.size());
+		d.redeposited = m_redeposited.data();
+		d.prompt = m_prompt.data();
+		d.element_energy = m_element_energy.data();
+		d.lifetime = m_lifetime.data();
+		d.charge = m_charge.data();
+		d.prompt_charge = m_prompt_charge.data();
+		d.energy = m_energy.data();
+		d.angle = m_angle.data();
+		d.scalars = m_scalars.data();
+		return d;
 	}
 
 	/**
-	* Adds an absorbed atom to the time since birth and charge tallies, and
-	* to the prompt charge tally if it came back promptly. Called from
-	* inside OpenMP loops, so the adds are atomic.
+	* Adds tallies kept elsewhere (a GPU's, copied back to the host) to
+	* these. They must be for the same surface and impurity, so the arrays
+	* have the same sizes.
 	*
-	* @param pt Time since the atom was born (s).
-	* @param q Its charge when it was absorbed.
-	* @param weight Its weight (atoms/s).
-	* @param prompt_by The time since birth up to which its return is
-	*        prompt (Slots::Slots::prompt_by), below 0 if it never ionized.
-	* @return True if the return was prompt.
+	* @param other The tallies to add (only the tally arrays are read).
 	*/
-	bool Deposition::add_lifetime_and_charge(const double pt, const int q,
-		const double weight, const double prompt_by)
+	void Deposition::add_tallies(const DepositionView& other)
 	{
-		const std::size_t nbins {m_lifetime.size()};
-		std::size_t bin {static_cast<std::size_t>(std::upper_bound(
-			m_lifetime_edges.begin(), m_lifetime_edges.end(), pt)
-			- m_lifetime_edges.begin())};
-		bin = bin == 0 ? 0 : std::min(bin - 1, nbins - 1);
-		#pragma omp atomic
-		m_lifetime[bin] += weight;
-
-		#pragma omp atomic
-		m_lifetime_sum += weight * pt;
-
-		const int charge {std::clamp(q, 0,
-			static_cast<int>(m_charge.size()) - 1)};
-		#pragma omp atomic
-		m_charge[charge] += weight;
-
-		const bool prompt {prompt_by >= 0.0 && pt <= prompt_by};
-		if (prompt)
+		auto add = [](std::vector<double>& to, const double* from)
 		{
-			#pragma omp atomic
-			m_prompt_charge[charge] += weight;
-		}
-		return prompt;
+			for (std::size_t n {}; n < to.size(); ++n) to[n] += from[n];
+		};
+		add(m_redeposited, other.redeposited);
+		add(m_prompt, other.prompt);
+		add(m_element_energy, other.element_energy);
+		add(m_lifetime, other.lifetime);
+		add(m_charge, other.charge);
+		add(m_prompt_charge, other.prompt_charge);
+		add(m_energy, other.energy);
+		add(m_angle, other.angle);
+		for (int n {}; n < num_dep_scalars; ++n)
+			m_scalars[n] += other.scalars[n];
 	}
 
 	/**
@@ -1986,8 +1942,11 @@ namespace Sputtering
 	* The atom is put on a surface element bordering that wall cell: the one
 	* whose plasma cell it just came from if there is one, otherwise the
 	* first. If no element borders the wall cell (the atom went more than a
-	* cell into the wall in one step), it's counted as unassigned. Called
-	* from inside OpenMP loops, so the adds are atomic.
+	* cell into the wall in one step), it's counted as unassigned. Its time
+	* since birth and charge are tallied, and its impact energy and angle if
+	* given. The work is done by the routine shared with the GPU
+	* (Sputtering::add_into_wall_cell in sputtering_hd.h). Called from
+	* inside OpenMP loops, so the adds are atomic.
 	*
 	* @param zone Zone of the wall cell.
 	* @param i x index of the wall cell.
@@ -2011,41 +1970,10 @@ namespace Sputtering
 		const int prev_j, const double pt, const int q, const double weight,
 		const double prompt_by, const Impact* impact)
 	{
-		const bool prompt {add_lifetime_and_charge(pt, q, weight,
-			prompt_by)};
-
-		const auto it {m_wall_cells.find(cell_key(zone, i, j, k))};
-		if (it == m_wall_cells.end())
-		{
-			add_impact(impact, nullptr, 0.0, weight, 0);
-			#pragma omp atomic
-			m_unassigned += weight;
-			return -1;
-		}
-
-		std::size_t pick {it->second.front()};
-		for (const std::size_t e : it->second)
-		{
-			const SurfaceElement& el {m_surface->elements()[e]};
-			if (el.zone == prev_zone && el.i == prev_i && el.j == prev_j)
-			{
-				pick = e;
-				break;
-			}
-		}
-		#pragma omp atomic
-		m_redeposited[pick] += weight;
-		if (prompt)
-		{
-			#pragma omp atomic
-			m_prompt[pick] += weight;
-		}
-
-		// The staircase element's normal, at the middle of its phi range
-		const SurfaceElement& el {m_surface->elements()[pick]};
-		add_impact(impact, &el, 0.5 * (el.phi_min + el.phi_max), weight,
-			pick);
-		return static_cast<long>(pick);
+		return Sputtering::add_into_wall_cell(view(), zone, i, j, k,
+			prev_zone, prev_i, prev_j, pt, q, weight, prompt_by,
+			impact != nullptr ? impact->v.data() : nullptr,
+			impact != nullptr ? impact->mass : 0.0, OmpAdd {});
 	}
 
 	/**
@@ -2058,8 +1986,10 @@ namespace Sputtering
 	* wrapped first if the zone is periodic in z, since the z faces are
 	* checked after the y faces, so z can still be just past the zone's
 	* end. Otherwise (SOLEDGE3X, whose wall faces are inside the material,
-	* or a face with no element) it's only counted in wall_face. Called from
-	* inside OpenMP loops, so the adds are atomic.
+	* or a face with no element) it's only counted in wall_face. The work
+	* is done by the routine shared with the GPU
+	* (Sputtering::add_at_wall_face in sputtering_hd.h). Called from inside
+	* OpenMP loops, so the adds are atomic.
 	*
 	* @param zones The background's zones.
 	* @param zone Zone whose face the atom crossed.
@@ -2081,44 +2011,10 @@ namespace Sputtering
 		const std::array<double, 3>& pos, const double pt, const int q,
 		const double weight, const double prompt_by, const Impact* impact)
 	{
-		const bool prompt {add_lifetime_and_charge(pt, q, weight,
-			prompt_by)};
-
-		if (!m_wall_faces.empty())
-		{
-			// Cell along the face (clamped to the zone by
-			// get_nearest_cell_index_cpu) and toroidal cell
-			const bool x_face {face == Zones::xmin || face == Zones::xmax};
-			const int along {x_face
-				? Indices::get_nearest_cell_index_cpu(zones.get_grid_y(zone),
-					pos[1])
-				: Indices::get_nearest_cell_index_cpu(zones.get_grid_x(zone),
-					pos[0])};
-			const double z {zones.get_face(zone, Zones::zmin) == zone
-				? zones.wrap_z(zone, pos[2]) : pos[2]};
-			const int k {Indices::get_nearest_cell_index_cpu(
-				zones.get_grid_z(zone), z)};
-			const auto it {m_wall_faces.find(wall_face_key(zone, face,
-				along, along, k))};
-			if (it != m_wall_faces.end())
-			{
-				#pragma omp atomic
-				m_redeposited[it->second] += weight;
-				if (prompt)
-				{
-					#pragma omp atomic
-					m_prompt[it->second] += weight;
-				}
-				add_impact(impact, &m_surface->elements()[it->second], z,
-					weight, it->second);
-				return static_cast<long>(it->second);
-			}
-		}
-
-		add_impact(impact, nullptr, 0.0, weight, 0);
-		#pragma omp atomic
-		m_wall_face += weight;
-		return -1;
+		return Sputtering::add_at_wall_face(view(), zones.view(), zone,
+			static_cast<int>(face), pos.data(), pt, q, weight, prompt_by,
+			impact != nullptr ? impact->v.data() : nullptr,
+			impact != nullptr ? impact->mass : 0.0, OmpAdd {});
 	}
 
 	/**
@@ -2152,17 +2048,9 @@ namespace Sputtering
 				MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
 			if (rank == root) v = total;
 		};
-		std::vector<double> scalars {m_unassigned, m_wall_face,
-			m_lifetime_sum, m_energy_sum, m_energy_weight, m_angle_sum,
-			m_angle_weight};
+		std::vector<double> scalars(m_scalars.begin(), m_scalars.end());
 		sum(scalars);
-		m_unassigned = scalars[0];
-		m_wall_face = scalars[1];
-		m_lifetime_sum = scalars[2];
-		m_energy_sum = scalars[3];
-		m_energy_weight = scalars[4];
-		m_angle_sum = scalars[5];
-		m_angle_weight = scalars[6];
+		std::copy(scalars.begin(), scalars.end(), m_scalars.begin());
 		sum(m_energy);
 		sum(m_angle);
 		sum(m_element_energy);
@@ -2199,23 +2087,23 @@ namespace Sputtering
 	double Deposition::mean_lifetime() const
 	{
 		const double tot {total()};
-		return tot > 0.0 ? m_lifetime_sum / tot : 0.0;
+		return tot > 0.0 ? m_scalars[dep_lifetime_sum] / tot : 0.0;
 	}
 	double Deposition::mean_energy() const
 	{
-		return m_energy_weight > 0.0 ? m_energy_sum / m_energy_weight : 0.0;
+		return m_scalars[dep_energy_weight] > 0.0 ? m_scalars[dep_energy_sum] / m_scalars[dep_energy_weight] : 0.0;
 	}
 	double Deposition::mean_angle() const
 	{
-		return m_angle_weight > 0.0 ? m_angle_sum / m_angle_weight : 0.0;
+		return m_scalars[dep_angle_weight] > 0.0 ? m_scalars[dep_angle_sum] / m_scalars[dep_angle_weight] : 0.0;
 	}
 	const std::vector<double>& Deposition::redeposited() const
 		{return m_redeposited;}
-	double Deposition::unassigned() const {return m_unassigned;}
-	double Deposition::wall_face() const {return m_wall_face;}
+	double Deposition::unassigned() const {return m_scalars[dep_unassigned];}
+	double Deposition::wall_face() const {return m_scalars[dep_wall_face];}
 	double Deposition::total() const
 	{
-		double sum {m_unassigned + m_wall_face};
+		double sum {m_scalars[dep_unassigned] + m_scalars[dep_wall_face]};
 		for (const double r : m_redeposited) sum += r;
 		return sum;
 	}
@@ -2274,9 +2162,9 @@ namespace Sputtering
 			<< 100.0 * m_charge[0] / tot << "% as neutrals\n";
 		os << "  Mean time since birth " << mean_lifetime() * 1e6
 			<< " us";
-		if (m_energy_weight > 0.0)
+		if (m_scalars[dep_energy_weight] > 0.0)
 			os << ", impact energy " << mean_energy() << " eV";
-		if (m_angle_weight > 0.0)
+		if (m_scalars[dep_angle_weight] > 0.0)
 		{
 			os << ", angle from the normal " << mean_angle()
 				<< " degrees";
@@ -2288,10 +2176,10 @@ namespace Sputtering
 		if (source_rate > 0.0)
 			os << ", " << 100.0 * prompt / source_rate << "% of the source";
 		os << "\n";
-		if (m_wall_face > 0.0 || m_unassigned > 0.0)
+		if (m_scalars[dep_wall_face] > 0.0 || m_scalars[dep_unassigned] > 0.0)
 		{
-			os << "  " << 100.0 * m_wall_face / tot << "% at wall faces and "
-				<< 100.0 * m_unassigned / tot << "% into wall cells with no "
+			os << "  " << 100.0 * m_scalars[dep_wall_face] / tot << "% at wall faces and "
+				<< 100.0 * m_scalars[dep_unassigned] / tot << "% into wall cells with no "
 				"surface element\n";
 		}
 	}
@@ -2683,5 +2571,310 @@ namespace Sputtering
 				"self-sputtering table's highest energy (" << m_table
 				.energy_max() << " eV), where its yield there was used.\n";
 		}
+	}
+
+	// -----------------------------------------------------------------
+	// Copies for the GPU
+	// -----------------------------------------------------------------
+
+#ifdef USE_CUDA
+	namespace
+	{
+		/// Copies n values to the current GPU, nullptr for none
+		template <typename T>
+		T* copy_to_gpu(const T* src, const std::size_t n, const char* name)
+		{
+			if (n == 0 || src == nullptr) return nullptr;
+			T* dst {};
+			Errors::check_cuda(cudaMalloc(&dst, n * sizeof(T)), name);
+			Errors::check_cuda(cudaMemcpy(dst, src, n * sizeof(T),
+				cudaMemcpyHostToDevice), name);
+			return dst;
+		}
+
+		/// n zeros on the current GPU, nullptr for none
+		double* zeros_on_gpu(const std::size_t n, const char* name)
+		{
+			if (n == 0) return nullptr;
+			double* dst {};
+			Errors::check_cuda(cudaMalloc(&dst, n * sizeof(double)), name);
+			Errors::check_cuda(cudaMemset(dst, 0, n * sizeof(double)), name);
+			return dst;
+		}
+
+		/// Copies n values from a GPU (zeros for none)
+		std::vector<double> copy_from_gpu(const double* src,
+			const std::size_t n, const char* name)
+		{
+			std::vector<double> out(n, 0.0);
+			if (n == 0 || src == nullptr) return out;
+			Errors::check_cuda(cudaMemcpy(out.data(), src, n * sizeof(double),
+				cudaMemcpyDeviceToHost), name);
+			return out;
+		}
+
+		/// Frees a device array a view points to (views hold const
+		/// pointers, but these were allocated by copy_to_gpu)
+		template <typename T>
+		void free_gpu(T*& p)
+		{
+			cudaFree(const_cast<std::remove_const_t<T>*>(p));
+			p = nullptr;
+		}
+
+		/// Copies the elements to the current GPU
+		ElementsView elements_to_gpu(const ElementsView& h)
+		{
+			ElementsView d {};
+			d.n = h.n;
+			d.zone = copy_to_gpu(h.zone, h.n, "elements");
+			d.i = copy_to_gpu(h.i, h.n, "elements");
+			d.j = copy_to_gpu(h.j, h.n, "elements");
+			d.k = copy_to_gpu(h.k, h.n, "elements");
+			d.face = copy_to_gpu(h.face, h.n, "elements");
+			d.n_R = copy_to_gpu(h.n_R, h.n, "elements");
+			d.n_Z = copy_to_gpu(h.n_Z, h.n, "elements");
+			d.phi_min = copy_to_gpu(h.phi_min, h.n, "elements");
+			d.phi_max = copy_to_gpu(h.phi_max, h.n, "elements");
+			d.cartesian = copy_to_gpu(h.cartesian, h.n, "elements");
+			return d;
+		}
+
+		/// Frees elements copied by elements_to_gpu
+		void free_elements(ElementsView& d)
+		{
+			free_gpu(d.zone);
+			free_gpu(d.i);
+			free_gpu(d.j);
+			free_gpu(d.k);
+			free_gpu(d.face);
+			free_gpu(d.n_R);
+			free_gpu(d.n_Z);
+			free_gpu(d.phi_min);
+			free_gpu(d.phi_max);
+			free_gpu(d.cartesian);
+			d.n = 0;
+		}
+	}
+#endif
+
+	/**
+	* Copies the source to a GPU, for starting sputtered atoms there with
+	* the same routine as the CPU (sample_birth in sputtering_hd.h).
+	*
+	* @param device_id GPU to copy to.
+	* @param imp_num Number of particles, so each stands for
+	*        source_rate / imp_num atoms/s, as on the CPU.
+	* @return The copy, to free with free_source. Without CUDA, an empty
+	*         one.
+	*/
+	SourceDevice Source::to_device(const int device_id, const int imp_num)
+		const
+	{
+		SourceDevice out {};
+#ifdef USE_CUDA
+		if (m_cdf.empty() || !(m_cdf.back() > 0.0))
+		{
+			Errors::fatal_error("Can't start sputtered atoms, since nothing "
+				"is sputtered (the source is 0 everywhere).");
+		}
+		Errors::check_cuda(cudaSetDevice(device_id), "Source::to_device");
+		const SourceView h {view()};
+		SourceView& d {out.view};
+		d = h;
+		d.el = elements_to_gpu(h.el);
+		d.table.log_energy = copy_to_gpu(h.table.log_energy,
+			h.table.n_energy, "yield table");
+		d.table.angle = copy_to_gpu(h.table.angle, h.table.n_angle,
+			"yield table");
+		d.table.yield = copy_to_gpu(h.table.yield, static_cast<std::size_t>(
+			h.table.n_energy) * h.table.n_angle, "yield table");
+		d.quad.x = copy_to_gpu(h.quad.x, h.quad.n, "quadrature");
+		d.quad.w = copy_to_gpu(h.quad.w, h.quad.n, "quadrature");
+		d.cdf = copy_to_gpu(h.cdf, h.n_idx, "source cdf");
+		d.frame_lo = copy_to_gpu(h.frame_lo, m_frame_lo.size(), "frames");
+		d.frame_hi = copy_to_gpu(h.frame_hi, m_frame_hi.size(), "frames");
+		d.cell_bounds = copy_to_gpu(h.cell_bounds, 4 * h.el.n,
+			"cell bounds");
+		d.e_sheath = copy_to_gpu(h.e_sheath, h.n_idx, "source");
+		d.ti = copy_to_gpu(h.ti, h.n_idx, "source");
+		d.te = copy_to_gpu(h.te, h.n_idx, "source");
+		d.energy = copy_to_gpu(h.energy, h.n_idx, "source");
+		d.impact_angle = copy_to_gpu(h.impact_angle, h.n_idx, "source");
+		d.point = copy_to_gpu(h.point, h.n_idx, "source");
+		d.sample_offset = copy_to_gpu(h.sample_offset,
+			m_sample_offset.size(), "impact samples");
+		d.sample_energy = copy_to_gpu(h.sample_energy,
+			m_sample_energy.size(), "impact samples");
+		d.sample_angle = copy_to_gpu(h.sample_angle,
+			m_sample_angle.size(), "impact samples");
+		d.sample_weight = copy_to_gpu(h.sample_weight,
+			m_sample_weight.size(), "impact samples");
+		out.device_id = device_id;
+		out.weight = m_source_rate / imp_num;
+#else
+		(void)device_id;
+		(void)imp_num;
+#endif
+		return out;
+	}
+
+	/**
+	* Frees a source copied to a GPU (Source::to_device).
+	*
+	* @param source_d The copy. Left empty.
+	*/
+	void free_source(SourceDevice& source_d)
+	{
+#ifdef USE_CUDA
+		if (source_d.device_id < 0) return;
+		cudaSetDevice(source_d.device_id);
+		SourceView& d {source_d.view};
+		free_elements(d.el);
+		free_gpu(d.table.log_energy);
+		free_gpu(d.table.angle);
+		free_gpu(d.table.yield);
+		free_gpu(d.quad.x);
+		free_gpu(d.quad.w);
+		free_gpu(d.cdf);
+		free_gpu(d.frame_lo);
+		free_gpu(d.frame_hi);
+		free_gpu(d.cell_bounds);
+		free_gpu(d.e_sheath);
+		free_gpu(d.ti);
+		free_gpu(d.te);
+		free_gpu(d.energy);
+		free_gpu(d.impact_angle);
+		free_gpu(d.point);
+		free_gpu(d.sample_offset);
+		free_gpu(d.sample_energy);
+		free_gpu(d.sample_angle);
+		free_gpu(d.sample_weight);
+#endif
+		source_d = {};
+	}
+
+	/**
+	* Makes empty tallies on a GPU with this object's lookups and bins, for
+	* the boundary kernel to add landings to with the same routines as the
+	* CPU (add_at_wall_face and add_into_wall_cell in sputtering_hd.h).
+	*
+	* @param device_id GPU to put them on.
+	* @return The tallies, to add back with add_from_device and free with
+	*         free_deposition. Without CUDA, an empty one.
+	*/
+	DepositionDevice Deposition::to_device(const int device_id)
+	{
+		DepositionDevice out {};
+#ifdef USE_CUDA
+		Errors::check_cuda(cudaSetDevice(device_id), "Deposition::to_device");
+		const DepositionView h {view()};
+		DepositionView& d {out.view};
+		d = h;
+		d.el = elements_to_gpu(h.el);
+		d.wall_cell_keys = copy_to_gpu(h.wall_cell_keys, h.n_wall_cells,
+			"wall cells");
+		d.wall_cell_start = copy_to_gpu(h.wall_cell_start,
+			m_wall_cell_start.size(), "wall cells");
+		d.wall_cell_elems = copy_to_gpu(h.wall_cell_elems,
+			m_wall_cell_elems.size(), "wall cells");
+		d.wall_face_keys = copy_to_gpu(h.wall_face_keys, h.n_wall_faces,
+			"wall faces");
+		d.wall_face_elems = copy_to_gpu(h.wall_face_elems, h.n_wall_faces,
+			"wall faces");
+		d.lifetime_edges = copy_to_gpu(h.lifetime_edges,
+			static_cast<std::size_t>(h.n_lifetime) + 1, "lifetime bins");
+		d.energy_edges = copy_to_gpu(h.energy_edges,
+			static_cast<std::size_t>(h.n_energy) + 1, "energy bins");
+		d.redeposited = zeros_on_gpu(m_redeposited.size(), "deposition");
+		d.prompt = zeros_on_gpu(m_prompt.size(), "deposition");
+		d.element_energy = zeros_on_gpu(m_element_energy.size(),
+			"deposition");
+		d.lifetime = zeros_on_gpu(m_lifetime.size(), "deposition");
+		d.charge = zeros_on_gpu(m_charge.size(), "deposition");
+		d.prompt_charge = zeros_on_gpu(m_prompt_charge.size(), "deposition");
+		d.energy = zeros_on_gpu(m_energy.size(), "deposition");
+		d.angle = zeros_on_gpu(m_angle.size(), "deposition");
+		d.scalars = zeros_on_gpu(num_dep_scalars, "deposition");
+		out.device_id = device_id;
+#else
+		(void)device_id;
+#endif
+		return out;
+	}
+
+	/**
+	* Adds a GPU's tallies (Deposition::to_device, added to by the
+	* boundary kernel) to these. Blocks until the GPU's kernels are done.
+	*
+	* @param dep_d The GPU's tallies.
+	*/
+	void Deposition::add_from_device(const DepositionDevice& dep_d)
+	{
+#ifdef USE_CUDA
+		if (dep_d.device_id < 0) return;
+		Errors::check_cuda(cudaSetDevice(dep_d.device_id),
+			"Deposition::add_from_device");
+		const DepositionView& d {dep_d.view};
+		auto from = [](const double* p, const std::size_t n)
+			{return copy_from_gpu(p, n, "Deposition::add_from_device");};
+		std::vector<double> redeposited {from(d.redeposited,
+			m_redeposited.size())};
+		std::vector<double> prompt {from(d.prompt, m_prompt.size())};
+		std::vector<double> element_energy {from(d.element_energy,
+			m_element_energy.size())};
+		std::vector<double> lifetime {from(d.lifetime, m_lifetime.size())};
+		std::vector<double> charge {from(d.charge, m_charge.size())};
+		std::vector<double> prompt_charge {from(d.prompt_charge,
+			m_prompt_charge.size())};
+		std::vector<double> energy {from(d.energy, m_energy.size())};
+		std::vector<double> angle {from(d.angle, m_angle.size())};
+		std::vector<double> scalars {from(d.scalars, num_dep_scalars)};
+		DepositionView h {};
+		h.redeposited = redeposited.data();
+		h.prompt = prompt.data();
+		h.element_energy = element_energy.data();
+		h.lifetime = lifetime.data();
+		h.charge = charge.data();
+		h.prompt_charge = prompt_charge.data();
+		h.energy = energy.data();
+		h.angle = angle.data();
+		h.scalars = scalars.data();
+		add_tallies(h);
+#else
+		(void)dep_d;
+#endif
+	}
+
+	/**
+	* Frees tallies on a GPU (Deposition::to_device).
+	*
+	* @param dep_d The tallies. Left empty.
+	*/
+	void free_deposition(DepositionDevice& dep_d)
+	{
+#ifdef USE_CUDA
+		if (dep_d.device_id < 0) return;
+		cudaSetDevice(dep_d.device_id);
+		DepositionView& d {dep_d.view};
+		free_elements(d.el);
+		free_gpu(d.wall_cell_keys);
+		free_gpu(d.wall_cell_start);
+		free_gpu(d.wall_cell_elems);
+		free_gpu(d.wall_face_keys);
+		free_gpu(d.wall_face_elems);
+		free_gpu(d.lifetime_edges);
+		free_gpu(d.energy_edges);
+		free_gpu(d.redeposited);
+		free_gpu(d.prompt);
+		free_gpu(d.element_energy);
+		free_gpu(d.lifetime);
+		free_gpu(d.charge);
+		free_gpu(d.prompt_charge);
+		free_gpu(d.energy);
+		free_gpu(d.angle);
+		free_gpu(d.scalars);
+#endif
+		dep_d = {};
 	}
 }

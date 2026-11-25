@@ -491,6 +491,8 @@ namespace Slots
 		cudaMalloc(&slots_d.weight, m_N * sizeof(double));
 		cudaMalloc(&slots_d.q, m_N * sizeof(int));
 		cudaMalloc(&slots_d.state, m_N * sizeof(int));
+		cudaMalloc(&slots_d.prompt_by, m_N * sizeof(double));
+		cudaMalloc(&slots_d.generation, m_N * sizeof(int));
 		cudaMalloc(&slots_d.all_dead, sizeof(bool));
 		cudaMalloc(&slots_d.num_dead, sizeof(int));
 		cudaMalloc(&slots_d.dead_indices, m_N * sizeof(int));
@@ -538,6 +540,10 @@ namespace Slots
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.state,  m_state.data(), m_N * sizeof(int),
 			cudaMemcpyHostToDevice);
+		cudaMemcpy(slots_d.prompt_by, m_prompt_by.data(),
+			m_N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(slots_d.generation, m_generation.data(),
+			m_N * sizeof(int), cudaMemcpyHostToDevice);
 
 		// Initialize all_dead to false
 		bool init = false;
@@ -611,6 +617,10 @@ namespace Slots
 			cudaMemcpyDeviceToHost);
 		cudaMemcpy(slots.m_state.data(), slots_d.state, 
 			slots_d.N * sizeof(int), cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_prompt_by.data(), slots_d.prompt_by,
+			slots_d.N * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_generation.data(), slots_d.generation,
+			slots_d.N * sizeof(int), cudaMemcpyDeviceToHost);
 #endif
 		return slots;
 	}
@@ -653,6 +663,8 @@ namespace Slots
 		cudaFree(slots_d.weight);
 		cudaFree(slots_d.q);
 		cudaFree(slots_d.state);
+		cudaFree(slots_d.prompt_by);
+		cudaFree(slots_d.generation);
 		cudaFree(slots_d.all_dead);
 		cudaFree(slots_d.num_dead);
 		cudaFree(slots_d.dead_indices);
@@ -678,6 +690,8 @@ namespace Slots
 		slots_d.weight = nullptr;
 		slots_d.q = nullptr;
 		slots_d.state = nullptr;
+		slots_d.prompt_by = nullptr;
+		slots_d.generation = nullptr;
 		slots_d.all_dead = nullptr;
 		slots_d.num_dead = nullptr;
 		slots_d.dead_indices = nullptr;

@@ -100,18 +100,22 @@ Then each pass through the loop runs these steps, in order:
 
 The loop ends once every slot is dead and no particles are left to launch.
 
-A sputtered source and the sheath hook into these steps on the CPU
-(`src/sputtering.cpp`, `src/sheath.cpp`):
+A sputtered source and the sheath hook into these steps
+(`src/sputtering.cpp`, `src/sheath.cpp`); the source and the deposition
+on the GPU too, the sheath and self-sputtering on the CPU only:
 
 - `Slots::fill_slots_cpu` starts new particles from
-  `Sputtering::Source::sample_birth`.
+  `Sputtering::Source::sample_birth`, and `fill_slots_gpu` from the same
+  routine on a device copy of the source (`Source::to_device`).
 - `Boris::update_velocity_cpu` adds `Sheath::field_at` to the
   interpolated E. Particles that can reach the sheath field this step
   are pushed in sub-steps by `Boris::substep_cpu`, and the plain push and
   `step_cpu` skip them.
 - `Boundary::check_bounds_cpu` puts absorbed particles on their wall
   element with `Sputtering::Deposition`, passing their impact energy and
-  angle. With self-sputtering, `Deposition::self` gives the
+  angle. `check_bounds_kernel` does the same into tallies on the device
+  (`Deposition::to_device`), added to the host's after the run
+  (`Deposition::add_from_device`). With self-sputtering, `Deposition::self` gives the
   `Sputtering::SelfSource`, whose `rebirth` turns the particle into a
   self-sputtered atom in place, so it carries on in the same slot with a
   new weight. A runaway chain is noted inside the parallel loop and stops
@@ -182,10 +186,19 @@ The boundary conditions are shared whole: `include/boundary_hd.h` has the
 per-particle routines (`time_bc`, `check_faces`, `in_wall_cell`,
 `turn_velocity`) that `Boundary::check_bounds_cpu` and the GPU's
 `check_bounds_kernel` both call with the same `BoundaryParams`
-(`Boundary::make_params`). The CPU adds what needs host classes on top
-(deposition on the wall, self-sputtering). Each GPU counts what happened
+(`Boundary::make_params`). The CPU adds self-sputtering on top, which
+needs host classes. Each GPU counts what happened
 to its particles (`Boundary::Fates`) in device counters that
 `add_fates_from_device` reads after the run.
+
+Sputtering is shared through `include/sputtering_hd.h`: flat views of
+the surface elements, the yield table, the source and the deposition
+tallies (`ElementsView`, `YieldView`, `SourceView`, `DepositionView`),
+`sample_birth`, and the deposition routines `add_at_wall_face` and
+`add_into_wall_cell`. The wall cells and wall faces with elements are
+sorted keys searched by bisection, rather than hash maps, so the device
+can search the same arrays. The tallies are added to through an adder
+passed in: `omp atomic` on the CPU, `atomicAdd` on the GPU.
 
 The thermal force's sampler is shared the same way: `Collisions::sample_bkg`
 and the skew helpers (`skew_at`, `skew_factor`, `skew_bound`) are in

@@ -9,7 +9,7 @@
 * (cub::DeviceSelect), and then one thread per dead slot creates a new
 * particle there, as long as there are particles left to launch. New
 * particles start according to the imp_*start_opt and imp_temp_start_opt
-* options.
+* options, or from the sputtered source (imp_source_opt = "sputter").
 */
 #include <cstdio>
 
@@ -22,6 +22,7 @@
 #include "pcg32.h"
 #include "slots.cuh"
 #include "slots_device.h"
+#include "sputtering_hd.h"
 #include "zones_hd.h"
 
 #include "indices.cuh"
@@ -249,6 +250,46 @@ namespace Slots
 
 	
 	/**
+	* Starts a sputtered atom from the source, as make_new_particle does on
+	* the CPU (slots.cpp): where, when and how fast from
+	* Sputtering::sample_birth (the same routine, with the same draws),
+	* neutral, and standing for source_rate / imp_num atoms/s.
+	*
+	* @param rng Random number generator of the slot.
+	* @param source_d The source on the device.
+	* @param bkg_d Background plasma on the device.
+	* @return The new particle.
+	*/
+	__device__
+	ParticleInitDevice make_sputtered_particle_cuda(pcg32& rng,
+		const Sputtering::SourceDevice& source_d,
+		const Background::BackgroundDevice& bkg_d)
+	{
+		const Sputtering::Birth b {Sputtering::sample_birth(source_d.view,
+			rng)};
+		ParticleInitDevice p;
+		p.zone = b.zone;
+		p.t = b.t;
+		p.x = b.x;
+		p.y = b.y;
+		p.z = b.z;
+		p.tidx = Indices::get_nearest_index_cuda(bkg_d.times, bkg_d.tdim,
+			p.t);
+		p.xidx = Zones::cell_index(bkg_d.zones, p.zone, 0, p.x);
+		p.yidx = Zones::cell_index(bkg_d.zones, p.zone, 1, p.y);
+		p.zidx = Zones::cell_index(bkg_d.zones, p.zone, 2, p.z);
+		p.vX = b.vX;
+		p.vY = b.vY;
+		p.vZ = b.vZ;
+		p.vx = 0.0;
+		p.vy = 0.0;
+		p.vz = 0.0;
+		p.weight = source_d.weight;
+		p.q = 0;
+		return p;
+	}
+
+	/**
 	* Predicate for cub::DeviceSelect::If: true for the index of a dead
 	* slot (state not 0).
 	*/
@@ -283,10 +324,14 @@ namespace Slots
 	* @param rem_parts Number of particles left to launch.
 	* @param rngs_d Random number generators on the device.
 	* @param opts_d Simulation options on the device.
+	* @param source Sputtered source on the device, or a copy with
+	*        device_id -1 to start particles from the imp_*start_opt
+	*        options.
 	*/
 	__global__ void fill_slots_kernel(SlotsDevice slots_d, 
 		Background::BackgroundDevice bkg_d, int rem_parts, pcg32* rngs_d, 
-		const Options::OptionsDevice* opts_d)
+		const Options::OptionsDevice* opts_d,
+		const Sputtering::SourceDevice source)
 	{
 		// Global index
 		int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -297,7 +342,9 @@ namespace Slots
 		int i = slots_d.dead_indices[idx];
 
 		// Create a new particle (device-side initializer)
-		ParticleInitDevice p = make_new_particle_cuda(rngs_d[i], opts_d, bkg_d);
+		ParticleInitDevice p = source.device_id >= 0
+			? make_sputtered_particle_cuda(rngs_d[i], source, bkg_d)
+			: make_new_particle_cuda(rngs_d[i], opts_d, bkg_d);
 
 		// Write particle data
 		slots_d.pt[i] = 0.0;
@@ -326,6 +373,11 @@ namespace Slots
 		slots_d.xidx[i] = p.xidx;
 		slots_d.yidx[i] = p.yidx;
 		slots_d.zidx[i] = p.zidx;
+
+		// Not yet ionized (no prompt window) and not self-sputtered, as
+		// fill_slots_cpu
+		slots_d.prompt_by[i] = -1.0;
+		slots_d.generation[i] = 0;
 
 		// Mark slot alive
 		slots_d.state[i] = 0;
@@ -380,10 +432,13 @@ namespace Slots
 	* @param rngs_d Random number generators on the device.
 	* @param opts_d Simulation options on the device.
 	* @param bkg_d Background plasma on the device.
+	* @param source_d Sputtered source on the device to start particles
+	*        from, or nullptr to start them from the imp_*start_opt options.
 	*/
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d,
-		const Background::BackgroundDevice& bkg_d)
+		const Background::BackgroundDevice& bkg_d,
+		const Sputtering::SourceDevice* source_d)
 	{
 
 		// Each slot is assigned to a specific GPU where its data lies
@@ -418,8 +473,10 @@ namespace Slots
 		// Call GPU kernel to fill slots.
 		int fillBlock = 256;
 		int fillGrid  = (num_dead + fillBlock - 1) / fillBlock;
+		const Sputtering::SourceDevice source {source_d != nullptr
+			? *source_d : Sputtering::SourceDevice {}};
 		fill_slots_kernel<<<fillGrid, fillBlock>>>(slots_d, bkg_d, rem_parts,
-			rngs_d, opts_d);
+			rngs_d, opts_d, source);
 
 #ifdef DEBUG
 		// Check for errors. This also catches errors from compact_dead_slots.

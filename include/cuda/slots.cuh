@@ -6,6 +6,7 @@
 * @brief Header file for slots.cu
 */
 #include "slots_device.h"
+#include "sputtering_hd.h"
 
 namespace Slots
 {
@@ -30,7 +31,8 @@ namespace Slots
 
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d, 
-		const Background::BackgroundDevice& bkg_d);
+		const Background::BackgroundDevice& bkg_d,
+		const Sputtering::SourceDevice* source_d = nullptr);
 
 	bool all_dead_gpu(SlotsDevice& slots_d);
 	

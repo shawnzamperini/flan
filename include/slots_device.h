@@ -47,6 +47,10 @@ namespace Slots
 		double* weight;		///< Particle weight, 1 / imp_num at launch
 		int* q;				///< Charge state
 		int* state;			///< 0 if the particle is alive, 1 if dead
+		double* prompt_by;	///< Particle time up to which a return to the
+							///< wall is prompt, below 0 for none (see
+							///< Slots::prompt_by)
+		int* generation;	///< Times self-sputtered (Slots::generation)
 
 		// Work arrays for the kernels that refill dead slots (see slots.cu)
 		bool* all_dead;		///< Single value, true if every slot is dead

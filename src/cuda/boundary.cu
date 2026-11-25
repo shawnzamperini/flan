@@ -9,8 +9,11 @@
 * time boundary, absorbing, wall, core, lcfs and periodic faces, crossings
 * into other zones, the wall mask chi, and the turn of the velocity of a
 * particle that goes around a toroidal wedge. What happened to the
-* particles is counted on the device (add_fates_from_device reads it). The
-* deposition on the wall and self-sputtering are CPU only so far.
+* particles is counted on the device (add_fates_from_device reads it).
+* Where absorbed atoms land on the wall is tallied on the device with the
+* routines shared with the CPU (sputtering_hd.h), and added to the host's
+* tallies after the run (Sputtering::Deposition::add_from_device).
+* Self-sputtering is CPU only so far.
 */
 #include <cstdio>
 
@@ -20,11 +23,22 @@
 #include "errors.h"
 #include "pcg32.h"
 #include "slots_device.h"
+#include "sputtering_hd.h"
 #include "zones_hd.h"
 
 
 namespace Boundary
 {
+	/// Adds to the device's deposition tallies (atomicAdd, since many
+	/// threads add to the same element or bin)
+	struct DeviceAdd
+	{
+		__device__ void operator()(double* p, const double value) const
+		{
+			atomicAdd(p, value);
+		}
+	};
+
 	/**
 	* Kernel that checks each particle against the time boundary and the
 	* faces of its zone and applies the boundary conditions, one thread per
@@ -45,11 +59,15 @@ namespace Boundary
 	*        for the core faces.
 	* @param fates_d Counters of what happened (num_fate_indices values),
 	*        added to, or nullptr to not count.
+	* @param dep Deposition tallies on the device, added to where atoms
+	*        land on the wall, if deposit is true.
+	* @param deposit Whether to tally the deposition.
 	*/
 	__global__
 	void check_bounds_kernel(Slots::SlotsDevice slots_d,
 		const Background::BackgroundDevice bkg_d, const BoundaryParams p,
-		pcg32* rngs_d, unsigned long long* fates_d)
+		pcg32* rngs_d, unsigned long long* fates_d,
+		const Sputtering::DepositionView dep, const bool deposit)
 	{
 		const int i = blockIdx.x * blockDim.x + threadIdx.x;
 		if (i >= slots_d.N) return;
@@ -73,13 +91,35 @@ namespace Boundary
 			state = check_faces(zones, p, pos, zone, turn, rngs_d[i], tally,
 				wall_face);
 
-			// Absorb particles that ended up in a cell inside the wall
+			// Its velocity, for the impact energy and angle tallies (before
+			// any turn, as on the CPU)
+			const double v[3] {slots_d.vX[i], slots_d.vY[i], slots_d.vZ[i]};
+
+			// Landed on a wall face: where on it
+			if (state && wall_face >= 0 && deposit)
+			{
+				Sputtering::add_at_wall_face(dep, zones, zone, wall_face, pos,
+					slots_d.pt[i], slots_d.q[i], slots_d.weight[i],
+					slots_d.prompt_by[i], v, slots_d.mass, DeviceAdd {});
+			}
+
+			// Absorb particles that ended up in a cell inside the wall, and
+			// put them on the element bordering it whose plasma cell they
+			// came from (the slot's zone and cell from before this step)
 			int idx[3];
 			if (!state && p.chi != nullptr
 				&& in_wall_cell(zones, p.chi, zone, pos, idx))
 			{
 				state = 1;
 				++tally.n[fate_chi];
+				if (deposit)
+				{
+					Sputtering::add_into_wall_cell(dep, zone, idx[0], idx[1],
+						idx[2], slots_d.zone[i], slots_d.xidx[i],
+						slots_d.yidx[i], slots_d.pt[i], slots_d.q[i],
+						slots_d.weight[i], slots_d.prompt_by[i], v,
+						slots_d.mass, DeviceAdd {});
+				}
 			}
 
 			// The velocity is Cartesian, so it turns with the particle
@@ -130,15 +170,20 @@ namespace Boundary
 	* @param fates_d Counters of what happened on this GPU
 	*        (num_fate_indices values, from
 	*        OpenADAS::IonizRecombWarningsDevice::fates), or nullptr.
+	* @param dep_d Deposition tallies on this GPU
+	*        (Sputtering::Deposition::to_device), or nullptr to not tally.
 	*/
 	void check_bounds_gpu(Slots::SlotsDevice& slots_d,
 		const Background::BackgroundDevice& bkg_d, const BoundaryParams& p,
-		pcg32* rngs_d, unsigned long long* fates_d)
+		pcg32* rngs_d, unsigned long long* fates_d,
+		const Sputtering::DepositionDevice* dep_d)
 	{
 		const int blockSize {256};
 		const int gridSize {(slots_d.N + blockSize - 1) / blockSize};
+		const bool deposit {dep_d != nullptr && dep_d->device_id >= 0};
 		check_bounds_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, p,
-			rngs_d, fates_d);
+			rngs_d, fates_d, deposit ? dep_d->view
+			: Sputtering::DepositionView {}, deposit);
 
 #ifdef DEBUG
 		cudaError_t err {cudaDeviceSynchronize()};

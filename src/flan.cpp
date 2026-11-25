@@ -138,13 +138,6 @@ R"(
 	// The thermal force needs the heat fluxes and the CPU
 	Collisions::check_thermal_force(bkg, opts);
 
-	// The charge limit for tests is only applied on the CPU
-	if (opts.imp_iz_max_charge() >= 0 && opts.use_gpu_int() > 0)
-	{
-		Errors::fatal_error("imp_iz_max_charge only works on the CPU. Set "
-			"use_gpu = \"off\".");
-	}
-
 	// The sputtered source. Every rank calculates its own from the
 	// broadcast background, since every rank starts particles from it.
 	// Each particle then stands for source_rate / imp_num atoms/s (its
@@ -157,11 +150,6 @@ R"(
 		{
 			Errors::fatal_error("imp_source_opt = \"sputter\" needs a "
 				"sputtering yield table, set with sput_table_file.");
-		}
-		if (opts.use_gpu_int() > 0)
-		{
-			Errors::fatal_error("imp_source_opt = \"sputter\" only runs on "
-				"the CPU for now. Set use_gpu = \"off\".");
 		}
 		if (rank == 0) std::cout << "Calculating the sputtered source...\n";
 		const Sputtering::Surface surface(bkg, opts.sput_max_wall_dist());
@@ -252,6 +240,11 @@ R"(
 	std::optional<Sputtering::SelfSource> self {};
 	if (opts.sput_self_int() == 1)
 	{
+		if (opts.use_gpu_int() > 0)
+		{
+			Errors::fatal_error("sput_self = \"on\" only runs on the CPU "
+				"for now. Set use_gpu = \"off\".");
+		}
 		if (!source)
 		{
 			Errors::fatal_error("sput_self = \"on\" needs the sputtered "
