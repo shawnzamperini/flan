@@ -771,6 +771,22 @@ namespace Impurity
 
 
 	/**
+	* How much GPU memory to_device takes: the per-cell tallies (counts
+	* as int, nine more as double) over every frame, without ghost cells,
+	* and the zones' sizes and offsets.
+	*
+	* @return Bytes.
+	*/
+	std::size_t Statistics::device_bytes() const
+	{
+		const std::size_t N {m_counts.get_data().size()};
+		const std::size_t nzones {static_cast<std::size_t>(
+			m_counts.get_nzones())};
+		return N * (sizeof(int) + 9 * sizeof(double))
+			+ nzones * (sizeof(std::size_t) + 3 * sizeof(int));
+	}
+
+	/**
 	* Allocates GPU memory for the statistics arrays and copies them to the
 	* device.
 	*
@@ -818,16 +834,23 @@ namespace Impurity
 				cudaMemcpyHostToDevice);
 		}
 
-		cudaMalloc(&stats_d.counts, N * sizeof(int));
-		cudaMalloc(&stats_d.weights, N * sizeof(double));
-		cudaMalloc(&stats_d.vX, N * sizeof(double));
-		cudaMalloc(&stats_d.vY, N * sizeof(double));
-		cudaMalloc(&stats_d.vZ, N * sizeof(double));
-		cudaMalloc(&stats_d.vx, N * sizeof(double));
-		cudaMalloc(&stats_d.vy, N * sizeof(double));
-		cudaMalloc(&stats_d.vz, N * sizeof(double));
-		cudaMalloc(&stats_d.q, N * sizeof(double));
-		cudaMalloc(&stats_d.s, N * sizeof(double));
+		// Checked, so running out of memory stops the run here rather
+		// than failing later in a kernel
+		auto alloc = [](auto** p, const std::size_t bytes)
+		{
+			Errors::check_cuda(cudaMalloc(p, bytes),
+				"Statistics::to_device (out of GPU memory?)");
+		};
+		alloc(&stats_d.counts, N * sizeof(int));
+		alloc(&stats_d.weights, N * sizeof(double));
+		alloc(&stats_d.vX, N * sizeof(double));
+		alloc(&stats_d.vY, N * sizeof(double));
+		alloc(&stats_d.vZ, N * sizeof(double));
+		alloc(&stats_d.vx, N * sizeof(double));
+		alloc(&stats_d.vy, N * sizeof(double));
+		alloc(&stats_d.vz, N * sizeof(double));
+		alloc(&stats_d.q, N * sizeof(double));
+		alloc(&stats_d.s, N * sizeof(double));
 
 		// Copy to device
 		cudaMemcpy(stats_d.counts, m_counts.get_data().data(), N * sizeof(int), 

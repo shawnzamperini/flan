@@ -15,6 +15,7 @@ add_executable(test_boris_cpu test_boris_cpu.cpp)
 add_executable(test_openadas_cpu test_openadas_cpu.cpp)
 add_executable(test_zoned_vector_cpu test_zoned_vector_cpu.cpp)
 add_executable(test_zones_cpu test_zones_cpu.cpp)
+add_executable(test_gpu_memory_cpu test_gpu_memory_cpu.cpp)
 
 # Link your main library + GoogleTest. Tests that involve OpenMP need to link
 # against those as well as the flan library.
@@ -26,6 +27,7 @@ target_link_libraries(test_boris_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_openadas_cpu PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 target_link_libraries(test_zoned_vector_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_zones_cpu PRIVATE flan gtest_main)
+target_link_libraries(test_gpu_memory_cpu PRIVATE flan gtest_main)
 
 # Register with CTest
 add_test(NAME GetNearestIndexCPUTest COMMAND test_get_nearest_index_cpu)
@@ -36,6 +38,7 @@ add_test(NAME BorisCPUTest COMMAND test_boris_cpu)
 add_test(NAME OpenADASCPUTest COMMAND test_openadas_cpu)
 add_test(NAME ZonedVectorCPUTest COMMAND test_zoned_vector_cpu)
 add_test(NAME ZonesCPUTest COMMAND test_zones_cpu)
+add_test(NAME GpuMemoryCPUTest COMMAND test_gpu_memory_cpu)
 
 add_executable(test_cross_zones_cpu test_cross_zones_cpu.cpp)
 target_link_libraries(test_cross_zones_cpu PRIVATE flan gtest_main
@@ -158,6 +161,7 @@ if(ENABLE_CUDA)
 	add_executable(test_collisions_cuda test_collisions_cuda.cpp)
 	add_executable(test_sputtering_cuda test_sputtering_cuda.cpp)
 	add_executable(test_self_sputter_cuda test_self_sputter_cuda.cpp)
+	add_executable(test_gpu_memory_cuda test_gpu_memory_cuda.cpp)
 	add_executable(test_sheath_cuda test_sheath_cuda.cpp)
 
 	# The boundary routines are inline (boundary_hd.h)
@@ -200,6 +204,8 @@ if(ENABLE_CUDA)
 		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
 	target_compile_definitions(test_self_sputter_cuda PRIVATE
 		FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+	target_link_libraries(test_gpu_memory_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
 	target_link_libraries(test_sheath_cuda PRIVATE flan gtest_main
 		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
 	target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main)
@@ -229,6 +235,7 @@ if(ENABLE_CUDA)
 	add_test(NAME CollisionsCUDATest COMMAND test_collisions_cuda)
 	add_test(NAME SputteringCUDATest COMMAND test_sputtering_cuda)
 	add_test(NAME SelfSputterCUDATest COMMAND test_self_sputter_cuda)
+	add_test(NAME GpuMemoryCUDATest COMMAND test_gpu_memory_cuda)
 	add_test(NAME SheathCUDATest COMMAND test_sheath_cuda)
 	add_test(NAME BoundaryCUDATest COMMAND test_boundary_cuda)
 	add_test(NAME InterpolateCUDATest COMMAND test_interpolate_cuda)

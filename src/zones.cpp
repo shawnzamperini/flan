@@ -1242,6 +1242,30 @@ namespace Zones
 	*         with free_zones. Stops the run if GPU support wasn't compiled
 	*         in.
 	*/
+	/**
+	* How much GPU memory to_device takes: the flat arrays it copies.
+	*
+	* @return Bytes.
+	*/
+	std::size_t Zones::device_bytes() const
+	{
+		auto bytes = [](const auto& v)
+			{return v.size() * sizeof(typename std::decay_t<decltype(v)>
+				::value_type);};
+		std::size_t n {};
+		for (int dim {}; dim < 3; ++dim)
+		{
+			n += bytes(m_flat.n[dim]) + bytes(m_flat.center_offset[dim])
+				+ bytes(m_flat.centers[dim]) + bytes(m_flat.edge_offset[dim])
+				+ bytes(m_flat.edges[dim]);
+		}
+		n += bytes(m_flat.faces) + bytes(m_flat.cell_offset)
+			+ bytes(m_flat.flags) + bytes(m_flat.z_shift_offset)
+			+ bytes(m_flat.z_shift) + bytes(m_flat.core_offset)
+			+ bytes(m_flat.core_zones);
+		return n;
+	}
+
 	ZonesView Zones::to_device(int device_id) const
 	{
 		ZonesView d {m_flat.view()};

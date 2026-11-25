@@ -1581,6 +1581,29 @@ namespace Background
 		m_uZ.broadcast(comm);
 	}
 
+	/**
+	* How much GPU memory to_device (cuda/background.cu) takes: the times,
+	* the zones, the 3D geometry (9 reciprocal basis vector components and
+	* the wall mask, if any) and the 4D plasma and fields (14, plus the two
+	* heat fluxes if the background has them), all doubles with ghost
+	* cells. Kept in step with to_device, so a run can say before copying
+	* whether the background fits on a GPU.
+	*
+	* @return Bytes.
+	*/
+	std::size_t Background::device_bytes() const
+	{
+		const std::size_t n_3d {m_zones.view().cell_offset[
+			m_zones.get_nzones()]};
+		const std::size_t n_4d {static_cast<std::size_t>(m_dim1) * n_3d};
+		std::size_t n {9 * n_3d + 14 * n_4d};
+		if (!m_q_par_i.get_data().empty()) n += n_4d;
+		if (!m_q_par_e.get_data().empty()) n += n_4d;
+		if (!m_chi.get_data().empty()) n += n_3d;
+		n += static_cast<std::size_t>(m_dim1);	// times
+		return n * sizeof(double) + m_zones.device_bytes();
+	}
+
 #ifndef USE_CUDA
 
 	// If these definitions gets called, it means you're in the CPU-only version

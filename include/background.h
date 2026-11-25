@@ -425,6 +425,8 @@ namespace Background
 
 		BackgroundDevice to_device(int device_id = 0);
 
+		std::size_t device_bytes() const;
+
 		BkgFPType interp_te();
 	};
 

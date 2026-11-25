@@ -124,6 +124,15 @@ With a GPU build of Flan installed, set `inpts["use_gpu"] = "cuda"` to follow
 the particles on the GPUs. Each rank uses every GPU it can see, so run one
 rank per node (see [MPI Parallelism](../developer/mpi-parallelism.md)).
 
+Every GPU holds a whole copy of the background and of the statistics, so
+adding GPUs doesn't let a bigger background fit. The memory needed is about
+112 bytes per cell per background frame for the background (128 with the
+heat fluxes for the thermal force) plus 76 for the statistics. Before
+copying anything, Flan prints how much each GPU needs and has free, and
+stops with a message if the run doesn't fit, leaving a tenth of the free
+memory (at least 256 MiB) for the smaller tables. Use fewer frames, fewer
+slots (`slot_cap`), or run on the CPU.
+
 ## What a run does
 
 Flan prints a short banner with the version and the number of ranks and

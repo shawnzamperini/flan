@@ -211,6 +211,8 @@ namespace Zones
 
 		ZonesView to_device(int device_id) const;
 
+		std::size_t device_bytes() const;
+
 		int neighbor_index(const int zone, const int dim, const double coord,
 			const int idx) const;
 

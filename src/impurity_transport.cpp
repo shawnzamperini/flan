@@ -5,6 +5,7 @@
 */
 
 #include <algorithm>
+#include <iomanip>
 #include <cmath>
 #include <chrono>
 #include <cstdlib>
@@ -389,6 +390,55 @@ namespace ImpurityTransport
 			source);
 	}
 
+
+	/**
+	* Whether a run fits in a GPU's memory, and if not, a message saying
+	* how much it needs (decision 5 of the GPU plan: a background too big
+	* for one GPU stops the run; keeping only some frames on the device is
+	* left for later). Every GPU holds a whole copy of the background, the
+	* statistics and the slots, so adding GPUs doesn't help.
+	*
+	* The background and statistics dominate for large runs, about 200
+	* bytes per cell per frame together. A tenth of the free memory, at
+	* least 256 MiB, is kept for the smaller copies (OpenADAS, the
+	* sputtering and sheath tables) and CUDA's own work space.
+	*
+	* @param need What the run needs on each GPU.
+	* @param free_bytes Free memory on the GPU (cudaMemGetInfo).
+	* @param total_bytes Its total memory.
+	* @param device_id The GPU, for the message.
+	* @return An empty string if it fits, otherwise the message.
+	*/
+	std::string gpu_memory_shortfall(const GpuMemoryNeed& need,
+		const std::size_t free_bytes, const std::size_t total_bytes,
+		const int device_id)
+	{
+		const std::size_t sum {need.background + need.statistics
+			+ need.slots};
+		const std::size_t reserve {std::max<std::size_t>(free_bytes / 10,
+			std::size_t {256} << 20)};
+		if (sum + reserve <= free_bytes) return "";
+
+		auto gib = [](const std::size_t b)
+		{
+			std::ostringstream os;
+			os << std::fixed << std::setprecision(2)
+				<< static_cast<double>(b) / (1024.0 * 1024.0 * 1024.0)
+				<< " GiB";
+			return os.str();
+		};
+		std::ostringstream msg;
+		msg << "This run doesn't fit in GPU " << device_id << "'s memory: it "
+			"needs " << gib(sum) << " (background " << gib(need.background)
+			<< ", statistics " << gib(need.statistics) << ", particle slots "
+			<< gib(need.slots) << "), plus about " << gib(reserve)
+			<< " to spare, and the GPU has " << gib(free_bytes) << " free of "
+			<< gib(total_bytes) << ". Each GPU holds the whole background "
+			"and statistics, so more GPUs don't help. Use fewer background "
+			"frames (each frame adds about the same), fewer slots "
+			"(slot_cap), or run on the CPU (use_gpu = \"off\").";
+		return msg.str();
+	}
 
 	/**
 	* Works out how many sub-steps each particle needs near a wall this
@@ -1344,6 +1394,38 @@ namespace ImpurityTransport
 			std::vector<Sputtering::SelfDevice> gpu_selfs(num_gpus);
 			Sputtering::SelfSource* self {deposition != nullptr
 				? deposition->self() : nullptr};
+
+			// Stop before copying anything if the run won't fit on a GPU.
+			// Each slot has about 25 arrays of 8 bytes or less, an index,
+			// its sub-step count and a 16-byte generator: 256 bytes is
+			// above that.
+			GpuMemoryNeed need {};
+			need.background = bkg.device_bytes();
+			need.statistics = imp_stats.device_bytes();
+			need.slots = static_cast<std::size_t>(slots.N()) * 256;
+			for (int dev = 0; dev < num_gpus; dev++)
+			{
+				std::size_t free_bytes {};
+				std::size_t total_bytes {};
+				Errors::check_cuda(cudaSetDevice(dev), "follow_impurities");
+				Errors::check_cuda(cudaMemGetInfo(&free_bytes, &total_bytes),
+					"follow_impurities");
+				const std::string shortfall {gpu_memory_shortfall(need,
+					free_bytes, total_bytes, dev)};
+				if (!shortfall.empty()) Errors::fatal_error(shortfall);
+				if (dev == 0)
+				{
+					std::cout << std::fixed << std::setprecision(2)
+						<< "GPU memory for each GPU: background "
+						<< need.background / 1073741824.0 << " GiB, "
+						"statistics " << need.statistics / 1073741824.0
+						<< " GiB, slots " << need.slots / 1073741824.0
+						<< " GiB (" << free_bytes / 1073741824.0 << " GiB "
+						"free of " << total_bytes / 1073741824.0 << ")\n"
+						<< std::defaultfloat;
+				}
+			}
+
 			for (int dev = 0; dev < num_gpus; dev++) 
 			{
 				// The sputtered source and the deposition tallies, if

@@ -582,6 +582,23 @@ Every phase is checked three ways:
 - Several GPUs per rank and several ranks: `MPITest` on a compute node,
   and a 1-node, 4-GPU run against 1 GPU.
 
+Progress:
+
+- Memory check done. `Background::device_bytes`,
+  `Statistics::device_bytes` and `Zones::device_bytes` give what
+  `to_device` copies; `follow_impurities` compares their sum (plus 256
+  bytes per slot) with `cudaMemGetInfo` on each GPU before copying, and
+  stops with a message (`gpu_memory_shortfall`) unless a tenth of the
+  free memory, at least 256 MiB, is left over. The statistics
+  allocations are now checked too. Tested by `GpuMemoryCPUTest` (the
+  message and the margin) and `GpuMemoryCUDATest` (estimate against the
+  measured drop in free memory on the multi-zone test backgrounds). On
+  the SPARC BOUT++ background with 20 frames (19.7 M cells per frame
+  with ghost cells, heat fluxes on), the estimate was 2479 MiB for the
+  background and 962 MiB for the statistics, against 2504 MiB and
+  972 MiB measured, about 170 MiB per frame. A 40 GB A100 fits about 200
+  such frames.
+
 **G9. Docs.**
 
 - Remove "CPU only" from `input-options.md`, `running/soledge3x.md`,
