@@ -185,7 +185,7 @@ Every phase is checked three ways:
 - `mkdocs.yml`: `FLAN_HD=` in Doxygen's `PREDEFINED` (mkdocs isn't
   installed here, so not built).
 
-**G1. Zones on the device.** Done except the timing on a GPU node.
+**G1. Zones on the device.** Done.
 
 - One struct for the host and the device instead of a separate
   `ZonesDevice`: `Zones::ZonesView` (`include/zones_hd.h`) holds per-zone
@@ -232,7 +232,24 @@ Every phase is checked three ways:
   `ctest` pass (except `MPITest`, which needs `srun`).
 - Timing: the G0 job again, `$SCRATCH/flan_gpu/g1_node/timing.sbatch`
   (same cases and configuration, plus one Gkeyll 1e6 run with
-  `srun --gpus=1`), not yet run.
+  `srun --gpus=1`). This node had the 40 GB A100s, G0's the 80 GB ones.
+  Main loop, G0 → G1:
+
+    | Case | CPU | GPU (4 GPUs) |
+    |---|---|---|
+    | `gradb` | 2.08 → 2.47 s | 2.61 → 2.48 s |
+    | `z10` | 63 → 58 s | 2.83 → 2.75 s |
+    | Gkeyll, 1e5 particles | 90.6 → 77.4 s | 3.74 → 3.76 s |
+    | Gkeyll, 1e6 particles | — | 10.3 → 11.0 s |
+
+  The Gkeyll 1e6 run on one GPU took 17.5 s. Only the 1e6 run is slower,
+  by about 6% (G0's two 1e6 runs differed by 1%); the CPU column moves by
+  more than that between jobs. That isn't enough to bring back a
+  single-zone fast path (decision 1); G8 looks at it again. The seeded
+  outputs match G0's: `gradb` and `gradb_gpu` bit for bit, `z10`, `z10_gpu`
+  and the Gkeyll 1e5 CPU and GPU runs with the same counts and velocity
+  sums within 1e-11 m/s. The Gkeyll 1e6 runs on one and four GPUs write
+  the same file, so the 4-GPU 1e6 output wasn't compared.
 
 **G2. Multi-zone push, collisions, ionization and statistics.**
 
