@@ -94,7 +94,7 @@ namespace Options
 		double m_sput_self_min_weight               {0.1};
 		int m_sput_self_max_gen                     {1000};
 		double m_sput_angle_val                     {60.0};
-		std::string m_sput_impact_opt               {"formula"};
+		std::string m_sput_impact_opt               {"sheath"};
 		double m_sput_max_wall_dist                  {2.0};
 		
 		// General background options

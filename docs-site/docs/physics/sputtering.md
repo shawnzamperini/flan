@@ -296,6 +296,13 @@ backgrounds whose flow next to the wall is too slow.
 
 ### Impact energy and effective yield
 
+`sput_impact_opt` sets where the energies and angles the ions hit the
+wall with come from. By default (`"sheath"`) they come from D$^+$ test
+ions pushed through the sheath field (see
+[below](#d-impacts-from-the-sheath)); `"formula"` uses the formula in
+this section and a fixed angle. The formula sets out what goes into the
+impact energy, so it comes first.
+
 Only the background ions sputter. Electrons are far too light: one can give
 a W atom at most $4m_e M/(m_e + M)^2 \approx 10^{-5}$ of its energy, far
 below the binding energy. $T_e$ comes in only because the electrons set
@@ -328,6 +335,93 @@ kink at threshold would spoil a Gauss-Laguerre rule.
 The sheath formula assumes no secondary electron emission from the wall,
 which would make the drop smaller.
 
+### D⁺ impacts from the sheath
+
+The formula leaves out what the sheath does to the ions' direction. With
+the field at a grazing angle, the magnetic presheath turns the ions from
+along $\mathbf{B}$ toward the wall, but only partly, so the angle they
+hit at depends on the field's angle and the plasma, and goes with their
+energy: the ions that come in fast along $\mathbf{B}$ are turned least.
+Near threshold the yield of D on W rises steeply with both energy and
+angle, so a fixed angle can be far off. With `sput_impact_opt =
+"sheath"` (the default) Flan instead pushes D$^+$ test ions through the
+same sheath field the impurities feel (`sheath_model`, with
+`sheath_fd` and `sheath_drop`), and averages the yield over what they
+hit with (`Sheath::sample_impacts`, `Sheath::ImpactTable`).
+
+**The test ions.** Each push is one-dimensional: a flat wall, a uniform
+$\mathbf{B}$ at the angle $\theta$ to its normal, and the potential of
+the sheath model as a function of the distance from the wall. The ions
+start $10\rho_s$ from the wall, where the field is negligible, with a
+Maxwellian at $T_i$ shifted by $c_s = \sqrt{e(T_e + T_i)/m_i}$ along
+$\hat{\mathbf{b}}$ toward the wall (the flow the Bohm criterion asks for
+at the sheath's edge). Only those moving toward the wall along
+$\mathbf{B}$ enter, and each is weighted by its speed along $\mathbf{B}$,
+its share of the flux into the sheath. They're pushed by the Boris
+scheme at 100 steps per gyroperiod, sub-stepped near the wall as in the
+main loop (see [Sub-stepping near the wall](#sub-stepping-near-the-wall)),
+and the velocity where each crosses the wall gives its impact energy and
+its angle from the normal. An ion that goes back past $20\rho_s$ or
+hasn't hit after 2000 gyroperiods is counted as lost. The field is
+static and $\mathbf{B}$ does no work, so each ion hits with its starting
+energy plus the drop; how far that holds (about $10^{-4}$ of the drop) is
+saved with the output.
+
+**The table.** In units of $\rho_s$, $c_s$ and $T_e$, an ion's path
+depends only on $\theta$ (which also sets how the drop is split), $T_i/T_e$
+and $\lambda_D/\rho_s$, so impact energies scale with $T_e$ and the
+angles don't change. Flan makes a table on a grid of these: 0.5° in
+$\theta$ (up to 89.5°), 0.1 in $\ln(T_i/T_e)$ and a factor of 2 in
+$\lambda_D/\rho_s$, with 2000 test ions at each point. Only the points
+the run's wall elements and frames fall on are made, at the start of the
+run, in parallel. A point takes from a fraction of a second at moderate
+angles to over a second near grazing incidence on 16 cores, and a
+divertor typically needs about a hundred points. Each element in each
+frame uses its nearest point, with the energies times its own $T_e$.
+
+**The effective yield** is then the flux-weighted average over the
+point's test ions $k$,
+
+$$
+Y_\text{eff} = \sum_k w_k\, Y(T_e\,\varepsilon_k, \alpha_k),
+\qquad \sum_k w_k = 1,
+$$
+
+with $\varepsilon_k$ the impact energy over $T_e$ and $\alpha_k$ the
+angle, and the mean impact energy and angle saved in the output are the
+same averages. `sput_angle_val` isn't used.
+
+**Mean impact energy.** It's the drop plus the flux-weighted mean energy
+the ions start with: $T_i$ across $\mathbf{B}$, and along it the shifted
+Maxwellian weighted by speed, together about
+$\tfrac{1}{2}T_e + 3T_i$. The formula's $\tfrac{1}{2}T_e$ for the
+presheath and $2T_i$ for an unshifted Maxwellian give about $T_i$ less.
+The extra $T_i$ comes from the ions entering the sheath already flowing
+at $c_s$, which the formula counts only through $T_e$.
+
+**Limitations.**
+
+- The $\mathbf{E}\times\mathbf{B}$ part of the flux (see
+  [Ion flux onto the wall](#ion-flux-onto-the-wall)) gets the same
+  energies and angles as the parallel part.
+- The test ions see a uniform plasma and field and no collisions, and
+  start the same way everywhere.
+- The grid in $\lambda_D/\rho_s$ is coarse: a point can be up to a factor
+  $\sqrt{2}$ off. At $\lambda_D/\rho_s \sim 0.01$ (dense, cold divertor
+  plasmas) that moves the mean angle a few tenths of a degree, at
+  $\sim 0.2$ (low density, strong field) by up to 2°.
+  Along a target the mean angle steps by about that much where the
+  elements cross from one point to the next.
+- 2000 test ions resolve the distribution down to about 1/2000 of the
+  flux. Where the plasma is cold enough that only the far tail of the
+  ions is above threshold, the source comes out exactly 0, where
+  `"formula"`, which integrates its thermal distribution to $30\,T_i$,
+  gives a tiny one. Those places sputter many orders of magnitude less
+  than the hot ones, so the total isn't affected.
+- Only D$^+$ (the background's ion species) sputters, and the sheath
+  model's drop has no secondary electron emission.
+- CPU only, like the rest of sputtering.
+
 ### Output
 
 The source is saved in the netCDF file's `sputtering` group, which has an
@@ -347,13 +441,31 @@ The source is saved in the netCDF file's `sputtering` group, which has an
 | `flux_par`, `flux_exb` | (time, element) | m$^{-2}$s$^{-1}$ | Its parallel and E x B parts, positive into the wall |
 | `energy` | (time, element) | eV | Mean impact energy |
 | `yield` | (time, element) | atoms/ion | Effective yield |
+| `ion_angle` | (time, element) | degrees | Mean angle the ions hit at, from the normal (`sput_angle_val` with `"formula"`) |
 | `rate` | (time, element) | atoms/s | Sputtered atoms |
 | `total_rate` | (time) | atoms/s | Sum over the elements |
 
+With `sput_impact_opt = "sheath"` the group also has the energies and
+angles of the ions hitting the wall, averaged over the frames' windows
+like `source_rate`:
+
+| Variable | Shape | Units | Contents |
+|---|---|---|---|
+| `ion_energy_edges` | (ion_energy_edge) | eV | Edges of the energy bins, 20 per decade from 0.01 eV to 100 keV |
+| `ion_energy_hist`, `ion_angle_hist` | (ion_energy_bin), (ion_angle_bin) | ions/s | Ions hitting the wall by impact energy, and by angle from the normal in 1° bins |
+| `sputtering_ion_energy_hist`, `sputtering_ion_angle_hist` | (ion_energy_bin), (ion_angle_bin) | atoms/s | The atoms sputtered by the ions in each bin, so they add up to `source_rate` |
+
+and the attributes `ion_impact_points` (points in the table),
+`ion_impact_num_ions` (test ions at each), `ion_impact_lost` and
+`ion_impact_max_energy_error` (the most an ion's impact energy is off its
+starting energy plus the drop, over the drop). `sput_impact_opt` is saved
+as an attribute either way.
+
 A summary is also printed at the start of the run: the total rate, the ion
 flux onto the wall and how much came from each part, and the flux-weighted
-mean impact energy and yield. The `source_rate` attribute of the group is
-the total rate averaged over the run (see below).
+mean impact energy, angle and yield, and with `"sheath"` the size of the
+table. The `source_rate` attribute of the group is the total rate averaged
+over the run (see below).
 
 ## Starting the sputtered atoms
 
@@ -372,7 +484,9 @@ aren't used:
 3. **Which ion sputtered it.** Near threshold only the fast ions sputter,
    so the energy $E_i$ of the ion is picked from the ions that sputter,
    whose energies go as $Y(E)\,p(\varepsilon)$, the same integrand as
-   $Y_\text{eff}$.
+   $Y_\text{eff}$. With `sput_impact_opt = "sheath"`, one of the point's
+   test ions is picked with weight $w_k Y_k$ instead, which gives its
+   energy.
 4. **How fast.** The atom's energy is from the Thompson distribution,
    $f(E) \propto E/(E + E_b)^3$, with the target's surface binding energy
    $E_b$ from the yield table (8.79 eV for W). The distribution is cut off
@@ -468,7 +582,9 @@ the wall, much harder than its gyration alone would.
 
 `sheath_model` adds this field to the push, as an analytic function of
 the distance $d$ from the wall, in the plasma cells next to a wall. It's
-`"brooks"` by default, and `"off"` leaves it out. The background's own
+`"brooks"` by default, and `"off"` leaves it out (and then needs
+`sput_impact_opt = "formula"`, since the D$^+$ impacts come from the same
+field). The background's own
 field already holds the collisional presheath, so only these two layers
 are added.
 
@@ -556,9 +672,6 @@ to $10^{-8}$ s.
 
 ### What it leaves out
 
-- **D$^+$ impacts.** The sputtered source still uses the formula for
-  $E_\text{sheath}$ and the fixed angle `sput_angle_val` above, not ions
-  pushed through this field.
 - **The GPU.** Sputtering is CPU only, and a GPU run goes without the
   sheath, with a warning.
 - **Secondary electron emission**, which would lower the drop.
@@ -727,6 +840,12 @@ For deuterium sputtering tungsten near threshold:
 - **The ones that get away set the leakage.** The few percent that
   escape prompt redeposition carry the impurity along the field lines,
   and where they go is decided by the parallel forces on them.
+- **The sheath raises the D$^+$ source near threshold.** At grazing
+  field angles the ions hit far from the normal and, with the flow they
+  enter the sheath with, with more energy than the formula gives, and the
+  D on W yield rises with both. Near threshold `"sheath"` can give
+  several times the `"formula"` source; well above it, the two come
+  closer.
 - **The sheath raises prompt redeposition.** Its field pulls the ions
   back to the wall faster than their gyration would, more so the more
   grazing the field. With `sheath_model = "off"` prompt redeposition is
@@ -855,6 +974,29 @@ the model leaves out.
   prompt redeposition, and that `"brooks"` and `"borodkina"` give nearly
   the same answer.
 
+### D⁺ impacts
+
+`reg_sheath_impacts` makes the sputtered source on the slab with
+synthetic yield tables flat in angle, and checks:
+
+- With a constant yield, the source is the same with both values of
+  `sput_impact_opt`.
+- With a yield linear in energy, $Y_\text{eff}$ is the slope times the
+  mean impact energy, and that is the drop plus the flux-weighted mean
+  starting energy, worked out from the shifted Maxwellian, within its
+  counting error, at field angles from 0° to 85° and $T_i/T_e$ from 0.5
+  to 2.
+- With $\mathbf{B}$ along the normal, the field only adds to the speed
+  along it, so the distribution of impact angles follows from the
+  starting Maxwellian and the drop.
+- In Borodkina and Tsvetkov's two cases the mean angle matches the test
+  ions at the same plasma (from `reg_sheath_angles`) to within the grid's
+  error.
+
+It also prints the source from RustBCA's D on W with both options at a
+few $T_e$ and field angles. `reg_sheath_angles` checks the push the test
+ions use against the main loop and against the paper.
+
 ### Self-sputtering
 
 `reg_self_sputter` runs the prompt redeposition case with self-sputtering
@@ -905,10 +1047,12 @@ data/sputtering/D_on_W.h5 --save-plots ...` plus the reference data:
   followed impurity on a wall of another material, and no reflection:
   an impurity that hits the wall either sticks or (with self-sputtering)
   carries on as a sputtered atom.
-- **Fixed angle of incidence for D$^+$.** Every D$^+$ ion hits at
-  `sput_angle_val`, and with the impact energy from the formula. In
-  reality both depend on the field angle and the sheath. The impurities'
-  own impacts do come from the push.
+- **D$^+$ impacts from a one-dimensional model.** The D$^+$ energies and
+  angles come from test ions in a uniform plasma and the analytic sheath
+  field (see [D⁺ impacts from the sheath](#d-impacts-from-the-sheath)),
+  with the $\mathbf{E}\times\mathbf{B}$ part of the flux given the same
+  ones. With `sput_impact_opt = "formula"` every ion hits at the fixed
+  `sput_angle_val`. The impurities' own impacts come from the push.
 - **Atoms start on the staircase.** An atom starts at a staircase face,
   but its direction is about the outline's normal, which can be tilted
   from the face's. A direction that points back through the face goes

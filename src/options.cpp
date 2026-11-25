@@ -2636,8 +2636,9 @@ namespace Options
 	* presheath energy (Sputtering::sheath_energy) plus a thermal energy
 	* at Ti, all at sput_angle_val. "sheath": D+ test ions pushed through
 	* the sheath_model field (Sheath::ImpactTable), which gives the
-	* energies and angles together. "sheath" needs sheath_model to be on.
-	* CPU only.
+	* energies and angles together. "sheath" is the default and needs
+	* sheath_model to be on, so a run with the sheath off must set
+	* "formula". CPU only.
 	*
 	* Valid values are "formula" and "sheath"; anything else stops the run
 	* (check_input). Also sets the control integer returned by

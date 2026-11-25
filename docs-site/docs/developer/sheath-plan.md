@@ -647,11 +647,31 @@ and frame uses its grid point's samples.
     formula's at Te = Ti = 100 eV, 2.3 to 2.6 at 50 eV, and 6 to 32 at
     20 eV, where both are near threshold. At Te = 10 eV every D⁺ hits
     below threshold with `"sheath"` and Flan stops (source 0).
-- **D5. Docs and a full case.** The D⁺ impact section in
-  [Sputtering](../physics/sputtering.md) and the option in
-  [Input Options](../input-options.md); TCV-X21 with both options (gross
-  source, its spread along the targets, net erosion). Then `"sheath"`
-  becomes the default.
+- **D5. Docs and a full case.** Done:
+  - `"sheath"` is the default. A run with `sheath_model = "off"` stops
+    unless it sets `"formula"` (decided 2026-11-24, rather than falling
+    back to the formula quietly). `reg_prompt_redep` and
+    `reg_self_sputter` set `"formula"`, so their results don't move.
+  - [Sputtering](../physics/sputtering.md): a "D⁺ impacts from the
+    sheath" section (the test ions, the table, the effective yield, why
+    the mean energy has about T_i more than the formula's, limitations),
+    the output, births, a validation section for `reg_sheath_impacts`, a
+    "what to expect" item, and the limitations updated. Input Options
+    has the new default.
+  - TCV-X21 (sputtered targets, `"brooks"`, 10,000 W, 20 μs) with both
+    options. Gross source 3.45e16 against 9.84e15 atoms/s (3.5 times);
+    the ions hit at 73° against 60°, with 175 against 144 eV; the ions
+    that sputter have a median of 376 eV (10 to 90%: 300 to 530 eV)
+    against 168 eV for all. Along the targets the source is 2 to 100
+    times higher, most where it's coldest, and exactly 0 in the coldest
+    parts (only the far tail is above threshold, and 2000 test ions
+    don't reach it), where the formula's source is 8 orders below the
+    peak. The mean angle steps by 1° to 2° where the elements cross grid
+    points. 70% redeposited against 67%; net erosion 1.04e16 against
+    3.27e15 atoms/s. Run time 11.3 against 10.5 minutes.
+  - The finer λ_D / ρ_s grid was considered and not needed.
+
+S8 is done.
 
 Decisions (2026-11-23): the c_s-shifted start, fixed, as in
 `reg_sheath_angles`; the table built at startup, not a file; `"sheath"`

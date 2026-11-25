@@ -115,7 +115,11 @@ Inputs base_inputs(const std::string& variant)
 	inpts["imp_source_opt"] = "sputter";
 	inpts["sput_table_file"] = std::string(FLAN_DATA_DIR)
 		+ "/sputtering/D_on_W.h5";
+	// The D+ impacts from the formula at sput_angle_val, not the sheath
+	// model (the default), which some variants have off: this case
+	// checks what the atoms do after they're sputtered
 	inpts["sput_angle_val"] = 60.0;
+	inpts["sput_impact_opt"] = "formula";
 
 	// Self-sputtering
 	inpts["sput_self"] = "on";

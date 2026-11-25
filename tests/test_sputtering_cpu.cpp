@@ -1994,18 +1994,18 @@ TEST_F(SputteringTable, SelfChecks)
 		testing::ExitedWithCode(EXIT_FAILURE), "mass");
 }
 
-// sput_impact_opt: "formula" (the default) or "sheath", with its control
+// sput_impact_opt: "sheath" (the default) or "formula", with its control
 // integer; anything else stops the run
 TEST(SputteringOptions, ImpactOpt)
 {
 	Options::Options opts {};
-	EXPECT_EQ(opts.sput_impact_opt(), "formula");
-	EXPECT_EQ(opts.sput_impact_opt_int(), 0);
-	opts.set_sput_impact_opt("sheath");
 	EXPECT_EQ(opts.sput_impact_opt(), "sheath");
 	EXPECT_EQ(opts.sput_impact_opt_int(), 1);
 	opts.set_sput_impact_opt("formula");
+	EXPECT_EQ(opts.sput_impact_opt(), "formula");
 	EXPECT_EQ(opts.sput_impact_opt_int(), 0);
+	opts.set_sput_impact_opt("sheath");
+	EXPECT_EQ(opts.sput_impact_opt_int(), 1);
 	EXPECT_EXIT(opts.set_sput_impact_opt("bogus"),
 		testing::ExitedWithCode(EXIT_FAILURE), "sput_impact_opt");
 }

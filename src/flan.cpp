@@ -175,10 +175,10 @@ R"(
 		{
 			if (opts.sheath_model_int() == 0)
 			{
-				Errors::fatal_error("sput_impact_opt = \"sheath\" pushes the "
-					"ions through the sheath field, but sheath_model is "
-					"\"off\". Turn the sheath on, or use sput_impact_opt = "
-					"\"formula\".");
+				Errors::fatal_error("sput_impact_opt = \"sheath\" (the "
+					"default) pushes the ions through the sheath field, but "
+					"sheath_model is \"off\". Turn the sheath on, or set "
+					"sput_impact_opt = \"formula\".");
 			}
 			impact_model = static_cast<Sheath::Model>(
 				opts.sheath_model_int());
