@@ -29,6 +29,7 @@
 #include "options_device.h"
 #include "particle_progress.h"
 #include "pcg32.h"
+#include "sheath.h"
 #include "slots.h"
 #include "timer.h"
 #include "utilities.h"
@@ -125,9 +126,12 @@ namespace ImpurityTransport
 	* @param dt Time step (s).
 	* @param max_time_ctr Counter of particles that exceeded the maximum
 	*                     allowed time. Incremented atomically.
+	* @param nsub If given, particles with nsub[i] > 1 were already moved
+	*        by Boris::substep_cpu: only their times are advanced.
 	*/
 	void step_cpu(Slots::Slots& slots, const Background::Background& bkg, 
-		const Options::Options& opts, const double dt, int& max_time_ctr)
+		const Options::Options& opts, const double dt, int& max_time_ctr,
+		const std::vector<int>* nsub = nullptr)
 	{
 
 		#pragma omp parallel for
@@ -166,10 +170,13 @@ namespace ImpurityTransport
 			slots.set_pt(i, slots.pt()[i] + dt);
 			slots.set_t(i, slots.t()[i] + dt);
 
-			// Update curvilinear position
-			slots.set_x(i, slots.x()[i] + slots.vx()[i] * dt);
-			slots.set_y(i, slots.y()[i] + slots.vy()[i] * dt);
-			slots.set_z(i, slots.z()[i] + slots.vz()[i] * dt);
+			// Update curvilinear position, unless sub-stepped near a wall
+			if (nsub == nullptr || (*nsub)[i] <= 1)
+			{
+				slots.set_x(i, slots.x()[i] + slots.vx()[i] * dt);
+				slots.set_y(i, slots.y()[i] + slots.vy()[i] * dt);
+				slots.set_z(i, slots.z()[i] + slots.vz()[i] * dt);
+			}
 
 			// Check if maximum allowed time has been exceeded, setting to
 			// dead if so and incrementing counter
@@ -201,7 +208,7 @@ namespace ImpurityTransport
 	*            temperature.
 	* @param oa_ioniz OpenADAS ionization rate coefficients (SCD).
 	* @param oa_recomb OpenADAS recombination rate coefficients (ACD).
-	* @param opts Simulation options (currently unused).
+	* @param opts Simulation options, for the charge limit (imp_iz_max_charge).
 	* @param dt Time step (s).
 	* @param ioniz_warnings Counter of particles whose ionization
 	*                       probability exceeded 1.
@@ -218,7 +225,7 @@ namespace ImpurityTransport
 
 		// Updates particle charge within
 		OpenADAS::ioniz_recomb(slots, bkg, oa_ioniz, oa_recomb, dt, 
-			ioniz_warnings, recomb_warnings, rngs);
+			ioniz_warnings, recomb_warnings, rngs, opts.imp_iz_max_charge());
 	}
 
 
@@ -380,6 +387,36 @@ namespace ImpurityTransport
 
 
 	/**
+	* Works out how many sub-steps each particle needs near a wall this
+	* time step (Sheath::Sheath::substeps): 1 for most, more for charged
+	* particles that can reach the sheath field.
+	*
+	* @param slots Particle slots.
+	* @param sheath The sheath field.
+	* @param dt The time step (s).
+	* @param nsub Set to the number of sub-steps of each slot (resized to
+	*        the number of slots).
+	*/
+	void count_substeps_cpu(const Slots::Slots& slots,
+		const Sheath::Sheath& sheath, const double dt, std::vector<int>& nsub)
+	{
+		nsub.assign(slots.N(), 1);
+		#pragma omp parallel for
+		for (int i = 0; i < slots.N(); ++i)
+		{
+			if (slots.state()[i] > 0) continue;
+			const double q_m {slots.q()[i] * -Constants::charge_e
+				/ slots.mass()};
+			const double speed {std::sqrt(slots.vX()[i] * slots.vX()[i]
+				+ slots.vY()[i] * slots.vY()[i] + slots.vZ()[i]
+				* slots.vZ()[i])};
+			nsub[i] = sheath.substeps(slots.zone()[i], slots.tidx()[i],
+				slots.xidx()[i], slots.yidx()[i], slots.zidx()[i],
+				{slots.x()[i], slots.y()[i], slots.z()[i]}, speed, q_m, dt);
+		}
+	}
+
+	/**
 	* Updates particle velocities with the Boris algorithm, choosing the CPU
 	* or GPU implementation.
 	*
@@ -395,11 +432,17 @@ namespace ImpurityTransport
 	* @param bkg_d Device-side background plasma (used on the GPU path).
 	* @param opts Simulation options.
 	* @param dt Time step to advance the velocities by (s).
+	* @param sheath If given, the sheath field in front of the walls is
+	*        added to the background's (CPU only).
+	* @param nsub If given (with sheath), set to each particle's number of
+	*        sub-steps near the wall, and those with more than one are
+	*        pushed and moved by Boris::substep_cpu (CPU only).
 	*/
 	void boris_wrapper(Slots::Slots& slots, 
 		Slots::SlotsDevice& slots_d, const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, const Options::Options& opts,
-		const double dt)
+		const double dt, const Sheath::Sheath* sheath = nullptr,
+		std::vector<int>* nsub = nullptr)
 	{
 
 #ifdef USE_CUDA
@@ -411,7 +454,14 @@ namespace ImpurityTransport
 		}
 #endif
 
-		Boris::update_velocity_cpu(slots, bkg, opts, dt);
+		if (sheath != nullptr && nsub != nullptr)
+		{
+			count_substeps_cpu(slots, *sheath, dt, *nsub);
+			Boris::update_velocity_cpu(slots, bkg, opts, dt, sheath, nsub);
+			Boris::substep_cpu(slots, bkg, dt, *sheath, *nsub);
+			return;
+		}
+		Boris::update_velocity_cpu(slots, bkg, opts, dt, sheath);
 	}
 
 
@@ -529,13 +579,15 @@ namespace ImpurityTransport
 	*                   the GPU path).
 	* @param max_time_ctr Counter of particles that exceeded the maximum
 	*                     allowed time (CPU path only).
+	* @param nsub If given, the particles sub-stepped near a wall this step
+	*        (nsub[i] > 1), which are already moved (CPU path only).
 	*/
 	void step_wrapper(Slots::Slots& slots, Slots::SlotsDevice& slots_d,
 		const Background::Background& bkg, 
 		const Background::BackgroundDevice& bkg_d, 
 		const Options::Options& opts, const Options::OptionsDevice* opts_d,
 		const OpenADAS::IonizRecombWarningsDevice& warnings_d, 
-		int& max_time_ctr)
+		int& max_time_ctr, const std::vector<int>* nsub = nullptr)
 	{
 
 #ifdef USE_CUDA
@@ -548,7 +600,7 @@ namespace ImpurityTransport
 #endif
 
 		// Defined above
-		step_cpu(slots, bkg, opts, opts.imp_time_step(), max_time_ctr);
+		step_cpu(slots, bkg, opts, opts.imp_time_step(), max_time_ctr, nsub);
 	}
 
 
@@ -762,6 +814,8 @@ namespace ImpurityTransport
 	*               only).
 	* @param deposition Where absorbed particles land on the wall, added to
 	*                   if given (CPU only).
+	* @param sheath If given, the sheath field in front of the walls is
+	*               added to the push (CPU only).
 	* @return Counts of what happened to particles at the boundaries (CPU
 	*         path only, all zeros on the GPU path).
 	*/
@@ -779,7 +833,8 @@ namespace ImpurityTransport
 		const OpenADAS::IonizRecombWarningsDevice& warnings_d,
 		std::vector<pcg32>& rngs, pcg32* rngs_d, int& max_time_ctr,
 		const Sputtering::Source* source = nullptr,
-		Sputtering::Deposition* deposition = nullptr)
+		Sputtering::Deposition* deposition = nullptr,
+		const Sheath::Sheath* sheath = nullptr)
 	{
 
 		// Rank and number of processes
@@ -850,11 +905,14 @@ namespace ImpurityTransport
 		// at t - dt/2. So we still need to push the particle velocity
 		// back by half a time step.
 		boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
-			-opts.imp_time_step() / 2.0);
+			-opts.imp_time_step() / 2.0, sheath);
 
 		// Record starting position in statistics arrays
 		record_stats_wrapper(imp_stats, imp_stats_d, slots, slots_d, opts, 
 			opts.imp_time_step());
+
+		// Sub-steps of each particle near a wall (with the sheath field)
+		std::vector<int> nsub {};
 
 		// Begin loop
 		bool all_dead {false};
@@ -903,7 +961,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Boris));
 				boris_wrapper(slots, slots_d, bkg, bkg_d, opts, 
-					opts.imp_time_step());
+					opts.imp_time_step(), sheath, sheath ? &nsub : nullptr);
 			}
 
 #ifdef DEBUG
@@ -914,7 +972,7 @@ namespace ImpurityTransport
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::Step));
 				step_wrapper(slots, slots_d, bkg, bkg_d, opts, opts_d, 
-					warnings_d, max_time_ctr);
+					warnings_d, max_time_ctr, sheath ? &nsub : nullptr);
 			}
 
 #ifdef DEBUG
@@ -1085,13 +1143,15 @@ namespace ImpurityTransport
 	*        is added to it. Only used on CPUs.
 	* @param fates_out If given, set to what happened to the particles,
 	*        summed over every rank, on rank 0 (CPU only).
+	* @param sheath If given, the sheath field in front of the walls is
+	*        added to the push. Only used on CPUs.
 	* @return Impurity statistics accumulated from every particle followed
 	*         on this rank.
 	*/
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer,
 		const Sputtering::Source* source, Sputtering::Deposition* deposition,
-		Boundary::Fates* fates_out)
+		Boundary::Fates* fates_out, const Sheath::Sheath* sheath)
 	{
 		
 #ifdef DEBUG
@@ -1376,7 +1436,8 @@ namespace ImpurityTransport
 		const Boundary::Fates fates {main_loop(slots, slots_d, bkg, bkg_d,
 			imp_stats, imp_stats_d, oa_ioniz, oa_ioniz_d, oa_recomb,
 			oa_recomb_d, opts, opts_d, timer, ioniz_warnings, recomb_warnings,
-			warnings_d, rngs, rngs_d, max_time_ctr, source, deposition)};
+			warnings_d, rngs, rngs_d, max_time_ctr, source, deposition,
+			sheath)};
 
 		print_counter_warnings(opts, max_time_ctr, ioniz_warnings, 
 			recomb_warnings);

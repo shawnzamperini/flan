@@ -29,6 +29,7 @@
 #include "read_bkg.h"
 #include "read_gkyl.h"
 #include "save_results.h"
+#include "sheath.h"
 #include "sputtering.h"
 #include "timer.h"
 #include "vectors.h"
@@ -137,6 +138,13 @@ R"(
 	// The thermal force needs the heat fluxes and the CPU
 	Collisions::check_thermal_force(bkg, opts);
 
+	// The charge limit for tests is only applied on the CPU
+	if (opts.imp_iz_max_charge() >= 0 && opts.use_gpu_int() > 0)
+	{
+		Errors::fatal_error("imp_iz_max_charge only works on the CPU. Set "
+			"use_gpu = \"off\".");
+	}
+
 	// The sputtered source. Every rank calculates its own from the
 	// broadcast background, since every rank starts particles from it.
 	// Each particle then stands for source_rate / imp_num atoms/s (its
@@ -158,7 +166,29 @@ R"(
 		if (rank == 0) std::cout << "Calculating the sputtered source...\n";
 		const Sputtering::Surface surface(bkg, opts.sput_max_wall_dist());
 		const Sputtering::YieldTable table(opts.sput_table_file());
-		source.emplace(surface, bkg, table, opts);
+
+		// The ions' impact energies and angles from D+ test ions pushed
+		// through the sheath field, which must then be on, or from the
+		// formula at sput_angle_val
+		Sheath::Model impact_model {Sheath::Model::off};
+		if (opts.sput_impact_opt_int() == 1)
+		{
+			if (opts.sheath_model_int() == 0)
+			{
+				Errors::fatal_error("sput_impact_opt = \"sheath\" (the "
+					"default) pushes the ions through the sheath field, but "
+					"sheath_model is \"off\". Turn the sheath on, or set "
+					"sput_impact_opt = \"formula\".");
+			}
+			impact_model = static_cast<Sheath::Model>(
+				opts.sheath_model_int());
+			if (rank == 0)
+			{
+				std::cout << "Pushing D+ test ions through the sheath for "
+					"their impact energies and angles...\n";
+			}
+		}
+		source.emplace(surface, bkg, table, opts, impact_model);
 		if (rank == 0)
 		{
 			surface.print_summary(std::cout);
@@ -171,12 +201,79 @@ R"(
 				"follow.");
 		}
 		// Where the sputtered atoms land back on the wall
-		deposition.emplace(source->surface(), opts.imp_atom_num());
+		deposition.emplace(source->surface(), opts.imp_atom_num(),
+			bkg.get_phi_sign());
 		if (rank == 0 && opts.imp_source_scale_fact() != 1.0)
 		{
 			std::cout << "Warning! imp_source_scale_fact isn't used with "
 				"imp_source_opt = \"sputter\".\nThe sputtered source ("
 				<< source->source_rate() << " atoms/s) is used instead.\n";
+		}
+	}
+
+	// The sheath field in front of the walls, from the same wall surface
+	// as the sputtered source (or its own if there's no source). It's on
+	// by default, so a background without walls just goes without, and on
+	// the GPU (where it isn't written yet) it's left out with a warning.
+	std::optional<Sheath::Sheath> sheath {};
+	if (opts.sheath_model_int() > 0 && (source
+		|| Sputtering::has_surfaces(bkg)))
+	{
+		if (opts.use_gpu_int() > 0)
+		{
+			if (rank == 0)
+			{
+				std::cout << "Warning! The sheath field (sheath_model = \""
+					<< opts.sheath_model() << "\") only runs on the CPU for "
+					"now, so this GPU run goes without it.\n";
+			}
+		}
+		else
+		{
+			const auto model {static_cast<Sheath::Model>(
+				opts.sheath_model_int())};
+			if (source) sheath.emplace(source->surface(), bkg, model,
+				opts.sheath_fd(), opts.sheath_drop());
+			else
+			{
+				const Sputtering::Surface surface(bkg,
+					opts.sput_max_wall_dist());
+				sheath.emplace(surface, bkg, model, opts.sheath_fd(),
+					opts.sheath_drop());
+			}
+			if (rank == 0) sheath->print_summary(std::cout);
+		}
+	}
+
+	// Self-sputtering: impurities landing on the wall sputter more atoms
+	// and carry on as one of them. With the sheath field on, they've been
+	// accelerated through it already; without, the drop is added to their
+	// impact energy.
+	std::optional<Sputtering::SelfSource> self {};
+	if (opts.sput_self_int() == 1)
+	{
+		if (!source)
+		{
+			Errors::fatal_error("sput_self = \"on\" needs the sputtered "
+				"source (imp_source_opt = \"sputter\").");
+		}
+		if (opts.sput_self_table_file() == "undefined")
+		{
+			Errors::fatal_error("sput_self = \"on\" needs a "
+				"self-sputtering yield table, set with "
+				"sput_self_table_file.");
+		}
+		const Sputtering::YieldTable self_table(opts.sput_self_table_file());
+		self.emplace(*source, self_table, opts, sheath.has_value());
+		deposition->set_self(&*self);
+		if (rank == 0)
+		{
+			std::cout << "Self-sputtering on, yields from "
+				<< opts.sput_self_table_file() << " (" << self_table
+				.energy_min() << " to " << self_table.energy_max()
+				<< " eV). Roulette below " << self->min_weight()
+				<< " atoms/s; the run stops at generation "
+				<< opts.sput_self_max_gen() << ".\n";
 		}
 	}
 
@@ -186,7 +283,8 @@ R"(
 	Collisions::reset_skew_counts();
 	Impurity::Statistics imp_stats {ImpurityTransport::follow_impurities(bkg, opts, 
 		timer, source ? &*source : nullptr,
-		deposition ? &*deposition : nullptr, &fates)};
+		deposition ? &*deposition : nullptr, &fates,
+		sheath ? &*sheath : nullptr)};
 	timer.stop(Timer::Section::Imp);
 
 	// How the thermal force's skewed sampling went, over every rank
@@ -203,6 +301,11 @@ R"(
 		deposition->reduce(0);
 		if (rank == 0)
 			deposition->print_summary(std::cout, source->source_rate());
+	}
+	if (self)
+	{
+		self->reduce(0);
+		if (rank == 0) self->print_summary(std::cout, source->source_rate());
 	}
 
 	// Reduce imp_stats from each rank, defined in impurity_stats.cpp. Only

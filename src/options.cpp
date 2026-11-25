@@ -86,6 +86,9 @@ namespace Options
 		set_imp_source_opt(m_imp_source_opt);
 		set_sput_flux_opt(m_sput_flux_opt);
 		set_sput_bohm_floor(m_sput_bohm_floor);
+		set_sheath_model(m_sheath_model);
+		set_sput_self(m_sput_self);
+		set_sput_impact_opt(m_sput_impact_opt);
 	}
 
 	// Setter definitions. They're all the same, so just throwing together
@@ -536,6 +539,45 @@ namespace Options
 	*/
 	void Options::set_slab_major_radius(double slab_major_radius)
 		{m_slab_major_radius = slab_major_radius;}
+
+	/**
+	* Sets the slab_wall option.
+	*
+	* Which face of the slab background's box is a material wall, such as
+	* a divertor target: particles that reach it are absorbed and counted
+	* as hitting the wall, and with imp_source_opt = "sputter" the plasma
+	* sputters it. The face replaces whatever its *bound_type gives. Only
+	* for a straight slab (slab_major_radius = 0) on the CPU.
+	*
+	* Valid values are "none", "xmin", "xmax", "ymin" and "ymax". An
+	* invalid value prints an error and leaves the option unchanged.
+	*
+	* @param slab_wall New value of the slab_wall option.
+	*/
+	void Options::set_slab_wall(std::string slab_wall)
+	{
+		if (check_input<std::string>("slab_wall", slab_wall,
+			{"none", "xmin", "xmax", "ymin", "ymax"}))
+		{
+			m_slab_wall = slab_wall;
+		}
+	}
+
+	/**
+	* Sets the slab_b_angle option.
+	*
+	* Angle (degrees) the slab background's magnetic field is turned from
+	* +X toward -Y, in the X-Y plane: the unit vector along B is (cos a,
+	* -sin a, 0). With the wall at the y min face (slab_wall = "ymin"), it
+	* is the angle between the field and the wall, and the field runs into
+	* the wall going along +B. 0 (the default) is the field along +X. Must
+	* be from -90 to 90. Only for a straight slab, without slab_efield_y,
+	* slab_efield_y_rate or slab_bgrad_y.
+	*
+	* @param slab_b_angle New value of the slab_b_angle option.
+	*/
+	void Options::set_slab_b_angle(double slab_b_angle)
+		{m_slab_b_angle = slab_b_angle;}
 
 	/**
 	* Sets the tbound_type option.
@@ -995,6 +1037,41 @@ namespace Options
 	}
 
 	/**
+	* Sets the sheath_model option.
+	*
+	* The electric field of the sheath in front of the wall (the magnetic
+	* presheath and the Debye sheath), added to the push in the plasma
+	* cells next to the wall surfaces (see sheath.cpp). The layers are far
+	* thinner than a cell, so the background doesn't hold them. "brooks" is
+	* Brooks' two-exponential profile, as in ERO and GITR, and "borodkina"
+	* Borodkina and Tsvetkov's; both split the drop the same way. The
+	* default is "brooks". It only does anything on a background with wall
+	* surfaces (as for imp_source_opt = "sputter"), and is left out on
+	* other backgrounds. CPU only: a GPU run goes without it, with a
+	* warning.
+	*
+	* Valid values are "off", "brooks" and "borodkina". An invalid value
+	* prints an error and leaves the option unchanged. Also sets the
+	* control integer returned by sheath_model_int() to 0 for "off", 1 for
+	* "brooks", 2 for "borodkina" (the values of Sheath::Model). An invalid
+	* value leaves the control integer unchanged.
+	*
+	* @param sheath_model New value of the sheath_model option.
+	*/
+	void Options::set_sheath_model(std::string sheath_model)
+	{
+		if (check_input<std::string>("sheath_model", sheath_model,
+			{"off", "brooks", "borodkina"}))
+		{
+			m_sheath_model = sheath_model;
+		}
+
+		if (sheath_model == "off") m_sheath_model_int = 0;
+		else if (sheath_model == "brooks") m_sheath_model_int = 1;
+		else if (sheath_model == "borodkina") m_sheath_model_int = 2;
+	}
+
+	/**
 	* Sets the sput_angle_val option.
 	*
 	* Angle (degrees from the surface normal) at which background ions hit
@@ -1254,6 +1331,19 @@ namespace Options
 	*/
 	void Options::set_imp_atom_num(int imp_atom_num) 
 		{m_imp_atom_num = imp_atom_num;}
+
+	/**
+	* Sets the imp_iz_max_charge option.
+	*
+	* Highest charge the impurity can ionize to. It is for regression
+	* cases that compare with models leaving out further ionization, e.g.,
+	* prompt redeposition after ionizing once (Fussmann's model), not for
+	* physics runs. Below 0 (the default) there is no limit. CPU only.
+	*
+	* @param imp_iz_max_charge New value of the imp_iz_max_charge option.
+	*/
+	void Options::set_imp_iz_max_charge(int imp_iz_max_charge)
+		{m_imp_iz_max_charge = imp_iz_max_charge;}
 
 	/**
 	* Sets the imp_mass_amu option.
@@ -2448,6 +2538,221 @@ namespace Options
 		{return m_sput_flux_opt;}
 	const std::string& Options::sput_bohm_floor() const
 		{return m_sput_bohm_floor;}
+
+	/**
+	* Sets the sheath_fd option.
+	*
+	* The share of the sheath drop in the Debye sheath, f_D, in place of
+	* the one from the field's angle to the wall (1 - ln cos(theta) /
+	* lam_w). For comparing with models that fix it, such as Brooks'
+	* reference case (0.25), and for sensitivity studies. -1 (the
+	* default) works it out from the angle.
+	*
+	* Valid values are -1 and 0 to 1. An invalid value prints an error and
+	* leaves the option unchanged.
+	*
+	* @param sheath_fd New value of the sheath_fd option.
+	*/
+	void Options::set_sheath_fd(double sheath_fd)
+	{
+		if (sheath_fd == -1.0 || (sheath_fd >= 0.0 && sheath_fd <= 1.0))
+			m_sheath_fd = sheath_fd;
+		else
+		{
+			std::cerr << "Error! sheath_fd must be -1 or from 0 to 1, not "
+				<< sheath_fd << ". Leaving it at " << m_sheath_fd << ".\n";
+		}
+	}
+
+	/**
+	* Sets the sheath_drop option.
+	*
+	* The sheath's potential drop in units of Te (e |phi_wall| / Te), in
+	* place of the floating drop (-0.5 ln[2 pi (m_e / m_i)(1 + Ti / Te)],
+	* about 2.8 for D at Ti = Te). For comparing with models that fix it,
+	* such as Brooks' reference case (3), and for checks with a vanishing
+	* drop. -1 (the default) uses the floating drop.
+	*
+	* Valid values are -1 and above 0. An invalid value prints an error and
+	* leaves the option unchanged.
+	*
+	* @param sheath_drop New value of the sheath_drop option.
+	*/
+	void Options::set_sheath_drop(double sheath_drop)
+	{
+		if (sheath_drop == -1.0 || sheath_drop > 0.0)
+			m_sheath_drop = sheath_drop;
+		else
+		{
+			std::cerr << "Error! sheath_drop must be -1 or above 0, not "
+				<< sheath_drop << ". Leaving it at " << m_sheath_drop
+				<< ".\n";
+		}
+	}
+
+	/**
+	* Returns the sheath_fd option.
+	*
+	* @return Value of the sheath_fd option.
+	*/
+	double Options::sheath_fd() const {return m_sheath_fd;}
+
+	/**
+	* Returns the sheath_drop option.
+	*
+	* @return Value of the sheath_drop option.
+	*/
+	double Options::sheath_drop() const {return m_sheath_drop;}
+
+	/**
+	* Sets the sput_self option.
+	*
+	* Whether impurities that land on a wall element sputter more atoms
+	* (self-sputtering). The particle carries on as one of the atoms it
+	* sputtered, with its weight multiplied by the yield from the
+	* sput_self_table_file table (see Sputtering::SelfSource). Needs
+	* imp_source_opt = "sputter". CPU only.
+	*
+	* Valid values are "off" and "on"; anything else stops the run
+	* (check_input). Also sets the control integer returned by
+	* sput_self_int() to 0 for "off", 1 for "on".
+	*
+	* @param sput_self New value of the sput_self option.
+	*/
+	void Options::set_sput_self(std::string sput_self)
+	{
+		if (check_input<std::string>("sput_self", sput_self, {"off", "on"}))
+			m_sput_self = sput_self;
+
+		if (sput_self == "off") m_sput_self_int = 0;
+		else if (sput_self == "on") m_sput_self_int = 1;
+	}
+
+	/**
+	* Sets the sput_impact_opt option.
+	*
+	* Where the energies and angles the background's ions hit the wall
+	* with, for the sputtered source, come from. "formula": the sheath and
+	* presheath energy (Sputtering::sheath_energy) plus a thermal energy
+	* at Ti, all at sput_angle_val. "sheath": D+ test ions pushed through
+	* the sheath_model field (Sheath::ImpactTable), which gives the
+	* energies and angles together. "sheath" is the default and needs
+	* sheath_model to be on, so a run with the sheath off must set
+	* "formula". CPU only.
+	*
+	* Valid values are "formula" and "sheath"; anything else stops the run
+	* (check_input). Also sets the control integer returned by
+	* sput_impact_opt_int() to 0 for "formula", 1 for "sheath".
+	*
+	* @param sput_impact_opt New value of the sput_impact_opt option.
+	*/
+	void Options::set_sput_impact_opt(std::string sput_impact_opt)
+	{
+		if (check_input<std::string>("sput_impact_opt", sput_impact_opt,
+			{"formula", "sheath"}))
+		{
+			m_sput_impact_opt = sput_impact_opt;
+		}
+
+		if (sput_impact_opt == "formula") m_sput_impact_opt_int = 0;
+		else if (sput_impact_opt == "sheath") m_sput_impact_opt_int = 1;
+	}
+
+	/**
+	* Sets the sput_self_table_file option.
+	*
+	* Path to the self-sputtering yield table (the impurity on the wall
+	* material, e.g. W on W), made by python/rustbca_yields.py. Needed
+	* with sput_self = "on".
+	*
+	* @param sput_self_table_file New value of the sput_self_table_file
+	*        option.
+	*/
+	void Options::set_sput_self_table_file(std::string sput_self_table_file)
+		{m_sput_self_table_file = sput_self_table_file;}
+
+	/**
+	* Sets the sput_self_min_weight option.
+	*
+	* The weight, as a fraction of a particle's weight from the D+
+	* sputtered source, below which a self-sputtered particle plays Russian
+	* roulette: it carries on with this weight with probability (its new
+	* weight) / (this weight), and ends otherwise. That keeps the expected
+	* weight, while particles of little weight don't cost as much as the
+	* others.
+	*
+	* Valid values are 0 to 1. 0 turns roulette off. An invalid value
+	* prints an error and leaves the option unchanged.
+	*
+	* @param sput_self_min_weight New value of the sput_self_min_weight
+	*        option.
+	*/
+	void Options::set_sput_self_min_weight(double sput_self_min_weight)
+	{
+		if (sput_self_min_weight >= 0.0 && sput_self_min_weight <= 1.0)
+			m_sput_self_min_weight = sput_self_min_weight;
+		else
+		{
+			std::cerr << "Error! sput_self_min_weight must be from 0 to 1, "
+				"not " << sput_self_min_weight << ". Leaving it at "
+				<< m_sput_self_min_weight << ".\n";
+		}
+	}
+
+	/**
+	* Sets the sput_self_max_gen option.
+	*
+	* The most self-sputtering generations a particle can go through. A
+	* particle reaching it stops the run: with roulette, chains only get
+	* that long when the self-sputtering multiplication (the share coming
+	* back times the mean yield) is close to or above 1, the
+	* self-sputtering avalanche, where the self-sputtered rate has no
+	* steady value.
+	*
+	* Valid values are 1 and above. An invalid value prints an error and
+	* leaves the option unchanged.
+	*
+	* @param sput_self_max_gen New value of the sput_self_max_gen option.
+	*/
+	void Options::set_sput_self_max_gen(int sput_self_max_gen)
+	{
+		if (sput_self_max_gen >= 1) m_sput_self_max_gen = sput_self_max_gen;
+		else
+		{
+			std::cerr << "Error! sput_self_max_gen must be 1 or above, not "
+				<< sput_self_max_gen << ". Leaving it at "
+				<< m_sput_self_max_gen << ".\n";
+		}
+	}
+
+	/**
+	* @name Self-sputtering option getters
+	* See the setters for what each option means.
+	*/
+	///@{
+	const std::string& Options::sput_self() const {return m_sput_self;}
+
+	/**
+	* Returns the sput_impact_opt option.
+	*
+	* @return Value of the sput_impact_opt option.
+	*/
+	const std::string& Options::sput_impact_opt() const
+		{return m_sput_impact_opt;}
+	const std::string& Options::sput_self_table_file() const
+		{return m_sput_self_table_file;}
+	double Options::sput_self_min_weight() const
+		{return m_sput_self_min_weight;}
+	int Options::sput_self_max_gen() const {return m_sput_self_max_gen;}
+	///@}
+
+	/**
+	* Returns the sheath_model option.
+	*
+	* @return Value of the sheath_model option.
+	*/
+	const std::string& Options::sheath_model() const
+		{return m_sheath_model;}
 	double Options::sput_angle_val() const {return m_sput_angle_val;}
 	double Options::sput_max_wall_dist() const
 		{return m_sput_max_wall_dist;}
@@ -2579,6 +2884,23 @@ namespace Options
 	*/
 	double Options::slab_major_radius() const
 		{return m_slab_major_radius;}
+
+	/**
+	* Returns the slab_wall option (slab background: which face is a wall).
+	*
+	* @return Value of the slab_wall option.
+	*/
+	const std::string& Options::slab_wall() const
+		{return m_slab_wall;}
+
+	/**
+	* Returns the slab_b_angle option (slab background: angle of the field
+	* from +X toward -Y).
+	*
+	* @return Value of the slab_b_angle option.
+	*/
+	double Options::slab_b_angle() const
+		{return m_slab_b_angle;}
 
 	/**
 	* Returns the tbound_type option.
@@ -2744,6 +3066,14 @@ namespace Options
 	*/
 	int Options::imp_atom_num() const 
 		{return m_imp_atom_num;}
+
+	/**
+	* Returns the imp_iz_max_charge option.
+	*
+	* @return Value of the imp_iz_max_charge option (below 0: no limit).
+	*/
+	int Options::imp_iz_max_charge() const
+		{return m_imp_iz_max_charge;}
 
 	/**
 	* Returns the imp_mass_amu option.
@@ -3571,6 +3901,26 @@ namespace Options
 	int Options::sput_bohm_floor_int() const
 		{return get_control_int("sput_bohm_floor", m_sput_bohm_floor_int);}
 
+	int Options::sheath_model_int() const
+		{return get_control_int("sheath_model", m_sheath_model_int);}
+
+	/**
+	* Returns the control integer for sput_self: 0 for "off", 1 for "on".
+	*
+	* @return Control integer of the sput_self option.
+	*/
+	int Options::sput_self_int() const
+		{return get_control_int("sput_self", m_sput_self_int);}
+
+	/**
+	* Returns the control integer for sput_impact_opt: 0 for "formula", 1
+	* for "sheath".
+	*
+	* @return Control integer of the sput_impact_opt option.
+	*/
+	int Options::sput_impact_opt_int() const
+		{return get_control_int("sput_impact_opt", m_sput_impact_opt_int);}
+
 	// Setter declarations for internal control variables
 
 	/**
@@ -3597,11 +3947,14 @@ namespace Options
 	* prints an error saying GPU support was not compiled in.
 	*
 	* @param device_id ID of the GPU to copy to (unused).
+	* @return nullptr, since there is no device copy. Without a return
+	* the call would be undefined behaviour, not just an error message.
 	*/
 	OptionsDevice* Options::to_device(int device_id)
 	{
 		std::cerr << "Error! Options::to_device was called but GPU support"
 				  << " was not compiled in.\n";
+		return nullptr;
 	}
 
 	/**

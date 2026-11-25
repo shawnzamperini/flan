@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "background.h"
+#include "constants.h"
 #include "openadas.h"
 #include "pcg32.h"
 #include "slots.h"
@@ -289,4 +290,89 @@ TEST(IonizRecomb, FractionsMatchRates)
 		EXPECT_EQ(ioniz_warnings, 0);
 		EXPECT_EQ(recomb_warnings, 0);
 	}
+}
+
+
+// -------------------------------------------------------------------------
+// Prompt window and the charge limit
+// -------------------------------------------------------------------------
+
+// A neutral that ionizes for the first time gets prompt_by = its particle
+// time plus one singly charged gyroperiod, 2 pi m / (e B), at the field
+// where it ionized (1 T on the default slab). Ions don't, and a later
+// ionization doesn't move it.
+TEST(IonizRecomb, PromptBy)
+{
+	const fs::path root {write_fake_adas_dir("prompt_by", huge_rate,
+		tiny_rate)};
+	auto [oa_ioniz, oa_recomb] = load_fake(root);
+	Background::Background bkg {make_uniform_bkg(1e19, 10.0)};
+	std::vector<pcg32> rngs {get_rngs()};
+
+	constexpr int per_charge {8};
+	Slots::Slots slots {make_slots(bkg, per_charge)};
+	const double mass {7.0 * Constants::amu_to_kg};
+	slots.set_mass(mass);
+	for (int i {}; i < slots.N(); ++i) slots.set_pt(i, 2e-6);
+
+	int ioniz_warnings {};
+	int recomb_warnings {};
+	OpenADAS::ioniz_recomb(slots, bkg, oa_ioniz, oa_recomb, 1e-6,
+		ioniz_warnings, recomb_warnings, rngs);
+
+	const double period {2.0 * Constants::pi * mass
+		/ (-Constants::charge_e * 1.0)};
+	for (int i {}; i < slots.N(); ++i)
+	{
+		if (i / per_charge == 0)
+			EXPECT_NEAR(slots.prompt_by()[i], 2e-6 + period, 1e-12 * period);
+		else
+			EXPECT_EQ(slots.prompt_by()[i], -1.0);
+	}
+
+	// Ionizing again (1 -> 2) leaves it where it was
+	for (int i {}; i < slots.N(); ++i) slots.set_pt(i, 5e-6);
+	OpenADAS::ioniz_recomb(slots, bkg, oa_ioniz, oa_recomb, 1e-6,
+		ioniz_warnings, recomb_warnings, rngs);
+	for (int i {}; i < per_charge; ++i)
+	{
+		EXPECT_EQ(slots.q()[i], 2);
+		EXPECT_NEAR(slots.prompt_by()[i], 2e-6 + period, 1e-12 * period);
+	}
+}
+
+// With max_charge, particles don't ionize past it. Those already above it
+// stay where they are (there's no recombination here).
+TEST(IonizRecomb, MaxCharge)
+{
+	const fs::path root {write_fake_adas_dir("max_charge", huge_rate,
+		tiny_rate)};
+	auto [oa_ioniz, oa_recomb] = load_fake(root);
+	Background::Background bkg {make_uniform_bkg(1e19, 10.0)};
+	std::vector<pcg32> rngs {get_rngs()};
+
+	constexpr int per_charge {8};
+	Slots::Slots slots {make_slots(bkg, per_charge)};
+	slots.set_mass(7.0 * Constants::amu_to_kg);
+
+	int ioniz_warnings {};
+	int recomb_warnings {};
+	for (int step {}; step < 3; ++step)
+	{
+		OpenADAS::ioniz_recomb(slots, bkg, oa_ioniz, oa_recomb, 1e-6,
+			ioniz_warnings, recomb_warnings, rngs, 1);
+	}
+	for (int i {}; i < slots.N(); ++i)
+	{
+		const int q0 {i / per_charge};
+		EXPECT_EQ(slots.q()[i], std::max(q0, 1)) << "q0 = " << q0;
+	}
+
+	// Below 0 there's no limit
+	Slots::Slots free {make_slots(bkg, per_charge)};
+	free.set_mass(7.0 * Constants::amu_to_kg);
+	OpenADAS::ioniz_recomb(free, bkg, oa_ioniz, oa_recomb, 1e-6,
+		ioniz_warnings, recomb_warnings, rngs, -1);
+	for (int i {}; i < free.N(); ++i)
+		EXPECT_EQ(free.q()[i], std::min(i / per_charge + 1, fake_Z));
 }

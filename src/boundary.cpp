@@ -17,12 +17,14 @@
 #include <cmath>
 #include <iostream>
 #include <omp.h>
+#include <sstream>
 #include <vector>
 
 #include "mpi.h"
 
 #include "background.h"
 #include "boundary.h"
+#include "errors.h"
 #include "indices.h"
 #include "options.h"
 #include "pcg32.h"
@@ -48,6 +50,7 @@ namespace Boundary
 		core += other.core;
 		time_end += other.time_end;
 		runaway += other.runaway;
+		self_sputtered += other.self_sputtered;
 		max_time += other.max_time;
 		return *this;
 	}
@@ -63,10 +66,10 @@ namespace Boundary
 	*/
 	Fates print_fates(const Fates& fates)
 	{
-		std::array<long long, 8> local {fates.crossings, fates.absorbed,
+		std::array<long long, 9> local {fates.crossings, fates.absorbed,
 			fates.wall, fates.chi, fates.core, fates.time_end,
-			fates.runaway, fates.max_time};
-		std::array<long long, 8> total {};
+			fates.runaway, fates.max_time, fates.self_sputtered};
+		std::array<long long, 9> total {};
 		MPI_Reduce(local.data(), total.data(),
 			static_cast<int>(local.size()), MPI_LONG_LONG, MPI_SUM, 0,
 			MPI_COMM_WORLD);
@@ -88,6 +91,11 @@ namespace Boundary
 			std::cout << "  " << total[6] << " absorbed after crossing too "
 				"many zone faces in one step\n";
 		}
+		if (total[8])
+		{
+			std::cout << "  " << total[8] << " of those absorbed at a wall "
+				"carried on as self-sputtered atoms\n";
+		}
 
 		Fates sum {};
 		sum.crossings = total[0];
@@ -98,6 +106,7 @@ namespace Boundary
 		sum.time_end = total[5];
 		sum.runaway = total[6];
 		sum.max_time = total[7];
+		sum.self_sputtered = total[8];
 		return sum;
 	}
 
@@ -451,6 +460,14 @@ namespace Boundary
 		const bool chi_absorb {!chi.get_data().empty()
 			&& opts.s3x_chi_absorb_int() == 1};
 
+		// Self-sputtering, if on: particles landing on a wall element can
+		// carry on as atoms they sputtered
+		Sputtering::SelfSource* self {deposition != nullptr
+			? deposition->self() : nullptr};
+
+		// Set if a particle reached sput_self_max_gen (an avalanche)
+		bool avalanche {false};
+
 		#pragma omp parallel
 		{
 
@@ -515,6 +532,46 @@ namespace Boundary
 			// across z faces, which its velocity is turned by at the end
 			double turn {};
 
+			// Self-sputtering off element e, which the particle just landed
+			// on at (pos[0], pos[1], z_wall). If it carries on as an atom it
+			// sputtered, the slot gets that atom (its time goes on) and
+			// true is returned.
+			auto self_sputter = [&](const long e,
+				const Sputtering::Impact& impact, const double z_wall)
+			{
+				if (self == nullptr || e < 0) return false;
+				const Sputtering::Rebirth r {self->rebirth(
+					static_cast<std::size_t>(e), slots.tidx()[i],
+					{pos[0], pos[1], z_wall}, impact, slots.q()[i],
+					slots.weight()[i], slots.generation()[i], rng)};
+				if (r.avalanche)
+				{
+					#pragma omp atomic write
+					avalanche = true;
+				}
+				if (!r.alive) return false;
+
+				pos = {r.x, r.y, r.z};
+				zone = r.zone;
+				turn = 0.0;		// the new velocity is at the new z
+				slots.set_xidx(i, r.i);
+				slots.set_yidx(i, r.j);
+				slots.set_zidx(i, r.k);
+				slots.set_vX(i, r.vX);
+				slots.set_vY(i, r.vY);
+				slots.set_vZ(i, r.vZ);
+				slots.set_vx(i, 0.0);	// set by the next Boris update
+				slots.set_vy(i, 0.0);
+				slots.set_vz(i, 0.0);
+				slots.set_q(i, 0);
+				slots.set_weight(i, r.weight);
+				slots.set_pt(i, 0.0);	// time since its own sputtering
+				slots.set_prompt_by(i, -1.0);
+				slots.set_generation(i, slots.generation()[i] + 1);
+				++local.self_sputtered;
+				return true;
+			};
+
 			// Check each face in turn. Crossing into another zone starts
 			// over at the first face of the new zone.
 			int f {};
@@ -537,9 +594,16 @@ namespace Boundary
 							: local.absorbed);
 						if (deposition != nullptr && code == Zones::face_wall)
 						{
-							deposition->add_at_wall_face(zones, zone, face,
-								pos, slots.pt()[i], slots.q()[i],
-								slots.weight()[i]);
+							const Sputtering::Impact impact {{slots.vX()[i],
+								slots.vY()[i], slots.vZ()[i]}, slots.mass()};
+							const long e {deposition->add_at_wall_face(zones,
+								zone, face, pos, slots.pt()[i], slots.q()[i],
+								slots.weight()[i], slots.prompt_by()[i],
+								&impact)};
+							const double z_wall {zones.get_face(zone,
+								Zones::zmin) == zone ? zones.wrap_z(zone,
+								pos[2]) : pos[2]};
+							if (self_sputter(e, impact, z_wall)) state = 0;
 						}
 						break;
 					}
@@ -626,10 +690,14 @@ namespace Boundary
 					++local.chi;
 					if (deposition != nullptr)
 					{
-						deposition->add_into_wall_cell(zone, xidx, yidx,
-							zidx, slots.zone()[i], slots.xidx()[i],
-							slots.yidx()[i], slots.pt()[i], slots.q()[i],
-							slots.weight()[i]);
+						const Sputtering::Impact impact {{slots.vX()[i],
+							slots.vY()[i], slots.vZ()[i]}, slots.mass()};
+						const long e {deposition->add_into_wall_cell(zone,
+							xidx, yidx, zidx, slots.zone()[i],
+							slots.xidx()[i], slots.yidx()[i], slots.pt()[i],
+							slots.q()[i], slots.weight()[i],
+							slots.prompt_by()[i], &impact)};
+						if (self_sputter(e, impact, pos[2])) state = 0;
 					}
 				}
 			}
@@ -660,6 +728,24 @@ namespace Boundary
 		fates += local;
 
 		} // omp parallel
+
+		// A chain of self-sputtering that went on for sput_self_max_gen
+		// generations: the multiplication is at or near 1, so there's no
+		// steady state to find
+		if (avalanche)
+		{
+			std::ostringstream msg;
+			msg << "A particle was self-sputtered "
+				<< opts.sput_self_max_gen() << " times (sput_self_max_gen). "
+				"This looks like a self-sputtering avalanche: each atom "
+				"landing on the wall sputters, on average, about as many "
+				"atoms as come back, so the self-sputtered rate has no "
+				"steady value. Multiplication along the chains so far: "
+				<< self->chain_multiplication() << ", mean yield "
+				<< self->mean_yield() << " at a mean impact energy of "
+				<< self->mean_energy() << " eV.";
+			Errors::fatal_error(msg.str());
+		}
 	}  // check_bounds_cpu
 
 	/**

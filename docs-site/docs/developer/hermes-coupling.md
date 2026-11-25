@@ -248,9 +248,8 @@ same as for SOLEDGE3X. Tests: `SputteringSurface.TargetFaces`,
 `SputteringTable.SourceOnTargets`, `SputteringDeposition.WallFaces` and
 `ReadHermesTest.SputteringTargets`.
 
-**Later**: the GPU path, a time-averaged background, and field-aligned
-interpolation for turbulent SOLEDGE3X runs. The BOUT++ Hermes-3 reader
-has its own plan, below.
+**Later**: the GPU path, and field-aligned interpolation for turbulent
+SOLEDGE3X runs. The BOUT++ Hermes-3 reader has its own plan, below.
 
 ## BOUT++ Hermes-3 reader
 
@@ -521,8 +520,7 @@ ion skew; the summary below covers both formats.
    electromagnetic run to be worth having as an option (Phase B5), on by
    default since it's part of the run's physics.
 5. **Several restart segments** (dumps in different directories, one
-   after another in time): not in the first version. One directory per
-   background; a list of directories could come later.
+   after another in time): not supported. One directory per background.
 6. **q_par next to the targets** (from Phase B4): keep the one-sided
    gradient, or follow the run there: zero conduction through the sheath
    face, so the target cell gets the average of its two face fluxes (half

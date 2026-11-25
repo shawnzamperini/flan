@@ -114,6 +114,10 @@ namespace Zones
 		/// set_toroidal), 0 otherwise. Empty if no zone is.
 		std::vector<int> m_toroidal {};
 
+		/// 1 for zones whose x, y and z are the Cartesian X, Y and Z in
+		/// meters (see set_cartesian), 0 otherwise. Empty if no zone is.
+		std::vector<int> m_cartesian {};
+
 		/// Every ghost cell and its sources, built by fill_ghosts the first
 		/// time it's needed and cleared whenever the zones change
 		mutable std::vector<GhostCell> m_ghost_cells {};
@@ -215,6 +219,10 @@ namespace Zones
 		void set_toroidal(const int zone);
 
 		bool is_toroidal(const int zone) const;
+
+		void set_cartesian(const int zone);
+
+		bool is_cartesian(const int zone) const;
 
 		bool is_wedge(const int zone) const;
 

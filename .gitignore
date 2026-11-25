@@ -118,3 +118,4 @@ scripts/flan_setup.sh*
 *.internal
 *.html
 
+__pycache__/

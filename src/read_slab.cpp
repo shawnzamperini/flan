@@ -50,6 +50,18 @@ namespace Slab
 	* - Electric field along +Y, E_Y = slab_efield_y + slab_efield_y_rate
 	*   t, uniform in space. It gives an ExB drift, and a polarization
 	*   drift when it changes in time.
+	* - The field can be turned in the X-Y plane by slab_b_angle (a) from
+	*   +X toward -Y: B = slab_bmag (cos a, -sin a, 0). Then there can be
+	*   no electric field or gradient, since E_Y would have a part along B
+	*   and the gradient would make div B nonzero.
+	* - One face can be a material wall (slab_wall), such as a divertor
+	*   target, in place of what its *bound_type gives. With the wall at
+	*   y min, slab_b_angle is the angle between the field and the wall.
+	*   The face across from it can't be periodic, or particles would wrap
+	*   onto the wall.
+	*
+	* The zone is marked Cartesian (Zones::Zones::set_cartesian), so the
+	* wall can be sputtered.
 	*
 	* Bent slab (slab_major_radius = R0 > 0)
 	* --------------------------------------
@@ -124,6 +136,34 @@ namespace Slab
 				"slab_bgrad_y are only for a straight slab "
 				"(slab_major_radius = 0).");
 		}
+		// Field angle and wall
+		const double b_angle {opts.slab_b_angle() * Constants::pi / 180.0};
+		if (!(std::abs(opts.slab_b_angle()) <= 90.0))
+		{
+			Errors::fatal_error("slab_b_angle must be from -90 to 90 "
+				"degrees, got " + std::to_string(opts.slab_b_angle()) + ".");
+		}
+		if (opts.slab_b_angle() != 0.0 && (bent
+			|| opts.slab_efield_y() != 0.0
+			|| opts.slab_efield_y_rate() != 0.0
+			|| opts.slab_bgrad_y() != 0.0))
+		{
+			Errors::fatal_error("slab_b_angle is only for a straight slab "
+				"(slab_major_radius = 0) without slab_efield_y, "
+				"slab_efield_y_rate or slab_bgrad_y.");
+		}
+		const bool has_wall {opts.slab_wall() != "none"};
+		if (has_wall && bent)
+		{
+			Errors::fatal_error("slab_wall is only for a straight slab "
+				"(slab_major_radius = 0).");
+		}
+		if (has_wall && opts.use_gpu_int() > 0)
+		{
+			Errors::fatal_error("slab_wall only runs on the CPU for now. Set "
+				"use_gpu = \"off\".");
+		}
+
 		if (std::abs(opts.slab_bgrad_y()) * half_width >= 1.0)
 		{
 			Errors::fatal_error("slab_bgrad_y is too large: the magnetic "
@@ -242,17 +282,18 @@ namespace Slab
 		};
 
 		// Field strength, and the Cartesian components of the unit vector
-		// along the field. Straight: along +X, with the optional gradient
-		// in Y. Bent: toroidal, (-sin phi, cos phi, 0), falling as 1 / R.
+		// along the field. Straight: along +X turned toward -Y by
+		// slab_b_angle, with the optional gradient in Y. Bent: toroidal,
+		// (-sin phi, cos phi, 0), falling as 1 / R.
 		auto b_strength = [&](int, int i, int j, int)
 		{
 			return bent ? opts.slab_bmag() * R0 / x[i]
 				: opts.slab_bmag() * (1.0 + opts.slab_bgrad_y() * y[j]);
 		};
 		auto dir_X = [&](int, int, int, int k)
-			{return bent ? -std::sin(z[k]) : 1.0;};
+			{return bent ? -std::sin(z[k]) : std::cos(b_angle);};
 		auto dir_Y = [&](int, int, int, int k)
-			{return bent ? std::cos(z[k]) : 0.0;};
+			{return bent ? std::cos(z[k]) : -std::sin(b_angle);};
 
 		// Plasma. The flow is along the field. The electric field is
 		// along +Y and changes linearly in time (straight slab only).
@@ -288,6 +329,24 @@ namespace Slab
 		bkg.set_ion_mass_amu(opts.gkyl_ion_mass_amu());
 		Zones::Zones zones {Background::single_zone(x, y, z, grid_x,
 			grid_y, grid_z, opts)};
+		if (!bent) zones.set_cartesian(0);
+		if (has_wall)
+		{
+			// The wall face, and the one across from it
+			const std::string& w {opts.slab_wall()};
+			const Zones::Face face {w == "xmin" ? Zones::xmin
+				: w == "xmax" ? Zones::xmax
+				: w == "ymin" ? Zones::ymin : Zones::ymax};
+			const auto across {static_cast<Zones::Face>(
+				static_cast<int>(face) ^ 1)};
+			if (zones.get_face(0, across) == 0)
+			{
+				Errors::fatal_error("With slab_wall = \"" + w + "\", the "
+					"face across from the wall can't be periodic, or "
+					"particles would wrap onto the wall. Make it absorbing.");
+			}
+			zones.set_face(0, face, Zones::face_wall);
+		}
 		bkg.move_into_zones(zones);
 		bkg.move_into_ne(ne);
 		bkg.move_into_te(te);

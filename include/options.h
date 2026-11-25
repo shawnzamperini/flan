@@ -86,7 +86,15 @@ namespace Options
 		std::string m_sput_table_file        {"undefined"};
 		std::string m_sput_flux_opt       {"parallel_exb"};
 		std::string m_sput_bohm_floor              {"off"};
+		std::string m_sheath_model                 {"brooks"};
+		double m_sheath_fd                          {-1.0};
+		double m_sheath_drop                        {-1.0};
+		std::string m_sput_self                     {"off"};
+		std::string m_sput_self_table_file    {"undefined"};
+		double m_sput_self_min_weight               {0.1};
+		int m_sput_self_max_gen                     {1000};
 		double m_sput_angle_val                     {60.0};
+		std::string m_sput_impact_opt               {"sheath"};
 		double m_sput_max_wall_dist                  {2.0};
 		
 		// General background options
@@ -105,6 +113,8 @@ namespace Options
 		double m_slab_efield_y_rate                   {0.0};
 		double m_slab_bgrad_y                         {0.0};
 		double m_slab_major_radius                    {0.0};
+		std::string m_slab_wall                    {"none"};
+		double m_slab_b_angle                         {0.0};
 
 		// Geometry options
 		std::string m_tbound_type            {"absorbing"};
@@ -125,6 +135,7 @@ namespace Options
 
 		// Impurity characteristics
 		int m_imp_atom_num                            {74};
+		int m_imp_iz_max_charge                       {-1};
 		double m_imp_mass_amu                     {183.84};
 		int m_imp_init_charge                          {1};
 
@@ -213,6 +224,9 @@ namespace Options
 		int m_imp_source_opt_int                      {-1};
 		int m_sput_flux_opt_int                       {-1};
 		int m_sput_bohm_floor_int                     {-1};
+		int m_sheath_model_int                        {-1};
+		int m_sput_self_int                           {-1};
+		int m_sput_impact_opt_int                     {-1};
 
 		template <typename T>
 		bool check_input(const std::string& var, const T& value, 
@@ -272,6 +286,14 @@ namespace Options
 		void set_sput_table_file(std::string sput_table_file);
 		void set_sput_flux_opt(std::string sput_flux_opt);
 		void set_sput_bohm_floor(std::string sput_bohm_floor);
+		void set_sheath_model(std::string sheath_model);
+		void set_sheath_fd(double sheath_fd);
+		void set_sheath_drop(double sheath_drop);
+		void set_sput_self(std::string sput_self);
+		void set_sput_impact_opt(std::string sput_impact_opt);
+		void set_sput_self_table_file(std::string sput_self_table_file);
+		void set_sput_self_min_weight(double sput_self_min_weight);
+		void set_sput_self_max_gen(int sput_self_max_gen);
 		void set_sput_angle_val(double sput_angle_val);
 		void set_sput_max_wall_dist(double sput_max_wall_dist);
 		void set_min_ne(double min_ne);
@@ -289,6 +311,8 @@ namespace Options
 		void set_slab_efield_y_rate(double slab_efield_y_rate);
 		void set_slab_bgrad_y(double slab_bgrad_y);
 		void set_slab_major_radius(double slab_major_radius);
+		void set_slab_wall(std::string slab_wall);
+		void set_slab_b_angle(double slab_b_angle);
 		void set_tbound_type(std::string tbound_type);
 		void set_min_xbound_type(std::string min_xbound_type);
 		void set_max_xbound_type(std::string max_xbound_type);
@@ -305,6 +329,7 @@ namespace Options
 		void set_imp_ybound_buffer(double imp_ybound_buffer);
 		void set_imp_zbound_buffer(double imp_zbound_buffer);
 		void set_imp_atom_num(int imp_atom_num);
+		void set_imp_iz_max_charge(int imp_iz_max_charge);
 		void set_imp_mass_amu(double imp_mass_amu);
 		void set_imp_init_charge(int imp_init_charge);
 		void set_imp_num(int imp_num);
@@ -397,6 +422,14 @@ namespace Options
 		const std::string& sput_table_file() const;
 		const std::string& sput_flux_opt() const;
 		const std::string& sput_bohm_floor() const;
+		const std::string& sheath_model() const;
+		double sheath_fd() const;
+		double sheath_drop() const;
+		const std::string& sput_self() const;
+		const std::string& sput_impact_opt() const;
+		const std::string& sput_self_table_file() const;
+		double sput_self_min_weight() const;
+		int sput_self_max_gen() const;
 		double sput_angle_val() const;
 		double sput_max_wall_dist() const;
 		double min_ne() const;
@@ -414,6 +447,8 @@ namespace Options
 		double slab_efield_y_rate() const;
 		double slab_bgrad_y() const;
 		double slab_major_radius() const;
+		const std::string& slab_wall() const;
+		double slab_b_angle() const;
 		const std::string& tbound_type() const;
 		const std::string& min_xbound_type() const;
 		const std::string& max_xbound_type() const;
@@ -430,6 +465,7 @@ namespace Options
 		double imp_ybound_buffer() const;
 		double imp_zbound_buffer() const;
 		int imp_atom_num() const;
+		int imp_iz_max_charge() const;
 		double imp_mass_amu() const;
 		int imp_init_charge() const;
 		int imp_num() const;
@@ -513,6 +549,9 @@ namespace Options
 		int imp_source_opt_int() const;
 		int sput_flux_opt_int() const;
 		int sput_bohm_floor_int() const;
+		int sheath_model_int() const;
+		int sput_self_int() const;
+		int sput_impact_opt_int() const;
 
 		// Setter declarations for internal control variables. Added as needed.
 		void set_var_red_split_int(int var_red_split_int);

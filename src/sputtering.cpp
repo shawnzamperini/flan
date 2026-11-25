@@ -199,6 +199,7 @@
 #include "hdf5_utils.h"
 #include "indices.h"
 #include "options.h"
+#include "sheath.h"
 #include "sputtering.h"
 #include "zones.h"
 
@@ -488,8 +489,11 @@ namespace Sputtering
 	* whose grid is fitted to the targets (HERMES) has the targets at the
 	* wall faces of its zones (find_wall_faces).
 	*
-	* The run stops if neither gives any surface, e.g., for a Gkeyll or
-	* slab background, whose z isn't the toroidal angle.
+	* A slab background with a wall (slab_wall) is Cartesian, and its wall
+	* face is found the same way (find_wall_faces).
+	*
+	* The run stops if neither gives any surface, e.g., for a Gkeyll
+	* background, or a slab without a wall.
 	*
 	* @param bkg The background, with its geometry.
 	* @param max_wall_dist How far, in cell widths, the nearest wall
@@ -508,9 +512,10 @@ namespace Sputtering
 		if (m_elements.empty())
 		{
 			Errors::fatal_error("Sputtering surfaces need a background with "
-				"a wall mask (chi), as SOLEDGE3X backgrounds have, or with "
+				"a wall mask (chi), as SOLEDGE3X backgrounds have, with "
 				"wall faces on a toroidal grid fitted to the targets, as "
-				"HERMES backgrounds have. This background has neither.");
+				"HERMES backgrounds have, or a slab background with a wall "
+				"(slab_wall). This background has none of these.");
 		}
 	}
 
@@ -527,9 +532,15 @@ namespace Sputtering
 	* across the face (wall_zone = -1), so redeposited atoms are put on the
 	* element by where they cross the face (Deposition::add_at_wall_face).
 	*
-	* Only zones whose z is the toroidal angle (Zones::is_toroidal) are
-	* used, since the area and the normal's direction need phi. Wall faces
-	* in z are skipped, as they aren't in the poloidal plane.
+	* Only zones whose z is the toroidal angle (Zones::is_toroidal) or that
+	* are Cartesian (Zones::is_cartesian, the straight slab) are used,
+	* since the area and the normal's direction need to know what z is.
+	* Wall faces in z are skipped, as they aren't in the poloidal plane (or
+	* the X-Y plane).
+	*
+	* On a Cartesian zone the face's corners are its cell edges in (X, Y)
+	* directly, held in the R and Z fields of the element, and its area is
+	* the edge length times the cell's length in z (cartesian = true).
 	*
 	* @param bkg Background whose zones have wall faces.
 	*/
@@ -546,15 +557,32 @@ namespace Sputtering
 
 		for (int zone {}; zone < zones.get_nzones(); ++zone)
 		{
-			if (!zones.is_toroidal(zone)) continue;
+			const bool cartesian {zones.is_cartesian(zone)};
+			if (!zones.is_toroidal(zone) && !cartesian) continue;
 			const int nx {zones.get_nx(zone)};
 			const int ny {zones.get_ny(zone)};
+			const auto& grid_x {zones.get_grid_x(zone)};
+			const auto& grid_y {zones.get_grid_y(zone)};
 			const auto& grid_z {zones.get_grid_z(zone)};
 
+			// A cell corner in the poloidal plane, (R, Z), or in the X-Y
+			// plane on a Cartesian zone, where x and y are X and Y
 			auto corner = [&](int ci, int cj, int k) -> RZ
 			{
+				if (cartesian) return {grid_x[ci], grid_y[cj]};
 				return {std::hypot(grid_X(zone, ci, cj, k),
 					grid_Y(zone, ci, cj, k)), grid_Z(zone, ci, cj, k)};
+			};
+			// A cell's center in the same plane
+			auto center_of = [&](int i, int j, int k) -> RZ
+			{
+				if (cartesian)
+				{
+					return {0.5 * (grid_x[i] + grid_x[i + 1]),
+						0.5 * (grid_y[j] + grid_y[j + 1])};
+				}
+				return {std::hypot(X(zone, i, j, k), Y(zone, i, j, k)),
+					Z(zone, i, j, k)};
 			};
 
 			for (const FaceStencil& s : stencils)
@@ -594,12 +622,13 @@ namespace Sputtering
 					e.Z1 = c1.Z;
 					e.R_mid = mid.R;
 					e.Z_mid = mid.Z;
-					e.area_face = norm(c1 - c0) * mid.R
-						* (e.phi_max - e.phi_min);
+					// Swept around in phi (R dphi), or straight along Z
+					e.cartesian = cartesian;
+					e.area_face = norm(c1 - c0) * (e.phi_max - e.phi_min)
+						* (cartesian ? 1.0 : mid.R);
 					e.area = e.area_face;
 
-					const RZ center {std::hypot(X(zone, i, j, k),
-						Y(zone, i, j, k)), Z(zone, i, j, k)};
+					const RZ center {center_of(i, j, k)};
 					const RZ n_face {orient_like(unit_normal(c0, c1),
 						center - mid)};
 					e.n_R = n_face.R;
@@ -867,6 +896,33 @@ namespace Sputtering
 	}
 
 	/**
+	* Whether a background has wall surfaces a Surface can be made from:
+	* a wall mask (chi), or a wall face on the x or y side of a toroidal or
+	* Cartesian zone. The Surface constructor stops the run when there are
+	* none, so this lets options that are on by default (sheath_model)
+	* skip backgrounds without walls instead.
+	*
+	* @param bkg The background.
+	* @return True if Surface(bkg) would find elements to make.
+	*/
+	bool has_surfaces(const Background::Background& bkg)
+	{
+		if (!bkg.get_chi().get_data().empty()) return true;
+		const Zones::Zones& zones {bkg.get_zones()};
+		for (int zone {}; zone < zones.get_nzones(); ++zone)
+		{
+			if (!zones.is_toroidal(zone) && !zones.is_cartesian(zone))
+				continue;
+			for (const auto f : {Zones::xmin, Zones::xmax, Zones::ymin,
+				Zones::ymax})
+			{
+				if (zones.get_face(zone, f) == Zones::face_wall) return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	* Returns the energy an ion gains falling through the sheath and
 	* presheath in front of a floating wall (eV).
 	*
@@ -1000,7 +1056,7 @@ namespace Sputtering
 	*/
 	Source::Source(const Surface& surface,
 		const Background::Background& bkg, const YieldTable& table,
-		const Options::Options& opts)
+		const Options::Options& opts, const Sheath::Model impact_model)
 		: m_surface {surface},
 		m_nframes {static_cast<int>(bkg.get_times().size())},
 		m_phi_sign {bkg.get_phi_sign()}
@@ -1065,9 +1121,19 @@ namespace Sputtering
 		const std::size_t n_elem {m_surface.size()};
 		const std::size_t n_all {n_elem * m_nframes};
 		for (auto* v : {&m_flux, &m_flux_par, &m_flux_exb, &m_energy,
-			&m_yield, &m_rate, &m_e_sheath, &m_ti})
+			&m_yield, &m_rate, &m_e_sheath, &m_ti, &m_phi_wall, &m_te,
+			&m_impact_angle})
 		{
 			v->assign(n_all, 0.0);
+		}
+		m_point.assign(n_all, -1);
+
+		// D+ impacts from the sheath model: each element and frame gets a
+		// point of the table, sampled once they're all known
+		if (impact_model != Sheath::Model::off)
+		{
+			m_impacts = std::make_shared<Sheath::ImpactTable>(impact_model,
+				me_amu, mi_amu, opts.sheath_fd(), opts.sheath_drop());
 		}
 
 		// Kept for starting particles
@@ -1097,9 +1163,8 @@ namespace Sputtering
 			// of its phi range. Positions are (R cos phi,
 			// phi_sign R sin phi, Z), with the background's phi_sign, so
 			// R_hat is (cos phi, phi_sign sin phi, 0).
-			const double phi {0.5 * (el.phi_min + el.phi_max)};
-			const Vec3 n_wall {el.n_R * std::cos(phi),
-				el.n_R * m_phi_sign * std::sin(phi), el.n_Z};
+			const Vec3 n_wall {el.normal_xyz(
+				0.5 * (el.phi_min + el.phi_max), m_phi_sign)};
 
 			// Plasma in the element's plasma cell
 			const double n_i {std::max(static_cast<double>(
@@ -1116,11 +1181,13 @@ namespace Sputtering
 			// direction for the parallel flow or the drift.
 			double flux_par {};
 			double flux_exb {};
+			double cos_theta {};	// |b . n|, for the sheath
 			if (B2 > 0.0)
 			{
 				const double Bmag {std::sqrt(B2)};
 				const Vec3 b_hat {B[0] / Bmag, B[1] / Bmag, B[2] / Bmag};
 				const double b_n {dot3(b_hat, n_wall)};
+				cos_theta = std::abs(b_n);
 				const Vec3 u {uX(z, t, i, j, k), uY(z, t, i, j, k),
 					uZ(z, t, i, j, k)};
 
@@ -1144,35 +1211,42 @@ namespace Sputtering
 			const double flux {std::max(0.0,
 				use_exb ? flux_par + flux_exb : flux_par)};
 
-			// 5. Effective yield at the fixed angle
+			// 5. Effective yield at the fixed angle, or (with the sheath
+			// model) a point of the impact table, whose yield is found
+			// once the table is sampled, below
 			const double e_sheath {sheath_energy(te_c, ti_c, me_amu, mi_amu,
 				1)};
-			const EffectiveYield y {effective_yield(table, e_sheath, ti_c,
-				angle)};
-			if (y.frac_above > 0.01) ++m_num_above_table;
-
-			// 6. Rate
+			if (m_impacts && B2 > 0.0)
+			{
+				m_point[idx] = m_impacts->add(Sheath::make_params(te_c, ti_c,
+					n_i, std::sqrt(B2), cos_theta, me_amu, mi_amu,
+					opts.sheath_fd(), opts.sheath_drop()));
+			}
 			m_flux[idx] = flux;
 			m_flux_par[idx] = flux_par;
 			m_flux_exb[idx] = flux_exb;
-			m_energy[idx] = e_sheath + 2.0 * ti_c;
-			m_yield[idx] = y.yield;
-			m_rate[idx] = flux * y.yield * el.area;
 			m_e_sheath[idx] = e_sheath;
 			m_ti[idx] = ti_c;
-			m_total_rate[t] += m_rate[idx];
-		}
+			m_te[idx] = te_c;
+			if (m_point[idx] < 0)
+			{
+				const EffectiveYield y {effective_yield(table, e_sheath,
+					ti_c, angle)};
+				if (y.frac_above > 0.01) ++m_num_above_table;
+				m_energy[idx] = e_sheath + 2.0 * ti_c;
+				m_yield[idx] = y.yield;
+				m_impact_angle[idx] = angle;
+			}
 
-		// Computational x and y edges of each element's plasma cell, for
-		// placing atoms on its face
-		const Zones::Zones& zones {bkg.get_zones()};
-		m_cell_bounds.reserve(n_elem);
-		for (const SurfaceElement& el : m_surface.elements())
-		{
-			const auto& gx {zones.get_grid_x(el.zone)};
-			const auto& gy {zones.get_grid_y(el.zone)};
-			m_cell_bounds.push_back({gx[el.i], gx[el.i + 1], gy[el.j],
-				gy[el.j + 1]});
+			// 6. Rate
+			m_rate[idx] = flux * m_yield[idx] * el.area;
+
+			// The floating drop alone (no presheath), as the sheath model
+			// has it, or sheath_drop Te. For self-sputtering without the
+			// sheath field (SelfSource).
+			m_phi_wall[idx] = opts.sheath_drop() > 0.0
+				? opts.sheath_drop() * te_c : e_sheath - 0.5 * te_c;
+			m_total_rate[t] += m_rate[idx];
 		}
 
 		// Each frame stands for the times nearer to it than to the other
@@ -1196,6 +1270,116 @@ namespace Sputtering
 		{
 			return m_nframes == 1 ? 1.0 : m_frame_hi[t] - m_frame_lo[t];
 		};
+
+		// With the sheath model, the yield averaged over the impact
+		// samples of each element's point, weighted by their share of the
+		// flux, with energies over Te times the element's Te. The energies
+		// and angles of the ions hitting the wall, and of those weighted by
+		// their yield (the atoms they sputter), are histogrammed at the
+		// same time, averaged over the frames' windows like the rates
+		// (ions/s and atoms/s in each bin). Each element and frame is
+		// independent, so they're split between the threads, each with
+		// histograms of its own that are added up at the end.
+		if (m_impacts)
+		{
+			m_impacts->build();
+
+			// Energy bins of 20 a decade from 0.01 eV to 100 keV
+			constexpr int per_decade {20};
+			constexpr double log_lo {-2.0};
+			const int n_ebin {per_decade * 7};
+			for (int b {}; b <= n_ebin; ++b)
+			{
+				m_ion_energy_edges.push_back(std::pow(10.0, log_lo
+					+ static_cast<double>(b) / per_decade));
+			}
+			for (auto* v : {&m_ion_energy, &m_sput_ion_energy})
+				v->assign(n_ebin, 0.0);
+			for (auto* v : {&m_ion_angle, &m_sput_ion_angle})
+				v->assign(90, 0.0);
+			double total_window {};
+			for (int t {}; t < m_nframes; ++t) total_window += window(t);
+
+			int num_above {};
+			#pragma omp parallel reduction(+:num_above)
+			{
+				std::vector<double> ion_e(n_ebin, 0.0), sput_e(n_ebin, 0.0);
+				std::vector<double> ion_a(90, 0.0), sput_a(90, 0.0);
+
+				#pragma omp for schedule(dynamic, 256)
+				for (std::size_t idx = 0; idx < n_all; ++idx)
+				{
+					const int point {m_point[idx]};
+					if (point < 0) continue;
+					const std::size_t e {idx % n_elem};
+					const int t {static_cast<int>(idx / n_elem)};
+					const double ions {m_flux[idx]
+						* m_surface.elements()[e].area * window(t)
+						/ total_window};
+					double y {}, energy {}, ang {}, above {};
+					for (const auto& smp : m_impacts->samples(point))
+					{
+						const double en {smp.energy * m_te[idx]};
+						const double ys {table.get_yield(en, smp.angle)};
+						y += smp.weight * ys;
+						energy += smp.weight * en;
+						ang += smp.weight * smp.angle;
+						if (en > table.energy_max()) above += smp.weight;
+						if (!(ions > 0.0)) continue;
+
+						const double w {ions * smp.weight};
+						const int bin {static_cast<int>(std::floor(
+							(std::log10(en) - log_lo) * per_decade))};
+						if (bin >= 0 && bin < n_ebin)
+						{
+							ion_e[bin] += w;
+							sput_e[bin] += w * ys;
+						}
+						const int abin {std::clamp(static_cast<int>(
+							smp.angle), 0, 89)};
+						ion_a[abin] += w;
+						sput_a[abin] += w * ys;
+					}
+					if (above > 0.01) ++num_above;
+					m_yield[idx] = y;
+					m_energy[idx] = energy;
+					m_impact_angle[idx] = ang;
+					m_rate[idx] = m_flux[idx] * y
+						* m_surface.elements()[e].area;
+				}
+
+				#pragma omp critical
+				{
+					for (int b {}; b < n_ebin; ++b)
+					{
+						m_ion_energy[b] += ion_e[b];
+						m_sput_ion_energy[b] += sput_e[b];
+					}
+					for (int b {}; b < 90; ++b)
+					{
+						m_ion_angle[b] += ion_a[b];
+						m_sput_ion_angle[b] += sput_a[b];
+					}
+				}
+			}
+			m_num_above_table += num_above;
+
+			std::fill(m_total_rate.begin(), m_total_rate.end(), 0.0);
+			for (std::size_t idx {}; idx < n_all; ++idx)
+				m_total_rate[idx / n_elem] += m_rate[idx];
+		}
+
+		// Computational x and y edges of each element's plasma cell, for
+		// placing atoms on its face
+		const Zones::Zones& zones {bkg.get_zones()};
+		m_cell_bounds.reserve(n_elem);
+		for (const SurfaceElement& el : m_surface.elements())
+		{
+			const auto& gx {zones.get_grid_x(el.zone)};
+			const auto& gy {zones.get_grid_y(el.zone)};
+			m_cell_bounds.push_back({gx[el.i], gx[el.i + 1], gy[el.j],
+				gy[el.j + 1]});
+		}
 
 		// Atoms sputtered off each element in each frame's window, added
 		// up in the order the per-element values are stored, for picking
@@ -1257,6 +1441,70 @@ namespace Sputtering
 	const std::vector<double>& Source::frame_lo() const {return m_frame_lo;}
 	const std::vector<double>& Source::frame_hi() const {return m_frame_hi;}
 
+	/**
+	* The D+ yield table the source was made with.
+	*/
+	const YieldTable& Source::table() const {return m_table;}
+
+	/**
+	* Computational x and y edges of each element's plasma cell,
+	* {x_lo, x_hi, y_lo, y_hi}, one per element.
+	*/
+	const std::vector<std::array<double, 4>>& Source::cell_bounds() const
+		{return m_cell_bounds;}
+
+	/**
+	* The floating sheath drop in front of each element (V), without the
+	* presheath's 0.5 Te: what the sheath model's field holds, or
+	* sheath_drop Te if that's set. Per frame and element, like rate().
+	*/
+	const std::vector<double>& Source::phi_wall() const {return m_phi_wall;}
+
+	/**
+	* The background's toroidal handedness, for the elements' normals
+	* (SurfaceElement::normal_xyz).
+	*/
+	double Source::phi_sign() const {return m_phi_sign;}
+
+	/**
+	* Mean angle from the normal the ions hit each element at (degrees),
+	* weighted by their share of the flux: from the sheath model's
+	* samples with sput_impact_opt = "sheath", or sput_angle_val. Per
+	* frame and element, like rate().
+	*/
+	const std::vector<double>& Source::impact_angle() const
+	{
+		return m_impact_angle;
+	}
+
+	/// The D+ impact table, or nullptr without the sheath model
+	const Sheath::ImpactTable* Source::impacts() const
+	{
+		return m_impacts.get();
+	}
+
+	/**
+	* @name Ion impact histograms
+	* With the sheath model only (empty otherwise): the edges of the
+	* energy bins (eV, 20 a decade from 0.01 eV to 100 keV), and the rate
+	* ions hit the whole wall in each energy bin and each 1 degree bin of
+	* angle from the normal (ions/s), and the same weighted by their
+	* yield, the rate the ions in each bin sputter atoms (atoms/s). All
+	* averaged over the frames' windows, like source_rate.
+	*/
+	///@{
+	const std::vector<double>& Source::ion_energy_edges() const
+		{return m_ion_energy_edges;}
+	const std::vector<double>& Source::ion_energy() const
+		{return m_ion_energy;}
+	const std::vector<double>& Source::ion_angle() const
+		{return m_ion_angle;}
+	const std::vector<double>& Source::sputtering_ion_energy() const
+		{return m_sput_ion_energy;}
+	const std::vector<double>& Source::sputtering_ion_angle() const
+		{return m_sput_ion_angle;}
+	///@}
+
 	double Source::mean_total_rate() const
 	{
 		if (m_total_rate.empty()) return 0.0;
@@ -1281,6 +1529,7 @@ namespace Sputtering
 		double sum_exb {};
 		double sum_energy {};
 		double sum_yield {};
+		double sum_angle {};
 		const std::size_t n {size()};
 		for (int t {}; t < m_nframes; ++t)
 		for (std::size_t e {}; e < n; ++e)
@@ -1292,6 +1541,7 @@ namespace Sputtering
 			sum_exb += m_flux_exb[idx] * a;
 			sum_energy += m_energy[idx] * m_flux[idx] * a;
 			sum_yield += m_yield[idx] * m_flux[idx] * a;
+			sum_angle += m_impact_angle[idx] * m_flux[idx] * a;
 		}
 		const auto [min_it, max_it] {std::minmax_element(m_total_rate.begin(),
 			m_total_rate.end())};
@@ -1308,8 +1558,18 @@ namespace Sputtering
 				<< " ions/s, net parallel " << sum_par / m_nframes
 				<< " and net E x B " << sum_exb / m_nframes << "\n"
 				<< "  Mean impact energy " << sum_energy / sum_flux_area
-				<< " eV and yield " << sum_yield / sum_flux_area
-				<< " (weighted by the ion flux)\n";
+				<< " eV, angle " << sum_angle / sum_flux_area
+				<< " degrees from the normal, and yield " << sum_yield
+				/ sum_flux_area << " (weighted by the ion flux)\n";
+		}
+		if (m_impacts)
+		{
+			os << "  Ion impacts from the sheath model ("
+				<< (m_impacts->model() == Sheath::Model::brooks ? "brooks"
+				: "borodkina") << "): " << m_impacts->size() << " points, "
+				<< m_impacts->num_ions() << " test ions each, "
+				<< m_impacts->lost() << " lost, energy conserved to "
+				<< m_impacts->max_energy_error() << " of the drop\n";
 		}
 		if (m_num_above_table > 0)
 		{
@@ -1489,9 +1749,42 @@ namespace Sputtering
 		}
 		b.z = el.phi_min + rng.next_double() * (el.phi_max - el.phi_min);
 
-		// 3. Energy of the ion that sputtered it
-		b.e_impact = sample_impact_energy(m_table, m_e_sheath[idx],
-			m_ti[idx], m_angle, rng.next_double());
+		// 3. Energy (and angle) of the ion that sputtered it: from the
+		// impact samples of the element's point, weighted by their share
+		// of the flux times their yield, or from the formula at
+		// sput_angle_val
+		if (m_point[idx] >= 0)
+		{
+			const auto& smp {m_impacts->samples(m_point[idx])};
+			std::vector<double> cdf(smp.size());
+			double total {};
+			for (std::size_t k {}; k < smp.size(); ++k)
+			{
+				total += smp[k].weight * m_table.get_yield(smp[k].energy
+					* m_te[idx], smp[k].angle);
+				cdf[k] = total;
+			}
+			if (total > 0.0)
+			{
+				const std::size_t k {std::min(static_cast<std::size_t>(
+					std::upper_bound(cdf.begin(), cdf.end(),
+					rng.next_double() * total) - cdf.begin()),
+					smp.size() - 1)};
+				b.e_impact = smp[k].energy * m_te[idx];
+				b.a_impact = smp[k].angle;
+			}
+			else
+			{
+				b.e_impact = m_energy[idx];
+				b.a_impact = m_impact_angle[idx];
+			}
+		}
+		else
+		{
+			b.e_impact = sample_impact_energy(m_table, m_e_sheath[idx],
+				m_ti[idx], m_angle, rng.next_double());
+			b.a_impact = m_angle;
+		}
 
 		// 4. Energy of the atom, Thompson cut off at Lambda E_ion
 		b.e_atom = sample_thompson(m_table.target_Es(),
@@ -1500,8 +1793,7 @@ namespace Sputtering
 			/ m_imp_mass_kg)};
 
 		// 5. Direction: cosine about the normal at the atom's phi
-		const std::array<double, 3> n {el.n_R * std::cos(b.z),
-			el.n_R * m_phi_sign * std::sin(b.z), el.n_Z};
+		const std::array<double, 3> n {el.normal_xyz(b.z, m_phi_sign)};
 		const double u1 {rng.next_double()};
 		const double u2 {rng.next_double()};
 		const auto d {cosine_direction(n, u1, u2)};
@@ -1552,10 +1844,16 @@ namespace Sputtering
 	* @param surface The surface elements. It has to outlive this object.
 	* @param atomic_number Atomic number of the impurity.
 	*/
-	Deposition::Deposition(const Surface& surface, const int atomic_number)
+	Deposition::Deposition(const Surface& surface, const int atomic_number,
+		const double phi_sign)
 		: m_surface {&surface},
 		m_redeposited(surface.size(), 0.0),
-		m_charge(atomic_number + 1, 0.0)
+		m_charge(atomic_number + 1, 0.0),
+		m_prompt(surface.size(), 0.0),
+		m_prompt_charge(atomic_number + 1, 0.0),
+		m_phi_sign {phi_sign},
+		m_angle(90, 0.0),
+		m_element_energy(surface.size(), 0.0)
 	{
 		for (std::size_t e {}; e < surface.size(); ++e)
 		{
@@ -1578,18 +1876,84 @@ namespace Sputtering
 				-10.0 + static_cast<double>(b) / per_decade));
 		}
 		m_lifetime.assign(m_lifetime_edges.size() - 1, 0.0);
+
+		// Impact energies from 0.01 eV to 100 keV, 20 bins a decade
+		for (int b {}; b <= 20 * 7; ++b)
+			m_energy_edges.push_back(std::pow(10.0, -2.0 + b / 20.0));
+		m_energy.assign(m_energy_edges.size() - 1, 0.0);
 	}
 
 	/**
-	* Adds an absorbed atom to the time since birth and charge tallies.
-	* Called from inside OpenMP loops, so the adds are atomic.
+	* Adds an absorbed particle's impact energy and angle to the tallies.
+	*
+	* The energy is its kinetic energy, 0.5 m v^2. The angle is from the
+	* element's normal, with the normal at the particle's toroidal angle z
+	* (or the element's own on a Cartesian zone); it's only added when the
+	* particle landed on an element. Energies outside the bins go in the
+	* first or last. Called from inside OpenMP loops, so the adds are
+	* atomic.
+	*
+	* @param impact The particle's velocity and mass, or nullptr to add
+	*        nothing.
+	* @param el The element it landed on, or nullptr.
+	* @param z Its toroidal angle (its z coordinate).
+	* @param weight Its weight (atoms/s).
+	* @param e Index of el.
+	*/
+	void Deposition::add_impact(const Impact* impact,
+		const SurfaceElement* el, const double z, const double weight,
+		const std::size_t e)
+	{
+		if (impact == nullptr) return;
+		const auto& v {impact->v};
+		const double v2 {v[0] * v[0] + v[1] * v[1] + v[2] * v[2]};
+		const double energy {0.5 * impact->mass * v2 / Constants::ev_to_j};
+		const std::size_t nbins {m_energy.size()};
+		std::size_t bin {static_cast<std::size_t>(std::upper_bound(
+			m_energy_edges.begin(), m_energy_edges.end(), energy)
+			- m_energy_edges.begin())};
+		bin = bin == 0 ? 0 : std::min(bin - 1, nbins - 1);
+		#pragma omp atomic
+		m_energy[bin] += weight;
+		#pragma omp atomic
+		m_energy_sum += weight * energy;
+		#pragma omp atomic
+		m_energy_weight += weight;
+
+		if (el == nullptr || !(v2 > 0.0)) return;
+		#pragma omp atomic
+		m_element_energy[e] += weight * energy;
+
+		// The normal points into the plasma, the velocity into the wall
+		const auto n {el->normal_xyz(z, m_phi_sign)};
+		const double c {std::clamp(-(v[0] * n[0] + v[1] * n[1] + v[2]
+			* n[2]) / std::sqrt(v2), -1.0, 1.0)};
+		const double angle {std::acos(std::abs(c)) * 180.0
+			/ Constants::pi};
+		const int abin {std::clamp(static_cast<int>(angle), 0,
+			static_cast<int>(m_angle.size()) - 1)};
+		#pragma omp atomic
+		m_angle[abin] += weight;
+		#pragma omp atomic
+		m_angle_sum += weight * angle;
+		#pragma omp atomic
+		m_angle_weight += weight;
+	}
+
+	/**
+	* Adds an absorbed atom to the time since birth and charge tallies, and
+	* to the prompt charge tally if it came back promptly. Called from
+	* inside OpenMP loops, so the adds are atomic.
 	*
 	* @param pt Time since the atom was born (s).
 	* @param q Its charge when it was absorbed.
 	* @param weight Its weight (atoms/s).
+	* @param prompt_by The time since birth up to which its return is
+	*        prompt (Slots::Slots::prompt_by), below 0 if it never ionized.
+	* @return True if the return was prompt.
 	*/
-	void Deposition::add_lifetime_and_charge(const double pt, const int q,
-		const double weight)
+	bool Deposition::add_lifetime_and_charge(const double pt, const int q,
+		const double weight, const double prompt_by)
 	{
 		const std::size_t nbins {m_lifetime.size()};
 		std::size_t bin {static_cast<std::size_t>(std::upper_bound(
@@ -1599,10 +1963,21 @@ namespace Sputtering
 		#pragma omp atomic
 		m_lifetime[bin] += weight;
 
+		#pragma omp atomic
+		m_lifetime_sum += weight * pt;
+
 		const int charge {std::clamp(q, 0,
 			static_cast<int>(m_charge.size()) - 1)};
 		#pragma omp atomic
 		m_charge[charge] += weight;
+
+		const bool prompt {prompt_by >= 0.0 && pt <= prompt_by};
+		if (prompt)
+		{
+			#pragma omp atomic
+			m_prompt_charge[charge] += weight;
+		}
+		return prompt;
 	}
 
 	/**
@@ -1624,19 +1999,28 @@ namespace Sputtering
 	* @param pt Time since the atom was born (s).
 	* @param q Its charge.
 	* @param weight Its weight (atoms/s).
+	* @param prompt_by The time since birth up to which its return is
+	*        prompt (Slots::Slots::prompt_by). Below 0 (the default) it
+	*        isn't.
+	* @param impact Its velocity and mass, for the impact tallies, or
+	*        nullptr.
+	* @return Index of the element it was put on, or -1 if none.
 	*/
-	void Deposition::add_into_wall_cell(const int zone, const int i,
+	long Deposition::add_into_wall_cell(const int zone, const int i,
 		const int j, const int k, const int prev_zone, const int prev_i,
-		const int prev_j, const double pt, const int q, const double weight)
+		const int prev_j, const double pt, const int q, const double weight,
+		const double prompt_by, const Impact* impact)
 	{
-		add_lifetime_and_charge(pt, q, weight);
+		const bool prompt {add_lifetime_and_charge(pt, q, weight,
+			prompt_by)};
 
 		const auto it {m_wall_cells.find(cell_key(zone, i, j, k))};
 		if (it == m_wall_cells.end())
 		{
+			add_impact(impact, nullptr, 0.0, weight, 0);
 			#pragma omp atomic
 			m_unassigned += weight;
-			return;
+			return -1;
 		}
 
 		std::size_t pick {it->second.front()};
@@ -1651,6 +2035,17 @@ namespace Sputtering
 		}
 		#pragma omp atomic
 		m_redeposited[pick] += weight;
+		if (prompt)
+		{
+			#pragma omp atomic
+			m_prompt[pick] += weight;
+		}
+
+		// The staircase element's normal, at the middle of its phi range
+		const SurfaceElement& el {m_surface->elements()[pick]};
+		add_impact(impact, &el, 0.5 * (el.phi_min + el.phi_max), weight,
+			pick);
+		return static_cast<long>(pick);
 	}
 
 	/**
@@ -1674,13 +2069,20 @@ namespace Sputtering
 	* @param pt Time since the atom was born (s).
 	* @param q Its charge.
 	* @param weight Its weight (atoms/s).
+	* @param prompt_by The time since birth up to which its return is
+	*        prompt (Slots::Slots::prompt_by). Below 0 (the default) it
+	*        isn't.
+	* @param impact Its velocity and mass, for the impact tallies, or
+	*        nullptr.
+	* @return Index of the element it was put on, or -1 if none.
 	*/
-	void Deposition::add_at_wall_face(const Zones::Zones& zones,
+	long Deposition::add_at_wall_face(const Zones::Zones& zones,
 		const int zone, const Zones::Face face,
 		const std::array<double, 3>& pos, const double pt, const int q,
-		const double weight)
+		const double weight, const double prompt_by, const Impact* impact)
 	{
-		add_lifetime_and_charge(pt, q, weight);
+		const bool prompt {add_lifetime_and_charge(pt, q, weight,
+			prompt_by)};
 
 		if (!m_wall_faces.empty())
 		{
@@ -1702,13 +2104,36 @@ namespace Sputtering
 			{
 				#pragma omp atomic
 				m_redeposited[it->second] += weight;
-				return;
+				if (prompt)
+				{
+					#pragma omp atomic
+					m_prompt[it->second] += weight;
+				}
+				add_impact(impact, &m_surface->elements()[it->second], z,
+					weight, it->second);
+				return static_cast<long>(it->second);
 			}
 		}
 
+		add_impact(impact, nullptr, 0.0, weight, 0);
 		#pragma omp atomic
 		m_wall_face += weight;
+		return -1;
 	}
+
+	/**
+	* Turns on self-sputtering: the boundary check then passes each atom
+	* put on an element to it (SelfSource::rebirth).
+	*
+	* @param self The self-sputtering source, which has to outlive this
+	*        object, or nullptr to turn it off.
+	*/
+	void Deposition::set_self(SelfSource* self) {m_self = self;}
+
+	/**
+	* The self-sputtering source, or nullptr if self-sputtering is off.
+	*/
+	SelfSource* Deposition::self() const {return m_self;}
 
 	/**
 	* Adds up the tallies of every MPI rank onto one of them. Must be
@@ -1727,13 +2152,25 @@ namespace Sputtering
 				MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
 			if (rank == root) v = total;
 		};
-		std::vector<double> scalars {m_unassigned, m_wall_face};
+		std::vector<double> scalars {m_unassigned, m_wall_face,
+			m_lifetime_sum, m_energy_sum, m_energy_weight, m_angle_sum,
+			m_angle_weight};
 		sum(scalars);
 		m_unassigned = scalars[0];
 		m_wall_face = scalars[1];
+		m_lifetime_sum = scalars[2];
+		m_energy_sum = scalars[3];
+		m_energy_weight = scalars[4];
+		m_angle_sum = scalars[5];
+		m_angle_weight = scalars[6];
+		sum(m_energy);
+		sum(m_angle);
+		sum(m_element_energy);
 		sum(m_redeposited);
 		sum(m_lifetime);
 		sum(m_charge);
+		sum(m_prompt);
+		sum(m_prompt_charge);
 	}
 
 	/**
@@ -1742,9 +2179,36 @@ namespace Sputtering
 	* cells with no element (unassigned) and at wall faces, and their total
 	* (atoms/s). Also the edges of the time since birth bins (s), the rate
 	* in each bin, and the rate at each charge state, for every redeposited
-	* atom.
+	* atom. The prompt returns onto each element and at each charge state,
+	* and their total (every prompt return, including those that land with
+	* no element under them). The mean time since birth of the redeposited
+	* atoms (s). The impact energy bin edges (eV), and the rate in each
+	* energy bin and each 1 degree bin of the angle from the element's
+	* normal, their means (eV, degrees), and the sum of weight * energy on
+	* each element (eV atoms/s), for the particles added with an Impact.
 	*/
 	///@{
+	const std::vector<double>& Deposition::energy_edges() const
+		{return m_energy_edges;}
+	const std::vector<double>& Deposition::impact_energy() const
+		{return m_energy;}
+	const std::vector<double>& Deposition::impact_angle() const
+		{return m_angle;}
+	const std::vector<double>& Deposition::element_energy() const
+		{return m_element_energy;}
+	double Deposition::mean_lifetime() const
+	{
+		const double tot {total()};
+		return tot > 0.0 ? m_lifetime_sum / tot : 0.0;
+	}
+	double Deposition::mean_energy() const
+	{
+		return m_energy_weight > 0.0 ? m_energy_sum / m_energy_weight : 0.0;
+	}
+	double Deposition::mean_angle() const
+	{
+		return m_angle_weight > 0.0 ? m_angle_sum / m_angle_weight : 0.0;
+	}
 	const std::vector<double>& Deposition::redeposited() const
 		{return m_redeposited;}
 	double Deposition::unassigned() const {return m_unassigned;}
@@ -1760,6 +2224,15 @@ namespace Sputtering
 	const std::vector<double>& Deposition::lifetime() const
 		{return m_lifetime;}
 	const std::vector<double>& Deposition::charge() const {return m_charge;}
+	const std::vector<double>& Deposition::prompt() const {return m_prompt;}
+	const std::vector<double>& Deposition::prompt_charge() const
+		{return m_prompt_charge;}
+	double Deposition::prompt_total() const
+	{
+		double sum {};
+		for (const double r : m_prompt_charge) sum += r;
+		return sum;
+	}
 	///@}
 
 	/**
@@ -1799,11 +2272,416 @@ namespace Sputtering
 			mean_q += q * m_charge[q] / tot;
 		os << "  Mean charge when they land " << mean_q << ", "
 			<< 100.0 * m_charge[0] / tot << "% as neutrals\n";
+		os << "  Mean time since birth " << mean_lifetime() * 1e6
+			<< " us";
+		if (m_energy_weight > 0.0)
+			os << ", impact energy " << mean_energy() << " eV";
+		if (m_angle_weight > 0.0)
+		{
+			os << ", angle from the normal " << mean_angle()
+				<< " degrees";
+		}
+		os << "\n";
+		const double prompt {prompt_total()};
+		os << "  Prompt (within one singly charged gyroperiod of first "
+			"ionizing): " << prompt << " atoms/s";
+		if (source_rate > 0.0)
+			os << ", " << 100.0 * prompt / source_rate << "% of the source";
+		os << "\n";
 		if (m_wall_face > 0.0 || m_unassigned > 0.0)
 		{
 			os << "  " << 100.0 * m_wall_face / tot << "% at wall faces and "
 				<< 100.0 * m_unassigned / tot << "% into wall cells with no "
 				"surface element\n";
+		}
+	}
+	/**
+	* Works out the energy and angle an impurity hits a wall element with,
+	* for the self-sputtering yield.
+	*
+	* With the sheath field in the push (phi_wall = 0 here), the particle
+	* has already been accelerated through the sheath, so both come from
+	* its velocity. Without it, an ion of charge q still falls through the
+	* sheath before it hits, gaining q phi_wall, the same assumption as for
+	* the D+ ions of the source. That energy is added to its motion along
+	* the normal, v_n' = sqrt(v_n^2 + 2 q e phi_wall / m), since the
+	* sheath's field is along the normal, and the angle is from there. A
+	* particle moving away from the wall when it was absorbed (possible
+	* when the staircase's face and the element's normal differ) is taken
+	* to hit it with its speed along the normal.
+	*
+	* @param v Cartesian velocity (m/s).
+	* @param mass Mass (kg).
+	* @param n The element's unit normal, into the plasma.
+	* @param q Charge.
+	* @param phi_wall Sheath drop to add (V), 0 with the sheath field on.
+	* @return Impact energy (eV) and angle from the normal (degrees).
+	*/
+	SelfImpact self_impact(const std::array<double, 3>& v, const double mass,
+		const std::array<double, 3>& n, const int q, const double phi_wall)
+	{
+		const double v2 {v[0] * v[0] + v[1] * v[1] + v[2] * v[2]};
+		const double v_n {std::abs(v[0] * n[0] + v[1] * n[1] + v[2] * n[2])};
+		const double v_t2 {std::max(v2 - v_n * v_n, 0.0)};
+		double v_n2 {v_n * v_n};
+		if (q > 0 && phi_wall > 0.0)
+			v_n2 += 2.0 * q * Constants::ev_to_j * phi_wall / mass;
+
+		SelfImpact out {};
+		out.energy = 0.5 * mass * (v_t2 + v_n2) / Constants::ev_to_j;
+		out.angle = std::atan2(std::sqrt(v_t2), std::sqrt(v_n2)) * 180.0
+			/ Constants::pi;
+		return out;
+	}
+
+	/**
+	* Russian roulette on a weight.
+	*
+	* A weight at or above min_weight is kept. Below it, the particle
+	* carries on with min_weight with probability weight / min_weight and
+	* ends otherwise, so the expected weight is unchanged while particles
+	* of little weight are followed less often.
+	*
+	* @param weight The weight (atoms/s).
+	* @param min_weight Weight below which roulette is played. 0 or less
+	*        turns it off.
+	* @param u Uniform random number in [0, 1).
+	* @return The new weight, 0 if the particle ends.
+	*/
+	double roulette(const double weight, const double min_weight,
+		const double u)
+	{
+		if (!(weight > 0.0)) return 0.0;
+		if (!(min_weight > 0.0) || weight >= min_weight) return weight;
+		return u * min_weight < weight ? min_weight : 0.0;
+	}
+
+	/**
+	* Sets up self-sputtering off the source's surface elements.
+	*
+	* The table has to be for the impurity on the wall material: its
+	* projectile the impurity (atomic number imp_atom_num, mass within 5%
+	* of imp_mass_amu) and its target the D+ table's. The largest fraction
+	* of its energy the impurity can give a wall atom in one collision is
+	* Lambda = 4 m1 m2 / (m1 + m2)^2, 1 for W on W. Roulette is played
+	* below sput_self_min_weight times the source particles' weight,
+	* source_rate / imp_num.
+	*
+	* @param source The sputtered source: its elements, their plasma cells,
+	*        and the sheath drop in front of them. It has to outlive this
+	*        object.
+	* @param table Yield table of the impurity on the wall material.
+	* @param opts Options (imp_atom_num, imp_mass_amu, imp_num,
+	*        sput_self_min_weight, sput_self_max_gen).
+	* @param sheath_on Whether the push has the sheath field. If not, an
+	*        ion's impact energy gets the sheath drop added (self_impact).
+	*/
+	SelfSource::SelfSource(const Source& source, const YieldTable& table,
+		const Options::Options& opts, const bool sheath_on)
+		: m_table {table},
+		m_source {&source},
+		m_sheath_on {sheath_on},
+		m_imp_mass_kg {opts.imp_mass_amu() * Constants::amu_to_kg},
+		m_max_gen {opts.sput_self_max_gen()},
+		m_self(source.size(), 0.0),
+		m_gen_weight(opts.sput_self_max_gen() + 1, 0.0),
+		m_gen_landed(opts.sput_self_max_gen() + 1, 0.0)
+	{
+		if (std::lround(table.projectile_Z()) != opts.imp_atom_num())
+		{
+			Errors::fatal_error("The self-sputtering table "
+				+ table.path() + " is for a projectile of atomic number "
+				+ std::to_string(table.projectile_Z()) + ", but the impurity "
+				"(imp_atom_num) is " + std::to_string(opts.imp_atom_num())
+				+ ".");
+		}
+		if (std::abs(table.projectile_mass_amu() / opts.imp_mass_amu() - 1.0)
+			> 0.05)
+		{
+			Errors::fatal_error("The projectile mass in the self-sputtering "
+				"table " + table.path() + " (" + std::to_string(
+				table.projectile_mass_amu()) + " amu) is more than 5% off "
+				"the impurity's (imp_mass_amu, " + std::to_string(
+				opts.imp_mass_amu()) + " amu).");
+		}
+		if (std::lround(table.target_Z()) != std::lround(
+			source.table().target_Z()))
+		{
+			Errors::fatal_error("The self-sputtering table " + table.path()
+				+ " is for a target of atomic number " + std::to_string(
+				table.target_Z()) + ", but the sputtering table "
+				+ source.table().path() + " is for " + std::to_string(
+				source.table().target_Z()) + ". They need the same wall.");
+		}
+
+		const double m1 {table.projectile_mass_amu()};
+		const double m2 {table.target_mass_amu()};
+		m_lambda = 4.0 * m1 * m2 / ((m1 + m2) * (m1 + m2));
+		m_min_weight = opts.sput_self_min_weight() * source.source_rate()
+			/ opts.imp_num();
+		m_phi_sign = source.phi_sign();
+	}
+
+	/**
+	* What a particle that landed on element e does next: sputters more
+	* atoms and carries on as one of them, or ends.
+	*
+	* 1. Its impact energy and angle (self_impact), with the sheath drop
+	*    added if the push has no sheath field, from the element's plasma
+	*    cell at the particle's frame.
+	* 2. The yield Y at those from the table. The self-sputtered rate off
+	*    the element goes up by w Y, its expected value.
+	* 3. Its new weight w Y, through roulette (roulette).
+	* 4. If it carries on, it's a neutral atom at the place it hit, moved
+	*    a thousandth of a cell back into the element's plasma cell, with
+	*    a Thompson energy cut off at Lambda E (sample_thompson) and a
+	*    cosine direction about the element's normal (cosine_direction),
+	*    as for the D+ source. If that would be generation sput_self_max_gen
+	*    + 1, it ends instead and avalanche is set: the chain should have
+	*    ended long before (see SelfSource::print_summary).
+	*
+	* Called from inside OpenMP loops, so the adds are atomic.
+	*
+	* @param e Index of the element it landed on.
+	* @param frame Its background frame (Slots::Slots::tidx).
+	* @param pos Its computational position (x, y, z) when absorbed, z
+	*        already wrapped into its zone if periodic.
+	* @param impact Its velocity and mass.
+	* @param q Its charge.
+	* @param weight Its weight (atoms/s).
+	* @param generation How many times it was self-sputtered before.
+	* @param rng Random number generator of the calling thread.
+	* @return What it does next.
+	*/
+	Rebirth SelfSource::rebirth(const std::size_t e, const int frame,
+		const std::array<double, 3>& pos, const Impact& impact, const int q,
+		const double weight, const int generation, pcg32& rng)
+	{
+		const Surface& surface {m_source->surface()};
+		const SurfaceElement& el {surface.elements()[e]};
+		const std::size_t n_elem {surface.size()};
+		const int t {std::clamp(frame, 0, m_source->nframes() - 1)};
+		const double phi_wall {m_sheath_on ? 0.0
+			: m_source->phi_wall()[t * n_elem + e]};
+
+		// 1. Energy and angle
+		const double z {std::clamp(pos[2], std::min(el.phi_min, el.phi_max),
+			std::max(el.phi_min, el.phi_max))};
+		const std::array<double, 3> n {el.normal_xyz(z, m_phi_sign)};
+		const SelfImpact hit {self_impact(impact.v, impact.mass, n, q,
+			phi_wall)};
+
+		// 2. Yield
+		const double y {m_table.get_yield(hit.energy, hit.angle)};
+		const double w_new {weight * y};
+		#pragma omp atomic
+		m_landed += weight;
+		#pragma omp atomic
+		m_gen_landed[std::clamp(generation, 0, m_max_gen)] += weight;
+		#pragma omp atomic
+		m_energy_sum += weight * hit.energy;
+		#pragma omp atomic
+		m_angle_sum += weight * hit.angle;
+		#pragma omp atomic
+		m_self[e] += w_new;
+		#pragma omp atomic
+		m_self_total += w_new;
+		if (!(y > 0.0))
+		{
+			#pragma omp atomic
+			++m_num_below;
+		}
+		if (hit.energy > m_table.energy_max())
+		{
+			#pragma omp atomic
+			++m_num_above;
+		}
+
+		// 3. Roulette
+		Rebirth r {};
+		const double w {roulette(w_new, m_min_weight, rng.next_double())};
+		if (!(w > 0.0))
+		{
+			if (w_new > 0.0)
+			{
+				#pragma omp atomic
+				m_roulette_lost += w_new;
+			}
+			return r;
+		}
+		if (generation + 1 > m_max_gen)
+		{
+			r.avalanche = true;
+			return r;
+		}
+		#pragma omp atomic
+		m_gen_weight[generation + 1] += w;
+
+		// 4. The atom: where it hit, just inside the plasma cell
+		constexpr double inset {1e-3};
+		const auto& [x_lo, x_hi, y_lo, y_hi] {m_source->cell_bounds()[e]};
+		r.x = std::clamp(pos[0], x_lo, x_hi);
+		r.y = std::clamp(pos[1], y_lo, y_hi);
+		switch (el.face)
+		{
+			case Zones::xmin: r.x = x_lo + inset * (x_hi - x_lo); break;
+			case Zones::xmax: r.x = x_hi - inset * (x_hi - x_lo); break;
+			case Zones::ymin: r.y = y_lo + inset * (y_hi - y_lo); break;
+			default: r.y = y_hi - inset * (y_hi - y_lo); break;
+		}
+		r.z = z;
+		r.zone = el.zone;
+		r.i = el.i;
+		r.j = el.j;
+		r.k = el.k;
+
+		// Its energy and direction
+		const double e_atom {sample_thompson(m_table.target_Es(),
+			m_lambda * hit.energy, rng.next_double())};
+		const double speed {std::sqrt(2.0 * e_atom * Constants::ev_to_j
+			/ m_imp_mass_kg)};
+		const double u1 {rng.next_double()};
+		const double u2 {rng.next_double()};
+		const auto d {cosine_direction(n, u1, u2)};
+		r.vX = speed * d[0];
+		r.vY = speed * d[1];
+		r.vZ = speed * d[2];
+		r.weight = w;
+		r.alive = true;
+		return r;
+	}
+
+	/**
+	* Adds up the tallies of every MPI rank onto one of them. Must be
+	* called by every rank. The other ranks' tallies are left as they were.
+	*
+	* @param root Rank to add them up on.
+	*/
+	void SelfSource::reduce(const int root)
+	{
+		int rank {};
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		auto sum = [&](std::vector<double>& v)
+		{
+			std::vector<double> total(v.size(), 0.0);
+			MPI_Reduce(v.data(), total.data(), static_cast<int>(v.size()),
+				MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
+			if (rank == root) v = total;
+		};
+		sum(m_self);
+		sum(m_gen_weight);
+		sum(m_gen_landed);
+		std::vector<double> scalars {m_landed, m_self_total, m_energy_sum,
+			m_angle_sum, m_roulette_lost, static_cast<double>(m_num_below),
+			static_cast<double>(m_num_above)};
+		sum(scalars);
+		if (rank != root) return;
+		m_landed = scalars[0];
+		m_self_total = scalars[1];
+		m_energy_sum = scalars[2];
+		m_angle_sum = scalars[3];
+		m_roulette_lost = scalars[4];
+		m_num_below = static_cast<long long>(scalars[5]);
+		m_num_above = static_cast<long long>(scalars[6]);
+	}
+
+	/**
+	* @name Accessors
+	* The table, the roulette weight (atoms/s) and the generation limit;
+	* the self-sputtered rate off each element and in total (sum of w Y
+	* over the landings, atoms/s); the weight carried on into each
+	* generation (index g, 1 to sput_self_max_gen; 0 is left for the
+	* source) and the weight landing on elements from each generation
+	* (0 to sput_self_max_gen); the rate landing on elements and the weight-averaged yield,
+	* impact energy (eV) and angle (degrees) of those landings; the rate
+	* ended by roulette (its expected weight, w Y); and how many landings
+	* were below the threshold or past the table's highest energy.
+	*/
+	///@{
+	const YieldTable& SelfSource::table() const {return m_table;}
+	double SelfSource::min_weight() const {return m_min_weight;}
+	int SelfSource::max_gen() const {return m_max_gen;}
+	const std::vector<double>& SelfSource::self_sputtered() const
+		{return m_self;}
+	const std::vector<double>& SelfSource::generation_weight() const
+		{return m_gen_weight;}
+	const std::vector<double>& SelfSource::generation_landed() const
+		{return m_gen_landed;}
+	double SelfSource::self_total() const {return m_self_total;}
+	double SelfSource::landed() const {return m_landed;}
+	double SelfSource::mean_yield() const
+		{return m_landed > 0.0 ? m_self_total / m_landed : 0.0;}
+	double SelfSource::mean_energy() const
+		{return m_landed > 0.0 ? m_energy_sum / m_landed : 0.0;}
+	double SelfSource::mean_angle() const
+		{return m_landed > 0.0 ? m_angle_sum / m_landed : 0.0;}
+	double SelfSource::roulette_lost() const {return m_roulette_lost;}
+	long long SelfSource::num_below_threshold() const {return m_num_below;}
+	long long SelfSource::num_above_table() const {return m_num_above;}
+	///@}
+
+	/**
+	* The self-sputtering multiplication measured along the chains: the
+	* weight carried into generations 2 and up over that into 1 and up.
+	* If every generation comes back and sputters the same way, the weight
+	* in generation g is S M^g and this is M. It doesn't need the source
+	* rate, so it also works on one rank mid-run (for the avalanche
+	* message).
+	*
+	* @return The multiplication, 0 if nothing was self-sputtered.
+	*/
+	double SelfSource::chain_multiplication() const
+	{
+		double from1 {};
+		for (std::size_t g {1}; g < m_gen_weight.size(); ++g)
+			from1 += m_gen_weight[g];
+		if (!(from1 > 0.0)) return 0.0;
+		return (from1 - m_gen_weight[1]) / from1;
+	}
+
+	/**
+	* Prints the self-sputtered rate, the multiplication and the mean
+	* yield, energy and angle of the impurities landing on the wall.
+	*
+	* The multiplication M (the self-sputtered atoms per atom sputtered,
+	* from any source, that are followed) is T / (S + T), with S the D+
+	* source and T the self-sputtered rate, since T = S M / (1 - M) for a
+	* chain that sputters the same way each generation. It is printed with
+	* the chain estimate (chain_multiplication).
+	*
+	* @param os Stream to print to.
+	* @param source_rate The D+ sputtered source (atoms/s).
+	*/
+	void SelfSource::print_summary(std::ostream& os,
+		const double source_rate) const
+	{
+		os << "Self-sputtering: " << m_self_total << " atoms/s";
+		if (source_rate > 0.0)
+		{
+			os << ", " << m_self_total / source_rate << " times the D+ "
+				"source\n  Multiplication " << m_self_total / (source_rate
+				+ m_self_total) << " (along the chains "
+				<< chain_multiplication() << ")";
+		}
+		os << "\n  Landing on elements " << m_landed << " atoms/s, mean "
+			"yield " << mean_yield() << ", impact energy " << mean_energy()
+			<< " eV, angle from the normal " << mean_angle() << " degrees"
+			<< (m_sheath_on ? "" : " (with the sheath drop added)") << "\n";
+		double carried {};
+		int deepest {};
+		for (std::size_t g {1}; g < m_gen_weight.size(); ++g)
+		{
+			carried += m_gen_weight[g];
+			if (m_gen_weight[g] > 0.0) deepest = static_cast<int>(g);
+		}
+		os << "  Carried on " << carried << " atoms/s, down to generation "
+			<< deepest << "; " << m_roulette_lost << " atoms/s ended by "
+			"roulette\n";
+		if (m_num_above > 0)
+		{
+			os << "  Warning! " << m_num_above << " landings were past the "
+				"self-sputtering table's highest energy (" << m_table
+				.energy_max() << " eV), where its yield there was used.\n";
 		}
 	}
 }

@@ -28,13 +28,17 @@
 #include <vector>
 
 #include "background.h"
+#include "boundary.h"
+#include "constants.h"
 #include "flan_types.h"
 #include "hdf5.h"
 #include "hdf5_utils.h"
 #include "options.h"
 #include "pcg32.h"
+#include "read_bkg.h"
 #include "read_s3xe.h"
 #include "s3x_test_files.h"
+#include "sheath.h"
 #include "slots.h"
 #include "sputtering.h"
 #include "vectors.h"
@@ -80,6 +84,7 @@ namespace
 		std::vector<hsize_t> yield_shape {};	// Default (nE, nA)
 		bool target_Es {true};					// Write /target/Es
 		double projectile_Z {1.0};
+		double projectile_mass_amu {2.014};
 
 		Table()
 		{
@@ -101,9 +106,16 @@ namespace
 			/ ("flan_test_sputtering_" + std::to_string(getpid())
 			+ ".h5")).string()};
 
-		void write(const Table& t)
+		// A second table, for self-sputtering
+		std::string m_self_path {(std::filesystem::temp_directory_path()
+			/ ("flan_test_self_sputtering_" + std::to_string(getpid())
+			+ ".h5")).string()};
+
+		void write(const Table& t) {write(t, m_path);}
+
+		void write(const Table& t, const std::string& path)
 		{
-			const hid_t file {H5Fcreate(m_path.c_str(), H5F_ACC_TRUNC,
+			const hid_t file {H5Fcreate(path.c_str(), H5F_ACC_TRUNC,
 				H5P_DEFAULT, H5P_DEFAULT)};
 			write_doubles(file, "/energy", {t.energy.size()}, t.energy);
 			write_doubles(file, "/angle", {t.angle.size()}, t.angle);
@@ -111,14 +123,19 @@ namespace
 				? std::vector<hsize_t> {t.energy.size(), t.angle.size()}
 				: t.yield_shape, t.yield);
 			write_doubles(file, "/projectile/Z", {}, {t.projectile_Z});
-			write_doubles(file, "/projectile/mass_amu", {}, {2.014});
+			write_doubles(file, "/projectile/mass_amu", {},
+				{t.projectile_mass_amu});
 			write_doubles(file, "/target/Z", {}, {74.0});
 			write_doubles(file, "/target/mass_amu", {}, {183.84});
 			if (t.target_Es) write_doubles(file, "/target/Es", {}, {8.79});
 			H5Fclose(file);
 		}
 
-		void TearDown() override {std::filesystem::remove(m_path);}
+		void TearDown() override
+		{
+			std::filesystem::remove(m_path);
+			std::filesystem::remove(m_self_path);
+		}
 	};
 }
 
@@ -1320,4 +1337,726 @@ TEST(SputteringDeposition, WallFaces)
 	EXPECT_DOUBLE_EQ(dep.redeposited()[right], 4.0);
 	EXPECT_DOUBLE_EQ(dep.wall_face(), 8.0);
 	EXPECT_DOUBLE_EQ(dep.total(), 15.0);
+}
+
+namespace
+{
+	// Slab options with a wall on one face. The faces default to
+	// absorbing, so the one across from the wall isn't periodic.
+	Options::Options slab_wall_options(const std::string& wall,
+		const double b_angle = 0.0)
+	{
+		Options::Options opts {source_options()};
+		opts.set_bkg_source("slab");
+		opts.set_slab_ne(1e19);
+		opts.set_slab_te(20.0);
+		opts.set_slab_ti(20.0);
+		opts.set_slab_bmag(2.0);
+		opts.set_slab_tmax(1e-5);
+		opts.set_slab_wall(wall);
+		opts.set_slab_b_angle(b_angle);
+		return opts;
+	}
+}
+
+// A slab wall at y min is the 8 x 8 cell faces of that side of the 5 cm
+// box: normal +Y, each 6.25 mm square, 25 cm^2 in all. It is a Cartesian
+// surface, so the normal doesn't turn with z.
+TEST(SlabWall, SurfaceYmin)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("ymin"))};
+	ASSERT_EQ(bkg.get_zones().get_face(0, Zones::ymin), Zones::face_wall);
+	EXPECT_TRUE(bkg.get_zones().is_cartesian(0));
+
+	const Sputtering::Surface surface(bkg);
+	EXPECT_TRUE(surface.from_wall_faces());
+	ASSERT_EQ(surface.size(), 64u);
+	const double side {0.05 / 8.0};
+	for (const auto& e : surface.elements())
+	{
+		EXPECT_TRUE(e.cartesian);
+		EXPECT_TRUE(e.on_wall_face());
+		EXPECT_EQ(e.face, Zones::ymin);
+		EXPECT_EQ(e.j, 0);
+		EXPECT_NEAR(e.area, side * side, 1e-15);
+		EXPECT_NEAR(e.Z_mid, -0.025, 1e-15);	// Y of the face
+		EXPECT_NEAR(e.R_mid, (e.i + 0.5) * side, 1e-15);	// X
+		EXPECT_NEAR(e.phi_min, -0.025 + e.k * side, 1e-15);	// Z
+		for (const double z : {e.phi_min, e.phi_max})
+		{
+			const auto n {e.normal_xyz(z, 1.0)};
+			EXPECT_NEAR(n[0], 0.0, 1e-15);
+			EXPECT_NEAR(n[1], 1.0, 1e-15);
+			EXPECT_NEAR(n[2], 0.0, 1e-15);
+		}
+	}
+	EXPECT_NEAR(surface.total_area(), 0.05 * 0.05, 1e-14);
+}
+
+// At x max the normal is -X, and the surface is the y-z side
+TEST(SlabWall, SurfaceXmax)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("xmax"))};
+	const Sputtering::Surface surface(bkg);
+	ASSERT_EQ(surface.size(), 64u);
+	for (const auto& e : surface.elements())
+	{
+		EXPECT_EQ(e.face, Zones::xmax);
+		EXPECT_EQ(e.i, 7);
+		EXPECT_NEAR(e.R_mid, 0.05, 1e-15);
+		const auto n {e.normal_xyz(0.0, 1.0)};
+		EXPECT_NEAR(n[0], -1.0, 1e-15);
+		EXPECT_NEAR(n[1], 0.0, 1e-15);
+	}
+	EXPECT_NEAR(surface.total_area(), 0.05 * 0.05, 1e-14);
+}
+
+// slab_b_angle turns B from +X toward -Y. With the wall at y min it is the
+// angle between B and the wall, and the flow along B runs into the wall.
+TEST(SlabWall, FieldAngle)
+{
+	for (const double deg : {0.0, 3.0, 30.0, 87.0, 90.0})
+	{
+		auto opts {slab_wall_options("ymin", deg)};
+		opts.set_slab_flow(1e4);
+		const auto bkg {Background::read_bkg(opts)};
+		const double a {deg * S3XTest::pi / 180.0};
+		for (const int t : {0, 127})
+		{
+			const double bX {bkg.get_bX()(0, t, 3, 4, 5)};
+			const double bY {bkg.get_bY()(0, t, 3, 4, 5)};
+			EXPECT_NEAR(bX, 2.0 * std::cos(a), 1e-6);
+			EXPECT_NEAR(bY, -2.0 * std::sin(a), 1e-6);
+			EXPECT_NEAR(bkg.get_bZ()(0, t, 3, 4, 5), 0.0, 1e-12);
+			EXPECT_NEAR(bkg.get_bmag()(0, t, 3, 4, 5), 2.0, 1e-6);
+
+			// Angle between B and the wall (normal +Y)
+			EXPECT_NEAR(std::asin(std::abs(bY) / 2.0), a, 1e-6);
+			EXPECT_NEAR(bkg.get_uX()(0, t, 3, 4, 5), 1e4 * std::cos(a), 1e-2);
+			EXPECT_NEAR(bkg.get_uY()(0, t, 3, 4, 5), -1e4 * std::sin(a), 1e-2);
+		}
+	}
+}
+
+// The plasma flowing along B at angle a to the wall puts a flux n u sin a
+// on it, and atoms are born just off the wall, moving away from it
+TEST_F(SputteringTable, SlabWallSource)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	const double deg {10.0};
+	auto opts {slab_wall_options("ymin", deg)};
+	opts.set_slab_flow(1e4);
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg, table, opts);
+
+	const double flux {1e19 * 1e4 * std::sin(deg * S3XTest::pi / 180.0)};
+	for (std::size_t e {}; e < source.size(); ++e)
+	{
+		EXPECT_NEAR(source.flux()[e], flux, 1e-5 * flux);
+		EXPECT_NEAR(source.rate()[e], flux * 0.02
+			* surface.elements()[e].area, 1e-5 * flux * 0.02
+			* surface.elements()[e].area);
+	}
+	EXPECT_NEAR(source.total_rate()[0], flux * 0.02 * 0.05 * 0.05,
+		1e-5 * flux * 0.02 * 0.05 * 0.05);
+
+	pcg32 rng(7, 1);
+	const double side {0.05 / 8.0};
+	for (int n {}; n < 2000; ++n)
+	{
+		const auto b {source.sample_birth(rng)};
+		const auto& el {surface.elements()[b.element]};
+		EXPECT_NEAR(b.y, -0.025 + 1e-3 * side, 1e-12);
+		EXPECT_GE(b.x, el.R0 - 1e-15);
+		EXPECT_LE(b.x, el.R0 + side + 1e-15);
+		EXPECT_GE(b.z, el.phi_min);
+		EXPECT_LE(b.z, el.phi_max);
+		EXPECT_GE(b.vY, 0.0);
+	}
+}
+
+// D+ impacts from the sheath model (sput_impact_opt = "sheath"): with a
+// constant yield the averaged yield is exactly that, whatever the
+// impacts, so the rate is the same as the formula's; the slab's uniform
+// plasma is one point of the impact table; the ions hit nearer the
+// normal than the field (80 degrees from it here); and each birth
+// carries an ion energy and angle.
+//
+// The mean impact energy is the drop plus what the flux into the sheath
+// carries. For a Maxwellian at Ti drifting at c_s along B, weighted by
+// the speed along B, that's m c_s^2 / 2 + 2.5 Ti (the speed along B adds
+// m c_s^2 / 2 + 1.5 Ti, across it Ti): with c_s^2 = (Te + Ti) e / m,
+// 0.5 Te + 3 Ti on top of the floating drop. The formula has 0.5 Te +
+// 2 Ti, so the sheath model's is Ti more (only ions moving toward the
+// wall are kept, which changes it little at Ti = Te).
+TEST_F(SputteringTable, SheathImpacts)
+{
+	write(constant_table(0.02));
+	const Sputtering::YieldTable table(m_path);
+	auto opts {slab_wall_options("ymin", 10.0)};
+	opts.set_slab_flow(1e4);
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source formula(surface, bkg, table, opts);
+	const Sputtering::Source sheath(surface, bkg, table, opts,
+		Sheath::Model::brooks);
+
+	EXPECT_EQ(formula.impacts(), nullptr);
+	ASSERT_NE(sheath.impacts(), nullptr);
+	EXPECT_EQ(sheath.impacts()->size(), 1u);
+	EXPECT_TRUE(sheath.impacts()->built());
+	for (std::size_t e {}; e < sheath.size(); ++e)
+	{
+		EXPECT_NEAR(sheath.yield()[e], 0.02, 1e-12);
+		EXPECT_NEAR(sheath.rate()[e], formula.rate()[e],
+			1e-12 * formula.rate()[e]);
+		EXPECT_LT(sheath.impact_angle()[e], 70.0);
+		EXPECT_GT(sheath.impact_angle()[e], 5.0);
+		EXPECT_NEAR(formula.impact_angle()[e], 60.0, 1e-12);
+		// The formula's is the drop + 0.5 Te + 2 Ti
+		const double expected {formula.energy()[e] + 20.0};
+		EXPECT_NEAR(sheath.energy()[e], expected, 0.03 * expected);
+	}
+	EXPECT_NEAR(sheath.source_rate(), formula.source_rate(),
+		1e-12 * formula.source_rate());
+
+	// The histograms of the ions hitting the wall add up to the ion flux
+	// onto it, and weighted by the yield to the source. Only with the
+	// sheath model.
+	EXPECT_TRUE(formula.ion_energy().empty());
+	auto sum = [](const std::vector<double>& v)
+	{
+		double total {};
+		for (const double x : v) total += x;
+		return total;
+	};
+	const double ions {sheath.source_rate() / 0.02};
+	EXPECT_EQ(sheath.ion_energy_edges().size(),
+		sheath.ion_energy().size() + 1);
+	EXPECT_EQ(sheath.ion_angle().size(), 90u);
+	EXPECT_NEAR(sum(sheath.ion_energy()), ions, 1e-9 * ions);
+	EXPECT_NEAR(sum(sheath.ion_angle()), ions, 1e-9 * ions);
+	EXPECT_NEAR(sum(sheath.sputtering_ion_energy()), sheath.source_rate(),
+		1e-9 * sheath.source_rate());
+	EXPECT_NEAR(sum(sheath.sputtering_ion_angle()), sheath.source_rate(),
+		1e-9 * sheath.source_rate());
+
+	pcg32 rng(5, 1);
+	for (int n {}; n < 200; ++n)
+	{
+		const auto b {sheath.sample_birth(rng)};
+		EXPECT_GT(b.e_impact, 0.0);
+		EXPECT_GE(b.a_impact, 0.0);
+		EXPECT_LE(b.a_impact, 90.0);
+		const auto f {formula.sample_birth(rng)};
+		EXPECT_EQ(f.a_impact, 60.0);
+	}
+}
+
+// With a yield that only the fast ions get (a step at 1.2 times the
+// formula's mean energy), the sheath model's yield is the flux-weighted
+// share of its samples above the step, and the ions picked for births
+// are all above it
+TEST_F(SputteringTable, SheathImpactsStep)
+{
+	auto opts {slab_wall_options("ymin", 10.0)};
+	opts.set_slab_flow(1e4);
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const double e0 {1.2 * (Sputtering::sheath_energy(20.0, 20.0, 5.4858e-4,
+		2.014, 1) + 40.0)};
+	write(step_table(e0, 0.5));
+	const Sputtering::YieldTable table(m_path);
+	const Sputtering::Source sheath(surface, bkg, table, opts,
+		Sheath::Model::brooks);
+	ASSERT_NE(sheath.impacts(), nullptr);
+	double above {};
+	for (const auto& s : sheath.impacts()->samples(0))
+		if (s.energy * 20.0 > e0) above += s.weight;
+	ASSERT_GT(above, 0.0);
+	EXPECT_NEAR(sheath.yield()[0], 0.5 * above, 1e-9);
+
+	pcg32 rng(9, 1);
+	for (int n {}; n < 200; ++n)
+		EXPECT_GT(sheath.sample_birth(rng).e_impact, e0);
+}
+
+// An atom absorbed at the slab wall lands on the element under it
+TEST(SlabWall, Deposition)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("ymin"))};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+	const double side {0.05 / 8.0};
+	const std::array<double, 3> pos {2.5 * side, -0.0251,
+		-0.025 + 6.5 * side};
+	dep.add_at_wall_face(bkg.get_zones(), 0, Zones::ymin, pos, 1e-6, 3,
+		2.0);
+	double total {};
+	for (std::size_t e {}; e < surface.size(); ++e)
+	{
+		const auto& el {surface.elements()[e]};
+		const double expected {el.i == 2 && el.k == 6 ? 2.0 : 0.0};
+		EXPECT_DOUBLE_EQ(dep.redeposited()[e], expected);
+		total += dep.redeposited()[e];
+	}
+	EXPECT_DOUBLE_EQ(total, 2.0);
+	EXPECT_DOUBLE_EQ(dep.wall_face(), 0.0);
+}
+
+// What the slab won't do with a wall or a turned field
+TEST(SlabWall, Checks)
+{
+	auto periodic {slab_wall_options("ymin")};
+	periodic.set_max_ybound_type("periodic");
+	EXPECT_EXIT(Background::read_bkg(periodic),
+		testing::ExitedWithCode(EXIT_FAILURE), "can't be periodic");
+
+	auto bent {slab_wall_options("ymin")};
+	bent.set_slab_major_radius(1.0);
+	EXPECT_EXIT(Background::read_bkg(bent),
+		testing::ExitedWithCode(EXIT_FAILURE), "straight slab");
+
+	auto e_field {slab_wall_options("ymin", 10.0)};
+	e_field.set_slab_efield_y(100.0);
+	EXPECT_EXIT(Background::read_bkg(e_field),
+		testing::ExitedWithCode(EXIT_FAILURE), "slab_b_angle");
+
+	auto too_far {slab_wall_options("ymin", 91.0)};
+	EXPECT_EXIT(Background::read_bkg(too_far),
+		testing::ExitedWithCode(EXIT_FAILURE), "-90 to 90");
+
+	// Without a wall the slab has no surface to sputter
+	EXPECT_EXIT(Sputtering::Surface {Background::read_bkg(
+		slab_wall_options("none"))}, testing::ExitedWithCode(EXIT_FAILURE),
+		"slab_wall");
+}
+
+// A return is prompt if it comes by prompt_by, and is tallied by element
+// and charge as well as with the rest. One that never ionized (prompt_by
+// below 0) or came later isn't.
+TEST(SlabWall, PromptTally)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("ymin"))};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+	const double side {0.05 / 8.0};
+	const std::array<double, 3> pos {0.5 * side, -0.0251, -0.025
+		+ 0.5 * side};
+	const auto& zones {bkg.get_zones()};
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 1e-6, 1, 1.0, 2e-6);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 2e-6, 2, 2.0, 2e-6);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 3e-6, 1, 4.0, 2e-6);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 1e-6, 0, 8.0, -1.0);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 1e-6, 1, 16.0);
+
+	EXPECT_DOUBLE_EQ(dep.total(), 31.0);
+	EXPECT_DOUBLE_EQ(dep.prompt_total(), 3.0);
+	EXPECT_DOUBLE_EQ(dep.prompt_charge()[1], 1.0);
+	EXPECT_DOUBLE_EQ(dep.prompt_charge()[2], 2.0);
+	double on_elements {};
+	for (std::size_t e {}; e < surface.size(); ++e)
+	{
+		const auto& el {surface.elements()[e]};
+		const bool here {el.i == 0 && el.k == 0};
+		EXPECT_DOUBLE_EQ(dep.prompt()[e], here ? 3.0 : 0.0);
+		on_elements += dep.prompt()[e];
+	}
+	EXPECT_DOUBLE_EQ(on_elements, 3.0);
+}
+
+// The sheath field on a toroidal background, in front of the 45 degree
+// staircase wall: B along Z is 45 degrees from the wall's normal
+// (-1, -1) / sqrt(2) in (R, Z). In plasma cell (6, 3) the particle is 0.8
+// of the way to the cell's xmax face, so 0.2 cell widths (2 mm) in R from
+// it, 2 mm / sqrt(2) along the normal, nearer than the ymax face. The
+// field is along the normal turned to the particle's toroidal angle.
+TEST(SheathField, DiagonalWall)
+{
+	const auto bkg {diagonal_with_plasma(Plasma {})};
+	const Sputtering::Surface surface(bkg);
+	const Sheath::Sheath sheath(surface, bkg, Sheath::Model::brooks);
+	ASSERT_EQ(sheath.size(), surface.size());
+
+	const double phi {0.13};
+	const std::array<double, 3> pos {6.8, 3.5, phi};
+	std::size_t e {};
+	double d {};
+	ASSERT_TRUE(sheath.distance(0, 6, 3, 1, pos, e, d));
+	const auto& el {surface.elements()[e]};
+	EXPECT_EQ(el.face, Zones::xmax);
+	EXPECT_EQ(el.i, 6);
+	EXPECT_EQ(el.j, 3);
+	EXPECT_NEAR(d, 0.002 / std::sqrt(2.0), 1e-12);
+
+	const auto& p {sheath.params(0, e)};
+	EXPECT_NEAR(p.theta, S3XTest::pi / 4.0, 1e-9);
+	const double en {Sheath::field(p, Sheath::Model::brooks, d)};
+	ASSERT_LT(en, 0.0);
+	const auto E {sheath.field_at(0, 0, 6, 3, 1, pos)};
+	const auto n {el.normal_xyz(phi, bkg.get_phi_sign())};
+	for (int c {}; c < 3; ++c) EXPECT_NEAR(E[c], en * n[c], 1e-9 * -en);
+
+	// Pulling toward the wall, up and out in R
+	EXPECT_GT(E[0] * std::cos(phi) + E[1] * std::sin(phi), 0.0);
+	EXPECT_GT(E[2], 0.0);
+
+	// A cell away from the wall has no field
+	const auto none {sheath.field_at(0, 0, 6, 1, 1, {6.5, 1.5, phi})};
+	for (const double c : none) EXPECT_DOUBLE_EQ(c, 0.0);
+}
+
+// Impact tallies on the slab wall at y min (normal +Y): a particle coming
+// straight in is at 0 degrees, one coming in at 45 degrees is at 45, and
+// one at 60 degrees from the normal at 60. The energies are 0.5 m v^2,
+// and the mean time since birth is weighted by rate.
+TEST(SlabWall, ImpactTally)
+{
+	const auto bkg {Background::read_bkg(slab_wall_options("ymin"))};
+	const Sputtering::Surface surface(bkg);
+	Sputtering::Deposition dep(surface, 74);
+	const double side {0.05 / 8.0};
+	const std::array<double, 3> pos {0.5 * side, -0.0251, -0.025
+		+ 0.5 * side};
+	const auto& zones {bkg.get_zones()};
+	const double mass {183.84 * 1.661e-27};
+	const double v {1e4};
+	const double energy {0.5 * mass * v * v / 1.602e-19};
+	const double s {std::sqrt(0.5)};
+	const Sputtering::Impact straight {{0.0, -v, 0.0}, mass};
+	const Sputtering::Impact oblique {{v * s, -v * s, 0.0}, mass};
+	const Sputtering::Impact steep {{0.0, -0.5 * v, v * std::sqrt(0.75)},
+		mass};
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 1e-6, 1, 1.0, -1.0,
+		&straight);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 2e-6, 1, 2.0, -1.0,
+		&oblique);
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 4e-6, 1, 1.0, -1.0,
+		&steep);
+
+	// Without an Impact, only the time since birth counts
+	dep.add_at_wall_face(zones, 0, Zones::ymin, pos, 0.0, 1, 4.0);
+
+	EXPECT_NEAR(dep.mean_energy(), energy, 1e-9 * energy);
+	EXPECT_NEAR(dep.mean_angle(), (0.0 + 2.0 * 45.0 + 60.0) / 4.0, 1e-9);
+	EXPECT_NEAR(dep.mean_lifetime(), (1e-6 + 4e-6 + 4e-6) / 8.0, 1e-18);
+	EXPECT_DOUBLE_EQ(dep.impact_angle()[0], 1.0);
+	EXPECT_DOUBLE_EQ(dep.impact_angle()[44] + dep.impact_angle()[45], 2.0);
+	EXPECT_DOUBLE_EQ(dep.impact_angle()[59] + dep.impact_angle()[60], 1.0);
+	double in_bins {};
+	for (const double r : dep.impact_energy()) in_bins += r;
+	EXPECT_DOUBLE_EQ(in_bins, 4.0);
+	const auto& edges {dep.energy_edges()};
+	for (std::size_t b {}; b < dep.impact_energy().size(); ++b)
+	{
+		const bool here {edges[b] <= energy && energy < edges[b + 1]};
+		EXPECT_DOUBLE_EQ(dep.impact_energy()[b], here ? 4.0 : 0.0);
+	}
+	double on_elements {};
+	for (const double r : dep.element_energy()) on_elements += r;
+	EXPECT_NEAR(on_elements, 4.0 * energy, 1e-9 * energy);
+}
+
+// Roulette keeps weights at or above the minimum, and below it keeps the
+// expected weight: the particle carries on with the minimum or ends
+TEST(SelfSputtering, Roulette)
+{
+	EXPECT_DOUBLE_EQ(Sputtering::roulette(2.0, 1.0, 0.99), 2.0);
+	EXPECT_DOUBLE_EQ(Sputtering::roulette(1.0, 1.0, 0.99), 1.0);
+	EXPECT_DOUBLE_EQ(Sputtering::roulette(0.0, 1.0, 0.0), 0.0);
+	EXPECT_DOUBLE_EQ(Sputtering::roulette(0.3, 0.0, 0.99), 0.3);
+	EXPECT_DOUBLE_EQ(Sputtering::roulette(0.3, 1.0, 0.29), 1.0);
+	EXPECT_DOUBLE_EQ(Sputtering::roulette(0.3, 1.0, 0.31), 0.0);
+
+	pcg32 rng(11, 3);
+	const int n {1000000};
+	const double w {0.3};
+	double sum {};
+	for (int k {}; k < n; ++k)
+	{
+		const double out {Sputtering::roulette(w, 1.0, rng.next_double())};
+		ASSERT_TRUE(out == 0.0 || out == 1.0);
+		sum += out;
+	}
+	// Binomial: standard error sqrt(w (1 - w) / n)
+	EXPECT_NEAR(sum / n, w, 4.0 * std::sqrt(w * (1.0 - w) / n));
+}
+
+// The impact energy and angle: from the velocity alone for a neutral or
+// with the sheath field on (phi_wall = 0), and with q phi_wall added to
+// the motion along the normal for an ion without it
+TEST(SelfSputtering, Impact)
+{
+	const double mass {183.84 * Constants::amu_to_kg};
+	const double ev {Constants::ev_to_j};
+	const double v {1e4};
+	const double ke {0.5 * mass * v * v / ev};
+	const std::array<double, 3> n {0.0, 1.0, 0.0};
+	const double s {std::sqrt(0.5)};
+	const std::array<double, 3> oblique {v * s, -v * s, 0.0};
+
+	const auto neutral {Sputtering::self_impact(oblique, mass, n, 0, 50.0)};
+	EXPECT_NEAR(neutral.energy, ke, 1e-9 * ke);
+	EXPECT_NEAR(neutral.angle, 45.0, 1e-9);
+
+	const auto on {Sputtering::self_impact(oblique, mass, n, 2, 0.0)};
+	EXPECT_NEAR(on.energy, ke, 1e-9 * ke);
+	EXPECT_NEAR(on.angle, 45.0, 1e-9);
+
+	const auto off {Sputtering::self_impact(oblique, mass, n, 2, 50.0)};
+	EXPECT_NEAR(off.energy, ke + 100.0, 1e-9 * (ke + 100.0));
+	const double v_n {std::sqrt(0.5 * v * v + 2.0 * 2.0 * 50.0 * ev
+		/ mass)};
+	EXPECT_NEAR(off.angle, std::atan2(v * s, v_n) * 180.0 / S3XTest::pi,
+		1e-9);
+
+	// Moving away from the wall: its speed along the normal still counts
+	const auto away {Sputtering::self_impact({v * s, v * s, 0.0}, mass, n,
+		2, 50.0)};
+	EXPECT_NEAR(away.energy, off.energy, 1e-9 * off.energy);
+	EXPECT_NEAR(away.angle, off.angle, 1e-9);
+}
+
+namespace
+{
+	// A slab with a wall at y min, B at 10 degrees to it and a flow onto
+	// it, its D+ source from a constant yield, and the self-sputtering
+	// options
+	Options::Options self_options()
+	{
+		auto opts {slab_wall_options("ymin", 10.0)};
+		opts.set_slab_flow(1e4);
+		opts.set_imp_num(100);
+		opts.set_sput_self("on");
+		opts.set_sput_self_min_weight(0.1);
+		opts.set_sput_self_max_gen(3);
+		return opts;
+	}
+
+	// A W on W table with a constant yield from 1 eV
+	Table self_table(const double y)
+	{
+		Table t {constant_table(y)};
+		t.projectile_Z = 74.0;
+		t.projectile_mass_amu = 183.84;
+		return t;
+	}
+}
+
+// A W ion landing on the slab wall without the sheath field: its impact
+// energy gets the element's floating drop, its weight becomes w Y, and it
+// carries on as a neutral atom just inside the plasma cell where it hit,
+// moving into the plasma no faster than Lambda E (Lambda = 1 for W on W)
+// allows. The tallies get w Y.
+TEST_F(SputteringTable, SelfRebirth)
+{
+	write(constant_table(0.02));
+	write(self_table(0.5), m_self_path);
+	const auto opts {self_options()};
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg,
+		Sputtering::YieldTable {m_path}, opts);
+	Sputtering::SelfSource self(source, Sputtering::YieldTable {m_self_path},
+		opts, false);
+	const double w0 {source.source_rate() / 100.0};
+	EXPECT_NEAR(self.min_weight(), 0.1 * w0, 1e-12 * w0);
+
+	const double side {0.05 / 8.0};
+	const std::array<double, 3> pos {2.3 * side, -0.0251, -0.025
+		+ 5.6 * side};
+	std::size_t e {surface.size()};
+	for (std::size_t k {}; k < surface.size(); ++k)
+	{
+		const auto& el {surface.elements()[k]};
+		if (el.i == 2 && el.k == 5) e = k;
+	}
+	ASSERT_LT(e, surface.size());
+
+	const double mass {183.84 * Constants::amu_to_kg};
+	const double ev {Constants::ev_to_j};
+	const double v {1e4};
+	const Sputtering::Impact impact {{0.0, -v, 0.0}, mass};
+	const double drop {source.phi_wall()[e]};
+	// The floating drop for D at Ti = Te: 2.84 Te
+	EXPECT_NEAR(drop / 20.0, -0.5 * std::log(2.0 * S3XTest::pi
+		* bkg.get_elec_mass_amu() / bkg.get_ion_mass_amu() * 2.0), 1e-9);
+	const double energy {0.5 * mass * v * v / ev + 3.0 * drop};
+
+	pcg32 rng(5, 2);
+	const double y_cell {-0.025 + 1e-3 * side};
+	for (int n {}; n < 200; ++n)
+	{
+		const auto r {self.rebirth(e, 0, pos, impact, 3, w0, 0, rng)};
+		ASSERT_TRUE(r.alive);
+		EXPECT_FALSE(r.avalanche);
+		EXPECT_DOUBLE_EQ(r.weight, 0.5 * w0);
+		EXPECT_EQ(r.zone, 0);
+		EXPECT_NEAR(r.x, pos[0], 1e-15);
+		EXPECT_NEAR(r.y, y_cell, 1e-12);
+		EXPECT_NEAR(r.z, pos[2], 1e-15);
+		EXPECT_EQ(r.i, 2);
+		EXPECT_EQ(r.k, 5);
+		EXPECT_GT(r.vY, 0.0);
+		const double e_atom {0.5 * mass * (r.vX * r.vX + r.vY * r.vY
+			+ r.vZ * r.vZ) / ev};
+		EXPECT_LE(e_atom, energy * (1.0 + 1e-9));
+	}
+	EXPECT_NEAR(self.mean_energy(), energy, 1e-9 * energy);
+	EXPECT_NEAR(self.mean_angle(), 0.0, 1e-9);
+	EXPECT_NEAR(self.self_sputtered()[e], 200 * 0.5 * w0, 1e-9 * w0);
+	EXPECT_NEAR(self.self_total(), 200 * 0.5 * w0, 1e-9 * w0);
+	EXPECT_NEAR(self.generation_weight()[1], 200 * 0.5 * w0, 1e-9 * w0);
+	EXPECT_NEAR(self.generation_landed()[0], 200 * w0, 1e-9 * w0);
+	EXPECT_NEAR(self.mean_yield(), 0.5, 1e-12);
+
+	// With the sheath field on, the velocity alone
+	Sputtering::SelfSource with(source, Sputtering::YieldTable {m_self_path},
+		opts, true);
+	with.rebirth(e, 0, pos, impact, 3, w0, 0, rng);
+	EXPECT_NEAR(with.mean_energy(), 0.5 * mass * v * v / ev, 1e-6);
+
+	// A neutral below the table's lowest energy (1 eV) sputters nothing
+	const Sputtering::Impact slow {{0.0, -100.0, 0.0}, mass};
+	const auto none {with.rebirth(e, 0, pos, slow, 0, w0, 0, rng)};
+	EXPECT_FALSE(none.alive);
+	EXPECT_EQ(with.num_below_threshold(), 1);
+
+	// Past sput_self_max_gen (3), the chain ends as an avalanche
+	const auto last {self.rebirth(e, 0, pos, impact, 3, w0, 2, rng)};
+	EXPECT_TRUE(last.alive);
+	const auto over {self.rebirth(e, 0, pos, impact, 3, w0, 3, rng)};
+	EXPECT_FALSE(over.alive);
+	EXPECT_TRUE(over.avalanche);
+}
+
+// Light particles play roulette: they carry on with the minimum weight
+// or end, keeping the expected weight, and what's lost is tallied
+TEST_F(SputteringTable, SelfRoulette)
+{
+	write(constant_table(0.02));
+	write(self_table(0.5), m_self_path);
+	const auto opts {self_options()};
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg,
+		Sputtering::YieldTable {m_path}, opts);
+	Sputtering::SelfSource self(source, Sputtering::YieldTable {m_self_path},
+		opts, true);
+	const double w_min {self.min_weight()};
+	const double w {0.1 * w_min};	// w Y = 0.05 w_min
+	const Sputtering::Impact impact {{0.0, -1e4, 0.0}, 183.84
+		* Constants::amu_to_kg};
+	const double side {0.05 / 8.0};
+	pcg32 rng(9, 4);
+	const int n {20000};
+	int alive {};
+	for (int k {}; k < n; ++k)
+	{
+		const auto r {self.rebirth(0, 0, {0.5 * side, -0.0251, -0.025
+			+ 0.5 * side}, impact, 1, w, 0, rng)};
+		if (r.alive)
+		{
+			EXPECT_DOUBLE_EQ(r.weight, w_min);
+			++alive;
+		}
+	}
+	const double p {0.05};
+	EXPECT_NEAR(static_cast<double>(alive) / n, p, 4.0 * std::sqrt(p
+		* (1.0 - p) / n));
+	EXPECT_NEAR(self.generation_weight()[1], alive * w_min, 1e-9 * n * w);
+	EXPECT_NEAR(self.roulette_lost(), (n - alive) * 0.5 * w, 1e-9 * n * w);
+	EXPECT_NEAR(self.self_total(), n * 0.5 * w, 1e-9 * n * w);
+}
+
+// The self-sputtering table has to be the impurity on the D+ table's wall
+TEST_F(SputteringTable, SelfChecks)
+{
+	write(constant_table(0.02));
+	const auto opts {self_options()};
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg,
+		Sputtering::YieldTable {m_path}, opts);
+
+	write(constant_table(0.5), m_self_path);
+	EXPECT_EXIT(Sputtering::SelfSource(source,
+		Sputtering::YieldTable {m_self_path}, opts, false),
+		testing::ExitedWithCode(EXIT_FAILURE), "atomic number");
+
+	Table light {self_table(0.5)};
+	light.projectile_mass_amu = 150.0;
+	write(light, m_self_path);
+	EXPECT_EXIT(Sputtering::SelfSource(source,
+		Sputtering::YieldTable {m_self_path}, opts, false),
+		testing::ExitedWithCode(EXIT_FAILURE), "mass");
+}
+
+// sput_impact_opt: "sheath" (the default) or "formula", with its control
+// integer; anything else stops the run
+TEST(SputteringOptions, ImpactOpt)
+{
+	Options::Options opts {};
+	EXPECT_EQ(opts.sput_impact_opt(), "sheath");
+	EXPECT_EQ(opts.sput_impact_opt_int(), 1);
+	opts.set_sput_impact_opt("formula");
+	EXPECT_EQ(opts.sput_impact_opt(), "formula");
+	EXPECT_EQ(opts.sput_impact_opt_int(), 0);
+	opts.set_sput_impact_opt("sheath");
+	EXPECT_EQ(opts.sput_impact_opt_int(), 1);
+	EXPECT_EXIT(opts.set_sput_impact_opt("bogus"),
+		testing::ExitedWithCode(EXIT_FAILURE), "sput_impact_opt");
+}
+
+// Through the boundary check: a W ion past the slab wall is redeposited
+// and carries on as a neutral W atom of generation 1 in the plasma, with
+// its time since birth reset
+TEST_F(SputteringTable, SelfBoundary)
+{
+	write(constant_table(0.02));
+	write(self_table(2.0), m_self_path);
+	const auto opts {self_options()};
+	const auto bkg {Background::read_bkg(opts)};
+	const Sputtering::Surface surface(bkg);
+	const Sputtering::Source source(surface, bkg,
+		Sputtering::YieldTable {m_path}, opts);
+	Sputtering::Deposition dep(surface, 74);
+	Sputtering::SelfSource self(source, Sputtering::YieldTable {m_self_path},
+		opts, false);
+	dep.set_self(&self);
+
+	Slots::Slots slots(1);
+	slots.set_mass(183.84 * Constants::amu_to_kg);
+	slots.set_Z(74);
+	const double side {0.05 / 8.0};
+	slots.set_x(0, 0.5 * side);
+	slots.set_y(0, -0.0251);
+	slots.set_z(0, -0.025 + 0.5 * side);
+	slots.set_vY(0, -1e4);
+	slots.set_q(0, 2);
+	const double w0 {source.source_rate() / 100.0};
+	slots.set_weight(0, w0);
+	slots.set_pt(0, 3e-6);
+	slots.set_t(0, 1e-6);
+	slots.set_state(0, 0);
+
+	std::vector<pcg32> rngs {};
+	for (int k {}; k < omp_get_max_threads(); ++k) rngs.emplace_back(k + 1, 1);
+	Boundary::Fates fates {};
+	Boundary::check_bounds_cpu(slots, bkg, opts, rngs, fates, &dep);
+
+	EXPECT_EQ(slots.state()[0], 0);
+	EXPECT_EQ(slots.q()[0], 0);
+	EXPECT_EQ(slots.generation()[0], 1);
+	EXPECT_DOUBLE_EQ(slots.weight()[0], 2.0 * w0);
+	EXPECT_DOUBLE_EQ(slots.pt()[0], 0.0);
+	EXPECT_DOUBLE_EQ(slots.t()[0], 1e-6);
+	EXPECT_GT(slots.y()[0], -0.025);
+	EXPECT_GT(slots.vY()[0], 0.0);
+	EXPECT_EQ(fates.wall, 1);
+	EXPECT_EQ(fates.self_sputtered, 1);
+	EXPECT_DOUBLE_EQ(dep.total(), w0);
+	EXPECT_DOUBLE_EQ(self.self_total(), 2.0 * w0);
 }

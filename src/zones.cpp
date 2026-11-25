@@ -959,6 +959,36 @@ namespace Zones
 	}
 
 	/**
+	* Marks a zone as Cartesian: its x, y and z are the Cartesian X, Y and
+	* Z in meters, as on the straight slab. Wall surfaces on its faces
+	* (Sputtering::Surface) can then be found without a toroidal angle.
+	* Gkeyll zones aren't Cartesian, even though their z is a length, since
+	* x and y there are flux coordinates.
+	*
+	* @param zone Zone whose coordinates are Cartesian.
+	*/
+	void Zones::set_cartesian(const int zone)
+	{
+		if (zone < 0 || zone >= get_nzones())
+		{
+			Errors::fatal_error("Zones::set_cartesian: there is no zone "
+				+ std::to_string(zone) + ".");
+		}
+		if (std::ssize(m_cartesian) < get_nzones())
+			m_cartesian.resize(get_nzones());
+		m_cartesian[zone] = 1;
+	}
+
+	/**
+	* @param zone Zone to check.
+	* @return True if the zone's coordinates are Cartesian (set_cartesian).
+	*/
+	bool Zones::is_cartesian(const int zone) const
+	{
+		return zone < std::ssize(m_cartesian) && m_cartesian[zone] == 1;
+	}
+
+	/**
 	* Whether a zone is a toroidal wedge: its z is the toroidal angle, it's
 	* periodic in z, and its period isn't a whole turn (to within 1e-9 of
 	* 2 pi). Only then do vectors need rotating across its z faces, since
@@ -1016,6 +1046,7 @@ namespace Zones
 		m_z_shift.resize(ntables);
 		for (auto& v : m_z_shift) Utilities::mpi_broadcast_vector(v, 0, comm);
 		Utilities::mpi_broadcast_vector(m_toroidal, 0, comm);
+		Utilities::mpi_broadcast_vector(m_cartesian, 0, comm);
 		m_ghost_cells.clear();
 	}
 

@@ -98,6 +98,24 @@ Then each pass through the loop runs these steps, in order:
 | Record statistics | `record_stats_wrapper` | `Impurity::record_stats_cpu` | `ImpurityStats::record_stats_gpu` |
 
 The loop ends once every slot is dead and no particles are left to launch.
+
+A sputtered source and the sheath hook into these steps on the CPU
+(`src/sputtering.cpp`, `src/sheath.cpp`):
+
+- `Slots::fill_slots_cpu` starts new particles from
+  `Sputtering::Source::sample_birth`.
+- `Boris::update_velocity_cpu` adds `Sheath::field_at` to the
+  interpolated E. Particles that can reach the sheath field this step
+  are pushed in sub-steps by `Boris::substep_cpu`, and the plain push and
+  `step_cpu` skip them.
+- `Boundary::check_bounds_cpu` puts absorbed particles on their wall
+  element with `Sputtering::Deposition`, passing their impact energy and
+  angle. With self-sputtering, `Deposition::self` gives the
+  `Sputtering::SelfSource`, whose `rebirth` turns the particle into a
+  self-sputtered atom in place, so it carries on in the same slot with a
+  new weight. A runaway chain is noted inside the parallel loop and stops
+  the run after it.
+
 The physics of each step is described in
 [Impurity Transport](../physics/impurity-transport.md),
 [Collisions](../physics/collisions.md) and

@@ -399,6 +399,62 @@ namespace Options
 				assign_option<std::string>(set_func, var, key);
 			}
 
+			else if (key == "sheath_model")
+			{
+				auto set_func = std::bind(&Options::set_sheath_model, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sheath_fd")
+			{
+				auto set_func = std::bind(&Options::set_sheath_fd, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "sheath_drop")
+			{
+				auto set_func = std::bind(&Options::set_sheath_drop, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "sput_impact_opt")
+			{
+				auto set_func = std::bind(&Options::set_sput_impact_opt,
+					&opts, std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_self")
+			{
+				auto set_func = std::bind(&Options::set_sput_self, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_self_table_file")
+			{
+				auto set_func = std::bind(&Options::set_sput_self_table_file, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "sput_self_min_weight")
+			{
+				auto set_func = std::bind(&Options::set_sput_self_min_weight, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
+			else if (key == "sput_self_max_gen")
+			{
+				auto set_func = std::bind(&Options::set_sput_self_max_gen, &opts,
+					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
 			else if (key == "sput_angle_val")
 			{
 				auto set_func = std::bind(&Options::set_sput_angle_val, &opts,
@@ -518,6 +574,20 @@ namespace Options
 				assign_option<double>(set_func, var, key);
 			}
 
+			else if (key == "slab_wall")
+			{
+				auto set_func = std::bind(&Options::set_slab_wall, &opts,
+					std::placeholders::_1);
+				assign_option<std::string>(set_func, var, key);
+			}
+
+			else if (key == "slab_b_angle")
+			{
+				auto set_func = std::bind(&Options::set_slab_b_angle, &opts,
+					std::placeholders::_1);
+				assign_option<double>(set_func, var, key);
+			}
+
 			else if (key == "tbound_type")
 			{
 				auto set_func = std::bind(&Options::set_tbound_type, &opts,
@@ -606,6 +676,13 @@ namespace Options
 			{
 				auto set_func = std::bind(&Options::set_imp_atom_num, &opts,
 					std::placeholders::_1);
+				assign_option<int>(set_func, var, key);
+			}
+
+			else if (key == "imp_iz_max_charge")
+			{
+				auto set_func = std::bind(&Options::set_imp_iz_max_charge,
+					&opts, std::placeholders::_1);
 				assign_option<int>(set_func, var, key);
 			}
 
