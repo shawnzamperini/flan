@@ -9,7 +9,8 @@
 * with eight times the estimate, to 3% plus 2 MiB per copy. That catches
 * a wrong count of frames, cells or ghost cells, not one array more or
 * less; the estimate was checked to that on a large BOUT++ background
-* (see the GPU plan, G8).
+* (see the GPU plan, G8). Another process using the same GPU changes the
+* free memory too, so the test runs on its own under ctest (RUN_SERIAL).
 */
 
 #include <cstddef>
