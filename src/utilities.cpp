@@ -14,6 +14,8 @@
 #include "flan_types.h"
 #include "mpi.h"
 #include "utilities.h"
+#include "interp_hd.h"
+#include "utilities_hd.h"
 #include "vectors.h"
 #include "zones.h"
 
@@ -193,7 +195,8 @@ namespace Utilities
 	* corners. Interpolation weights are clamped to the range [0, 1]
 	* to prevent extrapolation beyond the cell boundaries. As a result,
 	* points outside the cell return the value on the nearest cell face,
-	* edge, or corner.
+	* edge, or corner. The work is done by trilinear_box (utilities_hd.h),
+	* which the GPU interpolation uses too.
 	*
 	* Corner indexing follows the usual convention:
 	*
@@ -233,30 +236,8 @@ namespace Utilities
 		const double v011, const double v111,
 		const double x, const double y, const double z)
 	{
-		// Normalized coordinates in [0,1]
-		double tx = (x - x0) / (x1 - x0);
-		double ty = (y - y0) / (y1 - y0);
-		double tz = (z - z0) / (z1 - z0);
-
-		// Prevent extrapolating past the cell center values on the edges of 
-		// the grid. If we don't do this, we can get some pretty incorrect 
-		// values.
-		tx = std::clamp(tx, 0.0, 1.0);
-		ty = std::clamp(ty, 0.0, 1.0);
-		tz = std::clamp(tz, 0.0, 1.0);
-
-		// Interpolate along x for the four lower/upper face corners
-		const double c00 = v000 + tx * (v100 - v000);
-		const double c01 = v001 + tx * (v101 - v001);
-		const double c10 = v010 + tx * (v110 - v010);
-		const double c11 = v011 + tx * (v111 - v011);
-
-		// Interpolate along y for the lower and upper edges
-		const double c0 = c00 + ty * (c10 - c00);
-		const double c1 = c01 + ty * (c11 - c01);
-
-		// Interpolate along z and return
-		return c0 + tz * (c1 - c0);
+		return trilinear_box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0,
+			v000, v100, v010, v110, v001, v101, v011, v111, x, y, z);
 	}
 
 
@@ -507,6 +488,10 @@ namespace Utilities
 	* ghost cells hold their vectors already rotated to that angle (see
 	* Zones::Zones::fill_ghosts(vX, vY, phi_sign)).
 	*
+	* The work is done by interp_aligned_flat (interp_hd.h), which the GPU
+	* kernels call too, so both interpolate a shifted-metric zone the same
+	* way.
+	*
 	* @tparam T Data type stored in the fields.
 	* @tparam N Number of fields.
 	* @param vecs Fields to sample, indexed as (zone, t, x, y, z).
@@ -528,83 +513,14 @@ namespace Utilities
 		const std::vector<double>& t, const double t0, const double x0,
 		const double y0, const double z0, const double phi_sign)
 	{
-		static_assert(N == 1 || N == 3);
-		const bool rotate {phi_sign != 0.0};
-
-		// Weight of the upper of two bracketing points, clamped so points
-		// past the last cell centers take the edge value
-		auto weight = [](double c, double c0, double c1)
-		{
-			return c1 == c0 ? 0.0 : std::clamp((c - c0) / (c1 - c0), 0.0,
-				1.0);
-		};
-
-		const double tc {std::clamp(t0, t.front(), t.back())};
-		const auto [it0, it1] = bracket_indices(t, tc);
-		const double wt {weight(tc, t[it0], t[it1])};
-		const auto [ix0, ix1] = zones.bracket(zone, 0, x0);
-		const double wx {weight(x0, zones.center(zone, 0, ix0),
-			zones.center(zone, 0, ix1))};
-		const auto [iy0, iy1] = zones.bracket(zone, 1, y0);
-		const double wy {weight(y0, zones.center(zone, 1, iy0),
-			zones.center(zone, 1, iy1))};
-
+		// The shared version (interp_hd.h), which the GPU uses too, on the
+		// fields' flat data
+		std::array<const T*, N> data {};
+		for (std::size_t n {}; n < N; ++n) data[n] = vecs[n]->get_data().data();
 		std::array<double, N> out {};
-		for (int a {}; a < 2; ++a)
-		{
-			const int ix {a ? ix1 : ix0};
-			const double w_x {a ? wx : 1.0 - wx};
-			if (w_x == 0.0) continue;
-
-			// zShift of the field line through the point, in this column
-			const double zs_p {(1.0 - wy) * zones.z_shift(zone, ix, iy0)
-				+ wy * zones.z_shift(zone, ix, iy1)};
-			for (int b {}; b < 2; ++b)
-			{
-				const int iy {b ? iy1 : iy0};
-				const double w_xy {w_x * (b ? wy : 1.0 - wy)};
-				if (w_xy == 0.0) continue;
-
-				// Where the field line crosses this plane, and the two
-				// cells around it in z (one may be a periodic ghost)
-				const double zc {zones.wrap_z(zone,
-					z0 + zones.z_shift(zone, ix, iy) - zs_p)};
-				const auto [iz0, iz1] = zones.bracket(zone, 2, zc);
-				const double wz {weight(zc, zones.center(zone, 2, iz0),
-					zones.center(zone, 2, iz1))};
-
-				// Each of the two z cells' values, blended in time, and
-				// for a vector rotated from its cell's frame to z0
-				std::array<double, N> sample {};
-				for (int c {}; c < 2; ++c)
-				{
-					const int iz {c ? iz1 : iz0};
-					const double w_z {c ? wz : 1.0 - wz};
-					std::array<double, N> v {};
-					for (std::size_t n {}; n < N; ++n)
-					{
-						const auto& f {*vecs[n]};
-						v[n] = (1.0 - wt) * f(zone, it0, ix, iy, iz)
-							+ wt * f(zone, it1, ix, iy, iz);
-					}
-					if constexpr (N == 3)
-					{
-						if (rotate)
-						{
-							const double zf {zones.center(zone, 2, iz)};
-							const double ang {phi_sign * (z0 - zf)};
-							const double cs {std::cos(ang)};
-							const double sn {std::sin(ang)};
-							const double vx {v[0]};
-							v[0] = cs * vx - sn * v[1];
-							v[1] = sn * vx + cs * v[1];
-						}
-					}
-					for (std::size_t n {}; n < N; ++n) sample[n] += w_z * v[n];
-				}
-				for (std::size_t n {}; n < N; ++n) out[n] += w_xy * sample[n];
-			}
-		}
+		interp_aligned_flat<T, static_cast<int>(N)>(data.data(), zones.view(),
+			t.data(), static_cast<int>(t.size()), zone, t0, x0, y0, z0,
+			phi_sign, out.data());
 		return out;
 	}
 

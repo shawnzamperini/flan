@@ -34,6 +34,8 @@ namespace Options
 											///< sub-step
 		int imp_coll_subcycle_cap;	///< Largest number of sub-steps per
 									///< collision (1 = no sub-cycling)
+		int imp_thermal_force;	///< 1 to skew the colliding background
+								///< particles by the heat fluxes
 
 		// Starting time and position. Each opt_int is 0 for single_value
 		// (start at *_val), 1 for range (uniform between *range_min and
@@ -58,6 +60,9 @@ namespace Options
 		double zstart_val;		///< imp_zstart_val
 		double zrange_min;		///< imp_zrange_min
 		double zrange_max;		///< imp_zrange_max
+
+		int zone_start;			///< Zone particles start in, from 0
+								///< (imp_zone_start_val - 1)
 
 		double imp_max_time;	///< Maximum time a particle is followed (s)
 

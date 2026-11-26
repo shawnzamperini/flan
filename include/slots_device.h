@@ -4,6 +4,8 @@
 */
 #pragma once
 
+#include <cstddef>
+
 namespace Slots
 {
 	/**
@@ -28,6 +30,8 @@ namespace Slots
 		double* x;			///< Computational x coordinate
 		double* y;			///< Computational y coordinate
 		double* z;			///< Computational z coordinate
+		int* zone;			///< Zone the particle is in. The coordinates
+							///< and cell indices are in this zone.
 		int* tidx;			///< Nearest background time index
 		int* xidx;			///< x index of the containing grid cell
 		int* yidx;			///< y index of the containing grid cell
@@ -43,11 +47,22 @@ namespace Slots
 		double* weight;		///< Particle weight, 1 / imp_num at launch
 		int* q;				///< Charge state
 		int* state;			///< 0 if the particle is alive, 1 if dead
+		double* prompt_by;	///< Particle time up to which a return to the
+							///< wall is prompt, below 0 for none (see
+							///< Slots::prompt_by)
+		int* generation;	///< Times self-sputtered (Slots::generation)
+		int* nsub;			///< Near-wall sub-steps of each slot this step
+							///< (set when the sheath is on, see
+							///< Boris::update_velocity_gpu)
 
 		// Work arrays for the kernels that refill dead slots (see slots.cu)
 		bool* all_dead;		///< Single value, true if every slot is dead
 		int* dead_indices;	///< Indices of the dead slots, size N
 		int* num_dead;		///< Single value, number of entries in
 							///< dead_indices
+		void* select_temp;	///< Work space for cub::DeviceSelect, which
+							///< lists the dead slots (allocated by
+							///< fill_slots_gpu when first needed)
+		std::size_t select_temp_bytes;	///< Size of select_temp in bytes
 	};
 }

@@ -43,14 +43,14 @@ In the directory where the output should go:
 
 ```
 for v in z10 z10_nosub z5 z10_gpu c4; do <build dir>/reg_friction $v; done
-for v in z10 z10_ions z10_elec z10_nosub z10_off z5 c4_ions; do
+for v in z10 z10_ions z10_elec z10_nosub z10_off z10_gpu z5 c4_ions; do
     <build dir>/reg_thermal_force $v
 done
 for v in gyration exb polarization gradb curvature gradb_gpu; do
     <build dir>/reg_drifts $v
 done
 export OPENADAS_ROOT=<directory with scd50/ and acd50/>
-for v in p01 p03 p1 p3 p10 b4 full drop0 brooks_ref; do
+for v in p01 p03 p1 p3 p10 b4 full drop0 brooks_ref p01_gpu p1_gpu drop0_gpu; do
     <build dir>/reg_prompt_redep $v
 done
 for m in brooks borodkina; do for a in 2 5 10 20; do
@@ -67,10 +67,12 @@ for te in 20 50 100; do for a in 60 85; do
     <build dir>/reg_sheath_impacts dw_te${te}_a${a}_formula
 done; done
 python <flan>/regression/make_self_tables.py
-for v in y05 y125 w_te20 w_te50; do <build dir>/reg_self_sputter $v; done
+for v in y05 y125 w_te20 w_te50 y05_gpu y125_gpu w_te20_gpu; do
+    <build dir>/reg_self_sputter $v
+done
 ```
 
-Leave out `z10_gpu` and `gradb_gpu` without a GPU. The collision runs
+Leave out the `_gpu` variants without a GPU. The collision runs
 take from seconds to a few minutes each on a laptop, the drift runs about
 a second. The prompt redeposition runs take about one (p01) to several
 (p10) minutes each on 16 cores. Each writes `<case>_<variant>.nc`.

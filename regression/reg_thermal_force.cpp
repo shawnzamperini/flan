@@ -28,8 +28,7 @@
 *
 * Everything about the case is set in this file: the plasma comes from
 * the slab background (bkg_source = "slab"). Ionization and recombination
-* are off, so the charge stays at its starting value. The heat-flux skew
-* only runs on the CPU for now.
+* are off, so the charge stays at its starting value.
 *
 * Usage: reg_thermal_force <variant>, where <variant> is one of
 *
@@ -39,6 +38,7 @@
 *              Expected to miss the fluid drift by about 30%, see below.
 *   z10_nosub  as z10 with sub-cycling off: shows what it corrects
 *   z10_off    as z10 with imp_thermal_force = "off": no drift
+*   z10_gpu    as z10, on the GPU
 *   z5         W5+: the same drift as z10
 *   c4_ions    C4+ starting at the ion temperature, ion heat flux only:
 *              the thermal force on a light impurity (see below)
@@ -212,6 +212,12 @@ int main(int argc, char* argv[])
 	else if (variant == "z10_nosub")
 		inpts = create_inputs(variant, tungsten, 10, 80e-6, 5e-8,
 			eps_i, eps_e, false, true);
+	else if (variant == "z10_gpu")
+	{
+		inpts = create_inputs(variant, tungsten, 10, 80e-6, 5e-8,
+			eps_i, eps_e, true, true);
+		inpts["use_gpu"] = "cuda";
+	}
 	else if (variant == "z10_off")
 		inpts = create_inputs(variant, tungsten, 10, 80e-6, 5e-8,
 			eps_i, eps_e, true, false);
@@ -226,8 +232,8 @@ int main(int argc, char* argv[])
 	else
 	{
 		std::cerr << "Usage: reg_thermal_force <variant>, with <variant> "
-			"one of z10, z10_ions, z10_elec, z10_nosub, z10_off, z5, "
-			"c4_ions\n";
+			"one of z10, z10_ions, z10_elec, z10_nosub, z10_off, z10_gpu, "
+			"z5, c4_ions\n";
 		MPI_Finalize();
 		return 1;
 	}

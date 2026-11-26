@@ -547,7 +547,7 @@ namespace Options
 	* a divertor target: particles that reach it are absorbed and counted
 	* as hitting the wall, and with imp_source_opt = "sputter" the plasma
 	* sputters it. The face replaces whatever its *bound_type gives. Only
-	* for a straight slab (slab_major_radius = 0) on the CPU.
+	* for a straight slab (slab_major_radius = 0).
 	*
 	* Valid values are "none", "xmin", "xmax", "ymin" and "ymax". An
 	* invalid value prints an error and leaves the option unchanged.
@@ -1047,8 +1047,7 @@ namespace Options
 	* Borodkina and Tsvetkov's; both split the drop the same way. The
 	* default is "brooks". It only does anything on a background with wall
 	* surfaces (as for imp_source_opt = "sputter"), and is left out on
-	* other backgrounds. CPU only: a GPU run goes without it, with a
-	* warning.
+	* other backgrounds.
 	*
 	* Valid values are "off", "brooks" and "borodkina". An invalid value
 	* prints an error and leaves the option unchanged. Also sets the
@@ -1338,7 +1337,7 @@ namespace Options
 	* Highest charge the impurity can ionize to. It is for regression
 	* cases that compare with models leaving out further ionization, e.g.,
 	* prompt redeposition after ionizing once (Fussmann's model), not for
-	* physics runs. Below 0 (the default) there is no limit. CPU only.
+	* physics runs. Below 0 (the default) there is no limit.
 	*
 	* @param imp_iz_max_charge New value of the imp_iz_max_charge option.
 	*/
@@ -2611,7 +2610,7 @@ namespace Options
 	* (self-sputtering). The particle carries on as one of the atoms it
 	* sputtered, with its weight multiplied by the yield from the
 	* sput_self_table_file table (see Sputtering::SelfSource). Needs
-	* imp_source_opt = "sputter". CPU only.
+	* imp_source_opt = "sputter".
 	*
 	* Valid values are "off" and "on"; anything else stops the run
 	* (check_input). Also sets the control integer returned by
@@ -2638,7 +2637,7 @@ namespace Options
 	* the sheath_model field (Sheath::ImpactTable), which gives the
 	* energies and angles together. "sheath" is the default and needs
 	* sheath_model to be on, so a run with the sheath off must set
-	* "formula". CPU only.
+	* "formula". The test ions are pushed on the CPU, also for a GPU run.
 	*
 	* Valid values are "formula" and "sheath"; anything else stops the run
 	* (check_input). Also sets the control integer returned by

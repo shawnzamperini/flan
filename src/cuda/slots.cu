@@ -5,21 +5,26 @@
 *        checking if every slot is dead.
 *
 * GPU version of the slot routines in slots.cpp. Each time step, the
-* indices of the dead slots are gathered into a compact list with a
-* warp-level stream compaction, and then one thread per dead slot creates a
-* new particle there, as long as there are particles left to launch. New
+* indices of the dead slots are listed in increasing order
+* (cub::DeviceSelect), and then one thread per dead slot creates a new
+* particle there, as long as there are particles left to launch. New
 * particles start according to the imp_*start_opt and imp_temp_start_opt
-* options.
+* options, or from the sputtered source (imp_source_opt = "sputter").
 */
 #include <cstdio>
 
+#include <cub/device/device_select.cuh>
+#include <thrust/iterator/counting_iterator.h>
+
 #include "background_device.h"
+#include "errors.h"
 #include "options_device.h"
 #include "pcg32.h"
 #include "slots.cuh"
 #include "slots_device.h"
+#include "sputtering_hd.h"
+#include "zones_hd.h"
 
-#include "device_constants.cuh"
 #include "indices.cuh"
 #include "interpolate.cuh"
 
@@ -109,6 +114,7 @@ namespace Slots
 	* @param x Starting computational x coordinate.
 	* @param y Starting computational y coordinate.
 	* @param z Starting computational z coordinate.
+	* @param zone Zone the particle starts in.
 	* @param tidx Index of the nearest background time frame.
 	* @param xidx x index of the grid cell containing the particle.
 	* @param yidx y index of the grid cell containing the particle.
@@ -120,8 +126,8 @@ namespace Slots
 	__device__
 	Vec3d get_birth_vXYZ(const Background::BackgroundDevice bkg_d, 
 		const double t, const double x, const double y, const double z, 
-		const int tidx, const int xidx, const int yidx, const int zidx, 
-		pcg32& rng, const Options::OptionsDevice* opts_d)
+		const int zone, const int tidx, const int xidx, const int yidx,
+		const int zidx, pcg32& rng, const Options::OptionsDevice* opts_d)
 	{
 		// Start at input temperature value
 		double start_temp {};
@@ -135,11 +141,11 @@ namespace Slots
 		else if (opts_d->imp_temp_start_opt_int == 1)
 		{
 			Interpolate::InterpolationStencil stencil_4d
-				{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, 
+				{Interpolate::build_stencil_4d(bkg_d, zone, tidx, xidx, yidx, zidx, 
 				t, x, y, z)};
 
-			start_temp = Interpolate::interpolate_field_4d(bkg_d.ti, 
-				stencil_4d, t, x, y, z);
+			start_temp = Interpolate::interp_plasma(bkg_d, bkg_d.ti,
+				stencil_4d, zone, t, x, y, z);
 
 			// Limit to minimum value
 			start_temp = fmax(start_temp, opts_d->min_ti);
@@ -168,7 +174,9 @@ namespace Slots
 	/**
 	* Creates a new particle based on the input options.
 	*
-	* The starting t, x, y and z come from get_birth_val_cuda, the indices
+	* The particle starts in zone imp_zone_start_val (as
+	* Slots::make_new_particle on the CPU), and its starting t, x, y and z
+	* come from get_birth_val_cuda in that zone's coordinates, the indices
 	* of the nearest time frame and the containing grid cell are found, and
 	* the starting Cartesian velocity comes from get_birth_vXYZ. The
 	* computational velocities are left at zero, since they are set on the
@@ -189,29 +197,40 @@ namespace Slots
 
 		ParticleInitDevice p;
 
-		// Create a new particle based on input options.
-		// d_x_min/max, etc. are defined in device_constants.cuh
+		// The zone the particle is born in (imp_zone_start_val, numbered
+		// from 1 in the input). The starting position is in that zone's
+		// coordinates.
+		const Zones::ZonesView& zones {bkg_d.zones};
+		p.zone = opts_d->zone_start;
+		const double* gx {Zones::zone_edges(zones, p.zone, 0)};
+		const double* gy {Zones::zone_edges(zones, p.zone, 1)};
+		const double* gz {Zones::zone_edges(zones, p.zone, 2)};
+
+		// Create a new particle based on input options. The full range is
+		// the zone's outer cell edges.
 		p.t = get_birth_val_cuda(opts_d->tstart_opt_int, opts_d->tstart_val, 
-			opts_d->trange_min, opts_d->trange_max, d_t_min, d_t_max, rng);
+			opts_d->trange_min, opts_d->trange_max, bkg_d.t_min,
+			bkg_d.t_max, rng);
 		p.x = get_birth_val_cuda(opts_d->xstart_opt_int, opts_d->xstart_val, 
-			opts_d->xrange_min, opts_d->xrange_max, d_x_min, d_x_max, rng);
+			opts_d->xrange_min, opts_d->xrange_max, gx[0],
+			gx[zones.n[0][p.zone]], rng);
 		p.y = get_birth_val_cuda(opts_d->ystart_opt_int, opts_d->ystart_val, 
-			opts_d->yrange_min, opts_d->yrange_max, d_y_min, d_y_max, rng);
+			opts_d->yrange_min, opts_d->yrange_max, gy[0],
+			gy[zones.n[1][p.zone]], rng);
 		p.z = get_birth_val_cuda(opts_d->zstart_opt_int, opts_d->zstart_val, 
-			opts_d->zrange_min, opts_d->zrange_max, d_z_min, d_z_max, rng);
+			opts_d->zrange_min, opts_d->zrange_max, gz[0],
+			gz[zones.n[2][p.zone]], rng);
 
 		// Get indices, same process as in impurity_transport.cu
-		p.tidx = Indices::get_nearest_index_cuda(d_t, bkg_d.tdim, p.t);
-		p.xidx = Indices::get_nearest_cell_index_cuda(d_grid_x, bkg_d.xdim+1, 
-			p.x);
-		p.yidx = Indices::get_nearest_cell_index_cuda(d_grid_y, bkg_d.ydim+1, 
-			p.y);
-		p.zidx = Indices::get_nearest_cell_index_cuda(d_grid_z, bkg_d.zdim+1, 
-			p.z);
+		p.tidx = Indices::get_nearest_index_cuda(bkg_d.times, bkg_d.tdim,
+			p.t);
+		p.xidx = Zones::cell_index(zones, p.zone, 0, p.x);
+		p.yidx = Zones::cell_index(zones, p.zone, 1, p.y);
+		p.zidx = Zones::cell_index(zones, p.zone, 2, p.z);
 
 		// Get starting vX, vY, vZ into struct
-		Vec3d vXYZ {get_birth_vXYZ(bkg_d, p.t, p.x, p.y, p.z, p.tidx, p.xidx, 
-			p.yidx, p.zidx, rng, opts_d)};
+		Vec3d vXYZ {get_birth_vXYZ(bkg_d, p.t, p.x, p.y, p.z, p.zone, p.tidx,
+			p.xidx, p.yidx, p.zidx, rng, opts_d)};
 		p.vX = vXYZ.x;
 		p.vY = vXYZ.y;
 		p.vZ = vXYZ.z;
@@ -231,111 +250,66 @@ namespace Slots
 
 	
 	/**
-	* Kernel that gathers the indices of every dead slot into a compact
-	* list.
+	* Starts a sputtered atom from the source, as make_new_particle does on
+	* the CPU (slots.cpp): where, when and how fast from
+	* Sputtering::sample_birth (the same routine, with the same draws),
+	* neutral, and standing for source_rate / imp_num atoms/s.
 	*
-	* This is a warp-level stream compaction. Each warp votes on which of
-	* its lanes hold a dead slot (__ballot_sync), lane 0 reserves room for
-	* that many indices in dead_indices with a single atomicAdd on
-	* num_dead, and each dead lane then writes its slot index at its offset
-	* within the warp's reserved block. Using one atomic per warp instead of
-	* one per thread keeps contention low. The order of the indices between
-	* warps is not deterministic.
-	*
-	* @param state State of each slot, where 0 is alive and anything else
-	*        is dead.
-	* @param dead_indices Output list of dead slot indices. Must be able to
-	*        hold N indices.
-	* @param num_dead Device counter of dead slots. Must be zeroed before
-	*        the launch. Holds the number of dead slots afterward.
-	* @param N Number of slots.
+	* @param rng Random number generator of the slot.
+	* @param source_d The source on the device.
+	* @param bkg_d Background plasma on the device.
+	* @return The new particle.
 	*/
-	__global__ void compact_dead_slots(const int* __restrict__ state,
-		int* __restrict__ dead_indices, int* __restrict__ num_dead, int N)
+	__device__
+	ParticleInitDevice make_sputtered_particle_cuda(pcg32& rng,
+		const Sputtering::SourceDevice& source_d,
+		const Background::BackgroundDevice& bkg_d)
 	{
-		// Global thread index
-		int tid  = blockIdx.x * blockDim.x + threadIdx.x;
-
-		// Thread position within its warp (lane within warp)
-		int lane = threadIdx.x & 31;  // This is essentially thread % 32
-
-		// Active mask for this warp. Tells us which lanes are active.
-		// This returns a bitwise mask in a 32-bit integer. For
-		// example, if mask = 0b00000000_00000000_00000000_11101111, this 
-		// means lanes 0, 1, 2, 3, 5, 6, 7 are active and 4, 8-31 are inactive.
-		// Really just relevant for the final warp if slots doesn't equally
-		// divide by 32. We need this for the warp-level intrinsics below.
-		unsigned int mask {__activemask()};
-
-		// Is this thread in range?
-		bool in_range {(tid < N)};
-
-		// Is this slot dead (state > 0)?
-		bool is_dead {false};
-		if (in_range) is_dead = (state[tid] != 0);
-
-		// Warp-wide vote: which lanes are dead? Similar to activemask, this
-		// returns a 32-bit bitwise mask indicating the lanes where
-		// is_dead=true. It only evaluates this for active lanes, as set in
-		// mask. For example, say our active lanes are:
-		//       mask = 0b00000000_00000000_00000000_11101111
-		//                                           TFT FFTT  <- is_dead values
-		// Then we'd get:
-		//  dead_mask = 0b00000000_00000000_00000000_10100011
-		unsigned int dead_mask = __ballot_sync(mask, is_dead);
-
-		// Number of dead lanes in this warp (popc = population count). This 
-		// just counts the number of 1's in dead_mask. Following the above
-		// example, we'd get 4 for this.
-		int warp_dead_count = __popc(dead_mask);
-
-		// No dead slots in this warp, nothing to do
-		if (warp_dead_count == 0) return;
-
-		// Compute this lane's offset among dead lanes in the warp
-		// Mask of dead lanes with index < lane
-		// First, 1u << lane creates a 32-bit mask with a single bit at position
-		// lane. So if lane = 16, then
-		//   1u << lane = 0b00000000_00000001_00000000_00000000
-		// Then subtracting 1 from this turns it into a mask with all bits
-		// below our bit equal to 1;
-		//   (1u << lane - 1) = 0b00000000_00000000_11111111_11111111
-		// Then we perform a bitwise & with dead_mask which keeps only the 
-		// dead bits below this lane. For our example from above,
-		//  dead_mask = 0b00000000_00000000_00000000_10100011
-		//              0b00000000_00000000_11111111_11111111
-		//  lane_mask = 0b00000000_00000000_00000000_10100011
-		// Finally, lane_offset is the sum of all the 1's, lane_offset = 4.
-		// This is used in calculating the index in dead_indices that we will 
-		// place the dead slot index in, done below.
-		unsigned int lane_mask = dead_mask & ((1u << lane) - 1);
-		int lane_offset = __popc(lane_mask);
-
-		// Let lane 0 reserve space in the global dead_indices array
-		// atomicAdd returns the original value of num_dead, which we assign
-		// to warp_base. Continuing our example where warp_dead_count=4, if
-		// we just say num_dead was 10 going into this, then after
-		// num_dead = 14 and warp_base = 10. Therefore when we get down to
-		// dead_indices, we will know that this warp "owns" (will only be
-		// indexing into) indices 10, 11, 12, 13, where each lane knows which
-		// index it will do via lane_offset.
-		int warp_base = 0;
-		if (lane == 0) warp_base = atomicAdd(num_dead, warp_dead_count);
-
-		// Broadcast warp_base to all lanes so that every lane in this warp 
-		// knows where in dead_indices to start from
-		warp_base = __shfl_sync(mask, warp_base, 0);
-
-		// If this lane is dead, write its global index into the compacted array
-		if (is_dead) dead_indices[warp_base + lane_offset] = tid;
+		const Sputtering::Birth b {Sputtering::sample_birth(source_d.view,
+			rng)};
+		ParticleInitDevice p;
+		p.zone = b.zone;
+		p.t = b.t;
+		p.x = b.x;
+		p.y = b.y;
+		p.z = b.z;
+		p.tidx = Indices::get_nearest_index_cuda(bkg_d.times, bkg_d.tdim,
+			p.t);
+		p.xidx = Zones::cell_index(bkg_d.zones, p.zone, 0, p.x);
+		p.yidx = Zones::cell_index(bkg_d.zones, p.zone, 1, p.y);
+		p.zidx = Zones::cell_index(bkg_d.zones, p.zone, 2, p.z);
+		p.vX = b.vX;
+		p.vY = b.vY;
+		p.vZ = b.vZ;
+		p.vx = 0.0;
+		p.vy = 0.0;
+		p.vz = 0.0;
+		p.weight = source_d.weight;
+		p.q = 0;
+		return p;
 	}
+
+	/**
+	* Predicate for cub::DeviceSelect::If: true for the index of a dead
+	* slot (state not 0).
+	*/
+	struct IsDead
+	{
+		const int* state;	///< State of each slot, 0 if alive
+
+		/**
+		* @param i Slot index.
+		* @return true if slot i is dead.
+		*/
+		__device__ bool operator()(const int i) const {return state[i] != 0;}
+	};
 
 
 	/**
 	* Kernel that fills dead slots with new particles.
 	*
 	* One thread handles one entry of the dead slot list from
-	* compact_dead_slots, so only the first min(num_dead, rem_parts) dead
+	* fill_slots_gpu, so only the first min(num_dead, rem_parts) dead
 	* slots are filled. Each creates a new particle with
 	* make_new_particle_cuda and writes it into the slot, marking it alive.
 	* The cell indices are set to 0 here and assigned afterward by
@@ -350,10 +324,14 @@ namespace Slots
 	* @param rem_parts Number of particles left to launch.
 	* @param rngs_d Random number generators on the device.
 	* @param opts_d Simulation options on the device.
+	* @param source Sputtered source on the device, or a copy with
+	*        device_id -1 to start particles from the imp_*start_opt
+	*        options.
 	*/
 	__global__ void fill_slots_kernel(SlotsDevice slots_d, 
 		Background::BackgroundDevice bkg_d, int rem_parts, pcg32* rngs_d, 
-		const Options::OptionsDevice* opts_d)
+		const Options::OptionsDevice* opts_d,
+		const Sputtering::SourceDevice source)
 	{
 		// Global index
 		int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -364,7 +342,9 @@ namespace Slots
 		int i = slots_d.dead_indices[idx];
 
 		// Create a new particle (device-side initializer)
-		ParticleInitDevice p = make_new_particle_cuda(rngs_d[i], opts_d, bkg_d);
+		ParticleInitDevice p = source.device_id >= 0
+			? make_sputtered_particle_cuda(rngs_d[i], source, bkg_d)
+			: make_new_particle_cuda(rngs_d[i], opts_d, bkg_d);
 
 		// Write particle data
 		slots_d.pt[i] = 0.0;
@@ -385,12 +365,19 @@ namespace Slots
 		slots_d.weight[i] = p.weight;
 
 		slots_d.q[i] = p.q;
+		slots_d.zone[i] = p.zone;
 
-		// These get assigned in find_containing_cell_gpu
-		slots_d.tidx[i] = 0;
-		slots_d.xidx[i] = 0;
-		slots_d.yidx[i] = 0;
-		slots_d.zidx[i] = 0;
+		// The time frame and cell of the birth, as fill_slots_cpu (the
+		// main loop finds them again with find_containing_cell_gpu)
+		slots_d.tidx[i] = p.tidx;
+		slots_d.xidx[i] = p.xidx;
+		slots_d.yidx[i] = p.yidx;
+		slots_d.zidx[i] = p.zidx;
+
+		// Not yet ionized (no prompt window) and not self-sputtered, as
+		// fill_slots_cpu
+		slots_d.prompt_by[i] = -1.0;
+		slots_d.generation[i] = 0;
 
 		// Mark slot alive
 		slots_d.state[i] = 0;
@@ -421,10 +408,18 @@ namespace Slots
 	* Replaces dead particles with new ones, as long as there are particles
 	* left to launch.
 	*
-	* Runs compact_dead_slots to gather the dead slot indices, copies the
-	* number of dead slots back to the host (which waits for the kernel to
-	* finish), and then launches fill_slots_kernel with one thread per dead
-	* slot. Both use blocks of 256 threads. The fill kernel launch is
+	* Lists the dead slot indices in increasing order with
+	* cub::DeviceSelect::If, copies the number of dead slots back to the
+	* host (which waits for the selection to finish), and then launches
+	* fill_slots_kernel with one thread per dead slot, in blocks of 256
+	* threads.
+	*
+	* The order matters when there are more dead slots than particles left
+	* to launch: only the first rem_parts get a particle, and each slot has
+	* its own random number generator. An order that is the same every run
+	* (unlike one from atomics) makes a GPU run reproducible, so changes to
+	* the code can be checked bit for bit. The selection's work space is
+	* allocated here the first time and kept in slots_d. The fill kernel launch is
 	* asynchronous, except in DEBUG builds, where it waits for the kernel to
 	* finish and prints any error. The number of filled slots is
 	* min(rem_parts, num_dead), so the counts are updated on the host
@@ -437,24 +432,36 @@ namespace Slots
 	* @param rngs_d Random number generators on the device.
 	* @param opts_d Simulation options on the device.
 	* @param bkg_d Background plasma on the device.
+	* @param source_d Sputtered source on the device to start particles
+	*        from, or nullptr to start them from the imp_*start_opt options.
 	*/
 	void fill_slots_gpu(SlotsDevice& slots_d, int& rem_parts, int& alive_slots,
 		pcg32* rngs_d, Options::OptionsDevice* opts_d,
-		const Background::BackgroundDevice& bkg_d)
+		const Background::BackgroundDevice& bkg_d,
+		const Sputtering::SourceDevice* source_d)
 	{
 
 		// Each slot is assigned to a specific GPU where its data lies
 		cudaSetDevice(slots_d.device_id);
 
-		// Reset number of dead slots to zero
-		cudaMemset(slots_d.num_dead, 0, sizeof(*slots_d.num_dead));
-
-		// Fill in dead_indices with just the slots indices that have dead
-		// particles.
-		int blockSize = 256;
-		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
-		compact_dead_slots<<<gridSize, blockSize>>>(slots_d.state,
-			slots_d.dead_indices, slots_d.num_dead, slots_d.N);
+		// List the indices of the dead slots, in increasing order, in
+		// dead_indices, and their number in num_dead. The first call (with
+		// no work space) only gives the size of the work space needed.
+		const thrust::counting_iterator<int> slot_index(0);
+		const IsDead is_dead {slots_d.state};
+		std::size_t temp_bytes {};
+		cub::DeviceSelect::If(nullptr, temp_bytes, slot_index,
+			slots_d.dead_indices, slots_d.num_dead, slots_d.N, is_dead);
+		if (temp_bytes > slots_d.select_temp_bytes)
+		{
+			cudaFree(slots_d.select_temp);
+			Errors::check_cuda(cudaMalloc(&slots_d.select_temp, temp_bytes),
+				"fill_slots_gpu: allocating the work space");
+			slots_d.select_temp_bytes = temp_bytes;
+		}
+		cub::DeviceSelect::If(slots_d.select_temp, slots_d.select_temp_bytes,
+			slot_index, slots_d.dead_indices, slots_d.num_dead, slots_d.N,
+			is_dead);
 
 		// Read back num_dead
 		int num_dead = 0;
@@ -466,8 +473,10 @@ namespace Slots
 		// Call GPU kernel to fill slots.
 		int fillBlock = 256;
 		int fillGrid  = (num_dead + fillBlock - 1) / fillBlock;
+		const Sputtering::SourceDevice source {source_d != nullptr
+			? *source_d : Sputtering::SourceDevice {}};
 		fill_slots_kernel<<<fillGrid, fillBlock>>>(slots_d, bkg_d, rem_parts,
-			rngs_d, opts_d);
+			rngs_d, opts_d, source);
 
 #ifdef DEBUG
 		// Check for errors. This also catches errors from compact_dead_slots.

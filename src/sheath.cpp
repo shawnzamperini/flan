@@ -83,12 +83,18 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <type_traits>
+#include <utility>
 
 #include "boris.h"
 #include "constants.h"
 #include "errors.h"
 #include "pcg32.h"
 #include "sheath.h"
+
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
+#endif
 
 namespace Sheath
 {
@@ -188,115 +194,8 @@ namespace Sheath
 		return p;
 	}
 
-	/**
-	* The sheath potential at a distance d from the wall (V), relative to
-	* the plasma at the presheath entrance: phi_wall at d = 0 and 0 far
-	* away.
-	*
-	* @param p The sheath (make_params).
-	* @param model "brooks" or "borodkina"; "off" gives 0.
-	* @param d Distance from the wall along its normal (m), >= 0.
-	* @return The potential (V).
-	*/
-	double potential(const Params& p, const Model model, const double d)
-	{
-		if (model == Model::off || p.te == 0.0) return 0.0;
-		if (model == Model::brooks)
-		{
-			const double debye {p.f_d * std::exp(-d / (2.0 * p.lambda_d))};
-			const double mps {p.f_d < 1.0
-				? (1.0 - p.f_d) * std::exp(-d / p.rho_s) : 0.0};
-			return p.phi_wall * (debye + mps);
-		}
-
-		// Borodkina
-		const double xi {d / p.lambda_d};
-		if (p.debye)
-		{
-			if (xi <= p.xi_mps)
-				return p.te * (p.lam_w + p.q * (1.0 - std::exp(-p.a * xi)));
-			if (!(p.l_mps > 0.0)) return 0.0;
-			return p.te * p.lam_mps * std::exp(-(xi - p.xi_mps) / p.l_mps);
-		}
-		if (!(p.l_mps > 0.0)) return 0.0;
-		return p.te * p.lam_w * std::exp(-xi / p.l_mps);
-	}
-
-	/**
-	* The sheath field along the wall's normal into the plasma at a
-	* distance d from the wall, E . n = -dphi/dd (V/m). It is negative:
-	* the field points into the wall.
-	*
-	* @param p The sheath (make_params).
-	* @param model "brooks" or "borodkina"; "off" gives 0.
-	* @param d Distance from the wall along its normal (m), >= 0.
-	* @return E . n (V/m).
-	*/
-	double field(const Params& p, const Model model, const double d)
-	{
-		if (model == Model::off || p.te == 0.0) return 0.0;
-		if (model == Model::brooks)
-		{
-			const double l_ds {2.0 * p.lambda_d};
-			const double debye {p.f_d / l_ds * std::exp(-d / l_ds)};
-			const double mps {p.f_d < 1.0
-				? (1.0 - p.f_d) / p.rho_s * std::exp(-d / p.rho_s) : 0.0};
-			return p.phi_wall * (debye + mps);
-		}
-
-		// Borodkina: E . n = -(Te / lambda_D) dlam/dxi
-		const double xi {d / p.lambda_d};
-		double dlam {};
-		if (p.debye && xi <= p.xi_mps)
-			dlam = p.a * p.q * std::exp(-p.a * xi);
-		else if (p.l_mps > 0.0)
-		{
-			const double lam0 {p.debye ? p.lam_mps : p.lam_w};
-			const double xi0 {p.debye ? p.xi_mps : 0.0};
-			dlam = -lam0 / p.l_mps * std::exp(-(xi - xi0) / p.l_mps);
-		}
-		return -p.te * dlam / p.lambda_d;
-	}
-
-	/**
-	* How far from the wall the field reaches: n_scales of its longest
-	* scale length (past the Debye layer, for "borodkina"). With the
-	* default 28 the field beyond is below exp(-28) ~ 7e-13 of the drop per
-	* scale length, and is left out.
-	*
-	* @param p The sheath (make_params).
-	* @param model The profile.
-	* @param n_scales How many scale lengths.
-	* @return The distance (m).
-	*/
-	double range(const Params& p, const Model model, const double n_scales)
-	{
-		if (model == Model::off || p.te == 0.0) return 0.0;
-		const double l_ds {2.0 * p.lambda_d};
-		if (model == Model::brooks)
-		{
-			return n_scales * (p.f_d < 1.0 ? std::max(l_ds, p.rho_s)
-				: l_ds);
-		}
-		// Borodkina: the Debye layer then the presheath, or one of them
-		if (p.debye && !std::isfinite(p.xi_mps))
-			return n_scales / p.a * p.lambda_d;
-		if (p.debye) return (p.xi_mps + n_scales * p.l_mps) * p.lambda_d;
-		return n_scales * p.l_mps * p.lambda_d;
-	}
-
-	namespace
-	{
-		/// Packs a cell's zone and indices into one key (each is far less
-		/// than 2^16)
-		std::uint64_t cell_key(const int zone, const int i, const int j,
-			const int k)
-		{
-			auto u = [](int v)
-				{return static_cast<std::uint64_t>(v) & 0xffff;};
-			return (u(zone) << 48) | (u(i) << 32) | (u(j) << 16) | u(k);
-		}
-	}
+	// potential, field, range and substeps (of a Params) are in
+	// sheath_hd.h, shared with the GPU
 
 	/**
 	* Works out the sheath in front of every wall element in every time
@@ -395,8 +294,36 @@ namespace Sheath
 					"normal.");
 			}
 			m_elements.push_back(s);
-			m_cells[cell_key(el.zone, el.i, el.j, el.k)].push_back(e);
+			m_flat.zone.push_back(s.zone);
+			m_flat.face.push_back(static_cast<int>(s.face));
+			m_flat.lo.push_back(s.lo);
+			m_flat.hi.push_back(s.hi);
+			m_flat.thickness.push_back(s.thickness);
+			m_flat.n_R.push_back(s.n_R);
+			m_flat.n_Z.push_back(s.n_Z);
+			m_flat.cartesian.push_back(s.cartesian ? 1 : 0);
 		}
+
+		// Each plasma cell next to the wall and its elements, sorted by
+		// the cell's key and then the element, so each cell's elements
+		// stay in element order
+		std::vector<std::pair<std::uint64_t, int>> cells {};
+		for (std::size_t e {}; e < n_elem; ++e)
+		{
+			cells.emplace_back(cell_key(els[e].zone, els[e].i, els[e].j,
+				els[e].k), static_cast<int>(e));
+		}
+		std::sort(cells.begin(), cells.end());
+		for (const auto& [key, e] : cells)
+		{
+			if (m_cell_keys.empty() || m_cell_keys.back() != key)
+			{
+				m_cell_keys.push_back(key);
+				m_cell_start.push_back(static_cast<int>(m_cell_elems.size()));
+			}
+			m_cell_elems.push_back(e);
+		}
+		m_cell_start.push_back(static_cast<int>(m_cell_elems.size()));
 
 		// Params per frame and element
 		m_params.resize(static_cast<std::size_t>(m_nframes) * n_elem);
@@ -470,27 +397,8 @@ namespace Sheath
 		const int k, const std::array<double, 3>& pos,
 		std::size_t& element, double& d) const
 	{
-		if (m_elements.empty()) return false;
-		const auto it {m_cells.find(cell_key(zone, i, j, k))};
-		if (it == m_cells.end()) return false;
-
-		bool found {};
-		for (const std::size_t e : it->second)
-		{
-			const Element& s {m_elements[e]};
-			const int axis {static_cast<int>(s.face) / 2};
-			const bool max_face {(static_cast<int>(s.face) & 1) == 1};
-			const double frac {(max_face ? s.hi - pos[axis]
-				: pos[axis] - s.lo) / (s.hi - s.lo)};
-			const double de {std::max(frac, 0.0) * s.thickness};
-			if (!found || de < d)
-			{
-				d = de;
-				element = e;
-				found = true;
-			}
-		}
-		return found;
+		return ::Sheath::distance(view(), zone, i, j, k, pos.data(),
+			element, d);
 	}
 
 	/**
@@ -510,20 +418,10 @@ namespace Sheath
 		const int i, const int j, const int k,
 		const std::array<double, 3>& pos) const
 	{
-		std::size_t e {};
-		double d {};
-		if (m_model == Model::off || !distance(zone, i, j, k, pos, e, d))
-			return {0.0, 0.0, 0.0};
-		const int t {std::clamp(frame, 0, m_nframes - 1)};
-		const Params& p {params(t, e)};
-		if (d > range(p, m_model)) return {0.0, 0.0, 0.0};
-
-		const Element& s {m_elements[e]};
-		const double en {field(p, m_model, d)};
-		if (s.cartesian) return {en * s.n_R, en * s.n_Z, 0.0};
-		const double phi {pos[2]};
-		return {en * s.n_R * std::cos(phi),
-			en * s.n_R * m_phi_sign * std::sin(phi), en * s.n_Z};
+		std::array<double, 3> E {};
+		::Sheath::field_at(view(), zone, frame, i, j, k, pos.data(),
+			E.data());
+		return E;
 	}
 
 	/**
@@ -554,74 +452,10 @@ namespace Sheath
 		const int j, const int k, const std::array<double, 3>& pos,
 		const double speed, const double q_over_m, const double dt) const
 	{
-		if (m_model == Model::off || !(q_over_m > 0.0)) return 1;
-		std::size_t e {};
-		double d {};
-		if (!distance(zone, i, j, k, pos, e, d)) return 1;
-		const int t {std::clamp(frame, 0, m_nframes - 1)};
-		return ::Sheath::substeps(params(t, e), m_model, d, speed, q_over_m,
-			dt);
+		return ::Sheath::substeps(view(), zone, frame, i, j, k, pos.data(),
+			speed, q_over_m, dt);
 	}
 
-	/**
-	* Number of sub-steps a particle at distance d from a wall needs this
-	* time step, by the rule Sheath::substeps describes (that member finds
-	* the particle's element and distance, then calls this). Kept as a
-	* function of the sheath alone so the impact sampler
-	* (sample_impacts) sub-steps exactly as the main loop does.
-	*
-	* @param p The sheath (make_params).
-	* @param model "brooks" or "borodkina"; "off" gives 1.
-	* @param d Distance from the wall along its normal (m).
-	* @param speed The particle's speed (m/s).
-	* @param q_over_m Its charge over mass (C/kg), > 0 for positive ions.
-	* @param dt The time step (s).
-	* @return The number of sub-steps, 1 if it needs none.
-	*/
-	int substeps(const Params& p, const Model model, const double d,
-		const double speed, const double q_over_m, const double dt)
-	{
-		if (model == Model::off || !(q_over_m > 0.0) || p.te == 0.0)
-			return 1;
-
-		// The fastest it could be going, and how close it could get
-		const double drop {std::max(potential(p, model, d) - p.phi_wall,
-			0.0)};
-		const double v_max {speed + std::sqrt(2.0 * q_over_m * drop)};
-		const double reach {v_max * dt};
-		const double nearest {d - reach};
-		if (nearest > range(p, model, 7.0)) return 1;
-
-		// The Debye layer's scale and extent, and the presheath's scale
-		double l_debye {};
-		double debye_edge {};
-		double l_mps {};
-		if (model == Model::brooks)
-		{
-			l_debye = p.f_d > 0.0 ? 2.0 * p.lambda_d : 0.0;
-			debye_edge = 7.0 * l_debye;
-			l_mps = p.f_d < 1.0 ? p.rho_s : 0.0;
-		}
-		else
-		{
-			l_debye = p.debye ? p.lambda_d / p.a : 0.0;
-			debye_edge = p.debye ? (std::isfinite(p.xi_mps) ? p.xi_mps
-				* p.lambda_d : 0.0) + 7.0 * l_debye : 0.0;
-			l_mps = p.l_mps * p.lambda_d;
-		}
-		double scale {};
-		if (l_debye > 0.0 && nearest <= debye_edge) scale = l_debye;
-		else scale = l_mps;
-		if (l_debye > 0.0 && l_mps > 0.0 && nearest <= debye_edge)
-			scale = std::min(l_debye, l_mps);
-		if (!(scale > 0.0)) return 1;
-
-		// At least 2 in the field, so that a particle crossing the wall
-		// gets its impact velocity (see Boris::substep_cpu)
-		const double n {std::ceil(reach / (Sheath::substep_frac * scale))};
-		return static_cast<int>(std::clamp(n, 2.0,
-			static_cast<double>(Sheath::max_substeps)));
-	}
 
 	/**
 	* Pushes main ions (charge 1) through the sheath in front of a flat
@@ -1017,5 +851,123 @@ namespace Sheath
 				"off at the cell's far side, leaving out up to "
 				<< 100.0 * m_max_lost << "% of the drop\n";
 		}
+	}
+
+	/**
+	* The sheath as flat arrays, pointing into this object's own vectors,
+	* for the routines shared with the GPU (sheath_hd.h).
+	*
+	* @return The view.
+	*/
+	SheathView Sheath::view() const
+	{
+		SheathView v {};
+		v.model = m_model;
+		v.nframes = m_nframes;
+		v.phi_sign = m_phi_sign;
+		v.n_elem = m_elements.size();
+		v.zone = m_flat.zone.data();
+		v.face = m_flat.face.data();
+		v.lo = m_flat.lo.data();
+		v.hi = m_flat.hi.data();
+		v.thickness = m_flat.thickness.data();
+		v.n_R = m_flat.n_R.data();
+		v.n_Z = m_flat.n_Z.data();
+		v.cartesian = m_flat.cartesian.data();
+		v.params = m_params.data();
+		v.n_cells = m_cell_keys.size();
+		v.cell_keys = m_cell_keys.data();
+		v.cell_start = m_cell_start.data();
+		v.cell_elems = m_cell_elems.data();
+		return v;
+	}
+
+#ifdef USE_CUDA
+	namespace
+	{
+		/// Copies n values to the current GPU, nullptr for none
+		template <typename T>
+		T* copy_to_gpu(const T* src, const std::size_t n)
+		{
+			if (n == 0 || src == nullptr) return nullptr;
+			T* dst {};
+			Errors::check_cuda(cudaMalloc(&dst, n * sizeof(T)),
+				"Sheath::to_device");
+			Errors::check_cuda(cudaMemcpy(dst, src, n * sizeof(T),
+				cudaMemcpyHostToDevice), "Sheath::to_device");
+			return dst;
+		}
+
+		/// Frees a device array a view points to
+		template <typename T>
+		void free_gpu(T*& p)
+		{
+			cudaFree(const_cast<std::remove_const_t<T>*>(p));
+			p = nullptr;
+		}
+	}
+#endif
+
+	/**
+	* Copies the sheath to a GPU, for the push and the near-wall sub-steps
+	* there, with the same routines as the CPU (sheath_hd.h).
+	*
+	* @param device_id GPU to copy to.
+	* @return The copy, to free with free_sheath. Without CUDA, or with
+	*         the sheath off, an empty one (device_id -1, model off).
+	*/
+	SheathDevice Sheath::to_device(const int device_id) const
+	{
+		SheathDevice out {};
+#ifdef USE_CUDA
+		if (m_model == Model::off) return out;
+		Errors::check_cuda(cudaSetDevice(device_id), "Sheath::to_device");
+		const SheathView h {view()};
+		SheathView& d {out.view};
+		d = h;
+		d.zone = copy_to_gpu(h.zone, h.n_elem);
+		d.face = copy_to_gpu(h.face, h.n_elem);
+		d.lo = copy_to_gpu(h.lo, h.n_elem);
+		d.hi = copy_to_gpu(h.hi, h.n_elem);
+		d.thickness = copy_to_gpu(h.thickness, h.n_elem);
+		d.n_R = copy_to_gpu(h.n_R, h.n_elem);
+		d.n_Z = copy_to_gpu(h.n_Z, h.n_elem);
+		d.cartesian = copy_to_gpu(h.cartesian, h.n_elem);
+		d.params = copy_to_gpu(h.params, m_params.size());
+		d.cell_keys = copy_to_gpu(h.cell_keys, h.n_cells);
+		d.cell_start = copy_to_gpu(h.cell_start, m_cell_start.size());
+		d.cell_elems = copy_to_gpu(h.cell_elems, m_cell_elems.size());
+		out.device_id = device_id;
+#else
+		(void)device_id;
+#endif
+		return out;
+	}
+
+	/**
+	* Frees a sheath copied to a GPU (Sheath::to_device).
+	*
+	* @param sheath_d The copy. Left empty.
+	*/
+	void free_sheath(SheathDevice& sheath_d)
+	{
+#ifdef USE_CUDA
+		if (sheath_d.device_id < 0) return;
+		cudaSetDevice(sheath_d.device_id);
+		SheathView& d {sheath_d.view};
+		free_gpu(d.zone);
+		free_gpu(d.face);
+		free_gpu(d.lo);
+		free_gpu(d.hi);
+		free_gpu(d.thickness);
+		free_gpu(d.n_R);
+		free_gpu(d.n_Z);
+		free_gpu(d.cartesian);
+		free_gpu(d.params);
+		free_gpu(d.cell_keys);
+		free_gpu(d.cell_start);
+		free_gpu(d.cell_elems);
+#endif
+		sheath_d = {};
 	}
 }

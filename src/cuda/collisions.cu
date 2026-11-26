@@ -13,11 +13,14 @@
 * relative velocity by an angle chi. How collisional the step is is set by
 * s, which sets the shape A(s) of the distribution chi is sampled from.
 */
+#include <array>
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <math.h>
 
 #include "background_device.h"
+#include "collisions_hd.h"
+#include "errors.h"
 #include "constants.h"
 #include "options_device.h"
 #include "pcg32.h"
@@ -67,41 +70,6 @@ namespace Collisions
 	{
 		return sqrt(Constants::eps0 * te * Constants::ev_to_j / 
 			(ne * Constants::charge_e * Constants::charge_e)); 
-	}
-
-
-	/**
-	* Samples the velocity of a background particle from a drifting
-	* Maxwellian.
-	*
-	* Each component is drawn from a normal distribution with a mean equal
-	* to the flow velocity and a standard deviation of sqrt(kT/m). We call
-	* this thermal sampling of the background velocity.
-	*
-	* @param T Temperature of the background species (eV).
-	* @param uX Cartesian X flow velocity of the background species (m/s).
-	* @param uY Cartesian Y flow velocity of the background species (m/s).
-	* @param uZ Cartesian Z flow velocity of the background species (m/s).
-	* @param m Mass of the background species (kg).
-	* @param rng Random number generator for this particle.
-	* @param[out] bkg_vX Sampled Cartesian X velocity (m/s).
-	* @param[out] bkg_vY Sampled Cartesian Y velocity (m/s).
-	* @param[out] bkg_vZ Sampled Cartesian Z velocity (m/s).
-	*/
-	__device__ __forceinline__
-	void sample_bkg_velocity_cuda(const double T, const double uX, const double uY, 
-		const double uZ, const double m, pcg32& rng, double& bkg_vX, 
-		double& bkg_vY, double& bkg_vZ)
-	{
-		// Sampling from a drifting Maxwellian, which can be done by just
-		// sampling from a normally distributed number with uXYZ = mean = drift 
-		// and mu = sqrt(kT/m). We call this thermal sampling of the background
-		// velocity. Unfortunately throwing away the second random number 
-		// here. T [eV], m [kg]
-		double mu {sqrt(T * Constants::ev_to_j / m)};  // m/s
-		bkg_vX = rng.normal(uX, mu);
-		bkg_vY = rng.normal(uY, mu);
-		bkg_vZ = rng.normal(uZ, mu);
 	}
 
 
@@ -160,11 +128,12 @@ namespace Collisions
 
 	/**
 	* Samples the background particle an impurity collides with from a
-	* drifting Maxwellian (flow plus thermal sampling) and calculates the
-	* s term in the Nanbu collision model (Eq. 19) for that pair, s =
-	* s_coeff * dt / g^3, with g their relative speed. The instantaneous g
-	* is used for both its direction and its magnitude, as in Nanbu's
-	* paper.
+	* drifting Maxwellian (flow plus thermal sampling), skewed by the heat
+	* flux if eps isn't 0 (the thermal force, see sample_bkg in
+	* collisions_hd.h, which the CPU uses too), and calculates the s term
+	* in the Nanbu collision model (Eq. 19) for that pair, s = s_coeff * dt
+	* / g^3, with g their relative speed. The instantaneous g is used for
+	* both its direction and its magnitude, as in Nanbu's paper.
 	*
 	* Each call samples a new background particle, so calling it once per
 	* sub-step is what lets the impurity meet several of them in one time
@@ -183,7 +152,12 @@ namespace Collisions
 	* @param vX Cartesian X velocity of the impurity (m/s).
 	* @param vY Cartesian Y velocity of the impurity (m/s).
 	* @param vZ Cartesian Z velocity of the impurity (m/s).
+	* @param eps Heat-flux skew of the background species (see skew_at),
+	*        0 for none.
+	* @param shape Shape of the skew (only used if eps isn't 0).
+	* @param b Unit vector along B, 3 values (only used if eps isn't 0).
 	* @param rng Random number generator for this particle.
+	* @param[in,out] skew_counts Counts for the skewed sampler.
 	* @return The s term and the Cartesian components of the relative
 	*         velocity (m/s).
 	*/
@@ -191,17 +165,17 @@ namespace Collisions
 	NanbuSResult nanbu_calc_s_cuda(const double s_coeff, const double dt,
 		const double T, const double mass_kg, const double uX,
 		const double uY, const double uZ, const double vX, const double vY,
-		const double vZ, pcg32& rng)
+		const double vZ, const double eps, const SkewShape& shape,
+		const double* b, pcg32& rng, SkewCounts& skew_counts)
 	{
 		// Sample background particle velocity
-		double bkg_vX, bkg_vY, bkg_vZ;
-		sample_bkg_velocity_cuda(T, uX, uY, uZ, mass_kg, rng, bkg_vX, bkg_vY, 
-			bkg_vZ);
+		const BkgVelocity bkg_v {sample_bkg(T, uX, uY, uZ, mass_kg, eps,
+			shape, b, rng, skew_counts)};
 
 		// Instantaneous relative velocity
-		double inst_gX = vX - bkg_vX;
-		double inst_gY = vY - bkg_vY;
-		double inst_gZ = vZ - bkg_vZ;
+		double inst_gX = vX - bkg_v.vX;
+		double inst_gY = vY - bkg_v.vY;
+		double inst_gZ = vZ - bkg_v.vZ;
 
 		// Magnitude
 		double inst_g = sqrt(inst_gX * inst_gX + inst_gY * inst_gY +
@@ -431,7 +405,8 @@ namespace Collisions
 	* Coulomb collisions with one background species using the Nanbu model.
 	*
 	* One thread handles one slot, and dead particles are skipped. ne, Te
-	* (and Ti for ions) are interpolated at the particle location and held
+	* (and Ti for ions) are interpolated at the particle location (along
+	* the field line in a zone with a zShift table) and held
 	* at or above min_ne, min_te and min_ti. Then s, A and chi are calculated
 	* and the velocity is updated with nanbu_post_coll_cuda. Since this
 	* happens after the Boris update, the updated velocity is v at n+1/2. A
@@ -441,6 +416,13 @@ namespace Collisions
 	* is split into sub-steps, each with a newly sampled background
 	* particle, set by imp_coll_subcycle_target and imp_coll_subcycle_cap
 	* (see the notes on sub-cycling in collisions.h).
+	*
+	* With imp_thermal_force on and heat fluxes in the background, the
+	* colliding background particle is skewed by that species' parallel
+	* heat flux (q_par_e or q_par_i, interpolated like ne), which gives the
+	* electron or ion thermal force, as nanbu_coll does on the CPU. The
+	* sampler's counts are added to skew_d with atomicAdd, only where
+	* nonzero, since most particles in most steps have none.
 	*
 	* @param slots_d Particle slots on the device. The velocities are
 	*        updated in place.
@@ -454,15 +436,20 @@ namespace Collisions
 	* @param elec_mass_amu Electron mass (amu).
 	* @param ion_mass_amu Main ion mass (amu).
 	* @param opts_d Simulation options on the device, used for min_ne,
-	*        min_te, min_ti, imp_coll_subcycle_target and
-	*        imp_coll_subcycle_cap.
+	*        min_te, min_ti, imp_coll_subcycle_target,
+	*        imp_coll_subcycle_cap and imp_thermal_force.
+	* @param shape Shape of this species' skew (skew_shape).
+	* @param skew_d This species' counters for the skewed sampler
+	*        (num_skew_counts values, in the order of SkewCounts), or
+	*        nullptr to not count.
 	*/
 	__global__
 	void nanbu_coll_kernel(Slots::SlotsDevice slots_d, 
 		const Background::BackgroundDevice bkg_d, bool elec, const double dt, 
 		ImpurityStats::StatisticsDevice stats_d, pcg32* rngs_d, 
 		const double elec_mass_amu, const double ion_mass_amu, 
-		const Options::OptionsDevice* opts_d)
+		const Options::OptionsDevice* opts_d, const SkewShape shape,
+		unsigned long long* skew_d)
 	{
 		// Derivation and steps taken from:
 		// Nanbu, K. Theory of cumulative small-angle collisions in plasmas. 
@@ -487,6 +474,7 @@ namespace Collisions
 		int xidx {slots_d.xidx[i]};
 		int yidx {slots_d.yidx[i]};
 		int zidx {slots_d.zidx[i]};
+		const int zone {slots_d.zone[i]};
 		double t {slots_d.t[i]};
 		double x {slots_d.x[i]};
 		double y {slots_d.y[i]};
@@ -498,14 +486,15 @@ namespace Collisions
 		// Interpolate for ne, Te
 		// Get interpolation stencil at this location for 4D arrays
 		Interpolate::InterpolationStencil stencil_4d
-			{Interpolate::build_stencil_4d(bkg_d, tidx, xidx, yidx, zidx, t, x, 
+			{Interpolate::build_stencil_4d(bkg_d, zone, tidx, xidx, yidx, zidx, t, x, 
 			y, z)};
 
-		// Interpolate to get background flow at particle location
-		double ne {Interpolate::interpolate_field_4d(bkg_d.ne, 
-			stencil_4d, t, x, y, z)};
-		double Te {Interpolate::interpolate_field_4d(bkg_d.te, 
-			stencil_4d, t, x, y, z)};
+		// ne and Te at the particle (along the field line in a zone with a
+		// zShift table, as Background::interp_ne on the CPU)
+		double ne {Interpolate::interp_plasma(bkg_d, bkg_d.ne, stencil_4d,
+			zone, t, x, y, z)};
+		double Te {Interpolate::interp_plasma(bkg_d, bkg_d.te, stencil_4d,
+			zone, t, x, y, z)};
 
 		// Don't let them go below zero. This can happen near the edge of grids.
 		ne = fmax(ne, opts_d->min_ne);
@@ -523,8 +512,8 @@ namespace Collisions
 		else
 		{
 			mass_kg = ion_mass_amu * Constants::amu_to_kg;	
-			T = Interpolate::interpolate_field_4d(bkg_d.ti, stencil_4d, t, x, 
-				y, z);
+			T = Interpolate::interp_plasma(bkg_d, bkg_d.ti, stencil_4d, zone,
+				t, x, y, z);
 			T = fmax(opts_d->min_ti, T);
 		}
 
@@ -533,12 +522,38 @@ namespace Collisions
 		// are calculated once, before the sub-steps.
 		const double s_coeff {nanbu_s_coeff_cuda(q, T, Te, ne, slots_d.mass,
 			mass_kg)};
-		const double uX {Interpolate::interpolate_field_4d(bkg_d.uX, 
-			stencil_4d, t, x, y, z)};
-		const double uY {Interpolate::interpolate_field_4d(bkg_d.uY, 
-			stencil_4d, t, x, y, z)};
-		const double uZ {Interpolate::interpolate_field_4d(bkg_d.uZ, 
-			stencil_4d, t, x, y, z)};
+		double u[3];
+		Interpolate::interp_plasma_vec3(bkg_d, bkg_d.uX, bkg_d.uY, bkg_d.uZ,
+			stencil_4d, zone, t, x, y, z, u);
+		const double uX {u[0]};
+		const double uY {u[1]};
+		const double uZ {u[2]};
+
+		// Heat-flux skew of the species colliding with the impurity
+		// (thermal force): eps from its parallel heat flux, with ni = ne,
+		// and the unit vector along B it's measured along (B from the
+		// stencil, q_par along the field line like ne, as on the CPU).
+		// Where q_par = 0, no skew.
+		double eps {};
+		double b[3] {};
+		const double* q_field {elec ? bkg_d.q_par_e : bkg_d.q_par_i};
+		if (opts_d->imp_thermal_force == 1 && q_field != nullptr)
+		{
+			const double q_par {Interpolate::interp_plasma(bkg_d, q_field,
+				stencil_4d, zone, t, x, y, z)};
+			if (q_par != 0.0)
+			{
+				eps = skew_at(q_par, ne, T, mass_kg,
+					Interpolate::interpolate_field_4d(bkg_d.bX, stencil_4d,
+						t, x, y, z),
+					Interpolate::interpolate_field_4d(bkg_d.bY, stencil_4d,
+						t, x, y, z),
+					Interpolate::interpolate_field_4d(bkg_d.bZ, stencil_4d,
+						t, x, y, z),
+					b);
+			}
+		}
+		SkewCounts skew_counts {};
 
 		// Sub-cycling. Nanbu's model collides the impurity with ONE
 		// background particle per call. The friction force comes mostly
@@ -569,7 +584,7 @@ namespace Collisions
 		// Sample a background particle and calculate s (Eq. 19) for it,
 		// with the impurity velocity as it is after the previous sub-steps.
 		NanbuSResult s_res {nanbu_calc_s_cuda(s_coeff, dt_sub, T, mass_kg,
-			uX, uY, uZ, vX, vY, vZ, rngs_d[i])};
+			uX, uY, uZ, vX, vY, vZ, eps, shape, b, rngs_d[i], skew_counts)};
 		double s {s_res.s};
 		double gX {s_res.gX};
 		double gY {s_res.gY};
@@ -583,11 +598,9 @@ namespace Collisions
 		/*
 		if (!elec)
 		{
-			int Nx {stats_d.Nx};
-			int Ny {stats_d.Ny};
-			int Nz {stats_d.Nz};
-			int idx {slots_d.tidx[i] * (Nx * Ny * Nz) + slots_d.xidx[i] 
-				* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
+			const std::size_t idx {ImpurityStats::index(stats_d, zone,
+				slots_d.tidx[i], slots_d.xidx[i], slots_d.yidx[i],
+				slots_d.zidx[i])};
 			double p_w_dt {slots_d.weight[i] * dt_sub};  // Change to float
 
 			atomicAdd(&stats_d.s[idx], s * p_w_dt);
@@ -627,6 +640,21 @@ namespace Collisions
 		slots_d.vY[i] = vY;
 		slots_d.vZ[i] = vZ;
 
+		// The skewed sampler's counts, in the order of SkewCounts
+		if (skew_d != nullptr && skew_counts.samples != 0)
+		{
+			const long long c[num_skew_counts] {skew_counts.samples,
+				skew_counts.draws, skew_counts.negative,
+				skew_counts.above_bound, skew_counts.eps_capped};
+			for (int k {}; k < num_skew_counts; ++k)
+			{
+				if (c[k] != 0)
+				{
+					atomicAdd(&skew_d[k],
+						static_cast<unsigned long long>(c[k]));
+				}
+			}
+		}
 	}  // nanbu_coll_kernel
 
 
@@ -648,20 +676,30 @@ namespace Collisions
 	* @param elec_mass_amu Electron mass (amu).
 	* @param ion_mass_amu Main ion mass (amu).
 	* @param opts_d Simulation options on the device.
+	* @param skew_d Counters for the skewed sampler, ions then electrons
+	*        (2 num_skew_counts values, OpenADAS::IonizRecombWarningsDevice
+	*        ::skew), or nullptr to not count.
 	*/
 	void collision_gpu(Slots::SlotsDevice& slots_d, 
 		const Background::BackgroundDevice& bkg_d, const bool elec, 
 		const double dt, ImpurityStats::StatisticsDevice& imp_stats_d,
 		pcg32* rngs_d, const double elec_mass_amu, const double ion_mass_amu,
-		const Options::OptionsDevice* opts_d)
+		const Options::OptionsDevice* opts_d, unsigned long long* skew_d)
 	{
-		
 		// Block and grid size
 		int blockSize = 256;
 		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
 
+		// Shape of this species' skew, with the collisional (fluid
+		// closure) push, as on the CPU
+		const SkewShape shape {skew_shape(
+			elec ? skew_push_elec : skew_push_ion)};
+		unsigned long long* species_skew_d {skew_d == nullptr ? nullptr
+			: skew_d + (elec ? num_skew_counts : 0)};
+
 		nanbu_coll_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, elec, dt, 
-			imp_stats_d, rngs_d, elec_mass_amu, ion_mass_amu, opts_d);
+			imp_stats_d, rngs_d, elec_mass_amu, ion_mass_amu, opts_d, shape,
+			species_skew_d);
 
 #ifdef DEBUG
 		// Check for errors
@@ -671,5 +709,40 @@ namespace Collisions
 #endif
 
 	}  // collision_gpu
+
+
+	/**
+	* Copies the thermal force's sampler counts from a GPU (from
+	* nanbu_coll_kernel).
+	*
+	* Blocks until the GPU's kernels have finished.
+	*
+	* @param skew_d Counters on the device, ions then electrons (2
+	*        num_skew_counts values), or nullptr for none.
+	* @param device_id ID of the GPU they're on.
+	* @return Counts for ions [0] and electrons [1], to add to the host's
+	*         with add_skew_counts.
+	*/
+	std::array<SkewCounts, 2> skew_counts_from_device(
+		const unsigned long long* skew_d, const int device_id)
+	{
+		std::array<SkewCounts, 2> counts {};
+		if (skew_d == nullptr) return counts;
+		unsigned long long n[2 * num_skew_counts] {};
+		Errors::check_cuda(cudaSetDevice(device_id),
+			"Collisions::skew_counts_from_device");
+		Errors::check_cuda(cudaMemcpy(n, skew_d, sizeof(n),
+			cudaMemcpyDeviceToHost), "Collisions::skew_counts_from_device");
+		for (int s {}; s < 2; ++s)
+		{
+			const unsigned long long* c {n + s * num_skew_counts};
+			counts[s].samples = static_cast<long long>(c[0]);
+			counts[s].draws = static_cast<long long>(c[1]);
+			counts[s].negative = static_cast<long long>(c[2]);
+			counts[s].above_bound = static_cast<long long>(c[3]);
+			counts[s].eps_capped = static_cast<long long>(c[4]);
+		}
+		return counts;
+	}
 
 }  // namespace Collisions

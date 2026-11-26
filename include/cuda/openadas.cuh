@@ -24,6 +24,7 @@ namespace OpenADAS
 		const Background::BackgroundDevice& bkg_d,
 		const OpenADASDevice& oa_ioniz_d,
 		const OpenADASDevice& oa_recomb_d, const double dt,
-		const IonizRecombWarningsDevice& warnings_d, pcg32* rngs_d);
+		const IonizRecombWarningsDevice& warnings_d, pcg32* rngs_d,
+		int max_charge = -1);
 
 }  // OpenADAS

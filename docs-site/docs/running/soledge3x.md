@@ -6,9 +6,10 @@ work in Flan and what is different from Gkeyll backgrounds. An example
 input is `regression/s3x_example.cpp`, and the options are listed under
 [SOLEDGE3X](../input-options.md#soledge3x) on the Input Options page.
 
-!!! note "CPU only"
-    Only the CPU version of Flan can run SOLEDGE3X backgrounds so far
-    (`use_gpu = "off"`).
+!!! note "GPUs"
+    SOLEDGE3X backgrounds run on GPUs (`use_gpu = "cuda"`) as well as the
+    CPU, thermal force, sputtered source, sheath field and
+    self-sputtering included.
 
 ## Files
 

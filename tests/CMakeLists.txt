@@ -15,6 +15,7 @@ add_executable(test_boris_cpu test_boris_cpu.cpp)
 add_executable(test_openadas_cpu test_openadas_cpu.cpp)
 add_executable(test_zoned_vector_cpu test_zoned_vector_cpu.cpp)
 add_executable(test_zones_cpu test_zones_cpu.cpp)
+add_executable(test_gpu_memory_cpu test_gpu_memory_cpu.cpp)
 
 # Link your main library + GoogleTest. Tests that involve OpenMP need to link
 # against those as well as the flan library.
@@ -26,6 +27,7 @@ target_link_libraries(test_boris_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_openadas_cpu PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 target_link_libraries(test_zoned_vector_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_zones_cpu PRIVATE flan gtest_main)
+target_link_libraries(test_gpu_memory_cpu PRIVATE flan gtest_main)
 
 # Register with CTest
 add_test(NAME GetNearestIndexCPUTest COMMAND test_get_nearest_index_cpu)
@@ -36,6 +38,7 @@ add_test(NAME BorisCPUTest COMMAND test_boris_cpu)
 add_test(NAME OpenADASCPUTest COMMAND test_openadas_cpu)
 add_test(NAME ZonedVectorCPUTest COMMAND test_zoned_vector_cpu)
 add_test(NAME ZonesCPUTest COMMAND test_zones_cpu)
+add_test(NAME GpuMemoryCPUTest COMMAND test_gpu_memory_cpu)
 
 add_executable(test_cross_zones_cpu test_cross_zones_cpu.cpp)
 target_link_libraries(test_cross_zones_cpu PRIVATE flan gtest_main
@@ -153,48 +156,70 @@ if(ENABLE_CUDA)
 	add_executable(test_trilinear_cuda test_trilinear_cuda.cu)
 	add_executable(test_indices_cuda test_indices_cuda.cu)
 	add_executable(test_step_cuda test_step_cuda.cpp)
+	add_executable(test_stats_cuda test_stats_cuda.cpp)
+	add_executable(test_boundary_zones_cuda test_boundary_zones_cuda.cpp)
+	add_executable(test_collisions_cuda test_collisions_cuda.cpp)
+	add_executable(test_sputtering_cuda test_sputtering_cuda.cpp)
+	add_executable(test_self_sputter_cuda test_self_sputter_cuda.cpp)
+	add_executable(test_gpu_memory_cuda test_gpu_memory_cuda.cpp)
+	add_executable(test_sheath_cuda test_sheath_cuda.cpp)
 
-	# These need to include the definitons in the executable since they call
-	# kernels
-	add_executable(test_boundary_cuda test_boundary_cuda.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/boundary.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/device_constants.cu)
+	# The boundary routines are inline (boundary_hd.h)
+	add_executable(test_boundary_cuda test_boundary_cuda.cu)
 
-	# So tricky. We have to compile with background.cu here so that we don't
-	# use the flan library version of it, otherwise we end up with two
-	# different versions of device_constants (d_x, etc.), which results in
-	# undefined behavior. This occurs whenever to_device is used while needing
-	# device_constants. Wish I didn't put myself in this situation, but unsure
-	# how to fix it.
-	add_executable(test_interpolate_cuda
-		test_interpolate_cuda.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/device_constants.cu
-		${PROJECT_SOURCE_DIR}/src/cuda/background.cu)
+	# The stencils and zone functions are inline, so these only need the
+	# library for Background::to_device and Zones::to_device
+	add_executable(test_interpolate_cuda test_interpolate_cuda.cu)
+	add_executable(test_zones_cuda test_zones_cuda.cu)
+
+	# The kernel is in a .cu file of its own, so the test itself is compiled
+	# by the host compiler and can read the multi-zone test backgrounds
+	add_executable(test_plasma_interp_cuda test_plasma_interp_cuda.cpp
+		plasma_interp_kernel.cu)
 
 	# Test executables that call specific CUDA functions (instead of via a
 	# wrapper)
 	set_target_properties(test_trilinear_cuda PROPERTIES
 		CUDA_SEPARABLE_COMPILATION ON)
-	set_target_properties(test_boundary_cuda PROPERTIES
-		CUDA_SEPARABLE_COMPILATION ON)
-	set_target_properties(test_interpolate_cuda PROPERTIES
-		CUDA_SEPARABLE_COMPILATION ON)
 
 	target_link_libraries(test_fill_slots_cuda PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
 	target_link_libraries(test_openadas_cuda PRIVATE flan gtest_main CUDA::cudart)
 	target_link_libraries(test_all_dead_cuda PRIVATE flan gtest_main)
-	target_link_libraries(test_boris_cuda PRIVATE flan gtest_main)
+	target_link_libraries(test_boris_cuda PRIVATE flan gtest_main
+		netcdf-cxx4 netcdf hdf5)
 	target_link_libraries(test_neighbor_index_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_indices_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_step_cuda PRIVATE flan gtest_main CUDA::cudart)
+	target_link_libraries(test_stats_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
+	target_link_libraries(test_boundary_zones_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
+	target_link_libraries(test_collisions_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
+	target_link_libraries(test_sputtering_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
+	target_compile_definitions(test_sputtering_cuda PRIVATE
+		FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+	target_link_libraries(test_self_sputter_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
+	target_compile_definitions(test_self_sputter_cuda PRIVATE
+		FLAN_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+	target_link_libraries(test_gpu_memory_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
+	target_link_libraries(test_sheath_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5 OpenMP::OpenMP_CXX)
 	target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main)
-	target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main)
+	target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main
+		CUDA::cudart)
+	target_link_libraries(test_zones_cuda PRIVATE flan gtest_main
+		CUDA::cudart)
+	target_link_libraries(test_plasma_interp_cuda PRIVATE flan gtest_main
+		CUDA::cudart netcdf-cxx4 netcdf hdf5)
 
 	# When testing the CUDA kernel directly, no wrapper, we need to link
 	# against CUDA runtime.
 	target_link_libraries(test_trilinear_cuda PRIVATE flan gtest_main CUDA::cudart)
 	target_link_libraries(test_boundary_cuda PRIVATE flan gtest_main CUDA::cudart)
-	#target_link_libraries(test_interpolate_cuda PRIVATE flan gtest_main CUDA::cudart)
 
 	# Register with CTest
 	add_test(NAME BorisCUDATest COMMAND test_boris_cuda)
@@ -205,8 +230,17 @@ if(ENABLE_CUDA)
 	add_test(NAME NeighborIndexCUDATest COMMAND test_neighbor_index_cuda)
 	add_test(NAME IndicesCUDATest COMMAND test_indices_cuda)
 	add_test(NAME StepCUDATest COMMAND test_step_cuda)
+	add_test(NAME StatsCUDATest COMMAND test_stats_cuda)
+	add_test(NAME BoundaryZonesCUDATest COMMAND test_boundary_zones_cuda)
+	add_test(NAME CollisionsCUDATest COMMAND test_collisions_cuda)
+	add_test(NAME SputteringCUDATest COMMAND test_sputtering_cuda)
+	add_test(NAME SelfSputterCUDATest COMMAND test_self_sputter_cuda)
+	add_test(NAME GpuMemoryCUDATest COMMAND test_gpu_memory_cuda)
+	add_test(NAME SheathCUDATest COMMAND test_sheath_cuda)
 	add_test(NAME BoundaryCUDATest COMMAND test_boundary_cuda)
 	add_test(NAME InterpolateCUDATest COMMAND test_interpolate_cuda)
+	add_test(NAME ZonesCUDATest COMMAND test_zones_cuda)
+	add_test(NAME PlasmaInterpCUDATest COMMAND test_plasma_interp_cuda)
 
 endif()
 

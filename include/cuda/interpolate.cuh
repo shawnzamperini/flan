@@ -14,11 +14,25 @@
 * interpolated at that particle with interpolate_field_3d or
 * interpolate_field_4d, which saves recalculating the indices for each
 * field. Everything is inline so it can be used in any kernel.
+*
+* The neighbors and centers come from the functions in zones_hd.h, the
+* same ones the CPU uses, so the stencil is the CPU's (Boris::interp_recp
+* and interp_tang).
+*
+* Plasma quantities (ne, Te, Ti, the flow and E) are interpolated with
+* interp_plasma and interp_plasma_vec3, which in a zone with a zShift table
+* (a shifted-metric HERMES grid) interpolate along the field line instead,
+* as Background::interp_ne and interp_vec3 do on the CPU. The geometry and
+* B always use the stencil.
 */
+#include <cstddef>
+
 #include "background_device.h"
 
-#include "device_constants.cuh"
+#include "interp_hd.h"
 #include "utilities.cuh"
+#include "utilities_hd.h"
+#include "zones_hd.h"
 
 
 namespace Interpolate
@@ -29,8 +43,13 @@ namespace Interpolate
 	* used to interpolate fields at that point.
 	*
 	* The same struct is used for 3D and 4D fields. A 3D stencil from
-	* build_stencil_3d leaves the time members (idx1, tidx_neighbor, t0
+	* build_stencil_3d leaves the time members (base1, tidx_neighbor, t0
 	* and frame_dt) unset.
+	*
+	* A corner's value is field[base0 + local[c]] (at tidx) or
+	* field[base1 + local[c]] (at tidx_neighbor): base is where the zone's
+	* frame starts in the flat ZonedVector data, and local is the corner's
+	* index within it, which is small enough for an int.
 	*
 	* The 8 corners are ordered by (x, y, z) offset as 000, 001, 010, 011,
 	* 100, 101, 110, 111, where 0 is the containing cell's index and 1 is
@@ -38,14 +57,16 @@ namespace Interpolate
 	*/
 	struct InterpolationStencil
 	{
-		int idx0[8];         ///< Flattened indices of the corners at tidx.
-		int idx1[8];         ///< Flattened indices of the corners at
-		                     ///< tidx_neighbor (4D only).
+		std::size_t base0;   ///< Start of the zone's frame tidx (or of the
+		                     ///< zone, for 3D).
+		std::size_t base1;   ///< Start of the zone's frame tidx_neighbor
+		                     ///< (4D only).
+		int local[8];        ///< Corner indices within the zone's frame.
 
 		int tidx_neighbor;   ///< Neighboring time frame index (4D only).
-		int xidx_neighbor;   ///< Neighboring x cell index.
-		int yidx_neighbor;   ///< Neighboring y cell index.
-		int zidx_neighbor;   ///< Neighboring z cell index.
+		int xidx_neighbor;   ///< Neighboring x cell index (may be a ghost).
+		int yidx_neighbor;   ///< Neighboring y cell index (may be a ghost).
+		int zidx_neighbor;   ///< Neighboring z cell index (may be a ghost).
 
 		double t0;           ///< Time of frame tidx (s) (4D only).
 		double frame_dt;     ///< Time from frame tidx to tidx_neighbor (s).
@@ -65,17 +86,71 @@ namespace Interpolate
 
 
 	/**
+	* Fills in the spatial part of a stencil: the neighbors, the corners'
+	* local indices and the box of centers.
+	*
+	* @param zones The zones on the device.
+	* @param zone Zone the point is in.
+	* @param xidx x index of the grid cell containing the point.
+	* @param yidx y index of the grid cell containing the point.
+	* @param zidx z index of the grid cell containing the point.
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @param[out] s Stencil to fill in.
+	*/
+	__device__ __forceinline__
+	void build_stencil_space(const Zones::ZonesView& zones, const int zone,
+		const int xidx, const int yidx, const int zidx, const double x,
+		const double y, const double z, InterpolationStencil& s)
+	{
+		// The neighbor on the point's side of the cell center, which at the
+		// edge of a zone may be a ghost cell across a shared face
+		const int xn {Zones::neighbor_index(zones, zone, 0, x, xidx)};
+		const int yn {Zones::neighbor_index(zones, zone, 1, y, yidx)};
+		const int zn {Zones::neighbor_index(zones, zone, 2, z, zidx)};
+		s.xidx_neighbor = xn;
+		s.yidx_neighbor = yn;
+		s.zidx_neighbor = zn;
+
+		// Strides of the zone's frame, ghost cells included (as
+		// Zones::flat_index)
+		const int g {zones.ghost};
+		const int pz {zones.n[2][zone] + 2 * g};
+		const int pyz {(zones.n[1][zone] + 2 * g) * pz};
+		const int i0 {(xidx + g) * pyz};
+		const int i1 {(xn + g) * pyz};
+		const int j0 {(yidx + g) * pz};
+		const int j1 {(yn + g) * pz};
+		const int k0 {zidx + g};
+		const int k1 {zn + g};
+		s.local[0] = i0 + j0 + k0;
+		s.local[1] = i0 + j0 + k1;
+		s.local[2] = i0 + j1 + k0;
+		s.local[3] = i0 + j1 + k1;
+		s.local[4] = i1 + j0 + k0;
+		s.local[5] = i1 + j0 + k1;
+		s.local[6] = i1 + j1 + k0;
+		s.local[7] = i1 + j1 + k1;
+
+		// The box between the cell centers (not the cell edges), since
+		// that's where the fields are defined. A ghost cell's center is in
+		// this zone's frame.
+		s.x0 = Zones::center(zones, zone, 0, xidx);
+		s.y0 = Zones::center(zones, zone, 1, yidx);
+		s.z0 = Zones::center(zones, zone, 2, zidx);
+		s.dx = Zones::center(zones, zone, 0, xn) - s.x0;
+		s.dy = Zones::center(zones, zone, 1, yn) - s.y0;
+		s.dz = Zones::center(zones, zone, 2, zn) - s.z0;
+	}
+
+
+	/**
 	* Builds the stencil used to interpolate a 3D (x, y, z) field, such as
 	* the basis vectors, at a point.
 	*
-	* For each direction, get_neighbor_index_cuda picks the neighboring
-	* cell on the same side of the containing cell's center as the point
-	* (or the only neighbor at a grid edge). The 8 corner indices are then
-	* flattened with calc_3d_index_cuda, and the box origin and size are
-	* taken from the cell center coordinates in device_constants.cuh.
-	*
-	* @param bkg_d Background plasma on the device, used for the grid
-	*        dimensions.
+	* @param bkg_d Background plasma on the device.
+	* @param zone Zone the point is in.
 	* @param xidx x index of the grid cell containing the point.
 	* @param yidx y index of the grid cell containing the point.
 	* @param zidx z index of the grid cell containing the point.
@@ -86,69 +161,12 @@ namespace Interpolate
 	*/
 	__device__ __forceinline__
 	InterpolationStencil build_stencil_3d(
-		const Background::BackgroundDevice& bkg_d, int xidx, 
+		const Background::BackgroundDevice& bkg_d, const int zone, int xidx,
 		int yidx, int zidx, const double x, const double y, const double z)
 	{
 		InterpolationStencil s;
-
-		// Neighbor indices
-		const int xidx_neighbor = Utilities::get_neighbor_index_cuda(
-				x, d_x, xidx, bkg_d.xdim);
-
-		const int yidx_neighbor = Utilities::get_neighbor_index_cuda(
-				y, d_y, yidx, bkg_d.ydim);
-
-		const int zidx_neighbor = Utilities::get_neighbor_index_cuda(
-				z, d_z, zidx, bkg_d.zdim);
-
-		s.xidx_neighbor = xidx_neighbor;
-		s.yidx_neighbor = yidx_neighbor;
-		s.zidx_neighbor = zidx_neighbor;
-
-		// Indices at each vertex
-		s.idx0[0] = Utilities::calc_3d_index_cuda(bkg_d.ydim, bkg_d.zdim, 
-			xidx, yidx, zidx);
-
-		s.idx0[1] = Utilities::calc_3d_index_cuda(bkg_d.ydim, bkg_d.zdim,
-			xidx, yidx, zidx_neighbor);
-
-		s.idx0[2] = Utilities::calc_3d_index_cuda(bkg_d.ydim, bkg_d.zdim,
-			xidx, yidx_neighbor, zidx);
-
-		s.idx0[3] = Utilities::calc_3d_index_cuda(bkg_d.ydim, bkg_d.zdim,
-			xidx, yidx_neighbor, zidx_neighbor);
-
-		s.idx0[4] = Utilities::calc_3d_index_cuda(bkg_d.ydim, bkg_d.zdim,
-			xidx_neighbor, yidx, zidx);
-
-		s.idx0[5] = Utilities::calc_3d_index_cuda(bkg_d.ydim, bkg_d.zdim,
-			xidx_neighbor, yidx, zidx_neighbor);
-
-		s.idx0[6] = Utilities::calc_3d_index_cuda(bkg_d.ydim, bkg_d.zdim,
-			xidx_neighbor, yidx_neighbor, zidx);
-
-		s.idx0[7] = Utilities::calc_3d_index_cuda(bkg_d.ydim, bkg_d.zdim,
-			xidx_neighbor, yidx_neighbor, zidx_neighbor);
-
-
-		// x, y, z coordinates of two bounding vertices to interpolate 
-		// between. Note these are not grid vertices, but rather are formed
-		// by cell center coordinates since that's where the field is assumed
-		// to be defined. It is essentially a cell shifted by dx/2, dy/2
-		// and dz/2 if that helps.
-		// d_x, d_y, d_z are from device_constants.cuh
-		s.x0 = d_x[xidx];
-		s.y0 = d_y[yidx];
-		s.z0 = d_z[zidx];
-
-		const double x1 = d_x[xidx_neighbor];
-		const double y1 = d_y[yidx_neighbor];
-		const double z1 = d_z[zidx_neighbor];
-
-		s.dx = x1 - s.x0;
-		s.dy = y1 - s.y0;
-		s.dz = z1 - s.z0;
-
+		build_stencil_space(bkg_d.zones, zone, xidx, yidx, zidx, x, y, z, s);
+		s.base0 = bkg_d.zones.cell_offset[zone];
 		return s;
 	}
 
@@ -157,14 +175,13 @@ namespace Interpolate
 	* Builds the stencil used to interpolate a 4D (t, x, y, z) field, such
 	* as E, B, ne or Te, at a point.
 	*
-	* The neighbors are picked the same way as in build_stencil_3d,
-	* including in time: the neighboring frame is the one on the same side
-	* of frame tidx as t (or the only neighbor at the first or last frame),
-	* so t is bounded by the two frames. The 8 corner indices are flattened
-	* with calc_4d_index_cuda at both tidx (idx0) and tidx_neighbor (idx1).
+	* The neighbors in space are picked as in build_stencil_3d, and in time
+	* the neighboring frame is the one on the same side of frame tidx as t
+	* (or the only neighbor at the first or last frame), so t is bounded by
+	* the two frames.
 	*
-	* @param bkg_d Background plasma on the device, used for the grid
-	*        dimensions.
+	* @param bkg_d Background plasma on the device.
+	* @param zone Zone the point is in.
 	* @param tidx Index of the nearest background time frame.
 	* @param xidx x index of the grid cell containing the point.
 	* @param yidx y index of the grid cell containing the point.
@@ -177,120 +194,28 @@ namespace Interpolate
 	*/
 	__device__ __forceinline__
 	InterpolationStencil build_stencil_4d(
-		const Background::BackgroundDevice& bkg_d, int tidx, int xidx, 
-		int yidx, int zidx, const double t, const double x, const double y, 
-		const double z)
+		const Background::BackgroundDevice& bkg_d, const int zone, int tidx,
+		int xidx, int yidx, int zidx, const double t, const double x,
+		const double y, const double z)
 	{
 		InterpolationStencil s;
+		build_stencil_space(bkg_d.zones, zone, xidx, yidx, zidx, x, y, z, s);
 
-		// Neighbor indices
-		const int tidx_neighbor =
-			Utilities::get_neighbor_index_cuda(t, d_t, tidx, bkg_d.tdim);
+		const int tn {Utilities::get_neighbor_index_cuda(t, bkg_d.times,
+			tidx, bkg_d.tdim)};
+		s.tidx_neighbor = tn;
 
-		const int xidx_neighbor =
-			Utilities::get_neighbor_index_cuda(x, d_x, xidx, bkg_d.xdim);
+		// Zone z's frame t starts at tdim * cell_offset[z] + t * (cells in
+		// the zone), as in Zones::flat_index
+		const std::size_t zone_start {static_cast<std::size_t>(bkg_d.tdim)
+			* bkg_d.zones.cell_offset[zone]};
+		const std::size_t frame {bkg_d.zones.cell_offset[zone + 1]
+			- bkg_d.zones.cell_offset[zone]};
+		s.base0 = zone_start + static_cast<std::size_t>(tidx) * frame;
+		s.base1 = zone_start + static_cast<std::size_t>(tn) * frame;
 
-		const int yidx_neighbor =
-			Utilities::get_neighbor_index_cuda(y, d_y, yidx, bkg_d.ydim);
-
-		const int zidx_neighbor =
-			Utilities::get_neighbor_index_cuda(z, d_z, zidx, bkg_d.zdim);
-
-		s.tidx_neighbor = tidx_neighbor;
-		s.xidx_neighbor = xidx_neighbor;
-		s.yidx_neighbor = yidx_neighbor;
-		s.zidx_neighbor = zidx_neighbor;
-
-		// Indices at t = tidx
-		s.idx0[0] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx, xidx, yidx, zidx);
-
-		s.idx0[1] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx, xidx, yidx, zidx_neighbor);
-
-		s.idx0[2] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx, xidx, yidx_neighbor, zidx);
-
-		s.idx0[3] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx, xidx, yidx_neighbor, zidx_neighbor);
-
-		s.idx0[4] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx, xidx_neighbor, yidx, zidx);
-
-		s.idx0[5] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx, xidx_neighbor, yidx, zidx_neighbor);
-
-		s.idx0[6] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx, xidx_neighbor, yidx_neighbor, zidx);
-
-		s.idx0[7] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx, xidx_neighbor, yidx_neighbor, zidx_neighbor);
-
-		// Indices at t = tidx_neighbor
-		s.idx1[0] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx_neighbor, xidx, yidx, zidx);
-
-		s.idx1[1] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx_neighbor, xidx, yidx, zidx_neighbor);
-
-		s.idx1[2] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx_neighbor, xidx, yidx_neighbor, zidx);
-
-		s.idx1[3] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx_neighbor, xidx, yidx_neighbor, zidx_neighbor);
-
-		s.idx1[4] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx_neighbor, xidx_neighbor, yidx, zidx);
-
-		s.idx1[5] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx_neighbor, xidx_neighbor, yidx, zidx_neighbor);
-
-		s.idx1[6] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx_neighbor, xidx_neighbor, yidx_neighbor, zidx);
-
-		s.idx1[7] = Utilities::calc_4d_index_cuda(
-			bkg_d.xdim, bkg_d.ydim, bkg_d.zdim,
-			tidx_neighbor, xidx_neighbor,
-			yidx_neighbor, zidx_neighbor);
-
-		// t, x, y, z coordinates of two bounding vertices to interpolate 
-		// between. Note these are not grid vertices, but rather are formed
-		// by cell center coordinates since that's where the field is assumed
-		// to be defined. It is essentially a cell shifted by dx/2, dy/2
-		// and dz/2 if that helps.
-		// d_t, d_x, d_y, d_z are from device_constants.cuh
-		s.t0 = d_t[tidx];
-		const double t1 = d_t[tidx_neighbor];
-
-		s.x0 = d_x[xidx];
-		s.y0 = d_y[yidx];
-		s.z0 = d_z[zidx];
-
-		const double x1 = d_x[xidx_neighbor];
-		const double y1 = d_y[yidx_neighbor];
-		const double z1 = d_z[zidx_neighbor];
-
-		s.dx = x1 - s.x0;
-		s.dy = y1 - s.y0;
-		s.dz = z1 - s.z0;
-
-		s.frame_dt = t1 - s.t0;
-
+		s.t0 = bkg_d.times[tidx];
+		s.frame_dt = bkg_d.times[tn] - s.t0;
 		return s;
 	}
 
@@ -299,7 +224,8 @@ namespace Interpolate
 	* Trilinearly interpolates a 3D field at (x, y, z).
 	*
 	* The field values at the 8 stencil corners are passed to
-	* trilinear_interpolate, which clamps the weights to [0, 1], so there
+	* trilinear_box (utilities_hd.h, shared with the CPU), which clamps
+	* the weights to [0, 1], so there
 	* is no extrapolation past the box of cell centers.
 	*
 	* @param field Flattened 3D field on the device.
@@ -324,12 +250,12 @@ namespace Interpolate
 		#pragma unroll
 		for (int i = 0; i < 8; ++i)
 		{
-			verts0[i] = field[s.idx0[i]];
+			verts0[i] = field[s.base0 + s.local[i]];
 		}
 
 		// Trilinear interpolation within the spatial cell defined
 		// by the stencil.
-		return  Utilities::trilinear_interpolate(s.x0, s.y0, s.z0,
+		return  Utilities::trilinear_box(s.x0, s.y0, s.z0,
 				s.dx, s.dy, s.dz, verts0[0], verts0[4], verts0[2], verts0[6],
 				verts0[1], verts0[5], verts0[3], verts0[7], x, y, z);
 
@@ -371,20 +297,20 @@ namespace Interpolate
 		#pragma unroll
 		for (int i = 0; i < 8; ++i)
 		{
-			verts0[i] = field[s.idx0[i]];
-			verts1[i] = field[s.idx1[i]];
+			verts0[i] = field[s.base0 + s.local[i]];
+			verts1[i] = field[s.base1 + s.local[i]];
 		}
 
 		// Trilinear interpolation at the particle location for this
 		// field component, comp0, and then comp1 is the same just
 		// at the next time index. I've lined the indices of v up with
-		// the corresponding ones from the trilinear_interpolate 
+		// the corresponding ones from the trilinear_box 
 		// signature.
-		const double comp0 = Utilities::trilinear_interpolate(s.x0, s.y0, s.z0,
+		const double comp0 = Utilities::trilinear_box(s.x0, s.y0, s.z0,
 				s.dx, s.dy, s.dz, verts0[0], verts0[4], verts0[2], verts0[6],
 				verts0[1], verts0[5], verts0[3], verts0[7], x, y, z);
 
-		const double comp1 = Utilities::trilinear_interpolate(s.x0, s.y0, s.z0,
+		const double comp1 = Utilities::trilinear_box(s.x0, s.y0, s.z0,
 				s.dx, s.dy, s.dz, verts1[0], verts1[4], verts1[2], verts1[6],
 				verts1[1], verts1[5], verts1[3], verts1[7], x, y, z);
 
@@ -392,4 +318,81 @@ namespace Interpolate
 		return comp0 + (comp1 - comp0) * ((t - s.t0) / s.frame_dt);
 
 	} // interpolate_field_4d
+
+
+	/**
+	* Interpolates a plasma quantity (ne, Te, Ti, |E|, ...) at a point.
+	*
+	* In a zone with a zShift table the quantity is stretched along the
+	* field line, so it is interpolated along it (Utilities::
+	* interp_aligned_flat, shared with the CPU's Background::interp_4d with
+	* aligned = true). Elsewhere the stencil is used, as interpolate_field_4d.
+	*
+	* @param bkg_d Background plasma on the device.
+	* @param field Flattened 4D field on the device.
+	* @param s Stencil from build_stencil_4d, built at this point. Unused in
+	*        a zone with a zShift table.
+	* @param zone Zone the point is in.
+	* @param t Time of the point (s).
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @return Interpolated value.
+	*/
+	__device__ __forceinline__
+	double interp_plasma(const Background::BackgroundDevice& bkg_d,
+		const double* __restrict__ field, const InterpolationStencil& s,
+		const int zone, double t, double x, double y, double z)
+	{
+		if (Zones::has_z_shift(bkg_d.zones, zone))
+		{
+			const double* fields[1] {field};
+			double out[1];
+			Utilities::interp_aligned_flat<double, 1>(fields, bkg_d.zones,
+				bkg_d.times, bkg_d.tdim, zone, t, x, y, z, 0.0, out);
+			return out[0];
+		}
+		return interpolate_field_4d(field, s, t, x, y, z);
+	}
+
+
+	/**
+	* Interpolates a Cartesian vector of the plasma (the flow or E) at a
+	* point.
+	*
+	* In a zone with a zShift table the vector is interpolated along the
+	* field line, each sample rotated to the point's toroidal angle (as
+	* Background::interp_vec3 on the CPU). Elsewhere each component is
+	* interpolated with the stencil.
+	*
+	* @param bkg_d Background plasma on the device.
+	* @param fX X component, flattened 4D field on the device.
+	* @param fY Y component.
+	* @param fZ Z component.
+	* @param s Stencil from build_stencil_4d, built at this point.
+	* @param zone Zone the point is in.
+	* @param t Time of the point (s).
+	* @param x Computational x coordinate of the point.
+	* @param y Computational y coordinate of the point.
+	* @param z Computational z coordinate of the point.
+	* @param[out] out The X, Y and Z components.
+	*/
+	__device__ __forceinline__
+	void interp_plasma_vec3(const Background::BackgroundDevice& bkg_d,
+		const double* fX, const double* fY, const double* fZ,
+		const InterpolationStencil& s, const int zone, double t, double x,
+		double y, double z, double out[3])
+	{
+		if (Zones::has_z_shift(bkg_d.zones, zone))
+		{
+			const double* fields[3] {fX, fY, fZ};
+			Utilities::interp_aligned_flat<double, 3>(fields, bkg_d.zones,
+				bkg_d.times, bkg_d.tdim, zone, t, x, y, z, bkg_d.phi_sign,
+				out);
+			return;
+		}
+		out[0] = interpolate_field_4d(fX, s, t, x, y, z);
+		out[1] = interpolate_field_4d(fY, s, t, x, y, z);
+		out[2] = interpolate_field_4d(fZ, s, t, x, y, z);
+	}
 }

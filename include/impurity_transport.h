@@ -4,6 +4,9 @@
 */
 #pragma once
 
+#include <cstddef>
+#include <string>
+
 #include "background.h"
 #include "boundary.h"
 #include "options.h"
@@ -17,6 +20,17 @@ namespace Sheath {class Sheath;}
 
 namespace ImpurityTransport
 {
+	/// GPU memory a run needs on each GPU, by what it's for (bytes)
+	struct GpuMemoryNeed
+	{
+		std::size_t background {};	///< Background::device_bytes
+		std::size_t statistics {};	///< Statistics::device_bytes
+		std::size_t slots {};		///< Particle slots and their generators
+	};
+
+	std::string gpu_memory_shortfall(const GpuMemoryNeed& need,
+		std::size_t free_bytes, std::size_t total_bytes, int device_id);
+
 	// To-do: Rename Statistics namespace to just Statistics or something
 	Impurity::Statistics follow_impurities(Background::Background& bkg, 
 		Options::Options& opts, Timer::Timer& timer,

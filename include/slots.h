@@ -64,7 +64,7 @@ namespace Slots
         std::vector<double> m_vZ;
 
         std::vector<int> m_iters;
-        std::vector<int> m_zone;  // host only, see zone()
+        std::vector<int> m_zone;  // see zone()
         std::vector<int> m_tidx;
         std::vector<int> m_xidx;
         std::vector<int> m_yidx;

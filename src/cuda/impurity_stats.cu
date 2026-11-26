@@ -27,8 +27,8 @@ namespace ImpurityStats
 	* particles) is added to the weights. The Cartesian and computational
 	* velocities and the charge are added multiplied by weight * dt, so they
 	* can later be turned into weighted averages. Dead slots are skipped.
-	* The cell and time frame are the particle's tidx, xidx, yidx and zidx,
-	* so find_containing_cell_gpu must have been called first.
+	* The cell and time frame are the particle's zone, tidx, xidx, yidx and
+	* zidx, so find_containing_cell_gpu must have been called first.
 	*
 	* @param[in,out] stats_d Impurity statistics on the device. Added to.
 	* @param slots_d Particle slots on the device.
@@ -46,13 +46,11 @@ namespace ImpurityStats
 		// Don't count dead particles
 		if (slots_d.state[i]) return;
 
-		// 4D to 1D index, same as calc_4d_index_cuda
-		//int Nt {stats_d.Nt};
-		int Nx {stats_d.Nx};
-		int Ny {stats_d.Ny};
-		int Nz {stats_d.Nz};
-		int idx {slots_d.tidx[i] * (Nx * Ny * Nz) + slots_d.xidx[i] 
-			* (Ny * Nz) + slots_d.yidx[i] * Nz + slots_d.zidx[i]};
+		// The particle's cell and time frame in its zone, as
+		// record_stats_cpu
+		const std::size_t idx {index(stats_d, slots_d.zone[i],
+			slots_d.tidx[i], slots_d.xidx[i], slots_d.yidx[i],
+			slots_d.zidx[i])};
 
 		// Add to stats. atomicAdd is needed since other particles may be
 		// adding to the same cell at the same time.

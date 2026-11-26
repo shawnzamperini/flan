@@ -334,8 +334,8 @@ TEST(ThermalForce, UnskewedSampler)
 }
 
 // The thermal force is on by default. Without heat fluxes it only warns
-// (any device); with only one heat flux, or with heat fluxes on the GPU, it
-// stops the run; off checks nothing.
+// (any device); with only one heat flux it stops the run; with both it's
+// quiet on the CPU and the GPU; off checks nothing.
 TEST(ThermalForce, Checks)
 {
 	Background::Background bkg {};
@@ -368,8 +368,9 @@ TEST(ThermalForce, Checks)
 		testing::ExitedWithCode(EXIT_FAILURE), "only has q_par_i");
 	auto q_e {heat_flux()};
 	bkg.move_into_q_par_e(q_e);
-	EXPECT_EXIT(Collisions::check_thermal_force(bkg, opts),
-		testing::ExitedWithCode(EXIT_FAILURE), "only runs on the CPU");
+	testing::internal::CaptureStdout();
+	Collisions::check_thermal_force(bkg, opts);
+	EXPECT_EQ(testing::internal::GetCapturedStdout(), "");
 
 	opts.set_use_gpu("off");
 	testing::internal::CaptureStdout();

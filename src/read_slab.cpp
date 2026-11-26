@@ -158,11 +158,6 @@ namespace Slab
 			Errors::fatal_error("slab_wall is only for a straight slab "
 				"(slab_major_radius = 0).");
 		}
-		if (has_wall && opts.use_gpu_int() > 0)
-		{
-			Errors::fatal_error("slab_wall only runs on the CPU for now. Set "
-				"use_gpu = \"off\".");
-		}
 
 		if (std::abs(opts.slab_bgrad_y()) * half_width >= 1.0)
 		{

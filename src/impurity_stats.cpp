@@ -10,6 +10,7 @@
 * velocity, charge and Nanbu collisionality in each cell.
 */
 
+#include <array>
 #include <cmath>
 #include <iomanip>
 #include <numeric>
@@ -770,6 +771,22 @@ namespace Impurity
 
 
 	/**
+	* How much GPU memory to_device takes: the per-cell tallies (counts
+	* as int, nine more as double) over every frame, without ghost cells,
+	* and the zones' sizes and offsets.
+	*
+	* @return Bytes.
+	*/
+	std::size_t Statistics::device_bytes() const
+	{
+		const std::size_t N {m_counts.get_data().size()};
+		const std::size_t nzones {static_cast<std::size_t>(
+			m_counts.get_nzones())};
+		return N * (sizeof(int) + 9 * sizeof(double))
+			+ nzones * (sizeof(std::size_t) + 3 * sizeof(int));
+	}
+
+	/**
 	* Allocates GPU memory for the statistics arrays and copies them to the
 	* device.
 	*
@@ -789,28 +806,51 @@ namespace Impurity
 
 #ifdef USE_CUDA
 
-		// The GPU only handles a single zone so far, which has the same
-		// layout as a Vector4D
+		// The arrays are copied as they are (zone after zone, no ghost
+		// cells), with each zone's offset and size so the kernels can index
+		// them (ImpurityStats::index)
 		stats_d.device_id = device_id;
-		stats_d.Nt = m_dim1;
-		stats_d.Nx = get_dim2();
-		stats_d.Ny = get_dim3();
-		stats_d.Nz = get_dim4();
-		int N {static_cast<int>(m_counts.get_data().size())};
+		const int nzones {m_counts.get_nzones()};
+		stats_d.nzones = nzones;
+		const std::size_t N {m_counts.get_data().size()};
 
 		// GPU allocation
 		cudaSetDevice(device_id);
 
-		cudaMalloc(&stats_d.counts, N * sizeof(int));
-		cudaMalloc(&stats_d.weights, N * sizeof(double));
-		cudaMalloc(&stats_d.vX, N * sizeof(double));
-		cudaMalloc(&stats_d.vY, N * sizeof(double));
-		cudaMalloc(&stats_d.vZ, N * sizeof(double));
-		cudaMalloc(&stats_d.vx, N * sizeof(double));
-		cudaMalloc(&stats_d.vy, N * sizeof(double));
-		cudaMalloc(&stats_d.vz, N * sizeof(double));
-		cudaMalloc(&stats_d.q, N * sizeof(double));
-		cudaMalloc(&stats_d.s, N * sizeof(double));
+		std::vector<std::size_t> offsets (nzones);
+		for (int zone {}; zone < nzones; ++zone)
+			offsets[zone] = m_counts.get_zone_offset(zone);
+		Errors::check_cuda(cudaMalloc(&stats_d.zone_offset,
+			nzones * sizeof(std::size_t)), "Statistics::to_device");
+		cudaMemcpy(stats_d.zone_offset, offsets.data(),
+			nzones * sizeof(std::size_t), cudaMemcpyHostToDevice);
+		const std::array<std::pair<int**, const std::vector<int>*>, 3> dims
+			{{{&stats_d.nx, &m_nx}, {&stats_d.ny, &m_ny}, {&stats_d.nz, &m_nz}}};
+		for (const auto& [ptr, n] : dims)
+		{
+			Errors::check_cuda(cudaMalloc(ptr, nzones * sizeof(int)),
+				"Statistics::to_device");
+			cudaMemcpy(*ptr, n->data(), nzones * sizeof(int),
+				cudaMemcpyHostToDevice);
+		}
+
+		// Checked, so running out of memory stops the run here rather
+		// than failing later in a kernel
+		auto alloc = [](auto** p, const std::size_t bytes)
+		{
+			Errors::check_cuda(cudaMalloc(p, bytes),
+				"Statistics::to_device (out of GPU memory?)");
+		};
+		alloc(&stats_d.counts, N * sizeof(int));
+		alloc(&stats_d.weights, N * sizeof(double));
+		alloc(&stats_d.vX, N * sizeof(double));
+		alloc(&stats_d.vY, N * sizeof(double));
+		alloc(&stats_d.vZ, N * sizeof(double));
+		alloc(&stats_d.vx, N * sizeof(double));
+		alloc(&stats_d.vy, N * sizeof(double));
+		alloc(&stats_d.vz, N * sizeof(double));
+		alloc(&stats_d.q, N * sizeof(double));
+		alloc(&stats_d.s, N * sizeof(double));
 
 		// Copy to device
 		cudaMemcpy(stats_d.counts, m_counts.get_data().data(), N * sizeof(int), 
@@ -856,10 +896,9 @@ namespace Impurity
 
 #ifdef USE_CUDA
 
-		// Allocate vectors to hold GPU data, these are the middleman. The GPU
-		// only handles a single zone so far.
-		get_dim2();
-		int N {static_cast<int>(m_counts.get_data().size())};
+		// Allocate vectors to hold GPU data, these are the middleman. The
+		// device arrays have the same layout as the host's.
+		const std::size_t N {m_counts.get_data().size()};
 		std::vector<int> counts_h (N);
 		std::vector<double> weights_h (N);
 		std::vector<double> vX_h (N);
@@ -871,10 +910,14 @@ namespace Impurity
 		std::vector<double> s_h (N);
 		std::vector<double> charge_h (N);
 
-		// Previous errors could cause this to hang, unsure how to handle
-		// this yet
+		// Wait for the kernels to finish, so an error from one of them is
+		// reported here rather than by the copies below
 		cudaError_t err = cudaDeviceSynchronize();
-		printf("sync: %s\n", cudaGetErrorString(err));
+		if (err != cudaSuccess)
+		{
+			std::cerr << "Error on GPU #" << device_id << " before copying "
+				"the statistics: " << cudaGetErrorString(err) << "\n";
+		}
 
 		// Copy over from GPU to host
 		std::cout << "Copying data from GPU #" << device_id << " (N = " 
@@ -915,7 +958,7 @@ namespace Impurity
 		// as the GPU's, so they're added element by element.
 		std::cout << "Adding to host object...\n";
 		#pragma omp parallel for
-		for (int idx = 0; idx < N; ++idx)
+		for (std::size_t idx = 0; idx < N; ++idx)
 		{
 			m_counts.get_data()[idx] += counts_h[idx];
 			m_weights.get_data()[idx] += weights_h[idx];
@@ -1009,6 +1052,10 @@ namespace Impurity
 		cudaFree(stats_d.vz);
 		cudaFree(stats_d.s);
 		cudaFree(stats_d.q);
+		cudaFree(stats_d.zone_offset);
+		cudaFree(stats_d.nx);
+		cudaFree(stats_d.ny);
+		cudaFree(stats_d.nz);
 
 #endif
 
@@ -1023,6 +1070,10 @@ namespace Impurity
 		stats_d.vz = nullptr;
 		stats_d.s = nullptr;
 		stats_d.q = nullptr;
+		stats_d.zone_offset = nullptr;
+		stats_d.nx = nullptr;
+		stats_d.ny = nullptr;
+		stats_d.nz = nullptr;
 	}
 
 	/*

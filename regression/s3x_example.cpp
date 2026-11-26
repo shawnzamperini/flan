@@ -9,7 +9,7 @@ Inputs create_inputs()
 {
 	Inputs inpts;
 
-	// Meta options. Multi-zone backgrounds only run on the CPU for now.
+	// Meta options. "cuda" runs on GPUs, with everything below.
 	inpts["use_gpu"] = "off";
 	inpts["case_name"] = "s3x_example";
 

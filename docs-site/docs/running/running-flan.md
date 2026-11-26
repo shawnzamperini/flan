@@ -124,6 +124,33 @@ With a GPU build of Flan installed, set `inpts["use_gpu"] = "cuda"` to follow
 the particles on the GPUs. Each rank uses every GPU it can see, so run one
 rank per node (see [MPI Parallelism](../developer/mpi-parallelism.md)).
 
+Everything in the main loop runs on the GPUs, for every background:
+ionization and recombination, Nanbu collisions with the thermal force,
+the push with drifts, the sheath field and near-wall sub-steps, the
+boundaries, the sputtered source, deposition and self-sputtering. Reading
+the background and setting up the tables (the sputtered source's rates,
+the D⁺ impacts on the wall) happen on the CPU before the particles are
+followed, as on a CPU run. A GPU run gives the same results as a CPU run
+within the Monte Carlo error, not bit for bit, since each slot has its
+own random number generator.
+
+The GPUs pay off when they have many particles at once. A few thousand
+particles leave an A100 mostly idle, so such a run is only a little
+faster than on a full CPU node; with a hundred thousand or more on each
+GPU, a particle step takes more than ten times less than on the CPU
+node. Several GPUs split the particles between them, so give each GPU at
+least that many. Each step also takes some fixed time whatever the
+number of particles, so the last few particles of a run still cost time.
+
+Every GPU holds a whole copy of the background and of the statistics, so
+adding GPUs doesn't let a bigger background fit. The memory needed is about
+112 bytes per cell per background frame for the background (128 with the
+heat fluxes for the thermal force) plus 76 for the statistics. Before
+copying anything, Flan prints how much each GPU needs and has free, and
+stops with a message if the run doesn't fit, leaving a tenth of the free
+memory (at least 256 MiB) for the smaller tables. Use fewer frames, fewer
+slots (`slot_cap`), or run on the CPU.
+
 ## What a run does
 
 Flan prints a short banner with the version and the number of ranks and

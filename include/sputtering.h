@@ -26,6 +26,7 @@ namespace Sheath
 	class ImpactTable;
 }
 #include "pcg32.h"
+#include "sputtering_hd.h"
 #include "zones.h"
 
 
@@ -58,6 +59,8 @@ namespace Sputtering
 		explicit YieldTable(const std::string& path);
 
 		double get_yield(double energy, double angle) const;
+
+		YieldView view() const;
 
 		const std::string& path() const;
 		double energy_min() const;
@@ -161,6 +164,24 @@ namespace Sputtering
 		double m_total_area {};		///< Sum of the elements' areas (m^2)
 		bool m_wall_faces {};		///< Elements are zone wall faces
 
+		/// The elements as flat arrays, for ElementsView (see
+		/// build_flat)
+		struct Flat
+		{
+			std::vector<int> zone {};
+			std::vector<int> i {};
+			std::vector<int> j {};
+			std::vector<int> k {};
+			std::vector<int> face {};
+			std::vector<double> n_R {};
+			std::vector<double> n_Z {};
+			std::vector<double> phi_min {};
+			std::vector<double> phi_max {};
+			std::vector<int> cartesian {};
+		} m_flat {};
+
+		void build_flat();
+
 		void find_staircase(const Background::Background& bkg,
 			double max_wall_dist);
 		void find_wall_faces(const Background::Background& bkg);
@@ -177,6 +198,8 @@ namespace Sputtering
 		int num_fallback() const;
 		double total_area() const;
 		bool from_wall_faces() const;
+
+		ElementsView view() const;
 
 		void print_summary(std::ostream& os) const;
 	};
@@ -200,32 +223,11 @@ namespace Sputtering
 	double sample_impact_energy(const YieldTable& table, double e_sheath,
 		double ti, double angle, double u);
 
-	double sample_thompson(double e_b, double e_max, double u);
 
 	std::array<double, 3> cosine_direction(const std::array<double, 3>& n,
 		double u1, double u2);
 
-	/**
-	* Where, when and how fast a sputtered atom starts (see
-	* Source::sample_birth), plus which frame and element it came from and
-	* the energy of the ion that sputtered it, for checking.
-	*/
-	struct Birth
-	{
-		int zone {};			///< Zone it starts in
-		double t {};			///< Time (s)
-		double x {};			///< Computational x
-		double y {};			///< Computational y
-		double z {};			///< Computational z (phi for SOLEDGE3X)
-		double vX {};			///< Cartesian velocity (m/s)
-		double vY {};
-		double vZ {};
-		int frame {};			///< Time frame it was picked from
-		std::size_t element {};	///< Surface element it was picked from
-		double e_impact {};		///< Energy of the sputtering ion (eV)
-		double a_impact {};		///< Its angle from the normal (degrees)
-		double e_atom {};		///< Energy of the sputtered atom (eV)
-	};
+	// Birth is in sputtering_hd.h, shared with the GPU
 
 	/**
 	* The rate atoms are sputtered off each surface element by the
@@ -268,6 +270,13 @@ namespace Sputtering
 		std::vector<double> m_cdf {};		///< Cumulative atoms per idx
 		double m_source_rate {};			///< Time-averaged total rate
 		std::vector<double> m_mean_rate {};	///< Time-averaged rate per element
+
+		// The impact table's samples, flattened for SourceView: each
+		// point's are m_sample_offset[p] to m_sample_offset[p + 1]
+		std::vector<int> m_sample_offset {};
+		std::vector<double> m_sample_energy {};	///< Energy / Te
+		std::vector<double> m_sample_angle {};	///< Angle (degrees)
+		std::vector<double> m_sample_weight {};	///< Share of the flux
 
 		// D+ impacts from the sheath model (sput_impact_opt = "sheath"),
 		// or nullptr for the formula and sput_angle_val
@@ -323,6 +332,10 @@ namespace Sputtering
 
 		Birth sample_birth(pcg32& rng) const;
 
+		SourceView view() const;
+
+		SourceDevice to_device(int device_id, int imp_num) const;
+
 		void print_summary(std::ostream& os) const;
 	};
 
@@ -357,13 +370,20 @@ namespace Sputtering
 	private:
 		const Surface* m_surface {nullptr};	///< The surface elements
 		SelfSource* m_self {nullptr};	///< Self-sputtering, if on
-		std::unordered_map<std::uint64_t, std::vector<std::size_t>>
-			m_wall_cells {};		///< Elements bordering each wall cell
-		std::unordered_map<std::uint64_t, std::size_t>
-			m_wall_faces {};		///< Element on each cell of a wall face
+		// Wall cells bordering the plasma (by cell_key, sorted) and the
+		// elements on each, m_wall_cell_start[c] to [c + 1] in
+		// m_wall_cell_elems; cells of wall faces (by wall_face_key,
+		// sorted) and the element on each. Sorted arrays rather than hash
+		// maps, so the GPU can search the same ones.
+		std::vector<std::uint64_t> m_wall_cell_keys {};
+		std::vector<int> m_wall_cell_start {};
+		std::vector<int> m_wall_cell_elems {};
+		std::vector<std::uint64_t> m_wall_face_keys {};
+		std::vector<int> m_wall_face_elems {};
 		std::vector<double> m_redeposited {};	///< Rate onto each element
-		double m_unassigned {};		///< Into wall cells with no element
-		double m_wall_face {};		///< At wall faces with no element
+		/// Scalar tallies, indexed by DepositionScalar (unassigned, at
+		/// wall faces, and the sums for the means)
+		std::array<double, num_dep_scalars> m_scalars {};
 		std::vector<double> m_lifetime_edges {};	///< Time since birth
 													///< bin edges (s)
 		std::vector<double> m_lifetime {};	///< Rate in each time bin
@@ -373,25 +393,15 @@ namespace Sputtering
 		std::vector<double> m_prompt_charge {};	///< Prompt rate at each
 												///< charge state
 		double m_phi_sign {1.0};	///< Handedness of (R, phi, Z)
-		double m_lifetime_sum {};	///< Sum of weight * time since birth
 		std::vector<double> m_energy_edges {};	///< Impact energy bin
 												///< edges (eV)
 		std::vector<double> m_energy {};	///< Rate in each energy bin
 		std::vector<double> m_angle {};		///< Rate in each 1 degree bin
 											///< of the angle from the
 											///< normal
-		double m_energy_sum {};		///< Sum of weight * impact energy
-		double m_energy_weight {};	///< Rate with an impact energy
-		double m_angle_sum {};		///< Sum of weight * impact angle
-		double m_angle_weight {};	///< Rate with an impact angle
 		std::vector<double> m_element_energy {};	///< Sum of weight *
 													///< impact energy on
 													///< each element
-
-		bool add_lifetime_and_charge(double pt, int q, double weight,
-			double prompt_by);
-		void add_impact(const Impact* impact, const SurfaceElement* el,
-			double z, double weight, std::size_t e);
 
 	public:
 
@@ -414,6 +424,14 @@ namespace Sputtering
 
 		void reduce(int root);
 
+		DepositionView view();
+
+		void add_tallies(const DepositionView& other);
+
+		DepositionDevice to_device(int device_id);
+
+		void add_from_device(const DepositionDevice& dep_d);
+
 		const std::vector<double>& redeposited() const;
 		double unassigned() const;
 		double wall_face() const;
@@ -434,42 +452,30 @@ namespace Sputtering
 
 		void print_summary(std::ostream& os, double source_rate) const;
 	};
-	/**
-	* The energy and angle an impurity hits the wall with, for the
-	* self-sputtering yield (see self_impact).
-	*/
-	struct SelfImpact
+
+	void free_self(SelfDevice& self_d);
+
+	bool avalanche_on_device(const SelfDevice& self_d);
+
+	/// What the avalanche message reports of a GPU's chains
+	struct SelfStats
 	{
-		double energy {};	///< Impact energy (eV)
-		double angle {};	///< Angle from the element's normal (degrees)
+		double chain_multiplication {};
+		double mean_yield {};
+		double mean_energy {};		///< eV
 	};
 
+	SelfStats self_stats_from_device(const SelfDevice& self_d);
+
+	double chain_multiplication(const std::vector<double>& gen_weight);
+	void free_source(SourceDevice& source_d);
+
+	void free_deposition(DepositionDevice& dep_d);
+
+	// SelfImpact, roulette, Rebirth and the shared rebirth are in
+	// sputtering_hd.h. This takes arrays, for the CPU's callers.
 	SelfImpact self_impact(const std::array<double, 3>& v, double mass,
 		const std::array<double, 3>& n, int q, double phi_wall);
-
-	double roulette(double weight, double min_weight, double u);
-
-	/**
-	* A particle that landed on the wall and carries on as one of the atoms
-	* it sputtered (SelfSource::rebirth). If alive is false it ends there,
-	* redeposited, and nothing else is set.
-	*/
-	struct Rebirth
-	{
-		bool alive {};			///< Carries on as a sputtered atom
-		bool avalanche {};		///< Ended at sput_self_max_gen
-		int zone {};			///< Zone it starts in
-		double x {};			///< Computational x
-		double y {};			///< Computational y
-		double z {};			///< Computational z
-		int i {};				///< x index of its cell
-		int j {};				///< y index of its cell
-		int k {};				///< z index of its cell
-		double vX {};			///< Cartesian velocity (m/s)
-		double vY {};
-		double vZ {};
-		double weight {};		///< New weight (atoms/s)
-	};
 
 	/**
 	* Self-sputtering: impurities landing on a wall element sputter more
@@ -500,13 +506,10 @@ namespace Sputtering
 		std::vector<double> m_gen_landed {};	///< Weight landing on
 												///< elements from each
 												///< generation
-		double m_landed {};				///< Rate landing on elements
-		double m_self_total {};			///< Self-sputtered rate, sum w Y
-		double m_energy_sum {};			///< Sum of w E, landed on elements
-		double m_angle_sum {};			///< Sum of w angle
-		double m_roulette_lost {};		///< Rate ended by roulette
-		long long m_num_below {};		///< Landings below threshold
-		long long m_num_above {};		///< Landings past the table's end
+		/// The rates, sums and counts (SelfScalar), in one array so the
+		/// routine shared with the GPU (rebirth in sputtering_hd.h) adds
+		/// to them the same way
+		std::array<double, num_self_scalars> m_scalars {};
 
 	public:
 
@@ -520,6 +523,12 @@ namespace Sputtering
 			double weight, int generation, pcg32& rng);
 
 		void reduce(int root);
+
+		SelfView view();
+
+		SelfDevice to_device(int device_id);
+
+		void add_from_device(const SelfDevice& self_d);
 
 		const YieldTable& table() const;
 		double min_weight() const;

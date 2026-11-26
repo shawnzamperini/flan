@@ -138,13 +138,6 @@ R"(
 	// The thermal force needs the heat fluxes and the CPU
 	Collisions::check_thermal_force(bkg, opts);
 
-	// The charge limit for tests is only applied on the CPU
-	if (opts.imp_iz_max_charge() >= 0 && opts.use_gpu_int() > 0)
-	{
-		Errors::fatal_error("imp_iz_max_charge only works on the CPU. Set "
-			"use_gpu = \"off\".");
-	}
-
 	// The sputtered source. Every rank calculates its own from the
 	// broadcast background, since every rank starts particles from it.
 	// Each particle then stands for source_rate / imp_num atoms/s (its
@@ -157,11 +150,6 @@ R"(
 		{
 			Errors::fatal_error("imp_source_opt = \"sputter\" needs a "
 				"sputtering yield table, set with sput_table_file.");
-		}
-		if (opts.use_gpu_int() > 0)
-		{
-			Errors::fatal_error("imp_source_opt = \"sputter\" only runs on "
-				"the CPU for now. Set use_gpu = \"off\".");
 		}
 		if (rank == 0) std::cout << "Calculating the sputtered source...\n";
 		const Sputtering::Surface surface(bkg, opts.sput_max_wall_dist());
@@ -213,36 +201,24 @@ R"(
 
 	// The sheath field in front of the walls, from the same wall surface
 	// as the sputtered source (or its own if there's no source). It's on
-	// by default, so a background without walls just goes without, and on
-	// the GPU (where it isn't written yet) it's left out with a warning.
+	// by default, so a background without walls just goes without. On the
+	// GPU each device gets a copy (Sheath::to_device).
 	std::optional<Sheath::Sheath> sheath {};
 	if (opts.sheath_model_int() > 0 && (source
 		|| Sputtering::has_surfaces(bkg)))
 	{
-		if (opts.use_gpu_int() > 0)
-		{
-			if (rank == 0)
-			{
-				std::cout << "Warning! The sheath field (sheath_model = \""
-					<< opts.sheath_model() << "\") only runs on the CPU for "
-					"now, so this GPU run goes without it.\n";
-			}
-		}
+		const auto model {static_cast<Sheath::Model>(
+			opts.sheath_model_int())};
+		if (source) sheath.emplace(source->surface(), bkg, model,
+			opts.sheath_fd(), opts.sheath_drop());
 		else
 		{
-			const auto model {static_cast<Sheath::Model>(
-				opts.sheath_model_int())};
-			if (source) sheath.emplace(source->surface(), bkg, model,
-				opts.sheath_fd(), opts.sheath_drop());
-			else
-			{
-				const Sputtering::Surface surface(bkg,
-					opts.sput_max_wall_dist());
-				sheath.emplace(surface, bkg, model, opts.sheath_fd(),
-					opts.sheath_drop());
-			}
-			if (rank == 0) sheath->print_summary(std::cout);
+			const Sputtering::Surface surface(bkg,
+				opts.sput_max_wall_dist());
+			sheath.emplace(surface, bkg, model, opts.sheath_fd(),
+				opts.sheath_drop());
 		}
+		if (rank == 0) sheath->print_summary(std::cout);
 	}
 
 	// Self-sputtering: impurities landing on the wall sputter more atoms

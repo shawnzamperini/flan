@@ -46,6 +46,7 @@ namespace Options
 
 		opts_h.imp_coll_subcycle_target = m_imp_coll_subcycle_target;
 		opts_h.imp_coll_subcycle_cap    = m_imp_coll_subcycle_cap;
+		opts_h.imp_thermal_force        = m_imp_thermal_force_int;
 
 		opts_h.imp_mass_amu   = m_imp_mass_amu;
 
@@ -78,6 +79,7 @@ namespace Options
 		opts_h.lcfs_y         = m_lcfs_y;
 		opts_h.lcfs_z         = m_lcfs_z;
 
+		opts_h.zone_start     = m_imp_zone_start_val - 1;
 		opts_h.init_charge    = m_imp_init_charge;
 
 		opts_h.imp_temp_start_opt_int = m_imp_temp_start_opt_int;

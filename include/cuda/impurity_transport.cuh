@@ -18,5 +18,6 @@ namespace ImpurityTransport
 		const Background::BackgroundDevice& bkg_d);
 
 	void step_gpu(Slots::SlotsDevice& slots_d, const double dt, 
-		const Options::OptionsDevice* opts_d, int* max_time_ctr_d);
+		const Options::OptionsDevice* opts_d, int* max_time_ctr_d,
+		bool substepped = false);
 }

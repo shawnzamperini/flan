@@ -141,6 +141,8 @@ namespace Impurity
 		// GPU transfer
 		ImpurityStats::StatisticsDevice to_device(int device_id);
 
+		std::size_t device_bytes() const;
+
 		// Reduce GPU statistics into host-side clas
 		void add_stats_device(ImpurityStats::StatisticsDevice& stats_d, 
 			int device_id);

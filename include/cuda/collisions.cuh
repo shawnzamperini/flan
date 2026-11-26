@@ -5,7 +5,10 @@
 *
 * @brief Header file for collisions.cu
 */
+#include <array>
+
 #include "background_device.h"
+#include "collisions_hd.h"
 #include "options_device.h"
 #include "pcg32.h"
 #include "slots_device.h"
@@ -19,6 +22,9 @@ namespace Collisions
 		const Background::BackgroundDevice& bkg_d, const bool elec, 
 		const double dt, ImpurityStats::StatisticsDevice& imp_stats_d,
 		pcg32* rngs_d, const double elec_mass_amu, const double ion_mass_amu,
-		const Options::OptionsDevice* opts_d);
+		const Options::OptionsDevice* opts_d, unsigned long long* skew_d);
+
+	std::array<SkewCounts, 2> skew_counts_from_device(
+		const unsigned long long* skew_d, const int device_id);
 
 }  // namespace Collisions

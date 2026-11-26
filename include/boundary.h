@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "background.h"
+#include "boundary_hd.h"
 #include "options.h"
 #include "pcg32.h"
 #include "slots.h"
@@ -20,49 +21,16 @@ namespace Sputtering {class Deposition;}
 
 namespace Boundary
 {
-	/**
-	* What happened to particles at the boundaries over a run, counted by
-	* check_bounds_cpu. Reaching imp_max_time is counted separately.
-	*/
-	struct Fates
-	{
-		long long crossings {};	///< Crossings into another zone
-		long long absorbed {};	///< Absorbed at an absorbing face
-		long long wall {};		///< Absorbed at a wall face
-		long long chi {};		///< Absorbed inside the wall mask (chi)
-		long long core {};		///< Put back in at a core face
-		long long time_end {};	///< Reached the end of the background time
-		long long runaway {};	///< Absorbed after too many crossings
-		long long self_sputtered {};	///< Landed on the wall and carried
-										///< on as a self-sputtered atom
-		long long max_time {};	///< Followed longer than imp_max_time (set
-								///< by follow_impurities, not here)
-
-		Fates& operator+=(const Fates& other);
-	};
+	// Fates is in boundary_hd.h, so the GPU code can add to it
 
 	Fates print_fates(const Fates& fates);
 
-	int absorbing_bc(double a, double bound, bool max_bound,
-		double buffer = 0.0);
+	// absorbing_bc, periodic_bc, core_bc, twist_shift_dy, lcfs_bc,
+	// core_face and the rest of the per-particle routines are in
+	// boundary_hd.h, shared with the GPU
 
-	double periodic_bc(double a, double amin, double amax);
-
-	void core_bc(double& a, double& b, double& c, double a_min,
-		double a_max, double a_buffer, double b_min, double b_max,
-		double b_buffer, double c_min, double c_max, double c_buffer, 
-		bool max_bound, pcg32& rng);
-
-	double twist_shift_dy(double x);
-
-	int lcfs_bc(double& y, double& z, double x, double lcfs_x,
-		double y_min, double y_max, double z_min, double z_max,
-		double z_buffer, double y_shift, bool max_bound);
-
-	bool core_face(std::array<double, 3>& pos, int& zone,
-		const Zones::Face face, const std::vector<int>& core_zones,
-		const Zones::Zones& zones, const std::array<double, 3>& buffers,
-		pcg32& rng);
+	BoundaryParams make_params(const Background::Background& bkg,
+		const Options::Options& opts, const double* chi);
 
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
@@ -72,4 +40,7 @@ namespace Boundary
 	void check_bounds_cpu(Slots::Slots& slots, 
 		const Background::Background& bkg, const Options::Options& opts,
 		std::vector<pcg32>& rngs);
+
+	[[noreturn]] void avalanche_error(int max_gen,
+		double chain_multiplication, double mean_yield, double mean_energy);
 }

@@ -185,8 +185,7 @@ namespace Slots
 	* Returns the index of the zone each particle is in.
 	*
 	* The cell indices and computational coordinates are relative to this
-	* zone. Only kept on the host: the GPU only supports single-zone
-	* backgrounds, so to_device doesn't copy it and to_host leaves it at 0.
+	* zone. Copied to and from the GPU with the rest of the slot.
 	*
 	* @return Vector of length N() with one entry per slot.
 	*/
@@ -447,7 +446,8 @@ namespace Slots
 	* The per-particle arrays are allocated and copied, except iters,
 	* which are not stored on the device. The work arrays used by the GPU
 	* kernels (all_dead, num_dead and dead_indices) are also
-	* allocated, and all_dead is initialized to false. If GPU support was not
+	* allocated, and all_dead is initialized to false. The work space for
+	* listing the dead slots (select_temp) is left to fill_slots_gpu. If GPU support was not
 	* compiled in, an error is printed and an empty SlotsDevice is returned.
 	*
 	* @param device_id ID of the GPU to allocate the memory on.
@@ -476,6 +476,7 @@ namespace Slots
 		cudaMalloc(&slots_d.x, m_N * sizeof(double));
 		cudaMalloc(&slots_d.y, m_N * sizeof(double));
 		cudaMalloc(&slots_d.z, m_N * sizeof(double));
+		cudaMalloc(&slots_d.zone, m_N * sizeof(int));
 		cudaMalloc(&slots_d.tidx, m_N * sizeof(int));
 		cudaMalloc(&slots_d.xidx, m_N * sizeof(int));
 		cudaMalloc(&slots_d.yidx, m_N * sizeof(int));
@@ -490,9 +491,16 @@ namespace Slots
 		cudaMalloc(&slots_d.weight, m_N * sizeof(double));
 		cudaMalloc(&slots_d.q, m_N * sizeof(int));
 		cudaMalloc(&slots_d.state, m_N * sizeof(int));
+		cudaMalloc(&slots_d.prompt_by, m_N * sizeof(double));
+		cudaMalloc(&slots_d.generation, m_N * sizeof(int));
+		cudaMalloc(&slots_d.nsub, m_N * sizeof(int));
 		cudaMalloc(&slots_d.all_dead, sizeof(bool));
 		cudaMalloc(&slots_d.num_dead, sizeof(int));
 		cudaMalloc(&slots_d.dead_indices, m_N * sizeof(int));
+
+		// Sized and allocated by fill_slots_gpu the first time
+		slots_d.select_temp = nullptr;
+		slots_d.select_temp_bytes = 0;
 
 		// Copy to device
 		cudaMemcpy(slots_d.pt, m_pt.data(), m_N * sizeof(double), 
@@ -504,6 +512,8 @@ namespace Slots
 		cudaMemcpy(slots_d.y, m_y.data(), m_N * sizeof(double), 
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.z, m_z.data(), m_N * sizeof(double), 
+			cudaMemcpyHostToDevice);
+		cudaMemcpy(slots_d.zone, m_zone.data(), m_N * sizeof(int), 
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.tidx, m_tidx.data(), m_N * sizeof(int), 
 			cudaMemcpyHostToDevice);
@@ -531,6 +541,10 @@ namespace Slots
 			cudaMemcpyHostToDevice);
 		cudaMemcpy(slots_d.state,  m_state.data(), m_N * sizeof(int),
 			cudaMemcpyHostToDevice);
+		cudaMemcpy(slots_d.prompt_by, m_prompt_by.data(),
+			m_N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(slots_d.generation, m_generation.data(),
+			m_N * sizeof(int), cudaMemcpyHostToDevice);
 
 		// Initialize all_dead to false
 		bool init = false;
@@ -574,6 +588,8 @@ namespace Slots
 			cudaMemcpyDeviceToHost);
 		cudaMemcpy(slots.m_z.data(), slots_d.z, slots_d.N * sizeof(double), 
 			cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_zone.data(), slots_d.zone,
+			slots_d.N * sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(slots.m_vx.data(), slots_d.vx, slots_d.N * sizeof(double), 
 			cudaMemcpyDeviceToHost);
 		cudaMemcpy(slots.m_vy.data(), slots_d.vy, slots_d.N * sizeof(double), 
@@ -602,6 +618,10 @@ namespace Slots
 			cudaMemcpyDeviceToHost);
 		cudaMemcpy(slots.m_state.data(), slots_d.state, 
 			slots_d.N * sizeof(int), cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_prompt_by.data(), slots_d.prompt_by,
+			slots_d.N * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(slots.m_generation.data(), slots_d.generation,
+			slots_d.N * sizeof(int), cudaMemcpyDeviceToHost);
 #endif
 		return slots;
 	}
@@ -629,6 +649,7 @@ namespace Slots
 		cudaFree(slots_d.x);
 		cudaFree(slots_d.y);
 		cudaFree(slots_d.z);
+		cudaFree(slots_d.zone);
 		cudaFree(slots_d.tidx);
 		cudaFree(slots_d.xidx);
 		cudaFree(slots_d.yidx);
@@ -643,15 +664,20 @@ namespace Slots
 		cudaFree(slots_d.weight);
 		cudaFree(slots_d.q);
 		cudaFree(slots_d.state);
+		cudaFree(slots_d.prompt_by);
+		cudaFree(slots_d.generation);
+		cudaFree(slots_d.nsub);
 		cudaFree(slots_d.all_dead);
 		cudaFree(slots_d.num_dead);
 		cudaFree(slots_d.dead_indices);
+		cudaFree(slots_d.select_temp);
 
 		slots_d.pt = nullptr;
 		slots_d.t = nullptr;
 		slots_d.x = nullptr;
 		slots_d.y = nullptr;
 		slots_d.z = nullptr;
+		slots_d.zone = nullptr;
 		slots_d.tidx = nullptr;
 		slots_d.xidx = nullptr;
 		slots_d.yidx = nullptr;
@@ -666,9 +692,14 @@ namespace Slots
 		slots_d.weight = nullptr;
 		slots_d.q = nullptr;
 		slots_d.state = nullptr;
+		slots_d.prompt_by = nullptr;
+		slots_d.generation = nullptr;
+		slots_d.nsub = nullptr;
 		slots_d.all_dead = nullptr;
 		slots_d.num_dead = nullptr;
 		slots_d.dead_indices = nullptr;
+		slots_d.select_temp = nullptr;
+		slots_d.select_temp_bytes = 0;
 #endif
 		return;
 	}

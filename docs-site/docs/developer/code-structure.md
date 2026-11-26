@@ -57,7 +57,8 @@ MPI must be initialized before `flan()` is called, and every rank calls it.
    `axisym_mesh.cpp`. A reader for a shifted-metric grid (HERMES) also
    gives each zone a `zShift` table (`Zones::set_z_shift`). With it,
    plasma quantities are interpolated along the field line
-   (`Utilities::interp_aligned`, through `Background::interp_4d` with
+   (`Utilities::interp_aligned`, shared with the GPU through
+   `interp_hd.h`, called by `Background::interp_4d` with
    `aligned` set and `Background::interp_vec3`) and y derivatives are
    taken along it (`Axisym::aligned_dfdy`, `Axisym::grad_par`). B and the
    geometry are always interpolated at fixed z. Both readers mark their
@@ -99,22 +100,32 @@ Then each pass through the loop runs these steps, in order:
 
 The loop ends once every slot is dead and no particles are left to launch.
 
-A sputtered source and the sheath hook into these steps on the CPU
-(`src/sputtering.cpp`, `src/sheath.cpp`):
+A sputtered source and the sheath hook into these steps
+(`src/sputtering.cpp`, `src/sheath.cpp`), on the GPU too:
 
 - `Slots::fill_slots_cpu` starts new particles from
-  `Sputtering::Source::sample_birth`.
+  `Sputtering::Source::sample_birth`, and `fill_slots_gpu` from the same
+  routine on a device copy of the source (`Source::to_device`).
 - `Boris::update_velocity_cpu` adds `Sheath::field_at` to the
   interpolated E. Particles that can reach the sheath field this step
   are pushed in sub-steps by `Boris::substep_cpu`, and the plain push and
-  `step_cpu` skip them.
+  `step_cpu` skip them. The field, the sub-step count and the nearest wall
+  element are shared with the GPU (`sheath_hd.h`, on a `SheathView`);
+  `Boris::update_velocity_gpu` counts the sub-steps into `slots_d.nsub`,
+  and its `substep_kernel` is `substep_cpu` per thread.
 - `Boundary::check_bounds_cpu` puts absorbed particles on their wall
   element with `Sputtering::Deposition`, passing their impact energy and
-  angle. With self-sputtering, `Deposition::self` gives the
+  angle. `check_bounds_kernel` does the same into tallies on the device
+  (`Deposition::to_device`), added to the host's after the run
+  (`Deposition::add_from_device`). With self-sputtering, `Deposition::self` gives the
   `Sputtering::SelfSource`, whose `rebirth` turns the particle into a
   self-sputtered atom in place, so it carries on in the same slot with a
   new weight. A runaway chain is noted inside the parallel loop and stops
-  the run after it.
+  the run after it (`Boundary::avalanche_error`). On the GPU the kernel
+  calls the same routine on a device copy (`SelfSource::to_device`) with
+  the slot's generator, sets a device flag for a runaway chain, which
+  `check_bounds_wrapper` reads after each step, and the tallies are added
+  to the host's after the run (`SelfSource::add_from_device`).
 
 The physics of each step is described in
 [Impurity Transport](../physics/impurity-transport.md),
@@ -163,6 +174,60 @@ The physics is the same either way. The two versions are kept as close to
 each other as possible, so a change to one usually needs the same change in
 the other.
 
+### Code shared by the CPU and GPU
+
+Per-particle math that doesn't need the host classes can be written once and
+called from both sides. Mark the function `FLAN_HD` (`include/host_device.h`):
+nvcc compiles it for the host and the device, and the host compiler sees an
+ordinary function. Shared functions are `inline` (or templates) in headers
+named `*_hd.h`, take plain values, pointers and sizes rather than
+`std::vector` or the host classes, and don't throw, allocate or print. The
+CPU function keeps its interface and calls the shared one inside. For
+example, `Utilities::trilinear_box` (`include/utilities_hd.h`) is used by the
+CPU's `Utilities::trilinear_interpolate` and by the GPU interpolation
+stencils. New per-particle physics should be written this way, so there is
+only one version to keep up to date.
+
+The boundary conditions are shared whole: `include/boundary_hd.h` has the
+per-particle routines (`time_bc`, `check_faces`, `in_wall_cell`,
+`turn_velocity`) that `Boundary::check_bounds_cpu` and the GPU's
+`check_bounds_kernel` both call with the same `BoundaryParams`
+(`Boundary::make_params`). Each GPU counts what happened
+to its particles (`Boundary::Fates`) in device counters that
+`add_fates_from_device` reads after the run.
+
+Sputtering is shared through `include/sputtering_hd.h`: flat views of
+the surface elements, the yield table, the source and the deposition
+tallies (`ElementsView`, `YieldView`, `SourceView`, `DepositionView`),
+`sample_birth`, the deposition routines `add_at_wall_face` and
+`add_into_wall_cell`, and self-sputtering's `rebirth` on a `SelfView`
+(with `self_impact` and `roulette`). The wall cells and wall faces with elements are
+sorted keys searched by bisection, rather than hash maps, so the device
+can search the same arrays. The tallies are added to through an adder
+passed in: `omp atomic` on the CPU, `atomicAdd` on the GPU.
+
+The sheath is shared through `include/sheath_hd.h`: `Model`, `Params`,
+the profiles (`potential`, `field`, `range`) and the sub-step count, and
+a `SheathView` of the wall elements and their `Params` per frame, with
+the plasma cells next to the wall as sorted keys and each one's elements
+in CSR form. `distance`, `field_at` and `substeps` on a view are what
+`Sheath::Sheath`'s members call, and what the GPU's push
+(`Boris::push_one` in `cuda/boris.cu`) and `substep_kernel` call on a
+device copy (`Sheath::to_device`, freed with `free_sheath`).
+
+The thermal force's sampler is shared the same way: `Collisions::sample_bkg`
+and the skew helpers (`skew_at`, `skew_factor`, `skew_bound`) are in
+`include/collisions_hd.h`, called by `nanbu_coll` and `nanbu_coll_kernel`.
+The GPU's sampler counts go to device counters and are added to the
+host's (`skew_counts_from_device`, `add_skew_counts`), so they're reduced
+and printed together.
+
+Results from the two sides agree to rounding, not bit for bit: nvcc fuses
+`a + b * c` into one fused multiply-add, which rounds once instead of twice.
+A GPU run with a fixed `seed` is reproducible: the trajectories and counts
+are the same every time, and sums made with `atomicAdd` (the statistics)
+differ only by rounding, since the order of the additions varies.
+
 ### CPU (OpenMP)
 
 The CPU versions loop over the slots with `#pragma omp parallel for`. Each
@@ -182,20 +247,78 @@ the GPU into plain structs of device pointers:
 | Host side | Device side | Copied with |
 |---|---|---|
 | `Background::Background` | `Background::BackgroundDevice` | `Background::to_device` |
+| `Zones::Zones` | `Zones::ZonesView` (inside `BackgroundDevice`) | `Zones::to_device` |
 | `Slots::Slots` | `Slots::SlotsDevice` | `Slots::to_device` |
 | `Impurity::Statistics` | `ImpurityStats::StatisticsDevice` | `Statistics::to_device` |
 | `OpenADAS::OpenADAS` | `OpenADAS::OpenADASDevice` | `OpenADAS::to_device` |
 | `Options::Options` | `Options::OptionsDevice*` (only the options kernels use) | `Options::to_device` |
+| `Sputtering::Source` | `Sputtering::SourceDevice` | `Source::to_device` |
+| `Sputtering::Deposition` | `Sputtering::DepositionDevice` | `Deposition::to_device` |
+| `Sputtering::SelfSource` | `Sputtering::SelfDevice` | `SelfSource::to_device` |
+| `Sheath::Sheath` | `Sheath::SheathDevice` | `Sheath::to_device` |
 
-Each has a matching `free_*` function. The background's times, cell centers,
-cell edges and bounds are small and read by nearly every kernel, so they go in
-GPU *constant memory* instead (`src/cuda/device_constants.cu`). Constant memory
-is shared by everything on a GPU, so only one background can be on each GPU.
+Each has a matching `free_*` function. Everything is in global memory, so
+any number of backgrounds can be on one GPU. The tallies made on a GPU
+(deposition, self-sputtering, fates, warnings, sampler counts) are added
+to the host's after the run (`add_from_device` and the `*_from_device`
+functions), so the results and printed summaries are the same as a CPU
+run's.
+
+Before anything is copied, `follow_impurities` adds up the memory the
+copies need (`Background::device_bytes`, `Statistics::device_bytes`,
+plus the slots) and stops with a message if it won't fit on a GPU
+(`gpu_memory_shortfall`). A new array that scales with the grid should
+be counted in the matching `device_bytes`.
+
+The zones' grids live in nested `std::vector`s in `Zones::Zones`, which
+kernels can't use. `Zones::ZonesView` (`include/zones_hd.h`) holds the same
+grids as flat arrays (every zone's values one after another, with per-zone
+offsets), the face codes, the ghost cell centers and the `ZonedVector`
+offsets. `Zones` rebuilds its host view whenever the zones change
+(`Zones::view`), and `Zones::to_device` copies it to a GPU. The functions in
+`zones_hd.h` (`cell_index`, `neighbor_index`, `bracket`, `center`,
+`flat_index`) take either, so the CPU and the GPU find a particle's cell and
+interpolation stencil with the same code. Each slot carries its zone
+(`SlotsDevice::zone`), and the kernels pass it to these functions.
+`StatisticsDevice` holds the statistics' flat `ZonedVector` data with each
+zone's offset and size, and `ImpurityStats::index` finds a particle's entry in
+its zone, as `ZonedVector::calc_index` does on the CPU.
 
 With several GPUs, `follow_impurities` copies everything to each GPU and runs
 `main_loop` on each in its own `std::thread` (`gpu_worker`). Counters that the
 GPUs add to, like the ionization/recombination and `imp_max_time` warnings,
 are kept on each GPU and summed on the host after the threads finish.
+Each worker is pinned to its own OpenMP place (`pin_gpu_worker`): a
+`std::thread` starts with its creator's binding, which `OMP_PROC_BIND` sets
+to one core, and the workers would otherwise all share it.
+
+The timer's sections on a GPU run mostly time the launches, since a launch
+returns at once. The kernels' time shows up in the first section that
+copies something back from the device each step (the dead-slot count in
+"Filling slots", or the self-sputtering avalanche flag in "Boundary
+conditions"). For the time each kernel takes, use `nsys profile -t cuda`.
+
+### Adding a feature that runs on both
+
+1. Write the per-particle math once, as `FLAN_HD` functions in a
+   `*_hd.h` header, taking a view (a struct of plain pointers and sizes)
+   rather than the host class. Tallies are added through an adder
+   template argument (`OmpAdd` on the CPU, `DeviceAdd` on the GPU).
+2. Give the host class a `view()` for the CPU and a `to_device` that
+   copies the same arrays to a GPU and returns the view with device
+   pointers, plus a `free_*` function. Lookups that would use a hash map
+   on the CPU use sorted keys and bisection, or CSR lists, so the device
+   can search the same arrays.
+3. Call the shared functions from the CPU loop and from the kernel, and
+   pass the device copy through `follow_impurities`, `gpu_worker` and
+   `main_loop` to the wrapper. If the GPU tallies anything, copy it back
+   and add it to the host's after the run.
+4. Add any options the kernels read to `OptionsDevice` (see "Adding an
+   input option" below), and count large arrays in `device_bytes`.
+5. Test that the two agree: a `*_cuda` test that runs the CPU routine one
+   particle at a time with GPU slot i's generator (`pcg32(seed + i, i)`)
+   and compares to rounding, and a `_gpu` variant of the feature's
+   regression case that passes the same checker.
 
 ### Fields at a particle
 
@@ -205,14 +328,25 @@ common operation in the main loop. On the GPU it's done by building a
 `include/cuda/interpolate.cuh`) and reusing it for every field. The fields
 are interpolated trilinearly in space and linearly in time.
 
+In a zone with a `zShift` table (a shifted-metric HERMES grid), the plasma
+(ne, Te, Ti, the flow and E) is interpolated along the field line instead.
+The kernels call `Interpolate::interp_plasma` and `interp_plasma_vec3`, which
+use the stencil in other zones and `Utilities::interp_aligned_flat`
+(`include/interp_hd.h`) in these. The CPU's `Utilities::interp_aligned`
+calls the same function, so the two follow the field line the same way. B
+and the geometry always use the stencil.
+
 ## Data layout
 
 The background and statistics arrays are `Vectors::Vector4D`s with dimensions
 (t, x, y, z), and the geometry arrays are `Vectors::Vector3D`s with dimensions
 (x, y, z). Both store the data as one flattened vector in row-major order, so
-the last index varies fastest. The same layout is used on the GPU
-(`Utilities::calc_4d_index_cuda`) and in the netCDF output, so the data is
-copied as is between them.
+the last index varies fastest. A background with zones keeps its fields in
+`Vectors::ZonedVector`s: each zone in the same row-major order, ghost cells
+included, one zone after another. A single zone without ghost cells has the
+same layout as a `Vector4D`. The GPU uses the same layout
+(`Zones::flat_index`), and so does the netCDF output, so the data is copied as
+is between them.
 
 ## Namespaces
 

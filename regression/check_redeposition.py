@@ -287,7 +287,9 @@ def main():
             import matplotlib.pyplot as plt
             fig, axs = plt.subplots(1, 3, figsize=(11, 3.5))
             for model, marker in (("brooks", "o-"), ("borodkina", "s--")):
-                rs = [r for r in scan if r.sheath == model]
+                # The CPU runs; _gpu ones are in the table beside them
+                rs = [r for r in scan if r.sheath == model
+                      and not r.name.endswith("_gpu")]
                 if not rs:
                     continue
                 a = [r.angle for r in rs]

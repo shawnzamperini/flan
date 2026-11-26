@@ -4,38 +4,35 @@
 */
 #pragma once
 
+#include "zones_hd.h"
+
 namespace Background
 {
 	/**
 	* Device-side copy of a Background, made by Background::to_device and
 	* freed with free_bkg.
 	*
-	* The pointers are to global memory on the GPU. The 4D arrays are
-	* flattened as (t, x, y, z) and indexed with calc_4d_index_cuda, and the
-	* 3D arrays as (x, y, z) and indexed with calc_3d_index_cuda (see
-	* cuda/utilities.cuh). Vector components are in physical (Cartesian) X,
-	* Y and Z.
-	*
-	* The times, cell centers, cell edges and simulation bounds aren't held
-	* here. They're in constant memory as the global variables d_t, d_x,
-	* d_grid_x, d_x_min, etc. (see cuda/device_constants.cuh).
+	* The pointers are to global memory on the GPU. The fields are the flat
+	* data of the host's ZonedVectors (zone after zone, ghost cells
+	* included), so a value is found with Zones::flat_index on zones, with
+	* dim1 = tdim for the 4D (t, x, y, z) fields and dim1 = 1 for the 3D
+	* (x, y, z) ones. Vector components are in physical (Cartesian) X, Y and
+	* Z.
 	*/
 	struct BackgroundDevice
 	{
 		int device_id;	///< ID of the GPU the arrays are on
 		int tdim;		///< Number of background times
-		int xdim;		///< Number of cells in x
-		int ydim;		///< Number of cells in y
-		int zdim;		///< Number of cells in z
+		double t_min;	///< First background time (s)
+		double t_max;	///< Last background time (s)
+		double* times;	///< Background times (s), tdim values
 
-		// Kept in constant memory instead, see cuda/device_constants.cuh
-		//double* times;
-		//double* x;
-		//double* y;
-		//double* z;
-		//double* grid_x;
-		//double* grid_y;
-		//double* grid_z;
+		/// The zones' grids, on the device (Zones::to_device)
+		Zones::ZonesView zones;
+
+		/// +1 if (R, z, Z) is right handed, -1 if not, for rotating
+		/// vectors in toroidal zones (Background::get_phi_sign)
+		double phi_sign;
 
 		// Plasma and field data, 4D
 		double* ne;		///< Electron density (m^-3)
@@ -60,6 +57,15 @@ namespace Background
 		double* uX;		///< Background flow X component (m/s)
 		double* uY;		///< Background flow Y component (m/s)
 		double* uZ;		///< Background flow Z component (m/s)
+
+		/// Parallel ion and electron heat fluxes (W/m^2), for the thermal
+		/// force, or nullptr if the background has none
+		double* q_par_i;
+		double* q_par_e;
+
+		/// SOLEDGE3X wall mask chi, 3D (1 inside the wall), or nullptr if
+		/// the background has none
+		double* chi;
 
 		// Not allocated by to_device, so these are always nullptr
 		double* X;

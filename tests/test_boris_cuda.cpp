@@ -1,4 +1,12 @@
+#include <algorithm>
+#include <array>
+#include <filesystem>
 #include <gtest/gtest.h>
+#include <string>
+#include <unistd.h>
+
+#include "boris.h"
+#include "multizone_cases.h"
 
 #include "background.h"
 #include "background_device.h"
@@ -138,3 +146,90 @@ TEST(UpdateVelocityGPU, UniformFieldBorisRotation)
 
 }
 
+
+// ---------------------------------------------------------------------
+// The GPU push against the CPU's (Boris::update_velocity_cpu) on the same
+// particles, spread over every zone of a multi-zone background: the
+// stencils reach into ghost cells at the zone faces, and on the HERMES
+// grid E is interpolated along the field line and rotated to the
+// particle's toroidal angle. The two agree to rounding (the GPU's fused
+// multiply-adds).
+// ---------------------------------------------------------------------
+
+namespace
+{
+	void push_matches_cpu(const Background::Background& bkg_in)
+	{
+		Background::Background bkg {bkg_in};
+		Slots::Slots cpu {MultiZone::spread_particles(bkg, 400, 7)};
+		Slots::Slots gpu {cpu};
+		const Options::Options opts {};
+		const double dt {1e-8};
+
+		Boris::update_velocity_cpu(cpu, bkg, opts, dt, nullptr, nullptr);
+
+		Background::BackgroundDevice bkg_d {bkg.to_device()};
+		Slots::SlotsDevice slots_d {gpu.to_device()};
+		Boris::update_velocity_gpu(slots_d, bkg_d, dt);
+		gpu = gpu.to_host(slots_d);
+		Slots::free_slots(slots_d);
+		Background::free_bkg(bkg_d);
+
+		// Tolerances relative to the size of each velocity: the Cartesian
+		// one, and the computational one (whose components have different
+		// units, so each is compared to its own largest value)
+		double max_c {};
+		std::array<double, 3> max_v {};
+		for (int i {}; i < cpu.N(); ++i)
+		{
+			max_c = std::max({max_c, std::abs(cpu.vX()[i]),
+				std::abs(cpu.vY()[i]), std::abs(cpu.vZ()[i])});
+			max_v[0] = std::max(max_v[0], std::abs(cpu.vx()[i]));
+			max_v[1] = std::max(max_v[1], std::abs(cpu.vy()[i]));
+			max_v[2] = std::max(max_v[2], std::abs(cpu.vz()[i]));
+		}
+		ASSERT_GT(max_c, 0.0);
+		int bad {};
+		for (int i {}; i < cpu.N(); ++i)
+		{
+			const bool ok {std::abs(gpu.vX()[i] - cpu.vX()[i]) < 1e-10 * max_c
+				&& std::abs(gpu.vY()[i] - cpu.vY()[i]) < 1e-10 * max_c
+				&& std::abs(gpu.vZ()[i] - cpu.vZ()[i]) < 1e-10 * max_c
+				&& std::abs(gpu.vx()[i] - cpu.vx()[i]) < 1e-10 * max_v[0]
+				&& std::abs(gpu.vy()[i] - cpu.vy()[i]) < 1e-10 * max_v[1]
+				&& std::abs(gpu.vz()[i] - cpu.vz()[i]) < 1e-10 * max_v[2]};
+			if (!ok && bad++ < 5)
+			{
+				ADD_FAILURE() << "particle " << i << " zone "
+					<< cpu.zone()[i] << ": GPU v (" << gpu.vX()[i] << ", "
+					<< gpu.vY()[i] << ", " << gpu.vZ()[i] << "), CPU ("
+					<< cpu.vX()[i] << ", " << cpu.vY()[i] << ", "
+					<< cpu.vZ()[i] << ")";
+			}
+		}
+		EXPECT_EQ(bad, 0);
+	}
+}
+
+TEST(UpdateVelocityGPU, MatchesCPUOnHermesGrid)
+{
+	const auto dir {std::filesystem::temp_directory_path()
+		/ ("flan_test_boris_cuda_hermes_" + std::to_string(getpid()))};
+	const Background::Background bkg {MultiZone::hermes_background(dir)};
+	std::filesystem::remove_all(dir);
+
+	// Every zone has a zShift table, so E is field aligned throughout
+	for (int zone {}; zone < bkg.get_zones().get_nzones(); ++zone)
+		ASSERT_TRUE(bkg.get_zones().has_z_shift(zone));
+	push_matches_cpu(bkg);
+}
+
+TEST(UpdateVelocityGPU, MatchesCPUOnS3XGrid)
+{
+	const auto dir {std::filesystem::temp_directory_path()
+		/ ("flan_test_boris_cuda_s3x_" + std::to_string(getpid()))};
+	const Background::Background bkg {MultiZone::s3x_background(dir)};
+	std::filesystem::remove_all(dir);
+	ASSERT_GT(bkg.get_zones().get_nzones(), 1);
+	push_matches_cpu(bkg);
+}
