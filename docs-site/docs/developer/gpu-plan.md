@@ -648,6 +648,8 @@ Progress:
   rest. A step with only a few hundred particles left still takes about
   450 us, the latency of one particle through the kernels, and those
   steps are a quarter of the run.
+- Done. Left for later (see "Later" below): running the kernels over a
+  list of live slots, and keeping only some frames on the device.
 
 **G9. Docs.**
 
@@ -686,3 +688,21 @@ All seven were accepted as recommended (2026-11-24).
 7. **How close CPU and GPU must agree.** Recommended: deterministic
    tests to rounding; regression and end-to-end results within the
    Monte Carlo error (e.g. 3 sigma), not bit for bit.
+
+## Later
+
+- **Live-slot list.** Make the list of live slots each step (as
+  `fill_slots_gpu` lists the dead ones) and run the kernels over it, so
+  the warps aren't mostly dead or neutral slots once particles stop
+  being refilled (G8: 2 to 3 busy lanes of 32 in the collision kernel).
+  The results would be the same bit for bit, since each slot keeps its
+  generator. Expected gain about 1.5 to 2 times in the busy part of a
+  run; it doesn't help the per-step latency when few particles are left.
+  This also covers decision 4's compacted near-wall kernel, which G8
+  didn't show was needed on its own (every sub-stepped particle took 2
+  sub-steps).
+- **Backgrounds too big for one GPU** (decision 5): keep only the frames
+  around the particles' times on the device.
+- **Registers.** The main kernels use 133 to 255 registers per thread,
+  which limits them to 8 warps per SM; splitting them or capping
+  registers might help once the lanes are full.
