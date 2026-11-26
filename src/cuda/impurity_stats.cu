@@ -37,11 +37,9 @@ namespace ImpurityStats
 	__global__ void record_stats_kernel(StatisticsDevice stats_d, 
 		Slots::SlotsDevice slots_d, double dt)
 	{
-		// Global index
-		int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-		// Avoid out of bounds indexing
-		if (i >= slots_d.N) return;
+		// This thread's slot (the next live one, see slot_of_thread)
+		const int i {Slots::slot_of_thread(slots_d)};
+		if (i < 0) return;
 
 		// Don't count dead particles
 		if (slots_d.state[i]) return;
@@ -86,12 +84,11 @@ namespace ImpurityStats
 		// Each stats is assigned to a specific GPU where its data lies
 		cudaSetDevice(stats_d.device_id);
 
-		// Call GPU kernel to record stats. We use the number of slots to
-		// calculate the grid size because we effectively want to loop through
-		// all the slots and aggregate their data into stats_d "one slot at 
-		// a time"
+		// One thread per live slot (see Slots::slot_of_thread), each
+		// adding its particle into stats_d
 		int blockSize = 256;
-		int gridSize = (slots_d.N + blockSize - 1) / blockSize;
+		int gridSize = Slots::num_blocks(slots_d, blockSize);
+		if (gridSize == 0) return;	// no live slots
 		record_stats_kernel<<<gridSize, blockSize>>>(stats_d, slots_d, dt);
 
 #ifdef DEBUG

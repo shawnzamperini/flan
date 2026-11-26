@@ -236,10 +236,25 @@ OpenMP thread has its own random number generator.
 ### GPU (CUDA)
 
 The GPU versions are split into a *kernel* (e.g., `step_kernel`) that runs one
-thread per slot, and a host function (e.g., `step_gpu`) that launches it in
+thread per live slot, and a host function (e.g., `step_gpu`) that launches it in
 blocks of 256 threads. Launches are asynchronous, except in `DEBUG` builds,
 where each one waits for the kernel to finish and checks for errors. Each
 slot has its own random number generator (`init_rngs.cu`).
+
+After filling the dead slots, `fill_slots_gpu` lists the live ones in
+increasing order (`SlotsDevice::live_indices`). A kernel gets its slot from
+`Slots::slot_of_thread`, which gives thread k the k-th live slot, and its
+host function launches `Slots::num_blocks` blocks, skipping the launch when
+there are none. The live particles then fill whole warps instead of being
+scattered among dead slots, which a warp would wait on. The host knows the
+length of the list without asking the GPU: it's the number of live slots
+after the fill, and only the step and the boundary check kill particles,
+before the next fill. A particle killed during a step stays listed until
+then, so kernels still check the slot's state. Before the first fill, or
+for slots set up by hand in a test, there's no list and thread k takes slot
+k. Since each slot has its own generator and its own results, which thread
+handles it doesn't change them. A new per-particle kernel should get its
+slot the same way.
 
 Kernels can't use the host-side classes, so the data they need is copied to
 the GPU into plain structs of device pointers:

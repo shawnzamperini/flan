@@ -13,8 +13,10 @@ namespace Slots
 	* with free_slots.
 	*
 	* A plain struct of device pointers, so it can be passed to kernels by
-	* value. Each per-particle array has N entries, one per slot, and slot i
-	* is handled by thread i in the kernels. Positions and their velocities
+	* value. Each per-particle array has N entries, one per slot. The
+	* kernels find their slot with slot_of_thread: after fill_slots_gpu
+	* has listed the live slots (live_indices), thread k handles the k-th
+	* live slot, and before that, slot k. Positions and their velocities
 	* (x, vx) are in computational coordinates, and vX, vY, vZ are the
 	* Cartesian velocity.
 	*/
@@ -64,5 +66,52 @@ namespace Slots
 							///< lists the dead slots (allocated by
 							///< fill_slots_gpu when first needed)
 		std::size_t select_temp_bytes;	///< Size of select_temp in bytes
+
+		// The live slots, listed by fill_slots_gpu after filling, so the
+		// kernels run one thread per live slot rather than per slot
+		int* live_indices;	///< Indices of the live slots in increasing
+							///< order, size N, or nullptr before the
+							///< first fill (then every slot is used)
+		int* num_live_d;	///< Single value, number of entries in
+							///< live_indices (written by the selection)
+		int num_live;		///< The same on the host, which sizes the
+							///< launches; N while there's no list
 	};
+
+	/**
+	* Number of blocks of block_size threads that cover the slots the
+	* kernels run over (num_live of them). Can be 0, which is not a valid
+	* launch, so the caller skips the launch then.
+	*
+	* @param slots_d Particle slots on the device.
+	* @param block_size Threads per block.
+	* @return Number of blocks.
+	*/
+	inline int num_blocks(const SlotsDevice& slots_d, const int block_size)
+	{
+		return (slots_d.num_live + block_size - 1) / block_size;
+	}
+
+#ifdef __CUDACC__
+	/**
+	* The slot the calling thread handles, or -1 if it has none.
+	*
+	* Thread k (over the whole grid) takes the k-th entry of the live
+	* list, so the live particles fill whole warps instead of being
+	* scattered among dead slots. Without a list (before the first fill,
+	* or in tests that set up slots by hand) thread k takes slot k. A slot
+	* in the list can still be dead: particles that die during a step stay
+	* listed until the next fill, so the kernels keep checking the state.
+	*
+	* @param slots_d Particle slots on the device.
+	* @return Slot index, or -1 past the last slot.
+	*/
+	__device__ inline int slot_of_thread(const SlotsDevice& slots_d)
+	{
+		const int k {static_cast<int>(blockIdx.x * blockDim.x
+			+ threadIdx.x)};
+		if (k >= slots_d.num_live) return -1;
+		return slots_d.live_indices != nullptr ? slots_d.live_indices[k] : k;
+	}
+#endif
 }

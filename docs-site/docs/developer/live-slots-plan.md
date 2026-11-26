@@ -92,6 +92,21 @@ the other slots of a warp the way a GPU lane does.
 - Temporary instrumentation, not committed: how many of the live slots
   are neutral each step, which decides decision 1.
 
+Done (2026-11-26). The references are in `$SCRATCH/flan_gpu/live/l0`
+(`refs.sh` runs them): end-to-end HERMES `all` and `sput`, SOLEDGE3X
+`self`, the Gkeyll timing case and the seeded friction case. Neutral
+share of the live slots, sampled every 1000 steps after the first:
+
+| Case | Neutral share of live slots |
+|---|---|
+| HERMES, sputtered source | 46% at step 5000, 26% at 10000, 16% at 15000, 10% at 20000; 37% of the live particle steps |
+| SOLEDGE3X, sputtered source | All neutral at birth, but nearly all gone by step 2000; few neutrals after |
+| Gkeyll, started charged | None |
+
+So in a sputtered-source run, a third or more of the live slots early on
+are neutral, falling as they ionize. Whether L3 is worth doing is left to
+L4's measurement of the busy lanes in the collision kernel.
+
 **L1. The live list.**
 
 - `SlotsDevice::live_indices` (allocated and freed with the others) and
@@ -106,12 +121,32 @@ the other slots of a warp the way a GPU lane does.
   L0's (counts and trajectories exactly, sums to rounding,
   `g0/cmp.py`); the `_gpu` regression variants pass.
 
+Done. The selection reuses the dead list's work space; `live_indices`
+and its device-side count are allocated by the first fill. Every
+per-slot kernel in `src/cuda/` takes its slot from `slot_of_thread` and
+is launched over `num_blocks` blocks (none when nothing is live).
+`LiveSlotsCUDATest` checks that there's no list before a fill, that the
+list is the live slots in order after fills that kill and refill
+scattered slots, and that collisions, the push, the step and the cell
+search give bit-identical slots with and without it. Two mutations
+(ignoring the list, listing the dead slots) each fail it. Against L0,
+the seeded runs differ only in `atomicAdd` sums (the mean velocities,
+charge, density and redeposited energy), by at most 1e-15 relative;
+every count, and the printed summaries, are the same. The `_gpu`
+regression variants pass their checkers (collisions, drifts,
+redeposition, self-sputtering); `ctest` passes on both builds except
+`MPITest` (compute node only).
+
 **L2. The all-dead check from the host's count.**
 
 - With `alive_slots` exact after the fill, the run is over when it is 0
   and no particles are left to start. That replaces `all_dead_kernel`
   and its copy from the device, one wait for the GPU each step (decision
   3). Same checks as L1.
+
+Done, with L1: `all_dead_wrapper` returns `num_live == 0` once there's
+a list, and falls back to `all_dead_gpu` before the first fill. Checked
+with L1's runs.
 
 **L3. A charged-only list for collisions** (only if L0 shows many live
 slots are neutral, decision 1).

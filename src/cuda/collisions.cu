@@ -455,11 +455,9 @@ namespace Collisions
 		// Nanbu, K. Theory of cumulative small-angle collisions in plasmas. 
 		// Phys. Rev. E 55, 4642–4652 (1997).
 
-		// Global index
-		int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-		// Don't try and access beyond the number of slots (segfault)
-		if (i >= slots_d.N) return;
+		// This thread's slot (the next live one, see slot_of_thread)
+		const int i {Slots::slot_of_thread(slots_d)};
+		if (i < 0) return;
 
 		// If particle isn't alive then skip
 		if (slots_d.state[i] > 0) return;
@@ -688,7 +686,8 @@ namespace Collisions
 	{
 		// Block and grid size
 		int blockSize = 256;
-		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
+		int gridSize  = Slots::num_blocks(slots_d, blockSize);
+		if (gridSize == 0) return;	// no live slots
 
 		// Shape of this species' skew, with the collisional (fluid
 		// closure) push, as on the CPU

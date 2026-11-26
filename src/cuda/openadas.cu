@@ -242,11 +242,9 @@ namespace OpenADAS
 		OpenADASDevice oa_recomb_d, const float dt, pcg32* rngs_d, 
 		int* d_ioniz_warnings, int* d_recomb_warnings, const int max_charge)
 	{
-		// Global index
-		int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-		// Don't try and access beyond the number of slots (segfault)
-		if (i >= slots_d.N) return;
+		// This thread's slot (the next live one, see slot_of_thread)
+		const int i {Slots::slot_of_thread(slots_d)};
+		if (i < 0) return;
 
 		// If particle isn't alive then skip
 		if (slots_d.state[i] > 0) return;
@@ -452,7 +450,8 @@ namespace OpenADAS
 	{
 		// Block and grid size
 		int blockSize = 256;
-		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
+		int gridSize  = Slots::num_blocks(slots_d, blockSize);
+		if (gridSize == 0) return;	// no live slots
 
 		ioniz_recomb_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, 
 			oa_ioniz_d, oa_recomb_d, dt, rngs_d, warnings_d.ioniz, 
