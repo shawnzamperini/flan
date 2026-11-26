@@ -248,8 +248,8 @@ same as for SOLEDGE3X. Tests: `SputteringSurface.TargetFaces`,
 `SputteringTable.SourceOnTargets`, `SputteringDeposition.WallFaces` and
 `ReadHermesTest.SputteringTargets`.
 
-**Later**: the GPU path, and field-aligned interpolation for turbulent
-SOLEDGE3X runs. The BOUT++ Hermes-3 reader has its own plan, below.
+**Later**: field-aligned interpolation for turbulent SOLEDGE3X runs. The
+GPU path is done: see the [GPU Plan](gpu-plan.md) (G1 to G3). The BOUT++ Hermes-3 reader has its own plan, below.
 
 ## BOUT++ Hermes-3 reader
 

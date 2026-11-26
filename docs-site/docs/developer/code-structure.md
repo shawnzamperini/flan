@@ -252,9 +252,23 @@ the GPU into plain structs of device pointers:
 | `Impurity::Statistics` | `ImpurityStats::StatisticsDevice` | `Statistics::to_device` |
 | `OpenADAS::OpenADAS` | `OpenADAS::OpenADASDevice` | `OpenADAS::to_device` |
 | `Options::Options` | `Options::OptionsDevice*` (only the options kernels use) | `Options::to_device` |
+| `Sputtering::Source` | `Sputtering::SourceDevice` | `Source::to_device` |
+| `Sputtering::Deposition` | `Sputtering::DepositionDevice` | `Deposition::to_device` |
+| `Sputtering::SelfSource` | `Sputtering::SelfDevice` | `SelfSource::to_device` |
+| `Sheath::Sheath` | `Sheath::SheathDevice` | `Sheath::to_device` |
 
 Each has a matching `free_*` function. Everything is in global memory, so
-any number of backgrounds can be on one GPU.
+any number of backgrounds can be on one GPU. The tallies made on a GPU
+(deposition, self-sputtering, fates, warnings, sampler counts) are added
+to the host's after the run (`add_from_device` and the `*_from_device`
+functions), so the results and printed summaries are the same as a CPU
+run's.
+
+Before anything is copied, `follow_impurities` adds up the memory the
+copies need (`Background::device_bytes`, `Statistics::device_bytes`,
+plus the slots) and stops with a message if it won't fit on a GPU
+(`gpu_memory_shortfall`). A new array that scales with the grid should
+be counted in the matching `device_bytes`.
 
 The zones' grids live in nested `std::vector`s in `Zones::Zones`, which
 kernels can't use. `Zones::ZonesView` (`include/zones_hd.h`) holds the same
@@ -274,6 +288,37 @@ With several GPUs, `follow_impurities` copies everything to each GPU and runs
 `main_loop` on each in its own `std::thread` (`gpu_worker`). Counters that the
 GPUs add to, like the ionization/recombination and `imp_max_time` warnings,
 are kept on each GPU and summed on the host after the threads finish.
+Each worker is pinned to its own OpenMP place (`pin_gpu_worker`): a
+`std::thread` starts with its creator's binding, which `OMP_PROC_BIND` sets
+to one core, and the workers would otherwise all share it.
+
+The timer's sections on a GPU run mostly time the launches, since a launch
+returns at once. The kernels' time shows up in the first section that
+copies something back from the device each step (the dead-slot count in
+"Filling slots", or the self-sputtering avalanche flag in "Boundary
+conditions"). For the time each kernel takes, use `nsys profile -t cuda`.
+
+### Adding a feature that runs on both
+
+1. Write the per-particle math once, as `FLAN_HD` functions in a
+   `*_hd.h` header, taking a view (a struct of plain pointers and sizes)
+   rather than the host class. Tallies are added through an adder
+   template argument (`OmpAdd` on the CPU, `DeviceAdd` on the GPU).
+2. Give the host class a `view()` for the CPU and a `to_device` that
+   copies the same arrays to a GPU and returns the view with device
+   pointers, plus a `free_*` function. Lookups that would use a hash map
+   on the CPU use sorted keys and bisection, or CSR lists, so the device
+   can search the same arrays.
+3. Call the shared functions from the CPU loop and from the kernel, and
+   pass the device copy through `follow_impurities`, `gpu_worker` and
+   `main_loop` to the wrapper. If the GPU tallies anything, copy it back
+   and add it to the host's after the run.
+4. Add any options the kernels read to `OptionsDevice` (see "Adding an
+   input option" below), and count large arrays in `device_bytes`.
+5. Test that the two agree: a `*_cuda` test that runs the CPU routine one
+   particle at a time with GPU slot i's generator (`pcg32(seed + i, i)`)
+   and compares to rounding, and a `_gpu` variant of the feature's
+   regression case that passes the same checker.
 
 ### Fields at a particle
 

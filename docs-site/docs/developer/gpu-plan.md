@@ -662,6 +662,16 @@ Progress:
   note on the speed-up to expect.
 - Update the "Later" notes of the HERMES and sheath plans to point here.
 
+Done. The last "CPU only" notes were in `physics/thermal-force.md` (its
+table still said a GPU run with heat fluxes stops), `running/hermes.md`'s
+limitations, the HERMES and SOLEDGE3X example inputs and one comment in
+`impurity_transport.cpp`; the other pages were updated in their phases.
+`code-structure.md` has the sputtering and sheath device structs, the
+memory check, the worker pinning, what the GPU timer sections mean, and
+a checklist for adding a feature that runs on both. `running-flan.md`
+says what runs on the GPU and what speed-up to expect, and the
+Perlmutter page no longer calls the GPU script untested.
+
 ## Decisions
 
 All seven were accepted as recommended (2026-11-24).

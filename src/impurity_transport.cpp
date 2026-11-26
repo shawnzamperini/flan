@@ -906,7 +906,7 @@ namespace ImpurityTransport
 	* @param deposition Where absorbed particles land on the wall, added to
 	*                   if given (CPU path; dep_d on the GPU).
 	* @param sheath If given, the sheath field in front of the walls is
-	*               added to the push (CPU only).
+	*               added to the push (CPU path; sheath_d on the GPU).
 	* @param source_d Sputtered source on the device (GPU only), or
 	*                 nullptr.
 	* @param dep_d Deposition tallies on the device (GPU only), or nullptr.

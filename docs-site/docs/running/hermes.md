@@ -233,4 +233,3 @@ the turbulence as statistically steady.
   time, with no time averaging.
 - BOUT++ runs: one run directory per background, and no split in z
   (`NZPE` = 1).
-- On GPUs, no sputtering or sheath yet (see the note at the top).

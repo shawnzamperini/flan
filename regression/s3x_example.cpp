@@ -9,8 +9,7 @@ Inputs create_inputs()
 {
 	Inputs inpts;
 
-	// Meta options. "cuda" runs on GPUs, but the sheath field and
-	// self-sputtering are CPU only so far.
+	// Meta options. "cuda" runs on GPUs, with everything below.
 	inpts["use_gpu"] = "off";
 	inpts["case_name"] = "s3x_example";
 

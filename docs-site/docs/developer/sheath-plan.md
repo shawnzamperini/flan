@@ -679,8 +679,8 @@ follows `sheath_model` and refuses `"off"`; `"formula"` stays the
 default until D4 passes; the E × B share of Γ gets the same
 distribution, stated as a limitation.
 
-**Later**: the GPU path (sputtering is CPU only today, so this goes with
-moving the sputtered source to the GPU) and reflection.
+**Later**: reflection. The GPU path is done: see the
+[GPU Plan](gpu-plan.md) (G5 to G7).
 
 ## Phase S0 findings
 

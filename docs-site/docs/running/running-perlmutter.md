@@ -10,7 +10,9 @@ Copies of both are in the repository, as
 
 !!! note "Starting points"
     These scripts are a place to start, not tuned settings. The CPU script is
-    the one Flan has been run with. The GPU script hasn't been tested yet.
+    the one Flan has been run with. The GPU script's layout (one rank with
+    all 4 GPUs, threads bound to cores) is the one the GPU timings were
+    made with.
     How many CPUs to ask for and how to bind the threads depends on the job,
     see NERSC's guide to
     [process and thread affinity](https://docs.nersc.gov/jobs/affinity/).

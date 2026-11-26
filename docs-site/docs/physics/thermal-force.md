@@ -321,8 +321,8 @@ and on the CPU and the GPU.
 ## Using it
 
 The thermal force is on by default, so with a SOLEDGE3X background whose
-plasma files have the face fluxes, and `use_gpu = "off"`, nothing needs
-to be set. To compare with a run without it:
+plasma files have the face fluxes, nothing needs to be set, on the CPU
+or the GPU. To compare with a run without it:
 
 ```cpp
 inpts["imp_thermal_force"] = "off";
@@ -332,9 +332,8 @@ What Flan does in each situation:
 
 | Situation | Result |
 |---|---|
-| Heat fluxes available, CPU | Thermal force included |
+| Heat fluxes available | Thermal force included (CPU and GPU) |
 | No heat fluxes (other backgrounds, or files without face fluxes) | Warning, run goes ahead without it |
-| Heat fluxes available, GPU | Run stops: use the CPU or turn the option off |
 | Only one species has a heat flux | Run stops |
 | Option off, collisions on | Warning that the thermal force is left out |
 
