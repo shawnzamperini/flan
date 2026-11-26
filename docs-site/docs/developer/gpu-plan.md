@@ -598,6 +598,56 @@ Progress:
   background and 962 MiB for the statistics, against 2504 MiB and
   972 MiB measured, about 170 MiB per frame. A 40 GB A100 fits about 200
   such frames.
+- Compute-node runs (jobs 61996277, 61996279, 62011822; A100s, 64 CPU
+  threads). HERMES with everything on (sputtered source, sheath,
+  self-sputtering, thermal force), 2e4 steps of 1 ns per particle;
+  "following impurities" times:
+
+  | Run | Time |
+  |---|---|
+  | 4000 particles, CPU | 61 s |
+  | 4000 particles, 1 GPU | 28 s |
+  | 40000 particles, 1 GPU | 51 s |
+  | 160000 particles, 1 GPU | 125 s |
+  | 160000 particles, 4 GPUs, 1 rank (before / after pinning) | 106 s / 57 s |
+  | 640000 particles, 4 GPUs, 1 rank | 129 s |
+  | 160000 particles, 2 ranks of 2 GPUs (before pinning) | 56 s |
+
+  At 160000 particles a GPU takes about 13 ns per particle step,
+  against 360 ns on the CPU; 4000 particles leave it mostly idle. The
+  SOLEDGE3X case (no face heat fluxes, so no thermal force) took 10 s
+  for 4000 particles. `MPITest` passes on a compute node.
+- Several GPUs in one rank: the GPU workers are `std::thread`s started
+  from the OpenMP master thread, which `OMP_PROC_BIND` pins to one core,
+  and a new thread keeps its creator's binding. All four workers shared
+  one core while spinning in `cudaMemcpy`. `pin_gpu_worker` now gives
+  each its own OpenMP place, spread like `OMP_PROC_BIND=spread`; 4 GPUs
+  went from 1.2 to 2.2 times one GPU at 160000 particles (40000 each
+  doesn't fill a GPU), and 4 GPUs with 640000 take as long as 1 GPU with
+  160000.
+- The section timers: a launch returns at once, so a section's time on
+  the GPU is its launch time, and the kernels' time lands in the first
+  section that copies from the device. That was "Filling slots" (the
+  dead-slot count), and with self-sputtering it is "Boundary conditions"
+  (the avalanche flag). Neither does much work itself.
+- `nsys` (CUDA trace only; `-t osrt` stopped the run before
+  `MPI_Init`), 40000 particles: Nanbu collisions 61% of the GPU time,
+  near-wall sub-steps 18%, Boris 10%, ionization 5%, everything else
+  under 2% each. `ncu` needs DCGM's profiling paused
+  (`dcgmi profile --pause` in the job, `--resume` after). It shows the
+  kernels are latency bound, not memory bound (under 21% of memory
+  throughput): 133 to 255 registers per thread limit them to 8 warps
+  per SM, and in the collision kernel only 2 to 3 of 32 lanes are busy
+  per instruction (Boris and ionization: 16 to 17).
+- Why so few lanes: the collision sub-cycles aren't it (almost every
+  particle has 1, a few 2). With `imp_num` under `slot_cap` every
+  particle gets a slot at the start and slots aren't refilled, so the
+  live charged particles are scattered over slots that are dead or
+  neutral: 30% of slots mid-run, 3% near the end. Branches inside the
+  kernel (the skewed sampler's rejections, the interpolation) take the
+  rest. A step with only a few hundred particles left still takes about
+  450 us, the latency of one particle through the kernels, and those
+  steps are a quarter of the run.
 
 **G9. Docs.**
 

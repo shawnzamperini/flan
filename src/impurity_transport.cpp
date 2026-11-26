@@ -10,6 +10,10 @@
 #include <chrono>
 #include <cstdlib>
 #include <omp.h>
+#ifdef __linux__
+#include <pthread.h>
+#include <sched.h>
+#endif
 #include <sstream>
 #include <thread>
 #include <tuple>
@@ -1150,6 +1154,39 @@ namespace ImpurityTransport
 #ifdef USE_CUDA
 
 	/**
+	* Pins the worker thread for one GPU to its own share of the cores.
+	*
+	* With OpenMP thread binding on (OMP_PROC_BIND, as in the Perlmutter
+	* job scripts), the thread that starts the workers is bound to a single
+	* core, and a std::thread starts with its creator's binding. Every GPU
+	* worker would then share that one core, and since each spends most of
+	* a step waiting on its GPU in cudaMemcpy, which keeps a core busy,
+	* they slow each other down. Each worker is given the OpenMP place
+	* (OMP_PLACES) at dev / num_gpus of the way through the list, the way
+	* OMP_PROC_BIND=spread places threads. Without binding (no places),
+	* the threads are left free to run anywhere.
+	*
+	* @param t The worker's thread.
+	* @param dev Its GPU.
+	* @param num_gpus Number of GPU workers.
+	*/
+	void pin_gpu_worker([[maybe_unused]] std::thread& t,
+		[[maybe_unused]] const int dev, [[maybe_unused]] const int num_gpus)
+	{
+#ifdef __linux__
+		const int nplaces {omp_get_num_places()};
+		if (nplaces <= 0) return;
+		const int place {dev * nplaces / num_gpus};
+		std::vector<int> procs (omp_get_place_num_procs(place));
+		omp_get_place_proc_ids(place, procs.data());
+		cpu_set_t set;
+		CPU_ZERO(&set);
+		for (const int p : procs) CPU_SET(p, &set);
+		pthread_setaffinity_np(t.native_handle(), sizeof(set), &set);
+#endif
+	}
+
+	/**
 	* Runs main_loop on a single GPU from its own host thread.
 	*
 	* follow_impurities starts one of these per GPU so the GPUs run
@@ -1508,6 +1545,7 @@ namespace ImpurityTransport
 					deposition != nullptr ? &gpu_deps[dev] : nullptr,
 					sheath != nullptr ? &gpu_sheaths[dev] : nullptr,
 					self != nullptr ? &gpu_selfs[dev] : nullptr);
+				pin_gpu_worker(threads.back(), dev, num_gpus);
 			}
 
 			// Wait for all threads to finish
