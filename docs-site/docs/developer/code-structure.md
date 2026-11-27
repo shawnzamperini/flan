@@ -246,10 +246,15 @@ slot has its own random number generator (`init_rngs.cu`).
 
 After filling the dead slots, `fill_slots_gpu` lists the live ones in
 increasing order (`SlotsDevice::live_indices`). A kernel gets its slot from
-`Slots::slot_of_thread`, which gives thread k the k-th live slot, and its
-host function launches `Slots::num_blocks` blocks, skipping the launch when
-there are none. The live particles then fill whole warps instead of being
-scattered among dead slots, which a warp would wait on. The host knows the
+`Slots::slot_of_thread`, which hands the list out in order, `per_warp` slots
+to a warp, and its host function launches `Slots::num_blocks` blocks,
+skipping the launch when there are none. The live particles then sit
+together in warps instead of being scattered among dead slots, which a warp
+would wait on. They aren't always packed 32 to a warp, though: the kernels'
+lanes diverge, and a warp runs its lanes' different paths one after
+another, so while there are fewer particles than the GPU has resident
+warps, they're spread out as few to a warp as fills the GPU
+(`Slots::per_warp_for`), and run side by side. The host knows the
 length of the list without asking the GPU: it's the number of live slots
 after the fill, and only the step and the boundary check kill particles,
 before the next fill. A particle killed during a step stays listed until

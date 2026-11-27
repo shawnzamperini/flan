@@ -16,6 +16,7 @@ add_executable(test_openadas_cpu test_openadas_cpu.cpp)
 add_executable(test_zoned_vector_cpu test_zoned_vector_cpu.cpp)
 add_executable(test_zones_cpu test_zones_cpu.cpp)
 add_executable(test_gpu_memory_cpu test_gpu_memory_cpu.cpp)
+add_executable(test_live_slots_cpu test_live_slots_cpu.cpp)
 
 # Link your main library + GoogleTest. Tests that involve OpenMP need to link
 # against those as well as the flan library.
@@ -28,6 +29,7 @@ target_link_libraries(test_openadas_cpu PRIVATE flan gtest_main OpenMP::OpenMP_C
 target_link_libraries(test_zoned_vector_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_zones_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_gpu_memory_cpu PRIVATE flan gtest_main)
+target_link_libraries(test_live_slots_cpu PRIVATE flan gtest_main)
 
 # Register with CTest
 add_test(NAME GetNearestIndexCPUTest COMMAND test_get_nearest_index_cpu)
@@ -39,6 +41,7 @@ add_test(NAME OpenADASCPUTest COMMAND test_openadas_cpu)
 add_test(NAME ZonedVectorCPUTest COMMAND test_zoned_vector_cpu)
 add_test(NAME ZonesCPUTest COMMAND test_zones_cpu)
 add_test(NAME GpuMemoryCPUTest COMMAND test_gpu_memory_cpu)
+add_test(NAME LiveSlotsCPUTest COMMAND test_live_slots_cpu)
 
 add_executable(test_cross_zones_cpu test_cross_zones_cpu.cpp)
 target_link_libraries(test_cross_zones_cpu PRIVATE flan gtest_main

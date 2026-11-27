@@ -6,6 +6,8 @@
 
 #include <cstddef>
 
+#include "host_device.h"
+
 namespace Slots
 {
 	/**
@@ -15,8 +17,9 @@ namespace Slots
 	* A plain struct of device pointers, so it can be passed to kernels by
 	* value. Each per-particle array has N entries, one per slot. The
 	* kernels find their slot with slot_of_thread: after fill_slots_gpu
-	* has listed the live slots (live_indices), thread k handles the k-th
-	* live slot, and before that, slot k. Positions and their velocities
+	* has listed the live slots (live_indices), the threads take them in
+	* order, per_warp to a warp, and before that, thread k takes slot k.
+	* Positions and their velocities
 	* (x, vx) are in computational coordinates, and vX, vY, vZ are the
 	* Cartesian velocity.
 	*/
@@ -76,7 +79,59 @@ namespace Slots
 							///< live_indices (written by the selection)
 		int num_live;		///< The same on the host, which sizes the
 							///< launches; N while there's no list
+		int per_warp;		///< Live slots given to each warp, 1 to 32
+							///< (see per_warp_for); 32 while there's
+							///< no list
+		int resident_warps;	///< Warps of the heavy kernels this GPU runs
+							///< at once (set by the first fill)
 	};
+
+	/// Threads in a warp
+	constexpr int warp_size {32};
+
+	/**
+	* How many live slots each warp gets, so that the launch fills the
+	* warps the GPU can run at once and no more.
+	*
+	* The kernels' lanes diverge (most of all in the collisions), and a
+	* warp runs its lanes' different paths one after another. While
+	* there are fewer live particles than the GPU has resident warps,
+	* packing them 32 to a warp would make them take turns in a few warps
+	* when they could each have a warp and run at the same time. So they
+	* are spread out, as few to a warp as fills the GPU, and packed fully
+	* once there are more than it holds, when the warps would wait their
+	* turn anyway and packing saves the dead lanes.
+	*
+	* @param num_live Number of live slots.
+	* @param resident_warps Warps the GPU runs at once, 0 if not known.
+	* @return Live slots per warp, 1 to warp_size.
+	*/
+	FLAN_HD inline int per_warp_for(const int num_live,
+		const int resident_warps)
+	{
+		if (resident_warps <= 0) return warp_size;
+		const int p {(num_live + resident_warps - 1) / resident_warps};
+		return p < 1 ? 1 : (p > warp_size ? warp_size : p);
+	}
+
+	/**
+	* Position in the live list that thread k takes: the first per_warp
+	* lanes of each warp take consecutive entries, and the other lanes
+	* none.
+	*
+	* @param k Thread index over the whole grid.
+	* @param per_warp Live slots per warp.
+	* @param num_live Number of entries in the list.
+	* @return Position in the list, or -1 if the thread has none.
+	*/
+	FLAN_HD inline int list_position(const int k, const int per_warp,
+		const int num_live)
+	{
+		const int lane {k % warp_size};
+		if (lane >= per_warp) return -1;
+		const int j {(k / warp_size) * per_warp + lane};
+		return j < num_live ? j : -1;
+	}
 
 	/**
 	* Threads per block for the kernels that use the most registers:
@@ -91,25 +146,29 @@ namespace Slots
 
 	/**
 	* Number of blocks of block_size threads that cover the slots the
-	* kernels run over (num_live of them). Can be 0, which is not a valid
-	* launch, so the caller skips the launch then.
+	* kernels run over (num_live of them, per_warp to a warp). Can be 0,
+	* which is not a valid launch, so the caller skips the launch then.
 	*
 	* @param slots_d Particle slots on the device.
-	* @param block_size Threads per block.
+	* @param block_size Threads per block, a multiple of warp_size.
 	* @return Number of blocks.
 	*/
 	inline int num_blocks(const SlotsDevice& slots_d, const int block_size)
 	{
-		return (slots_d.num_live + block_size - 1) / block_size;
+		const int warps {(slots_d.num_live + slots_d.per_warp - 1)
+			/ slots_d.per_warp};
+		const int warps_per_block {block_size / warp_size};
+		return (warps + warps_per_block - 1) / warps_per_block;
 	}
 
 #ifdef __CUDACC__
 	/**
 	* The slot the calling thread handles, or -1 if it has none.
 	*
-	* Thread k (over the whole grid) takes the k-th entry of the live
-	* list, so the live particles fill whole warps instead of being
-	* scattered among dead slots. Without a list (before the first fill,
+	* The threads take the live list in order, per_warp to a warp
+	* (list_position), so the live particles sit together in warps
+	* instead of being scattered among dead slots, as many to a warp as
+	* fills the GPU (per_warp_for). Without a list (before the first fill,
 	* or in tests that set up slots by hand) thread k takes slot k. A slot
 	* in the list can still be dead: particles that die during a step stay
 	* listed until the next fill, so the kernels keep checking the state.
@@ -121,8 +180,9 @@ namespace Slots
 	{
 		const int k {static_cast<int>(blockIdx.x * blockDim.x
 			+ threadIdx.x)};
-		if (k >= slots_d.num_live) return -1;
-		return slots_d.live_indices != nullptr ? slots_d.live_indices[k] : k;
+		const int j {list_position(k, slots_d.per_warp, slots_d.num_live)};
+		if (j < 0) return -1;
+		return slots_d.live_indices != nullptr ? slots_d.live_indices[j] : j;
 	}
 #endif
 }

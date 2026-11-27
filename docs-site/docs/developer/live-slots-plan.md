@@ -3,7 +3,8 @@
 This page is the development plan for running the GPU kernels over a list
 of the slots that hold a live particle, instead of over every slot. It is
 the first item of "Later" in the [GPU Plan](gpu-plan.md#later). The work
-is on the branch `gpu-live-slots`.
+was done on the branch `gpu-live-slots` and merged to `main` on
+2026-11-27.
 
 ## Why
 
@@ -207,10 +208,42 @@ about 5% faster, the push 2%, the sub-steps the same. Kept for those
 (`Slots::heavy_block_size`); the other kernels stay at 256. Results are
 unchanged apart from the rounding of `atomicAdd` sums.
 
+**L4b. Spreading the list over the warps** (added after L4).
+
+- While there are fewer live slots than the GPU has resident warps for
+  the heavy kernels, give each warp only as many as fills the GPU, down
+  to one (`Slots::per_warp_for`, `Slots::list_position`); pack them 32
+  to a warp once there are more. `resident_warps` is set by the first
+  fill from the SM count and the registers per SM, taking the heavy
+  kernels at 255 registers per thread.
+
+Done (2026-11-27). `LiveSlotsCPUTest` checks that each live slot goes to
+exactly one thread with no more than `per_warp` to a warp (dropping the
+lane cut-off fails it), and `LiveSlotsCUDATest` that its comparison case
+is spread. The seeded runs match L2 to rounding and the logs are the
+same. On one node, alternating, "Following impurities" (s):
+
+| Case | `main` | packed (L4) | spread |
+|---|---|---|---|
+| SOLEDGE3X `self` (2 runs each) | 10.26 | 11.19 | 9.82 |
+| HERMES, 1 GPU, 4000 | 28.2 | 29.3 | 25.0 |
+| HERMES, 1 GPU, 40000 | 51.1 | 43.7 | 40.3 |
+| HERMES, 1 GPU, 160000 | 125.4 | 84.6 | 80.4 |
+| HERMES, 4 GPUs, 160000 | 56.5 | | 45.3 |
+| Gkeyll, 1 GPU | 2.87 | 2.38 | 2.36 |
+
+So the spread list is faster than `main` in every case, by 4% when only
+a few particles are left for most of the run and by a third in the
+largest. The rest of the collision kernel's idle lanes are divergence
+inside it, which is left for later (GPU plan).
+
 **L5. Docs and merge.**
 
 - `code-structure.md`: how a kernel finds its slot (`slot_of_thread`),
   for new kernels. Then merge to `main`.
+
+Done: `code-structure.md` covers `slot_of_thread`, the spreading and
+`heavy_block_size`, and the GPU plan's "Later" points here.
 
 ## Decisions
 

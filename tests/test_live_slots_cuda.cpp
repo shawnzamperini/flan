@@ -1,9 +1,9 @@
 /*
 * The list of live slots that fill_slots_gpu makes for the kernels
 * (SlotsDevice::live_indices, Slots::slot_of_thread): it holds exactly the
-* live slots in increasing order after a fill, and running the kernels
-* over it gives the same slots, bit for bit, as running them over every
-* slot. Each slot keeps its own generator, so which thread handles it
+* live slots in increasing order after a fill, spread over the warps
+* while there are few, and running the kernels over it gives the same
+* slots, bit for bit, as running them over every slot. Each slot keeps its own generator, so which thread handles it
 * mustn't matter.
 *
 * The slots are set up as in a run that has stopped refilling: every slot
@@ -167,6 +167,14 @@ TEST(LiveSlotsCUDA, ListsLiveSlotsInOrder)
 	// The setup gives a scattered list: most slots dead, some refilled
 	EXPECT_GT(num_live, refill);
 	EXPECT_LT(num_live, num_slots / 2);
+
+	// Spread over the warps to fill the GPU: so few live slots fit with
+	// fewer than 32 to a warp on any GPU this runs on, which the
+	// comparison below then covers
+	EXPECT_GT(s.slots_d.resident_warps, 0);
+	EXPECT_EQ(s.slots_d.per_warp, Slots::per_warp_for(num_live,
+		s.slots_d.resident_warps));
+	EXPECT_LT(s.slots_d.per_warp, Slots::warp_size);
 }
 
 // The kernels give the same slots over the list as over every slot

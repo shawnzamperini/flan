@@ -11,6 +11,7 @@
 * particles start according to the imp_*start_opt and imp_temp_start_opt
 * options, or from the sputtered source (imp_source_opt = "sputter").
 */
+#include <algorithm>
 #include <cstdio>
 
 #include <cub/device/device_select.cuh>
@@ -519,6 +520,20 @@ namespace Slots
 				"fill_slots_gpu: allocating the live list");
 			Errors::check_cuda(cudaMalloc(&slots_d.num_live_d, sizeof(int)),
 				"fill_slots_gpu: allocating the live count");
+
+			// Warps the heavy kernels can have on the GPU at once, for
+			// per_warp_for. They use up to 255 registers per thread, the
+			// most a thread can have, so that is what limits them.
+			int sms {}, regs {}, threads {};
+			cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount,
+				slots_d.device_id);
+			cudaDeviceGetAttribute(&regs,
+				cudaDevAttrMaxRegistersPerMultiprocessor, slots_d.device_id);
+			cudaDeviceGetAttribute(&threads,
+				cudaDevAttrMaxThreadsPerMultiProcessor, slots_d.device_id);
+			const int per_sm {std::max(1, std::min(regs / (255 * warp_size),
+				threads / warp_size))};
+			slots_d.resident_warps = sms * per_sm;
 		}
 		const IsAlive is_alive {slots_d.state};
 		std::size_t live_temp_bytes {};
@@ -535,6 +550,7 @@ namespace Slots
 			slot_index, slots_d.live_indices, slots_d.num_live_d, slots_d.N,
 			is_alive);
 		slots_d.num_live = alive_slots;
+		slots_d.per_warp = per_warp_for(alive_slots, slots_d.resident_warps);
 
 #ifdef DEBUG
 		// The host's count must be the selection's
