@@ -16,6 +16,7 @@ add_executable(test_openadas_cpu test_openadas_cpu.cpp)
 add_executable(test_zoned_vector_cpu test_zoned_vector_cpu.cpp)
 add_executable(test_zones_cpu test_zones_cpu.cpp)
 add_executable(test_gpu_memory_cpu test_gpu_memory_cpu.cpp)
+add_executable(test_live_slots_cpu test_live_slots_cpu.cpp)
 
 # Link your main library + GoogleTest. Tests that involve OpenMP need to link
 # against those as well as the flan library.
@@ -28,6 +29,7 @@ target_link_libraries(test_openadas_cpu PRIVATE flan gtest_main OpenMP::OpenMP_C
 target_link_libraries(test_zoned_vector_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_zones_cpu PRIVATE flan gtest_main)
 target_link_libraries(test_gpu_memory_cpu PRIVATE flan gtest_main)
+target_link_libraries(test_live_slots_cpu PRIVATE flan gtest_main)
 
 # Register with CTest
 add_test(NAME GetNearestIndexCPUTest COMMAND test_get_nearest_index_cpu)
@@ -39,6 +41,7 @@ add_test(NAME OpenADASCPUTest COMMAND test_openadas_cpu)
 add_test(NAME ZonedVectorCPUTest COMMAND test_zoned_vector_cpu)
 add_test(NAME ZonesCPUTest COMMAND test_zones_cpu)
 add_test(NAME GpuMemoryCPUTest COMMAND test_gpu_memory_cpu)
+add_test(NAME LiveSlotsCPUTest COMMAND test_live_slots_cpu)
 
 add_executable(test_cross_zones_cpu test_cross_zones_cpu.cpp)
 target_link_libraries(test_cross_zones_cpu PRIVATE flan gtest_main
@@ -152,6 +155,7 @@ if(ENABLE_CUDA)
 	add_executable(test_all_dead_cuda test_all_dead_cuda.cpp)
 	add_executable(test_boris_cuda test_boris_cuda.cpp)
 	add_executable(test_fill_slots_cuda test_fill_slots_cuda.cpp)
+	add_executable(test_live_slots_cuda test_live_slots_cuda.cpp)
 	add_executable(test_openadas_cuda test_openadas_cuda.cpp)
 	add_executable(test_trilinear_cuda test_trilinear_cuda.cu)
 	add_executable(test_indices_cuda test_indices_cuda.cu)
@@ -183,6 +187,8 @@ if(ENABLE_CUDA)
 		CUDA_SEPARABLE_COMPILATION ON)
 
 	target_link_libraries(test_fill_slots_cuda PRIVATE flan gtest_main OpenMP::OpenMP_CXX)
+	target_link_libraries(test_live_slots_cuda PRIVATE flan gtest_main
+		CUDA::cudart OpenMP::OpenMP_CXX)
 	target_link_libraries(test_openadas_cuda PRIVATE flan gtest_main CUDA::cudart)
 	target_link_libraries(test_all_dead_cuda PRIVATE flan gtest_main)
 	target_link_libraries(test_boris_cuda PRIVATE flan gtest_main
@@ -224,6 +230,7 @@ if(ENABLE_CUDA)
 	# Register with CTest
 	add_test(NAME BorisCUDATest COMMAND test_boris_cuda)
 	add_test(NAME FillSlotsCUDATest COMMAND test_fill_slots_cuda)
+	add_test(NAME LiveSlotsCUDATest COMMAND test_live_slots_cuda)
 	add_test(NAME OpenADASCUDATest COMMAND test_openadas_cuda)
 	add_test(NAME TrilinearCUDATest COMMAND test_trilinear_cuda)
 	add_test(NAME AllDeadCUDATest COMMAND test_all_dead_cuda)

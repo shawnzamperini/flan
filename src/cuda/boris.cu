@@ -265,8 +265,8 @@ namespace Boris
 		const Background::BackgroundDevice bkg_d, const double dt,
 		const Sheath::SheathView sh, const int* nsub)
 	{
-		const int i = blockIdx.x * blockDim.x + threadIdx.x;
-		if (i >= slots_d.N) return;
+		const int i {Slots::slot_of_thread(slots_d)};
+		if (i < 0) return;
 		if (slots_d.state[i] > 0) return;
 		if (nsub != nullptr && nsub[i] > 1) return;
 		push_one(slots_d, bkg_d, i, dt, sh);
@@ -281,13 +281,16 @@ namespace Boris
 	* @param slots_d Particle slots on the device.
 	* @param sh The sheath on the device.
 	* @param dt Time step (s).
-	* @param nsub Set to the sub-steps of each slot (1 for dead ones).
+	* @param nsub Set to the sub-steps of each slot the kernel runs over
+	*        (1 for dead ones). Slots outside the live list keep their old
+	*        value, which nothing reads, since the push, the sub-steps and
+	*        step_kernel run over the same list.
 	*/
 	__global__ void count_substeps_kernel(Slots::SlotsDevice slots_d,
 		const Sheath::SheathView sh, const double dt, int* nsub)
 	{
-		const int i = blockIdx.x * blockDim.x + threadIdx.x;
-		if (i >= slots_d.N) return;
+		const int i {Slots::slot_of_thread(slots_d)};
+		if (i < 0) return;
 		if (slots_d.state[i] > 0)
 		{
 			nsub[i] = 1;
@@ -326,8 +329,8 @@ namespace Boris
 		const Background::BackgroundDevice bkg_d, const double dt,
 		const Sheath::SheathView sh, const int* nsub)
 	{
-		const int i = blockIdx.x * blockDim.x + threadIdx.x;
-		if (i >= slots_d.N) return;
+		const int i {Slots::slot_of_thread(slots_d)};
+		if (i < 0) return;
 		if (slots_d.state[i] > 0 || nsub[i] <= 1) return;
 
 		const int n {nsub[i]};
@@ -425,9 +428,9 @@ namespace Boris
 	* Launches update_velocity_kernel to advance the velocity of every
 	* particle on the GPU by one time step.
 	*
-	* Uses blocks of 256 threads, one thread per slot. The launch is
-	* asynchronous, except in DEBUG builds, where it waits for the kernel to
-	* finish and prints any error.
+	* Uses blocks of Slots::heavy_block_size threads, one thread per live
+	* slot. The launch is asynchronous, except in DEBUG builds, where it
+	* waits for the kernel to finish and prints any error.
 	*
 	* With a sheath (sheath_d not nullptr) its field is added, and if
 	* substep is true, the particles that can reach it are sub-stepped as
@@ -450,8 +453,9 @@ namespace Boris
 	{
 		
 		// Block and grid size
-		int blockSize = 256;
-		int gridSize  = (slots_d.N + blockSize - 1) / blockSize;
+		const int blockSize {Slots::heavy_block_size};
+		const int gridSize {Slots::num_blocks(slots_d, blockSize)};
+		if (gridSize == 0) return;	// no live slots
 
 		const Sheath::SheathView sh {sheath_d != nullptr
 			&& sheath_d->device_id >= 0 ? sheath_d->view

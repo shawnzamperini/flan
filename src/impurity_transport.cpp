@@ -535,10 +535,13 @@ namespace ImpurityTransport
 	*
 	* The simulation is finished when no particles are waiting to be
 	* launched and every particle in slots is dead. If rem_parts is
-	* positive, false is returned without checking slots. If GPU
-	* acceleration is on (use_gpu), Slots::all_dead_gpu is called, which
-	* copies data from the GPU and so implicitly synchronizes it. The GPU
-	* branch only exists in CUDA builds.
+	* positive, false is returned without checking slots. On the GPU,
+	* once fill_slots_gpu has listed the live slots, the host already
+	* knows how many there are (SlotsDevice::num_live), and nothing kills
+	* a particle between the fill and this check, so no copy from the GPU
+	* is needed. Before the first fill, Slots::all_dead_gpu checks the
+	* slots on the device, which waits for the GPU. The GPU branch only
+	* exists in CUDA builds.
 	*
 	* @param slots Host-side particle slots (used on the CPU path).
 	* @param slots_d Device-side particle slots (used on the GPU path).
@@ -556,7 +559,10 @@ namespace ImpurityTransport
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
-			// Need to call a kernel here since the memory lives on the GPU
+			// The live count from the last fill, or a check on the device
+			// if there's no list yet
+			if (slots_d.live_indices != nullptr)
+				return slots_d.num_live == 0;
 			return Slots::all_dead_gpu(slots_d);
 		}
 #endif
@@ -1136,8 +1142,8 @@ namespace ImpurityTransport
 			// Check if all the particles in slots are dead. If this happens
 			// after fill_slots, it means there were no more alive particles
 			// to swap in and all the remaining ones are dead. So we're done.
-			// For GPUs, this has a GPU->CPU memory copy which means it has
-			// an implicit synchronize in it. 
+			// On the GPU this uses the live count from the fill, so it
+			// doesn't wait for the GPU (all_dead_wrapper).
 			{
 				Timer::ScopedTimer t(timer.acc(Timer::Section::AllDead));
 				all_dead = all_dead_wrapper(slots, slots_d, opts, rem_parts);

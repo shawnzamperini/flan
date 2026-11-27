@@ -502,6 +502,14 @@ namespace Slots
 		slots_d.select_temp = nullptr;
 		slots_d.select_temp_bytes = 0;
 
+		// No list of live slots until the first fill: the kernels run
+		// over every slot
+		slots_d.live_indices = nullptr;
+		slots_d.num_live_d = nullptr;
+		slots_d.num_live = m_N;
+		slots_d.per_warp = warp_size;
+		slots_d.resident_warps = 0;
+
 		// Copy to device
 		cudaMemcpy(slots_d.pt, m_pt.data(), m_N * sizeof(double), 
 			cudaMemcpyHostToDevice);
@@ -671,6 +679,8 @@ namespace Slots
 		cudaFree(slots_d.num_dead);
 		cudaFree(slots_d.dead_indices);
 		cudaFree(slots_d.select_temp);
+		cudaFree(slots_d.live_indices);
+		cudaFree(slots_d.num_live_d);
 
 		slots_d.pt = nullptr;
 		slots_d.t = nullptr;
@@ -700,6 +710,11 @@ namespace Slots
 		slots_d.dead_indices = nullptr;
 		slots_d.select_temp = nullptr;
 		slots_d.select_temp_bytes = 0;
+		slots_d.live_indices = nullptr;
+		slots_d.num_live_d = nullptr;
+		slots_d.num_live = 0;
+		slots_d.per_warp = warp_size;
+		slots_d.resident_warps = 0;
 #endif
 		return;
 	}

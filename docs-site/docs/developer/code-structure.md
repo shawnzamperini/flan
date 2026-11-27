@@ -236,10 +236,33 @@ OpenMP thread has its own random number generator.
 ### GPU (CUDA)
 
 The GPU versions are split into a *kernel* (e.g., `step_kernel`) that runs one
-thread per slot, and a host function (e.g., `step_gpu`) that launches it in
-blocks of 256 threads. Launches are asynchronous, except in `DEBUG` builds,
+thread per live slot, and a host function (e.g., `step_gpu`) that launches it in
+blocks of 256 threads, or `Slots::heavy_block_size` (128) for the kernels that
+use the most registers (ionization, collisions, the push). With so many
+registers an SM holds only a block or two, and smaller blocks spread a launch
+over more SMs. Launches are asynchronous, except in `DEBUG` builds,
 where each one waits for the kernel to finish and checks for errors. Each
 slot has its own random number generator (`init_rngs.cu`).
+
+After filling the dead slots, `fill_slots_gpu` lists the live ones in
+increasing order (`SlotsDevice::live_indices`). A kernel gets its slot from
+`Slots::slot_of_thread`, which hands the list out in order, `per_warp` slots
+to a warp, and its host function launches `Slots::num_blocks` blocks,
+skipping the launch when there are none. The live particles then sit
+together in warps instead of being scattered among dead slots, which a warp
+would wait on. They aren't always packed 32 to a warp, though: the kernels'
+lanes diverge, and a warp runs its lanes' different paths one after
+another, so while there are fewer particles than the GPU has resident
+warps, they're spread out as few to a warp as fills the GPU
+(`Slots::per_warp_for`), and run side by side. The host knows the
+length of the list without asking the GPU: it's the number of live slots
+after the fill, and only the step and the boundary check kill particles,
+before the next fill. A particle killed during a step stays listed until
+then, so kernels still check the slot's state. Before the first fill, or
+for slots set up by hand in a test, there's no list and thread k takes slot
+k. Since each slot has its own generator and its own results, which thread
+handles it doesn't change them. A new per-particle kernel should get its
+slot the same way.
 
 Kernels can't use the host-side classes, so the data they need is copied to
 the GPU into plain structs of device pointers:
@@ -312,7 +335,9 @@ conditions"). For the time each kernel takes, use `nsys profile -t cuda`.
 3. Call the shared functions from the CPU loop and from the kernel, and
    pass the device copy through `follow_impurities`, `gpu_worker` and
    `main_loop` to the wrapper. If the GPU tallies anything, copy it back
-   and add it to the host's after the run.
+   and add it to the host's after the run. A new per-particle kernel
+   takes its slot from `Slots::slot_of_thread` and is launched over
+   `Slots::num_blocks` blocks, as above.
 4. Add any options the kernels read to `OptionsDevice` (see "Adding an
    input option" below), and count large arrays in `device_bytes`.
 5. Test that the two agree: a `*_cuda` test that runs the CPU routine one

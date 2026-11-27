@@ -76,8 +76,8 @@ namespace Boundary
 		const Sputtering::DepositionView dep, const bool deposit,
 		const Sputtering::SelfView self, const bool self_on, int* avalanche)
 	{
-		const int i = blockIdx.x * blockDim.x + threadIdx.x;
-		if (i >= slots_d.N) return;
+		const int i {Slots::slot_of_thread(slots_d)};
+		if (i < 0) return;
 		if (slots_d.state[i] > 0) return;
 
 		const Zones::ZonesView& zones {bkg_d.zones};
@@ -209,7 +209,7 @@ namespace Boundary
 	* Launches check_bounds_kernel to apply the time and spatial boundary
 	* conditions to every particle on the GPU.
 	*
-	* Uses blocks of 256 threads, one thread per slot. The launch is
+	* Uses blocks of 256 threads, one thread per live slot. The launch is
 	* asynchronous, except in DEBUG builds, where it waits for the kernel to
 	* finish and prints any error.
 	*
@@ -234,7 +234,8 @@ namespace Boundary
 		const Sputtering::SelfDevice* self_d)
 	{
 		const int blockSize {256};
-		const int gridSize {(slots_d.N + blockSize - 1) / blockSize};
+		const int gridSize {Slots::num_blocks(slots_d, blockSize)};
+		if (gridSize == 0) return;	// no live slots
 		const bool deposit {dep_d != nullptr && dep_d->device_id >= 0};
 		const bool self_on {deposit && self_d != nullptr
 			&& self_d->device_id >= 0};
