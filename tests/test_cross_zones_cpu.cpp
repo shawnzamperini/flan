@@ -565,9 +565,16 @@ TEST(CrossZonesCPU, SingleZoneMatchesOldBounds)
 			ASSERT_EQ(slots.state()[i], state) << "combo " << combo
 				<< ", particle " << i;
 			EXPECT_EQ(slots.zone()[i], 0);
-			EXPECT_EQ(slots.x()[i], want[i][0]) << combo << " " << i;
-			EXPECT_EQ(slots.y()[i], want[i][1]) << combo << " " << i;
-			EXPECT_EQ(slots.z()[i], want[i][2]) << combo << " " << i;
+
+			// To within a few ulps, not exactly: the library takes the
+			// bounds from the zone's cell edges, which it works out from the
+			// cell centers, and in a Release build (-O3 -march=native, so
+			// fused multiply-adds) an edge can come out an ulp away from
+			// lo or hi. A particle put back on a buffered core face then
+			// differs by that ulp.
+			EXPECT_DOUBLE_EQ(slots.x()[i], want[i][0]) << combo << " " << i;
+			EXPECT_DOUBLE_EQ(slots.y()[i], want[i][1]) << combo << " " << i;
+			EXPECT_DOUBLE_EQ(slots.z()[i], want[i][2]) << combo << " " << i;
 		}
 	}
 
