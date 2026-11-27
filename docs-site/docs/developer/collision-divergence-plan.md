@@ -25,6 +25,11 @@ differ.
 
 ### What each cause could cost
 
+These estimates were written before C0, which measured them (see C0
+under Phases). Two were wrong: the sub-cycles cost nothing in HERMES,
+and the sampler's bound M is not "at most about 2" but up to 33 for
+the ions and 60 for the electrons, so it is the largest cost.
+
 ncu's busy lanes per instruction is weighted by instructions, so a few
 long paths count for more than many short ones. A rough count for each
 cause:
@@ -125,6 +130,10 @@ warp has only a few lanes. In that case the sort is skipped (decision
 
 ### Restructure the sampler (C4, only if C0 asks for it)
 
+Written before C0. C0 found the size of M matters more than the
+lanes waiting for each other, so C4 is now the tighter envelope below;
+these two are kept for later, if C5 shows the waiting still matters.
+
 If the sampler's draws are a large share after C3, make its loop the
 same for every lane of a warp. Two candidates:
 
@@ -142,6 +151,54 @@ still rejection sampling. `sample_bkg` is shared with the CPU, so the CPU
 changes with it, as `CLAUDE.md` asks. The checks are the regression
 collisions and thermal-force cases with their checkers (including the
 `_gpu` variants), and the sampler's counts against `test_thermal_force`.
+
+### A tighter envelope (C4, after C0)
+
+C0 showed that the sampler's cost is the size of M, not only the
+lanes waiting for each other: with M up to 33 or 60, even a warp of
+lanes that all drew together would take tens of draws. Drawing K
+candidates per pass doesn't change that. A tighter envelope does.
+
+Since |w_par| <= w, the skew factor is bounded at every speed by
+
+  F <= 1 + |eps| (|a| w + |b| w^3 + |c| w^5) = G(w).
+
+f_M G is a mixture of four isotropic distributions: the Maxwellian
+(weight 1), and w^k f_M for k = 1, 3, 5, with weights |eps| |a| <w>,
+|eps| |b| <w^3> and |eps| |c| <w^5> (moments of the Maxwellian's speed:
+<w> = 1.60, <w^3> = 6.38, <w^5> = 38.3). Each is easy to draw: an
+isotropic direction and a speed with w^2 from a gamma distribution of
+shape (k + 3) / 2 and scale 2. A candidate drawn from the mixture is
+accepted with probability max(F, 0) / G(w). The mean number of draws
+is the mixture's total weight, 1 + |eps| (|a| <w> + |b| <w^3> + |c|
+<w^5>): at |eps| = 1, 3.0 for the ion shape and 3.1 for the electron
+shape, against 33 and 60 now. It also removes the cut at 5 v_th, since
+G bounds F at every speed: no draws above the bound, and the sample is
+exact apart from the clipping of F < 0, which is unchanged.
+
+The shapes for k = 1, 3, 5 are 2, 3 and 4, all integers, so each w^2
+is a sum of 2, 3 or 4 exponentials, -2 ln U each. The direction is a
+uniform cos(theta) and azimuth. The Maxwellian component is drawn as
+now, from three normals.
+
+Checked in Python (`envelope_check.py` and `envelope_check2.py` in the
+C0 directory, 16 million candidates for each case, against the moments
+of max(F, 0) f_M by quadrature). Mean draws per sample, current bound
+and envelope:
+
+| Shape | eps = 0.1 | eps = 0.5 | eps = 1 |
+|---|---|---|---|
+| Ions | 4.2 and 1.2 | 17.1 and 2.0 | 32.7 and 3.0 |
+| Electrons | 6.9 and 1.2 | 30.2 and 2.0 | 57.9 and 3.0 |
+
+The envelope's heat flux and <w_par^3> agree with the quadrature
+within the statistical error in every case. The current sampler's are
+3% low for the electron shape at eps = 1 (q / eps 0.493 against 0.508),
+from the cut at 5 v_th, since the electron shape puts its lean on fast
+particles.
+
+The fixed-candidates idea above can still follow if C5 shows the lanes
+waiting for each other matters once the draws are few.
 
 ### Sub-cycles that are still long
 
@@ -164,6 +221,70 @@ plan. C0 records how often it happens.
   the cached normal, neutrals, interpolation and the rest, and the
   distribution of `n_sub` (and its largest value) for ions and
   electrons. Decide which of C2 to C4 go ahead.
+
+Done (2026-11-27), job in `$SCRATCH/flan_gpu/coll/c0` (`c0.sbatch`; the
+counters are a patch to a copy of the source in `src/`, and
+`c0_summary.py` and `src_lines.py` summarize the counters and the ncu
+source pages). The counters ran over the whole run. ncu profiled the
+two collision launches of one step: step 8000 and step 30000 of HERMES
+at 40000, step 1000 of SOLEDGE3X and of Gkeyll.
+
+Counters, per warp of the collision kernel (32 lanes):
+
+| Case | Species | Lanes with a slot | Charged | Busy in the sub-steps | Sub-step efficiency | Draws per sample | Warp draw passes per sub-step |
+|---|---|---|---|---|---|---|---|
+| HERMES 40000 | ions | 16.7 | 9.8 | 10.7 | 1.00 | 25.7 | 76.6 |
+| | electrons | | | 10.6 | 0.99 | 4.9 | 13.8 |
+| HERMES 160000 | ions | 26.7 | 15.8 | 16.5 | 1.00 | 25.7 | 86.3 |
+| | electrons | | | 16.1 | 0.98 | 4.9 | 15.6 |
+| SOLEDGE3X `self` | ions | 1.8 | 1.2 | 1.3 | 0.97 | 1 (no skew) | 1 |
+| | electrons | | | 1.0 | 0.80 | 1 | 1 |
+| Gkeyll | ions | 26.3 | 26.3 | 26.3 | 1.00 | 1 (no skew) | 1 |
+| | electrons | | | 8.6 | 0.33 | 1 | 1 |
+
+Sub-step efficiency is the mean `n_sub` over the mean of each warp's
+largest. The other branches don't matter: no warp mixed zones with and
+without a zShift table, and the A(s) branches are cheap.
+
+ncu, share of the kernel's stall samples and busy lanes per instruction,
+by source file:
+
+| Case | `pcg32.h` (the sampler's normals) | Interpolation (`interp_hd.h`, `zones_hd.h`, `interpolate.cuh`) | Nanbu (`collisions.cu`) | Lanes, whole kernel |
+|---|---|---|---|---|
+| HERMES, step 8000 | 60% at 2.7 lanes | 27% at 11 to 13 | 5% at 13 | 5.2 |
+| HERMES, step 30000 | 25% at 1 | 59% at 1 | 10% at 1.2 | 1.1 |
+| SOLEDGE3X | 22% at 1 | 17% at 1 | 47% at 1 | 1.2 |
+| Gkeyll | 25% at 7 | 34% at 32 | 35% at 12 | 11.9 |
+
+What this shows:
+
+- **HERMES: the skewed sampler.** Every charged particle there is
+  sampled with a skew, and for the ions |eps| is large: 53% of the ion
+  samples have it capped at 1 (the run's log). The bound M = 1 + |eps|
+  `shape.bound` is taken from the worst case up to 5 v_th, where
+  `shape.bound` is 32.4 for the ion shape and 58.8 for the electron
+  shape. So an ion takes 26 draws on average, and a warp waits for
+  about 80. The comment in `sample_bkg` that M is at most about 2 is
+  wrong. The normals for these draws are 60% of the kernel's time, at
+  under 3 busy lanes.
+- **Gkeyll: the electron sub-cycles.** The electrons have 4 sub-steps
+  on average, but each warp's largest is 13, so a third of the lanes are
+  busy in the loop. Sorting by `n_sub` (C3) is for this.
+- **The neutrals and the interpolation.** In HERMES 40% of the lanes
+  with a slot are neutral, and the interpolation, which runs at the
+  charged lanes' 11 to 13, is a quarter of the time. In Gkeyll it is a
+  third, with every lane busy. Doing it once for both species (C2) saves
+  about half of that.
+- **Few particles left** (HERMES late, SOLEDGE3X). One lane per warp,
+  as the spread list intends (L4b): these steps are latency, and
+  nothing in this plan changes them.
+- **Sub-cycles in HERMES**, the leading guess before C0: none. The ions
+  always have 1 and the electrons at most 3.
+
+So C4 goes first, and it changes how the sampler draws rather than
+only its loop: with a tighter envelope, an ion sample takes about 3
+draws at |eps| = 1 instead of 33 (see "A tighter envelope" below).
+Then C2, then C3, which matters only for runs like the Gkeyll case.
 
 **C1. References.**
 
@@ -195,10 +316,20 @@ matter).
   with and without the order.
 - Checks: as C2.
 
-**C4. Sampler** (if C0 shows the sampler still matters after C3).
+**C4. Sampler: the tighter envelope.** Done first, after C1 (C0's
+results).
 
-- The change to `sample_bkg` (CPU and GPU), the `docs-site` page on the
-  thermal force updated to describe the sampling.
+- `sample_bkg` (CPU and GPU, shared in `collisions_hd.h`) draws from
+  the mixture envelope and accepts with max(F, 0) / G. `skew_bound` and
+  `SkewShape::bound` go, and so does the `above_bound` count, which can
+  no longer happen (kept in the output as 0, or removed with the
+  output's readers, to decide when writing it). The wrong comment about
+  M goes with it. The `docs-site` page on the thermal force describes
+  the sampling.
+- Tests: in `test_thermal_force_cpu`, samples at several eps for both
+  shapes reproduce the target's flow (0), heat flux and friction moment
+  within their statistical error, and the mean draws per sample match
+  the mixture's weight.
 - Checks: `ctest` on both builds; every variant of `reg_friction` and
   `reg_thermal_force`, CPU and `_gpu`, through `check_collisions.py`;
   seeded end-to-end runs within Monte Carlo error (3 sigma) of C1's.
