@@ -420,7 +420,8 @@ namespace OpenADAS
 	* Launches ioniz_recomb_kernel to update the charge state of every
 	* particle on the GPU due to ionization and recombination.
 	*
-	* Uses blocks of 256 threads, one thread per slot. The warning counters
+	* Uses blocks of Slots::heavy_block_size threads, one thread per live
+	* slot. The warning counters
 	* are allocated once with alloc_warnings and accumulate over the whole
 	* run, so this is just a kernel launch with no allocations or copies.
 	* The launch is asynchronous, except in DEBUG builds, where it waits
@@ -449,8 +450,8 @@ namespace OpenADAS
 		const int max_charge)
 	{
 		// Block and grid size
-		int blockSize = 256;
-		int gridSize  = Slots::num_blocks(slots_d, blockSize);
+		const int blockSize {Slots::heavy_block_size};
+		const int gridSize {Slots::num_blocks(slots_d, blockSize)};
 		if (gridSize == 0) return;	// no live slots
 
 		ioniz_recomb_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, 

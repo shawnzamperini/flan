@@ -237,7 +237,10 @@ OpenMP thread has its own random number generator.
 
 The GPU versions are split into a *kernel* (e.g., `step_kernel`) that runs one
 thread per live slot, and a host function (e.g., `step_gpu`) that launches it in
-blocks of 256 threads. Launches are asynchronous, except in `DEBUG` builds,
+blocks of 256 threads, or `Slots::heavy_block_size` (128) for the kernels that
+use the most registers (ionization, collisions, the push). With so many
+registers an SM holds only a block or two, and smaller blocks spread a launch
+over more SMs. Launches are asynchronous, except in `DEBUG` builds,
 where each one waits for the kernel to finish and checks for errors. Each
 slot has its own random number generator (`init_rngs.cu`).
 
@@ -327,7 +330,9 @@ conditions"). For the time each kernel takes, use `nsys profile -t cuda`.
 3. Call the shared functions from the CPU loop and from the kernel, and
    pass the device copy through `follow_impurities`, `gpu_worker` and
    `main_loop` to the wrapper. If the GPU tallies anything, copy it back
-   and add it to the host's after the run.
+   and add it to the host's after the run. A new per-particle kernel
+   takes its slot from `Slots::slot_of_thread` and is launched over
+   `Slots::num_blocks` blocks, as above.
 4. Add any options the kernels read to `OptionsDevice` (see "Adding an
    input option" below), and count large arrays in `device_bytes`.
 5. Test that the two agree: a `*_cuda` test that runs the CPU routine one

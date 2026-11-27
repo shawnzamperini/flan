@@ -69,7 +69,7 @@ namespace ImpurityStats
 	* the impurity statistics.
 	*
 	* GPU version of record_stats_cpu. Uses blocks of 256 threads, one
-	* thread per slot. The launch is asynchronous, except in DEBUG builds,
+	* thread per live slot. The launch is asynchronous, except in DEBUG builds,
 	* where it waits for the kernel to finish and prints any error.
 	*
 	* @param[in,out] stats_d Impurity statistics on the device. Added to.

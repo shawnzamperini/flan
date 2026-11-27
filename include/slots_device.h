@@ -79,6 +79,17 @@ namespace Slots
 	};
 
 	/**
+	* Threads per block for the kernels that use the most registers:
+	* ionization and recombination, the collisions and the push (with its
+	* sub-steps). At 130 to 255 registers per thread an SM holds only a
+	* block or two of 256, so a launch a little over a multiple of the SM
+	* count leaves most SMs idle while its last blocks run. Smaller blocks
+	* spread the same threads over more SMs; measured, these kernels were
+	* as fast or faster with 128. The lighter kernels keep 256.
+	*/
+	constexpr int heavy_block_size {128};
+
+	/**
 	* Number of blocks of block_size threads that cover the slots the
 	* kernels run over (num_live of them). Can be 0, which is not a valid
 	* launch, so the caller skips the launch then.

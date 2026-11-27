@@ -72,7 +72,7 @@ namespace ImpurityTransport
 	* indices of every alive particle on the GPU.
 	*
 	* GPU version of find_containing_cell_cpu. Uses blocks of 256 threads,
-	* one thread per slot. The launch is asynchronous, except in DEBUG
+	* one thread per live slot. The launch is asynchronous, except in DEBUG
 	* builds, where it waits for the kernel to finish and prints any error.
 	*
 	* @param[in,out] slots_d Particle slots on the device. tidx, xidx, yidx
@@ -157,7 +157,7 @@ namespace ImpurityTransport
 	* time step.
 	*
 	* GPU version of step_cpu. Uses blocks of 256 threads, one thread per
-	* slot. The launch is asynchronous, except in DEBUG builds, where it
+	* live slot. The launch is asynchronous, except in DEBUG builds, where it
 	* waits for the kernel to finish and prints any error.
 	*
 	* @param[in,out] slots_d Particle slots on the device.

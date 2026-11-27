@@ -209,7 +209,7 @@ namespace Boundary
 	* Launches check_bounds_kernel to apply the time and spatial boundary
 	* conditions to every particle on the GPU.
 	*
-	* Uses blocks of 256 threads, one thread per slot. The launch is
+	* Uses blocks of 256 threads, one thread per live slot. The launch is
 	* asynchronous, except in DEBUG builds, where it waits for the kernel to
 	* finish and prints any error.
 	*

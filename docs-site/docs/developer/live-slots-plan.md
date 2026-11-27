@@ -156,12 +156,56 @@ slots are neutral, decision 1).
   the device: the collision kernels are launched over `num_live` threads
   and a thread past the device-side count returns.
 
+Dropped after L4: the busy lanes in the collision kernel are set by
+divergence inside it, not by which slots share a warp (see L4), so
+removing the neutrals from its list can't gain much.
+
 **L4. Measure.**
 
 - Compute-node job: the G8 cases against L0 on the same node, 1 and 4
   GPUs, nsys for the kernel times and ncu for the busy lanes. Try blocks
   of 128 threads (decision 4).
 - Record the results here and in the GPU plan's "Later".
+
+Done (2026-11-26), jobs in `$SCRATCH/flan_gpu/live/l4`. `main`, this
+branch and this branch with 128-thread blocks were run one after another
+on one node. Wall time (s), HERMES `all` unless noted:
+
+| Case | `main` | list | list, 128 |
+|---|---|---|---|
+| 1 GPU, 40000 | 84.3 | 78.0 | 74.6 |
+| 1 GPU, 160000 | 155.4 | 113.3 | 108.0 |
+| 4 GPUs, 160000 | 83.3 | 76.5 | |
+| Gkeyll, 1 GPU | 9.2 | 8.7 | 7.6 |
+
+With few particles the list is slower. Repeats (three of SOLEDGE3X
+`self`, two of HERMES at 4000, alternating) put "Following impurities"
+at 10.25 s for `main` against 11.27 s with the list for SOLEDGE3X, and
+28.2 s against 29.5 s for HERMES. The wall times of these runs vary more
+than that, from reading the background. nsys on SOLEDGE3X: the collision
+kernel takes 20% longer with the list and the sub-steps 10%; the others
+are the same.
+
+ncu at step 8000 of HERMES at 40000, where 73% of the slots are live
+(114 blocks instead of 157): busy lanes per instruction in the collision
+kernel go from 2.3 and 3.0 (ions, electrons) to 2.7 and 3.8, the
+sub-steps from 4.0 to 5.3, the push from 15.6 to 21.4 and ionization
+from 17.2 to 23.5. Across the run nsys has the collision kernel 8%
+faster.
+
+So the idle lanes in the collision kernel come from divergence inside
+it (the rejection loop of the skewed sampler, sub-cycles, neutrals
+returning early), not from dead slots. A warp runs its lanes' different
+paths one after another, so packing particles into fewer warps only
+helps when there are more warps than the GPU keeps resident. With fewer
+particles than that, `main` gives each its own warp, on its own SM, and
+they run in parallel; the list puts them in a few warps that run them in
+turn.
+
+128-thread blocks (decision 4), ncu: ionization 85 to 51 us, collisions
+about 5% faster, the push 2%, the sub-steps the same. Kept for those
+(`Slots::heavy_block_size`); the other kernels stay at 256. Results are
+unchanged apart from the rounding of `atomicAdd` sums.
 
 **L5. Docs and merge.**
 

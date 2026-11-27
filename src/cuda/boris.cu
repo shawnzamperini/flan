@@ -428,9 +428,9 @@ namespace Boris
 	* Launches update_velocity_kernel to advance the velocity of every
 	* particle on the GPU by one time step.
 	*
-	* Uses blocks of 256 threads, one thread per slot. The launch is
-	* asynchronous, except in DEBUG builds, where it waits for the kernel to
-	* finish and prints any error.
+	* Uses blocks of Slots::heavy_block_size threads, one thread per live
+	* slot. The launch is asynchronous, except in DEBUG builds, where it
+	* waits for the kernel to finish and prints any error.
 	*
 	* With a sheath (sheath_d not nullptr) its field is added, and if
 	* substep is true, the particles that can reach it are sub-stepped as
@@ -453,8 +453,8 @@ namespace Boris
 	{
 		
 		// Block and grid size
-		int blockSize = 256;
-		int gridSize  = Slots::num_blocks(slots_d, blockSize);
+		const int blockSize {Slots::heavy_block_size};
+		const int gridSize {Slots::num_blocks(slots_d, blockSize)};
 		if (gridSize == 0) return;	// no live slots
 
 		const Sheath::SheathView sh {sheath_d != nullptr

@@ -660,9 +660,9 @@ namespace Collisions
 	* Launches nanbu_coll_kernel to update the velocity of every particle on
 	* the GPU due to collisions with one background species.
 	*
-	* Uses blocks of 256 threads, one thread per slot. The launch is
-	* asynchronous, except in DEBUG builds, where it waits for the kernel to
-	* finish and prints any error.
+	* Uses blocks of Slots::heavy_block_size threads, one thread per live
+	* slot. The launch is asynchronous, except in DEBUG builds, where it
+	* waits for the kernel to finish and prints any error.
 	*
 	* @param slots_d Particle slots on the device.
 	* @param bkg_d Background plasma on the device.
@@ -685,8 +685,8 @@ namespace Collisions
 		const Options::OptionsDevice* opts_d, unsigned long long* skew_d)
 	{
 		// Block and grid size
-		int blockSize = 256;
-		int gridSize  = Slots::num_blocks(slots_d, blockSize);
+		const int blockSize {Slots::heavy_block_size};
+		const int gridSize {Slots::num_blocks(slots_d, blockSize)};
 		if (gridSize == 0) return;	// no live slots
 
 		// Shape of this species' skew, with the collisional (fluid
