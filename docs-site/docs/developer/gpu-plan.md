@@ -714,6 +714,9 @@ All seven were accepted as recommended (2026-11-24).
   runs them one after another. Restructuring the sampling, for example
   drawing a fixed number of candidates per pass for all lanes, is the
   next speed-up for runs with many particles.
+  Planned in the
+  [Collision Kernel Divergence Plan](collision-divergence-plan.md),
+  which first measures which of these the idle lanes come from.
 - **Backgrounds too big for one GPU** (decision 5): keep only the frames
   around the particles' times on the device.
 - **Registers.** The main kernels use 133 to 255 registers per thread,

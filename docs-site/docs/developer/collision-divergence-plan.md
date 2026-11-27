@@ -1,0 +1,239 @@
+# Collision Kernel Divergence Plan
+
+This page is the development plan for keeping more lanes busy in the GPU
+collision kernel (`nanbu_coll_kernel`, `src/cuda/collisions.cu`). It is
+the "Divergence in the collision kernel" item of "Later" in the
+[GPU Plan](gpu-plan.md#later). The work goes on the branch
+`gpu-coll-divergence`, from `main`.
+
+## Why
+
+The collision kernel is the largest share of the GPU's time (61% in
+G8's HERMES case, with everything on). G8 and the live-slot plan's L4
+measured with ncu that only 2.3 to 3.8 of a warp's 32 lanes are busy per
+instruction in it. The live list packs the warps with live slots, yet
+the busy lanes barely changed (2.3 to 2.7 for ions, 3.0 to 3.8 for
+electrons, with 73% of the slots live). So the idle lanes come from the
+lanes of a warp taking different paths inside the kernel, which the warp
+runs one after another. The Boris push and ionization, which branch
+less, run 16 to 23 lanes.
+
+Up to now the causes have only been guessed at: the rejection loop of the
+skewed sampler, the collision sub-cycles and neutrals returning early.
+Which of them matters is the first thing to find out, because the fixes
+differ.
+
+### What each cause could cost
+
+ncu's busy lanes per instruction is weighted by instructions, so a few
+long paths count for more than many short ones. A rough count for each
+cause:
+
+- **Sub-cycles.** A particle gets `n_sub` sub-steps, from 1 up to
+  `imp_coll_subcycle_cap` (128 by default), and a warp loops as many
+  times as its lane with the most. G8 found that almost every particle
+  has 1 and a few have 2. But if one lane in a warp has 100 while the
+  others have 1, the warp does 100 sub-steps with one lane busy for 99 of
+  them, and the warp averages about 1.3 busy lanes. A few such particles
+  per warp would explain the measurement alone. Particles in cold, dense
+  plasma near the targets are where to look.
+- **The skewed sampler** (`sample_bkg`, `collisions_hd.h`). Each draw is
+  accepted with probability F / M, and M is at most about 2, so a lane
+  takes 1 to 2 draws on average. The warp waits for the lane with the
+  most, which is a few draws at most. That costs a factor of 2 or 3 on
+  the sampler, not 10 on the kernel.
+- **The cached normal** (`pcg32::normal`). Every other call makes two
+  values with Box-Muller (log, sqrt, sin, cos) and the next returns the
+  cached one. Once lanes have taken different numbers of draws, their
+  parity differs, and the warp runs both branches. That costs at most a
+  factor of 2 on the draws.
+- **Neutrals.** They return at once. They are 10% to 46% of the live
+  slots in a sputtered-source HERMES run (L0), so they can cost up to
+  about a factor of 2, early in the run.
+- **Interpolation.** `interp_plasma` branches on whether the zone has a
+  zShift table, so a warp with slots in two kinds of zone runs both.
+  This only happens where zones meet.
+- **The A(s) and chi branches.** `nanbu_calc_A_cuda` has three branches
+  (one of them a table lookup). `nanbu_calc_chi_cuda` already works out
+  every branch and then picks one.
+
+## Approach
+
+### Measure first (C0)
+
+Build `build_gpu` as `RelWithDebInfo` (which already adds `-lineinfo`),
+and profile the collision kernel at the same steps L4 used, with ncu's
+source counters (`--section SourceCounters`, or `--set full` and the
+source page). These give the warp and thread instructions for each
+source line, and so where the idle lanes are. Also add temporary counters
+(not committed) for each warp: the largest and total `n_sub`, the
+largest and total sampler draws, and the number of neutral lanes. Their
+ratios give each cause's cost directly.
+
+The results decide which of C2 to C4 are done. Each is worth doing only
+if C0 shows that what it removes is a large share of the idle lanes.
+
+### Split the kernel (C2)
+
+The ion and electron collisions are two launches of the same kernel, one
+after the other. Each builds the interpolation stencil and interpolates
+ne, Te, the flow, B and q_par again. A prepare kernel that does all of
+this once per step for both species would store, for each slot:
+
+- ne, Te, Ti, the flow (3), B (3), q_par_e and q_par_i (11 doubles), and
+- `n_sub` for the ions and for the electrons (2 ints), 0 for neutral and
+  dead slots.
+
+The collision kernels then read these values and do only the sub-steps.
+They work out `s_coeff`, eps and b from the stored values with the same
+arithmetic as now. The interpolation then happens once instead of twice,
+the collision kernels need fewer registers, and C3 has the `n_sub`
+values it sorts by.
+
+No random numbers are drawn in the prepare kernel, and each slot still
+draws from its own generator in the same order (ions, then electrons).
+So the results should stay the same bit for bit, as with the live list.
+One thing could break that: the compiler may fuse multiplies and adds
+differently once the code is split. If it does, the change is to
+rounding only, and the seeded runs are compared as in L1, with sums to
+rounding.
+
+Memory: 96 bytes a slot, about 100 MB at the default `slot_cap`. The
+arrays are allocated with the other slot arrays and covered by G8's
+memory check.
+
+### Order the work (C3)
+
+Divergence from the sub-cycles goes away if lanes with similar `n_sub`
+share a warp. After the prepare kernel, a stable sort of the live list
+by a small key gives a collision list ordered by work. The key is the
+bucket of `n_sub` (log2, 0 for neutral, so about 4 bits; ions and
+electrons sorted separately, or by their sum, as decided in C0). This is
+`cub::DeviceRadixSort::SortPairs` with `begin_bit`/`end_bit` limited to
+the key. The sort is stable, so the order within a bucket is slot order,
+the same every run. The neutrals come first (key 0) and are skipped:
+the collision kernels start at the device-side count of neutrals and
+read the list length on the device. That is L3's approach, and it adds
+no wait for the host.
+
+Which thread handles a slot doesn't change the slot's results, so this
+step is bit-identical too. It costs one small sort a step, tens of
+microseconds for 10^5 slots. When few slots are live and the list is
+spread over the warps (L4b), the work order matters less, because each
+warp has only a few lanes. In that case the sort is skipped (decision
+3).
+
+### Restructure the sampler (C4, only if C0 asks for it)
+
+If the sampler's draws are a large share after C3, make its loop the
+same for every lane of a warp. Two candidates:
+
+- **A fixed number of candidates per pass.** Draw K candidates at once
+  and take the first one that is accepted, with another pass only if
+  none is. With M at most 2, K = 2 or 3 makes the second pass rare.
+- **Normals in pairs.** Make the three normals of a draw from two
+  Box-Muller pairs, without the cached value. Every lane then runs the
+  same transcendental functions, at the cost of throwing one value away.
+
+Both change which random numbers are drawn, so the results change
+statistically, not bit for bit. Accepted candidates have the same
+distribution: taking the first accepted of K independent candidates is
+still rejection sampling. `sample_bkg` is shared with the CPU, so the CPU
+changes with it, as `CLAUDE.md` asks. The checks are the regression
+collisions and thermal-force cases with their checkers (including the
+`_gpu` variants), and the sampler's counts against `test_thermal_force`.
+
+### Sub-cycles that are still long
+
+If C0 shows a few particles with `n_sub` near the cap, sorting puts them
+together in their own warps, but each warp still runs them one after
+another. That is the latency of one particle, and no reordering removes
+it. Making those sub-steps cheaper (the cap, the target, or an
+analytic limit for s >> 1) changes the physics and belongs in its own
+plan. C0 records how often it happens.
+
+## Phases
+
+**C0. Measure.**
+
+- Compute-node job, with the G8/L4 scripts (`$SCRATCH/flan_gpu/live/l4`):
+  HERMES `all` at 40000 and 160000 particles, SOLEDGE3X `self`, Gkeyll.
+  ncu source counters for the collision kernel at step 8000 (as in L4)
+  and at a late step, and the temporary per-warp counters over the run.
+- Record here how the idle lanes split between sub-cycles, the sampler,
+  the cached normal, neutrals, interpolation and the rest, and the
+  distribution of `n_sub` (and its largest value) for ions and
+  electrons. Decide which of C2 to C4 go ahead.
+
+**C1. References.**
+
+- Seeded reference outputs from `main` for the end-to-end cases and the
+  `_gpu` regression variants, as in the live-slot plan's L0, to compare
+  C2 and C3 against.
+
+**C2. Prepare kernel.**
+
+- A new kernel that interpolates once per step for both species and
+  writes the stored values and `n_sub`. The collision kernel reads them.
+  `collision_gpu`'s callers don't change.
+- Tests: `test_collisions_cuda` gets a case where the split kernels and
+  a run of the old path give identical slots, including with the thermal
+  force on and with sub-cycling.
+- Checks: `ctest` on both builds; seeded runs equal to C1's (counts and
+  trajectories exactly, sums to rounding); `_gpu` regression variants
+  pass their checkers; registers per thread for the new kernels from
+  `-Xptxas -v` or ncu.
+
+**C3. Collision list ordered by work** (if C0 shows the sub-cycles
+matter).
+
+- The sort after the prepare kernel, the collision kernels over the
+  ordered list, neutrals skipped by the device-side count.
+- Tests: a `*_cuda` test that the ordered list holds each charged live
+  slot exactly once, sorted by key and in slot order within a key, with
+  the neutrals counted; and that the collisions give identical slots
+  with and without the order.
+- Checks: as C2.
+
+**C4. Sampler** (if C0 shows the sampler still matters after C3).
+
+- The change to `sample_bkg` (CPU and GPU), the `docs-site` page on the
+  thermal force updated to describe the sampling.
+- Checks: `ctest` on both builds; every variant of `reg_friction` and
+  `reg_thermal_force`, CPU and `_gpu`, through `check_collisions.py`;
+  seeded end-to-end runs within Monte Carlo error (3 sigma) of C1's.
+
+**C5. Measure.**
+
+- The C0 cases, `main` and the branch alternating on one node: wall time,
+  nsys kernel times and ncu busy lanes. Record the results here and in
+  the GPU plan's "Later". Check that runs with few particles are no
+  slower (the sort's cost).
+
+**C6. Docs and merge.**
+
+- `code-structure.md`: the prepare kernel and the ordered list, for
+  new kernels that want the stored values. Then merge to `main`.
+
+## Decisions
+
+All five were accepted as recommended (2026-11-27).
+
+1. **Bit-identical results for C2 and C3.** Recommended: required, apart
+   from the rounding of `atomicAdd` sums and any change in how the
+   compiler fuses arithmetic (checked and stated if it happens). Only C4
+   may change the random numbers.
+2. **What the prepare kernel stores.** Recommended: the interpolated
+   plasma values (11 doubles) and `n_sub`, rather than everything
+   derived from them (`s_coeff`, eps, b for both species, about 18
+   doubles). That is half the memory, and the derived values cost only
+   arithmetic to recompute.
+3. **When to sort.** Recommended: only when the live list is packed 32
+   to a warp (`per_warp == 32`). When it is spread over the warps, warps
+   have few lanes and the sort's cost isn't repaid.
+4. **Sort key.** Recommended: decided by C0. If the ions' and electrons'
+   `n_sub` are mostly 1 for one species, sort by the other's bucket only,
+   with one list for both launches. Otherwise use one list per species.
+5. **The CPU.** Recommended: unchanged apart from C4's shared sampler.
+   A CPU thread doesn't wait for other lanes, so the split and the sort
+   don't help it.
