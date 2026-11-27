@@ -623,6 +623,9 @@ From the hypnotoad grid: `Rxy`, `Zxy` and the four cell corners, `Brxy`,
 
 ### Questions for the HERMES-3 developers
 
+Closed (2026-11-27): nothing in Flan waits on the answers. The
+assumptions above stay as stated.
+
 1. Does JAX-Hermes3's parallel conduction match Hermes-3's
    `braginskii_conduction` with the default `multispecies` collisions and
    no flux limiter? If not, what should Flan use, or could q_par be
