@@ -448,6 +448,10 @@ What this shows:
 - `code-structure.md`: the prepare kernel and the ordered list, for
   new kernels that want the stored values. Then merge to `main`.
 
+Done (2026-11-27). `code-structure.md` describes the prepare kernel and
+the stored values (from C2); the ordered list was dropped with C3.
+Merged to `main`.
+
 ## Decisions
 
 All five were accepted as recommended (2026-11-27).
