@@ -292,6 +292,12 @@ Then C2, then C3, which matters only for runs like the Gkeyll case.
   `_gpu` regression variants, as in the live-slot plan's L0, to compare
   C2 and C3 against.
 
+Done (2026-11-27), outputs in `$SCRATCH/flan_gpu/coll/c1/refs`. Release
+builds of `main` and of each phase, made after the build types were
+fixed, are under `$SCRATCH/flan_gpu/coll/rel`, and each phase is
+compared with a Release build of the one before it, since the build
+type alone changes the last bits.
+
 **C2. Prepare kernel.**
 
 - A new kernel that interpolates once per step for both species and
@@ -304,6 +310,20 @@ Then C2, then C3, which matters only for runs like the Gkeyll case.
   trajectories exactly, sums to rounding); `_gpu` regression variants
   pass their checkers; registers per thread for the new kernels from
   `-Xptxas -v` or ncu.
+
+Done (2026-11-27), commit 022acf0, job in `$SCRATCH/flan_gpu/coll/c2`.
+`collision_gpu`'s callers did change in the end: the transport loop now
+calls `collisions_gpu` once per step for both species, and
+`collision_gpu`, one species with its own prepare, stays for the tests.
+
+- Registers per thread: the collision kernel went from 173 to 104, the
+  prepare kernel uses about 160.
+- Against C4 (Release): every count, fate and printed summary of the
+  seeded runs is the same. Velocity sums differ by up to 1e-11
+  relative, because the split changes where the compiler fuses
+  multiply-adds and the last bits grow over the steps.
+- Following impurities, HERMES `all`: 44.05 to 43.36 s at 40000
+  particles, 58.41 to 55.89 s at 160000.
 
 **C3. Collision list ordered by work** (if C0 shows the sub-cycles
 matter).
@@ -333,6 +353,20 @@ results).
 - Checks: `ctest` on both builds; every variant of `reg_friction` and
   `reg_thermal_force`, CPU and `_gpu`, through `check_collisions.py`;
   seeded end-to-end runs within Monte Carlo error (3 sigma) of C1's.
+
+Done (2026-11-27), commit 66efd61, jobs in `$SCRATCH/flan_gpu/coll/rel`
+(`reg*.sbatch`) and `$SCRATCH/flan_gpu/coll/c4`. `above_bound` was
+removed from the output.
+
+- Every `reg_friction` and `reg_thermal_force` variant, CPU and `_gpu`,
+  passes `check_collisions.py` (39 of 41 checks, the 2 misses expected).
+  The GPU z10 drift is -1206 m/s against the model's -1195; `main`
+  gave -1183.
+- Runs without a skew are unchanged to rounding. HERMES `all` at 4000:
+  draws per ion sample 26 to 2.5, per electron sample 4.9 to 1.1;
+  candidates with negative F 0.013% to 0.04% (the share quadrature of
+  the clipped distribution gives, checked in `test_thermal_force_cpu`); Following impurities 43.9
+  to 31.6 s. Physics summaries within Monte Carlo error.
 
 **C5. Measure.**
 
