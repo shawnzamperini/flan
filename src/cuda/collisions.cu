@@ -401,13 +401,140 @@ namespace Collisions
 
 
 	/**
+	* Kernel that interpolates the plasma at each live, charged slot once
+	* per step for both species' collisions, and works out how many
+	* sub-steps each collision takes (see prepare_collisions_gpu).
+	*
+	* ne, Te and Ti are interpolated at the particle location (along the
+	* field line in a zone with a zShift table) and held at or above
+	* min_ne, min_te and min_ti; the flow likewise. With imp_thermal_force
+	* on, each species' parallel heat flux is interpolated where the
+	* background has it, and B where either is nonzero, for the skew in
+	* nanbu_coll_kernel. The values are those nanbu_coll_kernel used to
+	* interpolate itself, once for each species.
+	*
+	* Dead and neutral slots get 0 sub-steps and nothing else is written.
+	*
+	* @param slots_d Particle slots on the device. The coll_* arrays are
+	*        written.
+	* @param bkg_d Background plasma on the device.
+	* @param dt Time step (s).
+	* @param elec_mass_amu Electron mass (amu).
+	* @param ion_mass_amu Main ion mass (amu).
+	* @param opts_d Simulation options on the device, used for min_ne,
+	*        min_te, min_ti, imp_coll_subcycle_target,
+	*        imp_coll_subcycle_cap and imp_thermal_force.
+	*/
+	__global__
+	void collision_prep_kernel(Slots::SlotsDevice slots_d,
+		const Background::BackgroundDevice bkg_d, const double dt,
+		const double elec_mass_amu, const double ion_mass_amu,
+		const Options::OptionsDevice* opts_d)
+	{
+		const int i {Slots::slot_of_thread(slots_d)};
+		if (i < 0) return;
+
+		// Dead or neutral: no collisions
+		const int q {slots_d.q[i]};
+		if (slots_d.state[i] > 0 || q == 0)
+		{
+			slots_d.coll_nsub_i[i] = 0;
+			slots_d.coll_nsub_e[i] = 0;
+			return;
+		}
+
+		const int zone {slots_d.zone[i]};
+		const double t {slots_d.t[i]};
+		const double x {slots_d.x[i]};
+		const double y {slots_d.y[i]};
+		const double z {slots_d.z[i]};
+
+		// Interpolation stencil at this location for the 4D arrays
+		Interpolate::InterpolationStencil stencil_4d
+			{Interpolate::build_stencil_4d(bkg_d, zone, slots_d.tidx[i],
+			slots_d.xidx[i], slots_d.yidx[i], slots_d.zidx[i], t, x, y, z)};
+
+		// ne, Te and Ti at the particle (along the field line in a zone
+		// with a zShift table, as Background::interp_ne on the CPU), not
+		// below the minimums: they can go below zero near the edge of grids
+		const double ne {fmax(Interpolate::interp_plasma(bkg_d, bkg_d.ne,
+			stencil_4d, zone, t, x, y, z), opts_d->min_ne)};
+		const double Te {fmax(Interpolate::interp_plasma(bkg_d, bkg_d.te,
+			stencil_4d, zone, t, x, y, z), opts_d->min_te)};
+		const double Ti {fmax(opts_d->min_ti, Interpolate::interp_plasma(
+			bkg_d, bkg_d.ti, stencil_4d, zone, t, x, y, z))};
+
+		double u[3];
+		Interpolate::interp_plasma_vec3(bkg_d, bkg_d.uX, bkg_d.uY, bkg_d.uZ,
+			stencil_4d, zone, t, x, y, z, u);
+
+		// Parallel heat fluxes for the thermal force (along the field line
+		// like ne, as on the CPU), and B to measure them along where
+		// either is nonzero
+		double q_par_e {};
+		double q_par_i {};
+		if (opts_d->imp_thermal_force == 1)
+		{
+			if (bkg_d.q_par_e != nullptr)
+			{
+				q_par_e = Interpolate::interp_plasma(bkg_d, bkg_d.q_par_e,
+					stencil_4d, zone, t, x, y, z);
+			}
+			if (bkg_d.q_par_i != nullptr)
+			{
+				q_par_i = Interpolate::interp_plasma(bkg_d, bkg_d.q_par_i,
+					stencil_4d, zone, t, x, y, z);
+			}
+		}
+		double bX {};
+		double bY {};
+		double bZ {};
+		if (q_par_e != 0.0 || q_par_i != 0.0)
+		{
+			bX = Interpolate::interpolate_field_4d(bkg_d.bX, stencil_4d, t,
+				x, y, z);
+			bY = Interpolate::interpolate_field_4d(bkg_d.bY, stencil_4d, t,
+				x, y, z);
+			bZ = Interpolate::interpolate_field_4d(bkg_d.bZ, stencil_4d, t,
+				x, y, z);
+		}
+
+		slots_d.coll_ne[i] = ne;
+		slots_d.coll_te[i] = Te;
+		slots_d.coll_ti[i] = Ti;
+		slots_d.coll_uX[i] = u[0];
+		slots_d.coll_uY[i] = u[1];
+		slots_d.coll_uZ[i] = u[2];
+		slots_d.coll_bX[i] = bX;
+		slots_d.coll_bY[i] = bY;
+		slots_d.coll_bZ[i] = bZ;
+		slots_d.coll_q_par_e[i] = q_par_e;
+		slots_d.coll_q_par_i[i] = q_par_i;
+
+		// Sub-steps for each species (see the notes on sub-cycling in
+		// collisions.h and nanbu_coll_kernel)
+		const double elec_kg {elec_mass_amu * Constants::amu_to_kg};
+		const double ion_kg {ion_mass_amu * Constants::amu_to_kg};
+		slots_d.coll_nsub_i[i] = nanbu_num_substeps_cuda(nanbu_s0_cuda(
+			nanbu_s_coeff_cuda(q, Ti, Te, ne, slots_d.mass, ion_kg), dt, Ti,
+			ion_kg), opts_d->imp_coll_subcycle_target,
+			opts_d->imp_coll_subcycle_cap);
+		slots_d.coll_nsub_e[i] = nanbu_num_substeps_cuda(nanbu_s0_cuda(
+			nanbu_s_coeff_cuda(q, Te, Te, ne, slots_d.mass, elec_kg), dt, Te,
+			elec_kg), opts_d->imp_coll_subcycle_target,
+			opts_d->imp_coll_subcycle_cap);
+	}  // collision_prep_kernel
+
+
+	/**
 	* Kernel that updates the Cartesian velocity of each particle due to
 	* Coulomb collisions with one background species using the Nanbu model.
 	*
-	* One thread handles one slot, and dead particles are skipped. ne, Te
-	* (and Ti for ions) are interpolated at the particle location (along
-	* the field line in a zone with a zShift table) and held
-	* at or above min_ne, min_te and min_ti. Then s, A and chi are calculated
+	* One thread handles one slot, and dead and neutral particles are
+	* skipped. ne, Te (and Ti for ions), the flow and the number of
+	* sub-steps are those collision_prep_kernel stored for the slot this
+	* step (in the coll_* arrays), so it must have run since the particles
+	* last moved. Then s, A and chi are calculated
 	* and the velocity is updated with nanbu_post_coll_cuda. Since this
 	* happens after the Boris update, the updated velocity is v at n+1/2. A
 	* message is printed if chi is NaN.
@@ -419,7 +546,7 @@ namespace Collisions
 	*
 	* With imp_thermal_force on and heat fluxes in the background, the
 	* colliding background particle is skewed by that species' parallel
-	* heat flux (q_par_e or q_par_i, interpolated like ne), which gives the
+	* heat flux (coll_q_par_e or coll_q_par_i), which gives the
 	* electron or ion thermal force, as nanbu_coll does on the CPU. The
 	* sampler's counts are added to skew_d with atomicAdd, only where
 	* nonzero, since most particles in most steps have none.
@@ -467,89 +594,39 @@ namespace Collisions
 		int q {slots_d.q[i]};
 		if (q == 0) return;
 
-		// Local variables
-		int tidx {slots_d.tidx[i]};
-		int xidx {slots_d.xidx[i]};
-		int yidx {slots_d.yidx[i]};
-		int zidx {slots_d.zidx[i]};
-		const int zone {slots_d.zone[i]};
-		double t {slots_d.t[i]};
-		double x {slots_d.x[i]};
-		double y {slots_d.y[i]};
-		double z {slots_d.z[i]};
+		// The plasma at the particle, from collision_prep_kernel. The
+		// species colliding with the impurity: electrons (Te) if elec,
+		// ions (Ti) if not.
 		double vX {slots_d.vX[i]};
 		double vY {slots_d.vY[i]};
 		double vZ {slots_d.vZ[i]};
-
-		// Interpolate for ne, Te
-		// Get interpolation stencil at this location for 4D arrays
-		Interpolate::InterpolationStencil stencil_4d
-			{Interpolate::build_stencil_4d(bkg_d, zone, tidx, xidx, yidx, zidx, t, x, 
-			y, z)};
-
-		// ne and Te at the particle (along the field line in a zone with a
-		// zShift table, as Background::interp_ne on the CPU)
-		double ne {Interpolate::interp_plasma(bkg_d, bkg_d.ne, stencil_4d,
-			zone, t, x, y, z)};
-		double Te {Interpolate::interp_plasma(bkg_d, bkg_d.te, stencil_4d,
-			zone, t, x, y, z)};
-
-		// Don't let them go below zero. This can happen near the edge of grids.
-		ne = fmax(ne, opts_d->min_ne);
-		Te = fmax(Te, opts_d->min_te);
-
-		// Load some reusable variables based on which species. If elec = true,
-		// then electrons and ions if not. 
-		double T {};
-		double mass_kg {};
-		if (elec)
-		{
-			mass_kg = elec_mass_amu * Constants::amu_to_kg;	
-			T = Te;
-		}
-		else
-		{
-			mass_kg = ion_mass_amu * Constants::amu_to_kg;	
-			T = Interpolate::interp_plasma(bkg_d, bkg_d.ti, stencil_4d, zone,
-				t, x, y, z);
-			T = fmax(opts_d->min_ti, T);
-		}
+		const double ne {slots_d.coll_ne[i]};
+		const double Te {slots_d.coll_te[i]};
+		const double T {elec ? Te : slots_d.coll_ti[i]};
+		const double mass_kg {(elec ? elec_mass_amu : ion_mass_amu)
+			* Constants::amu_to_kg};
 
 		// Everything in s but dt / g^3 (see nanbu_s_coeff_cuda), and the
 		// background flow. Neither changes during the time step, so they
-		// are calculated once, before the sub-steps.
+		// are worked out once, before the sub-steps.
 		const double s_coeff {nanbu_s_coeff_cuda(q, T, Te, ne, slots_d.mass,
 			mass_kg)};
-		double u[3];
-		Interpolate::interp_plasma_vec3(bkg_d, bkg_d.uX, bkg_d.uY, bkg_d.uZ,
-			stencil_4d, zone, t, x, y, z, u);
-		const double uX {u[0]};
-		const double uY {u[1]};
-		const double uZ {u[2]};
+		const double uX {slots_d.coll_uX[i]};
+		const double uY {slots_d.coll_uY[i]};
+		const double uZ {slots_d.coll_uZ[i]};
 
 		// Heat-flux skew of the species colliding with the impurity
 		// (thermal force): eps from its parallel heat flux, with ni = ne,
-		// and the unit vector along B it's measured along (B from the
-		// stencil, q_par along the field line like ne, as on the CPU).
-		// Where q_par = 0, no skew.
+		// and the unit vector along B it's measured along. Where q_par = 0
+		// (or the thermal force is off), no skew.
 		double eps {};
 		double b[3] {};
-		const double* q_field {elec ? bkg_d.q_par_e : bkg_d.q_par_i};
-		if (opts_d->imp_thermal_force == 1 && q_field != nullptr)
+		const double q_par {elec ? slots_d.coll_q_par_e[i]
+			: slots_d.coll_q_par_i[i]};
+		if (q_par != 0.0)
 		{
-			const double q_par {Interpolate::interp_plasma(bkg_d, q_field,
-				stencil_4d, zone, t, x, y, z)};
-			if (q_par != 0.0)
-			{
-				eps = skew_at(q_par, ne, T, mass_kg,
-					Interpolate::interpolate_field_4d(bkg_d.bX, stencil_4d,
-						t, x, y, z),
-					Interpolate::interpolate_field_4d(bkg_d.bY, stencil_4d,
-						t, x, y, z),
-					Interpolate::interpolate_field_4d(bkg_d.bZ, stencil_4d,
-						t, x, y, z),
-					b);
-			}
+			eps = skew_at(q_par, ne, T, mass_kg, slots_d.coll_bX[i],
+				slots_d.coll_bY[i], slots_d.coll_bZ[i], b);
 		}
 		SkewCounts skew_counts {};
 
@@ -562,11 +639,10 @@ namespace Collisions
 		// force then comes out too weak. So when the step is too
 		// collisional, it is split into n_sub collisions of dt / n_sub,
 		// each with a newly sampled background particle. With n_sub = 1
-		// this is the plain model. See the notes in collisions.h.
-		const int n_sub {nanbu_num_substeps_cuda(
-			nanbu_s0_cuda(s_coeff, dt, T, mass_kg),
-			opts_d->imp_coll_subcycle_target,
-			opts_d->imp_coll_subcycle_cap)};
+		// this is the plain model. See the notes in collisions.h. n_sub
+		// was worked out by collision_prep_kernel.
+		const int n_sub {elec ? slots_d.coll_nsub_e[i]
+			: slots_d.coll_nsub_i[i]};
 		const double dt_sub {dt / n_sub};
 
 		for (int i_sub {}; i_sub < n_sub; ++i_sub)
@@ -643,7 +719,7 @@ namespace Collisions
 		{
 			const long long c[num_skew_counts] {skew_counts.samples,
 				skew_counts.draws, skew_counts.negative,
-				skew_counts.above_bound, skew_counts.eps_capped};
+				skew_counts.eps_capped};
 			for (int k {}; k < num_skew_counts; ++k)
 			{
 				if (c[k] != 0)
@@ -657,8 +733,49 @@ namespace Collisions
 
 
 	/**
-	* Launches nanbu_coll_kernel to update the velocity of every particle on
-	* the GPU due to collisions with one background species.
+	* Launches collision_prep_kernel, which interpolates the plasma at each
+	* live, charged slot once for both species' collisions and works out
+	* their sub-steps (the coll_* arrays of slots_d). It must run after
+	* the particles last moved or changed charge, before the collision
+	* kernels.
+	*
+	* Uses blocks of Slots::heavy_block_size threads, one thread per live
+	* slot. The launch is asynchronous, except in DEBUG builds, where it
+	* waits for the kernel to finish and prints any error.
+	*
+	* @param slots_d Particle slots on the device.
+	* @param bkg_d Background plasma on the device.
+	* @param dt Time step (s).
+	* @param elec_mass_amu Electron mass (amu).
+	* @param ion_mass_amu Main ion mass (amu).
+	* @param opts_d Simulation options on the device.
+	*/
+	void prepare_collisions_gpu(Slots::SlotsDevice& slots_d,
+		const Background::BackgroundDevice& bkg_d, const double dt,
+		const double elec_mass_amu, const double ion_mass_amu,
+		const Options::OptionsDevice* opts_d)
+	{
+		const int blockSize {Slots::heavy_block_size};
+		const int gridSize {Slots::num_blocks(slots_d, blockSize)};
+		if (gridSize == 0) return;	// no live slots
+
+		collision_prep_kernel<<<gridSize, blockSize>>>(slots_d, bkg_d, dt,
+			elec_mass_amu, ion_mass_amu, opts_d);
+
+#ifdef DEBUG
+		cudaError_t err {cudaDeviceSynchronize()};
+		if (err != cudaSuccess)
+		{
+			printf("collision_prep_kernel error: %s\n",
+				cudaGetErrorString(err));
+		}
+#endif
+	}  // prepare_collisions_gpu
+
+
+	/**
+	* Launches nanbu_coll_kernel for one background species, with the
+	* values prepare_collisions_gpu stored.
 	*
 	* Uses blocks of Slots::heavy_block_size threads, one thread per live
 	* slot. The launch is asynchronous, except in DEBUG builds, where it
@@ -675,11 +792,10 @@ namespace Collisions
 	* @param ion_mass_amu Main ion mass (amu).
 	* @param opts_d Simulation options on the device.
 	* @param skew_d Counters for the skewed sampler, ions then electrons
-	*        (2 num_skew_counts values, OpenADAS::IonizRecombWarningsDevice
-	*        ::skew), or nullptr to not count.
+	*        (2 num_skew_counts values), or nullptr to not count.
 	*/
-	void collision_gpu(Slots::SlotsDevice& slots_d, 
-		const Background::BackgroundDevice& bkg_d, const bool elec, 
+	static void collide_species_gpu(Slots::SlotsDevice& slots_d,
+		const Background::BackgroundDevice& bkg_d, const bool elec,
 		const double dt, ImpurityStats::StatisticsDevice& imp_stats_d,
 		pcg32* rngs_d, const double elec_mass_amu, const double ion_mass_amu,
 		const Options::OptionsDevice* opts_d, unsigned long long* skew_d)
@@ -707,7 +823,75 @@ namespace Collisions
 			printf("nanbu_coll_kernel error: %s\n", cudaGetErrorString(err));
 #endif
 
+	}  // collide_species_gpu
+
+
+	/**
+	* Updates the velocity of every particle on the GPU due to collisions
+	* with one background species: prepare_collisions_gpu, then that
+	* species' collision kernel. For callers that collide with one
+	* species at a time; a time step uses collisions_gpu, which prepares
+	* once for both.
+	*
+	* @param slots_d Particle slots on the device.
+	* @param bkg_d Background plasma on the device.
+	* @param elec If true, collide with electrons. Otherwise collide with
+	*        ions.
+	* @param dt Time step (s).
+	* @param imp_stats_d Impurity statistics on the device.
+	* @param rngs_d Random number generators on the device, one per slot.
+	* @param elec_mass_amu Electron mass (amu).
+	* @param ion_mass_amu Main ion mass (amu).
+	* @param opts_d Simulation options on the device.
+	* @param skew_d Counters for the skewed sampler, ions then electrons
+	*        (2 num_skew_counts values, OpenADAS::IonizRecombWarningsDevice
+	*        ::skew), or nullptr to not count.
+	*/
+	void collision_gpu(Slots::SlotsDevice& slots_d, 
+		const Background::BackgroundDevice& bkg_d, const bool elec, 
+		const double dt, ImpurityStats::StatisticsDevice& imp_stats_d,
+		pcg32* rngs_d, const double elec_mass_amu, const double ion_mass_amu,
+		const Options::OptionsDevice* opts_d, unsigned long long* skew_d)
+	{
+		prepare_collisions_gpu(slots_d, bkg_d, dt, elec_mass_amu,
+			ion_mass_amu, opts_d);
+		collide_species_gpu(slots_d, bkg_d, elec, dt, imp_stats_d, rngs_d,
+			elec_mass_amu, ion_mass_amu, opts_d, skew_d);
 	}  // collision_gpu
+
+
+	/**
+	* Updates the velocity of every particle on the GPU due to collisions
+	* with the background ions and then the electrons, interpolating the
+	* plasma once for both (prepare_collisions_gpu). Each slot draws from
+	* its own generator in that order, as two calls of collision_gpu
+	* would, so the results are the same.
+	*
+	* @param slots_d Particle slots on the device.
+	* @param bkg_d Background plasma on the device.
+	* @param dt Time step (s).
+	* @param imp_stats_d Impurity statistics on the device.
+	* @param rngs_d Random number generators on the device, one per slot.
+	* @param elec_mass_amu Electron mass (amu).
+	* @param ion_mass_amu Main ion mass (amu).
+	* @param opts_d Simulation options on the device.
+	* @param skew_d Counters for the skewed sampler, ions then electrons,
+	*        or nullptr to not count.
+	*/
+	void collisions_gpu(Slots::SlotsDevice& slots_d,
+		const Background::BackgroundDevice& bkg_d, const double dt,
+		ImpurityStats::StatisticsDevice& imp_stats_d, pcg32* rngs_d,
+		const double elec_mass_amu, const double ion_mass_amu,
+		const Options::OptionsDevice* opts_d, unsigned long long* skew_d)
+	{
+		prepare_collisions_gpu(slots_d, bkg_d, dt, elec_mass_amu,
+			ion_mass_amu, opts_d);
+		for (const bool elec : {false, true})
+		{
+			collide_species_gpu(slots_d, bkg_d, elec, dt, imp_stats_d,
+				rngs_d, elec_mass_amu, ion_mass_amu, opts_d, skew_d);
+		}
+	}  // collisions_gpu
 
 
 	/**
@@ -738,8 +922,7 @@ namespace Collisions
 			counts[s].samples = static_cast<long long>(c[0]);
 			counts[s].draws = static_cast<long long>(c[1]);
 			counts[s].negative = static_cast<long long>(c[2]);
-			counts[s].above_bound = static_cast<long long>(c[3]);
-			counts[s].eps_capped = static_cast<long long>(c[4]);
+			counts[s].eps_capped = static_cast<long long>(c[3]);
 		}
 		return counts;
 	}

@@ -115,7 +115,6 @@ namespace Collisions
 			total.samples += counts[s].samples;
 			total.draws += counts[s].draws;
 			total.negative += counts[s].negative;
-			total.above_bound += counts[s].above_bound;
 			total.eps_capped += counts[s].eps_capped;
 		}
 	}
@@ -128,17 +127,17 @@ namespace Collisions
 	*/
 	std::array<SkewCounts, 2> reduce_skew_counts()
 	{
-		std::array<long long, 10> local {};
+		constexpr int n {num_skew_counts};
+		std::array<long long, 2 * n> local {};
 		for (int s {}; s < 2; ++s)
 		{
 			const SkewCounts& c {g_skew_counts[s]};
-			local[5 * s] = c.samples;
-			local[5 * s + 1] = c.draws;
-			local[5 * s + 2] = c.negative;
-			local[5 * s + 3] = c.above_bound;
-			local[5 * s + 4] = c.eps_capped;
+			local[n * s] = c.samples;
+			local[n * s + 1] = c.draws;
+			local[n * s + 2] = c.negative;
+			local[n * s + 3] = c.eps_capped;
 		}
-		std::array<long long, 10> total {};
+		std::array<long long, 2 * n> total {};
 		MPI_Reduce(local.data(), total.data(),
 			static_cast<int>(local.size()), MPI_LONG_LONG, MPI_SUM, 0,
 			MPI_COMM_WORLD);
@@ -150,11 +149,10 @@ namespace Collisions
 		std::array<SkewCounts, 2> sums {};
 		for (int s {}; s < 2; ++s)
 		{
-			sums[s].samples = total[5 * s];
-			sums[s].draws = total[5 * s + 1];
-			sums[s].negative = total[5 * s + 2];
-			sums[s].above_bound = total[5 * s + 3];
-			sums[s].eps_capped = total[5 * s + 4];
+			sums[s].samples = total[n * s];
+			sums[s].draws = total[n * s + 1];
+			sums[s].negative = total[n * s + 2];
+			sums[s].eps_capped = total[n * s + 3];
 		}
 		return sums;
 	}
@@ -235,8 +233,7 @@ namespace Collisions
 			{
 				std::cout << ", " << double(c.draws) / c.samples
 					<< " draws each, " << double(c.negative) / c.draws
-					<< " of draws clipped (skew factor < 0), "
-					<< c.above_bound << " above the bound, " << c.eps_capped
+					<< " of draws clipped (skew factor < 0), " << c.eps_capped
 					<< " with |eps| capped at 1";
 			}
 			std::cout << '\n';
@@ -847,7 +844,6 @@ namespace Collisions
 				total.samples += skew_counts.samples;
 				total.draws += skew_counts.draws;
 				total.negative += skew_counts.negative;
-				total.above_bound += skew_counts.above_bound;
 				total.eps_capped += skew_counts.eps_capped;
 			}
 		} // omp parallel

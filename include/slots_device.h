@@ -60,6 +60,27 @@ namespace Slots
 							///< (set when the sheath is on, see
 							///< Boris::update_velocity_gpu)
 
+		// The plasma at each slot for the collisions, written each step by
+		// Collisions::prepare_collisions_gpu (one interpolation for both
+		// species) and read by the ion and electron collision kernels.
+		// Only set for live, charged slots; coll_nsub_i and coll_nsub_e
+		// are 0 for the others.
+		double* coll_ne;		///< ne, at least min_ne (m^-3)
+		double* coll_te;		///< Te, at least min_te (eV)
+		double* coll_ti;		///< Ti, at least min_ti (eV)
+		double* coll_uX;		///< Background flow, Cartesian X (m/s)
+		double* coll_uY;		///< Background flow, Cartesian Y (m/s)
+		double* coll_uZ;		///< Background flow, Cartesian Z (m/s)
+		double* coll_bX;		///< B, Cartesian X, where a heat flux is
+								///< nonzero (else 0)
+		double* coll_bY;		///< B, Cartesian Y (likewise)
+		double* coll_bZ;		///< B, Cartesian Z (likewise)
+		double* coll_q_par_e;	///< Electron parallel heat flux (W/m^2), 0
+								///< without the thermal force
+		double* coll_q_par_i;	///< Ion parallel heat flux (W/m^2), likewise
+		int* coll_nsub_i;		///< Collision sub-steps with the ions
+		int* coll_nsub_e;		///< Collision sub-steps with the electrons
+
 		// Work arrays for the kernels that refill dead slots (see slots.cu)
 		bool* all_dead;		///< Single value, true if every slot is dead
 		int* dead_indices;	///< Indices of the dead slots, size N

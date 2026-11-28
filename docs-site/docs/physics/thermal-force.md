@@ -156,29 +156,49 @@ file (`q_par_i` and `q_par_e`, in W/m²).
 
 ## Sampling
 
-A velocity is drawn from the skewed distribution by rejection: draw from
-the Maxwellian, and keep the draw with probability $F/M$, where
-$F = f/f_M$ is the skew factor at that velocity and
-$M = 1 + |\epsilon| \times \text{bound}$ is an upper limit on it for speeds
-up to $5\,v_\text{th}$. On average it takes $M$ draws per sample. Where
-$q_\parallel = 0$, a single Maxwellian draw is made, exactly as with the
-option off.
+A velocity is drawn from the skewed distribution by rejection. The
+candidates come from an envelope $f_M\,G$ that is at least $f$ at every
+velocity, with
+
+$$
+G(w) = 1 + |\epsilon| \left(|a|\,w + |b|\,w^3 + |c|\,w^5\right),
+$$
+
+which bounds the skew factor $F = f/f_M$ because $|w_\parallel| \le w$.
+A candidate is kept with probability $\max(F, 0)/G$. The envelope is a
+mixture of four isotropic distributions, each easy to draw from: the
+Maxwellian, with weight 1, and $w^k f_M$ for $k = 1, 3, 5$, with weights
+$|\epsilon|\,|a|\,\langle w\rangle$, $|\epsilon|\,|b|\,\langle w^3\rangle$
+and $|\epsilon|\,|c|\,\langle w^5\rangle$ (averages over the unit
+Maxwellian: $\langle w\rangle = 1.60$, $\langle w^3\rangle = 6.38$,
+$\langle w^5\rangle = 38.3$). For $w^k f_M$, $w^2$ is a sum of
+$(k + 3)/2$ exponentials of mean 2, and the direction is uniform.
+
+On average a sample takes as many candidates as the envelope's total
+weight, about $1 + 2|\epsilon|$ for the ion and electron shapes: 1.14 at
+$\epsilon = 0.07$ and 3.0 at $|\epsilon| = 1$. A bound on $F$ taken
+from its largest value up to some speed would be much looser, since $F$
+grows as $w^5$: up to $5\,v_\text{th}$ it is $1 + 32|\epsilon|$ for the
+ion shape and $1 + 59|\epsilon|$ for the electron shape, so that many
+draws per sample. Where $q_\parallel = 0$, a single Maxwellian draw is
+made, exactly as with the option off.
 
 The expansion behind the skewed distribution assumes $\epsilon$ is small,
-and three things happen where it isn't. All are counted.
+and two things happen where it isn't. Both are counted.
 
 | What | When | What is done |
 |---|---|---|
 | Clipped draw | $F < 0$: the skew factor is negative in the tails | The draw is dropped |
-| Above the bound | $F > M$: a draw faster than $5\,v_\text{th}$ | The draw is kept |
 | Capped skew | $\lvert\epsilon\rvert > 1$ | $\epsilon$ is set to $\pm 1$ |
 
-Clipping makes the sampled distribution carry a little less heat flux
-than asked for. For the ion shape, the sampled heat flux is 99.6% of the
-target at $\epsilon = 0.07$ and 86% at $\epsilon = 0.3$, where 0.3% of the
-draws are clipped. For the electron shape it is 94% at $\epsilon = 0.1$.
-The density, flow and temperature are hardly affected (the temperature
-rises by 0.7% at $\epsilon = 0.3$).
+Clipping makes the sampled distribution carry less heat flux than asked
+for. For the ion shape, the sampled heat flux is 99% of the target at
+$\epsilon = 0.07$, 84% at $|\epsilon| = 0.3$ (0.9% of the candidates
+clipped) and 60% at $|\epsilon| = 1$. For the electron shape it is 91%
+at $\epsilon = 0.1$ and 51% at $|\epsilon| = 1$. The density is kept,
+and the flow and temperature change a little: at $|\epsilon| = 0.3$ with
+the ion shape the mean moves by $0.006\,v_\text{th}$ toward the hot
+side and the temperature rises by 0.8%.
 
 The counts are printed at the end of the run and saved in the
 `thermal_force` group of the output file, for ions and electrons:
@@ -186,12 +206,11 @@ The counts are printed at the end of the run and saved in the
 | Attribute | Meaning |
 |---|---|
 | `samples` | Background particles sampled with a skew |
-| `draws` | Maxwellian draws, kept or not |
+| `draws` | Candidates drawn, kept or not |
 | `negative` | Clipped draws |
-| `above_bound` | Draws above the bound |
 | `eps_capped` | Samples where $\lvert\epsilon\rvert$ was capped at 1 |
 
-`negative / draws` is the share of the Maxwellian that was clipped. If it
+`negative / draws` is about the share of the distribution that was clipped. If it
 is more than a percent or so, or if many samples were capped, the heat
 flux is too large for the expansion in much of the region the impurities
 are in, and the thermal force there is only approximate.

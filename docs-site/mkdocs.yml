@@ -48,6 +48,7 @@ nav:
       - Sheath and Self-Sputtering Plan: developer/sheath-plan.md
       - GPU Plan: developer/gpu-plan.md
       - Live-Slot List Plan: developer/live-slots-plan.md
+      - Collision Kernel Divergence Plan: developer/collision-divergence-plan.md
       - Gangster Spongebob: developer/gangster-spongebob.md
       - API Reference:
           - Namespaces: api/namespaces.md

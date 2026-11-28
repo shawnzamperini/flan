@@ -1,6 +1,7 @@
 /*
 * The GPU Nanbu collisions (collision_gpu) against the CPU's (nanbu_coll),
-* particle by particle, with the thermal force on:
+* particle by particle, with the thermal force on, and collisions_gpu (one
+* preparation for both species) against collision_gpu for each:
 *
 * - the slab with ion and electron heat fluxes along B, so every
 *   background particle is sampled from the skewed distribution;
@@ -173,8 +174,108 @@ namespace
 			EXPECT_EQ(gpu.counts.samples, cpu.counts.samples);
 			EXPECT_EQ(gpu.counts.draws, cpu.counts.draws);
 			EXPECT_EQ(gpu.counts.negative, cpu.counts.negative);
-			EXPECT_EQ(gpu.counts.above_bound, cpu.counts.above_bound);
 			EXPECT_EQ(gpu.counts.eps_capped, cpu.counts.eps_capped);
+		}
+	}
+}
+
+namespace
+{
+	/// Velocities after colliding with the ions and then the electrons
+	/// on the GPU, either with collisions_gpu (one preparation for both)
+	/// or with collision_gpu for each, and both species' counts
+	struct BothResult
+	{
+		Slots::Slots slots;
+		std::array<Collisions::SkewCounts, 2> counts;
+	};
+
+	BothResult gpu_both(const Slots::Slots& in, Background::Background& bkg,
+		Options::Options& opts, const double dt, const bool combined)
+	{
+		Background::BackgroundDevice bkg_d {bkg.to_device()};
+		Slots::Slots gpu {in};
+		Slots::SlotsDevice slots_d {gpu.to_device()};
+		pcg32* rngs_d {init_rngs_cuda(slots_d, seed)};
+		Options::OptionsDevice* opts_d {opts.to_device()};
+		ImpurityStats::StatisticsDevice stats_d {};
+		unsigned long long* skew_d {};
+		const std::size_t skew_size {2 * Collisions::num_skew_counts
+			* sizeof(unsigned long long)};
+		cudaMalloc(&skew_d, skew_size);
+		cudaMemset(skew_d, 0, skew_size);
+
+		const double me {bkg.get_elec_mass_amu()};
+		const double mi {bkg.get_ion_mass_amu()};
+		if (combined)
+		{
+			Collisions::collisions_gpu(slots_d, bkg_d, dt, stats_d, rngs_d,
+				me, mi, opts_d, skew_d);
+		}
+		else
+		{
+			for (const bool elec : {false, true})
+			{
+				Collisions::collision_gpu(slots_d, bkg_d, elec, dt, stats_d,
+					rngs_d, me, mi, opts_d, skew_d);
+			}
+		}
+		BothResult r {gpu.to_host(slots_d),
+			Collisions::skew_counts_from_device(skew_d, 0)};
+
+		cudaFree(skew_d);
+		Options::free_opts(opts_d);
+		free_rngs(rngs_d, slots_d.device_id);
+		Slots::free_slots(slots_d);
+		Background::free_bkg(bkg_d);
+		return r;
+	}
+
+	/**
+	* collisions_gpu, which interpolates the plasma once for both species,
+	* gives the same velocities and counts, bit for bit, as collision_gpu
+	* for the ions and then the electrons, which prepares for each. Some
+	* slots are made neutral or dead, which both must leave alone.
+	*/
+	void combined_matches_separate(Background::Background& bkg,
+		Options::Options& opts, Slots::Slots slots, const double dt)
+	{
+		for (int i {}; i < slots.N(); ++i)
+		{
+			if (i % 7 == 3) slots.set_q(i, 0);
+			if (i % 11 == 5) slots.set_state(i, 1);
+		}
+		const BothResult a {gpu_both(slots, bkg, opts, dt, false)};
+		const BothResult b {gpu_both(slots, bkg, opts, dt, true)};
+
+		int bad {};
+		int changed {};
+		for (int i {}; i < slots.N(); ++i)
+		{
+			const bool same {a.slots.vX()[i] == b.slots.vX()[i]
+				&& a.slots.vY()[i] == b.slots.vY()[i]
+				&& a.slots.vZ()[i] == b.slots.vZ()[i]};
+			if (!same && bad++ < 5)
+			{
+				ADD_FAILURE() << "particle " << i << ": separate ("
+					<< a.slots.vX()[i] << ", " << a.slots.vY()[i] << ", "
+					<< a.slots.vZ()[i] << "), combined (" << b.slots.vX()[i]
+					<< ", " << b.slots.vY()[i] << ", " << b.slots.vZ()[i]
+					<< ")";
+			}
+			const bool moved {b.slots.vX()[i] != slots.vX()[i]};
+			const bool skipped {slots.q()[i] == 0 || slots.state()[i] > 0};
+			EXPECT_EQ(moved, !skipped) << i;
+			changed += moved;
+		}
+		EXPECT_EQ(bad, 0);
+		EXPECT_GT(changed, 0);
+		for (int s {}; s < 2; ++s)
+		{
+			EXPECT_EQ(a.counts[s].samples, b.counts[s].samples) << s;
+			EXPECT_EQ(a.counts[s].draws, b.counts[s].draws) << s;
+			EXPECT_EQ(a.counts[s].negative, b.counts[s].negative) << s;
+			EXPECT_EQ(a.counts[s].eps_capped, b.counts[s].eps_capped) << s;
 		}
 	}
 }
@@ -211,4 +312,35 @@ TEST(CollisionsCUDA, MatchesCPUOnHermesGrid)
 	Options::Options opts {};
 	Slots::Slots slots {MultiZone::spread_particles(bkg, 500, 5)};
 	collisions_match_cpu(bkg, opts, slots, 1e-8);
+}
+
+// One preparation for both species gives what preparing for each does:
+// on the slab (skewed, electrons sub-cycled) and on the HERMES grid (six
+// zones, heat fluxes along the field lines)
+TEST(CollisionsCUDA, CombinedMatchesSeparate)
+{
+	{
+		SCOPED_TRACE("slab");
+		Options::Options opts {};
+		opts.set_bkg_source("slab");
+		opts.set_slab_ne(1e19);
+		opts.set_slab_te(10.0);
+		opts.set_slab_ti(10.0);
+		opts.set_slab_bmag(1.0);
+		opts.set_slab_heat_flux_i(0.3);
+		opts.set_slab_heat_flux_e(0.3);
+		Background::Background bkg {Background::read_bkg(opts)};
+		combined_matches_separate(bkg, opts,
+			MultiZone::spread_particles(bkg, 4000, 3), 1e-7);
+	}
+	{
+		SCOPED_TRACE("hermes");
+		const auto dir {std::filesystem::temp_directory_path()
+			/ ("flan_test_collisions_combined_" + std::to_string(getpid()))};
+		Background::Background bkg {MultiZone::hermes_background(dir)};
+		std::filesystem::remove_all(dir);
+		Options::Options opts {};
+		combined_matches_separate(bkg, opts,
+			MultiZone::spread_particles(bkg, 500, 5), 1e-8);
+	}
 }

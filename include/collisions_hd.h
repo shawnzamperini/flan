@@ -57,21 +57,20 @@ namespace Collisions
 	* start of the run (or the last reset_skew_counts), GPUs included.
 	* They show how well the skew was reproduced: draws where the skew
 	* factor is negative were dropped (clipped), so negative / draws is
-	* the share of the Maxwellian that was clipped.
+	* about the share of the distribution that was clipped.
 	*/
 	struct SkewCounts
 	{
 		long long samples {};		///< Background particles sampled with a skew
-		long long draws {};			///< Maxwellian draws, accepted or not
+		long long draws {};			///< Candidates drawn from the envelope,
+									///< accepted or not
 		long long negative {};		///< Draws where the skew factor was < 0
-		long long above_bound {};	///< Draws where it was above the
-									///< rejection bound (|w| > 5)
 		long long eps_capped {};	///< Samples where |eps| > 1 was capped
 	};
 
 	/// Number of fields in SkewCounts, the size of each species' block of
 	/// counters on a GPU (in the order of the fields)
-	inline constexpr int num_skew_counts {5};
+	inline constexpr int num_skew_counts {4};
 
 	/// Largest |eps| used. The skew is an expansion meant for small eps,
 	/// and at |eps| = 1 it is already negative over a few percent of the
@@ -80,17 +79,31 @@ namespace Collisions
 
 	/**
 	* Shape of the skew: the coefficients of f / f_M = 1 + eps w_par
-	* (a + b w^2 + c w^4), and bound, the largest |w_par (a + b w^2 +
-	* c w^4)| for speeds up to 5 v_th, used for rejection sampling (see
-	* skew_bound). Made by skew_shape.
+	* (a + b w^2 + c w^4), and the weights of the envelope sample_bkg
+	* draws from, per unit |eps| (see skew_envelope): |a| <w>, |b| <w^3>
+	* and |c| <w^5>, with <w^k> the averages of the speed's powers over the
+	* unit Maxwellian. Made by skew_shape.
 	*/
 	struct SkewShape
 	{
 		double a {};
 		double b {};
 		double c {};
-		double bound {};
+		double env_a {};	///< |a| <w>
+		double env_b {};	///< |b| <w^3>
+		double env_c {};	///< |c| <w^5>
 	};
+
+	/**
+	* Averages of the speed's powers over the unit Maxwellian (the speed
+	* distribution sqrt(2 / pi) w^2 exp(-w^2 / 2)): <w> = 2 sqrt(2 / pi),
+	* <w^3> = 8 sqrt(2 / pi) and <w^5> = 48 sqrt(2 / pi).
+	*/
+	///@{
+	inline constexpr double maxwell_w1 {2.0 * 0.79788456080286536};
+	inline constexpr double maxwell_w3 {8.0 * 0.79788456080286536};
+	inline constexpr double maxwell_w5 {48.0 * 0.79788456080286536};
+	///@}
 
 	/**
 	* Size of the heat-flux skew, eps = q_par / (n T v_th), v_th =
@@ -159,7 +172,8 @@ namespace Collisions
 	*      lowest-order (Grad 13-moment) shape w_par (w^2 / 5 - 1) gives.
 	* They give c = (1 - push) / 25, b = 1/5 - 14 c and a = -1 + 35 c.
 	* push = 1 is the Grad shape (c = 0). push < 1 moves the lean to faster
-	* particles, which collide less.
+	* particles, which collide less. The envelope's weights (see
+	* skew_envelope) follow from a, b and c.
 	*
 	* push is a property of the background's distribution, not of the
 	* impurity. For a fluid background it comes from the closure (see
@@ -176,18 +190,9 @@ namespace Collisions
 		s.c = (1.0 - push) / 25.0;
 		s.b = 0.2 - 14.0 * s.c;
 		s.a = -1.0 + 35.0 * s.c;
-
-		// Largest |w (a + b w^2 + c w^4)| for w up to 5 (w_par = w is the
-		// worst direction), on a fine grid
-		constexpr double w_max {5.0};
-		constexpr int n {2000};
-		for (int i {}; i <= n; ++i)
-		{
-			const double w {w_max * i / n};
-			const double w2 {w * w};
-			s.bound = std::fmax(s.bound,
-				std::fabs(w * (s.a + s.b * w2 + s.c * w2 * w2)));
-		}
+		s.env_a = std::fabs(s.a) * maxwell_w1;
+		s.env_b = std::fabs(s.b) * maxwell_w3;
+		s.env_c = std::fabs(s.c) * maxwell_w5;
 		return s;
 	}
 
@@ -240,19 +245,44 @@ namespace Collisions
 	}
 
 	/**
-	* Bound M on skew_factor used for rejection sampling (see
-	* sample_bkg): M = 1 + |eps| shape.bound, which is at least the
-	* factor for speeds up to 5 v_th. Faster draws (about 1 in 10^5 of a
-	* Maxwellian) can exceed it; they are accepted with probability 1
-	* instead of F / M, which is counted.
+	* The envelope sample_bkg draws candidates from, relative to the
+	* Maxwellian, at speed w (in units of v_th):
+	*
+	*   G(w) = 1 + |eps| (|a| w + |b| w^3 + |c| w^5).
+	*
+	* Since |w_par| <= w, G is at least the skew factor at every velocity
+	* with that speed, whatever its direction, so rejection sampling from
+	* f_M G is exact at all speeds.
+	*
+	* @param eps Size of the skew.
+	* @param w Speed relative to the flow, in units of v_th.
+	* @param shape Shape of the skew.
+	* @return G(w).
+	*/
+	FLAN_HD inline double skew_envelope_at(const double eps, const double w,
+		const SkewShape& shape)
+	{
+		const double w2 {w * w};
+		return 1.0 + std::fabs(eps) * w * (std::fabs(shape.a)
+			+ std::fabs(shape.b) * w2 + std::fabs(shape.c) * w2 * w2);
+	}
+
+	/**
+	* Total weight of the envelope f_M G (see skew_envelope_at), the
+	* integral of G over the unit Maxwellian: 1 + |eps| (env_a + env_b +
+	* env_c). It is the mean number of candidates sample_bkg draws per
+	* sample, a little less where draws are clipped. At |eps| = 1 it is
+	* about 3 for the ion and electron shapes.
 	*
 	* @param eps Size of the skew.
 	* @param shape Shape of the skew.
-	* @return M.
+	* @return The envelope's weight.
 	*/
-	FLAN_HD inline double skew_bound(const double eps, const SkewShape& shape)
+	FLAN_HD inline double skew_envelope(const double eps,
+		const SkewShape& shape)
 	{
-		return 1.0 + std::fabs(eps) * shape.bound;
+		return 1.0 + std::fabs(eps)
+			* (shape.env_a + shape.env_b + shape.env_c);
 	}
 
 	/// Velocity of a sampled background particle (m/s, Cartesian)
@@ -275,15 +305,28 @@ namespace Collisions
 	*
 	* Skewed (eps != 0): the distribution is f = f_M [1 + eps w_par
 	* (a + b w^2 + c w^4)] (see skew_factor and skew_shape), sampled by
-	* rejection: draw w = (v - u) / v_th from the unskewed Maxwellian, with
-	* w_par = w . b, and accept it with probability max(F, 0) / M, where F
-	* is the skew factor and M = skew_bound(eps, shape) >= F. Accepted
-	* draws are distributed as f_M max(F, 0), the skewed distribution with
-	* its negative parts set to 0 (clipped). Clipping removes a little of
-	* the heat flux when the skew is strong: with the ion shape, under 1%
-	* at eps = 0.07 and about 14% at eps = 0.3. On average M draws are
-	* needed per sample, so on a GPU the threads of a warp wait for the one
-	* that needs the most; with |eps| capped at 1, M is at most about 2.
+	* rejection from the envelope f_M G(w), G = 1 + |eps| (|a| w + |b| w^3
+	* + |c| w^5) (skew_envelope_at), which is at least f_M F everywhere.
+	* f_M G is a mixture of four isotropic distributions: the Maxwellian,
+	* with weight 1, and w^k f_M for k = 1, 3, 5, with weights |eps|
+	* env_a, env_b and env_c. A candidate w = (v - u) / v_th is drawn
+	* from one of them, picked by weight: the Maxwellian as three normals,
+	* the others as a uniform direction and a speed with w^2 from a gamma
+	* distribution of shape (k + 3) / 2 = 2, 3 or 4 and scale 2, a sum of
+	* that many exponentials. It is accepted with probability max(F, 0) /
+	* G, with w_par = w . b. Accepted draws are distributed as f_M max(F,
+	* 0), the skewed distribution with its negative parts set to 0
+	* (clipped). Clipping removes a little of the heat flux when the skew
+	* is strong: with the ion shape, under 1% at eps = 0.07 and about 14%
+	* at eps = 0.3.
+	*
+	* The mean number of candidates per sample is the envelope's weight,
+	* skew_envelope (about 1 + 2 |eps|). A bound on F taken from its
+	* largest value up to some speed would be much looser, since F grows
+	* as w^5 where f_M is tiny: up to 5 v_th it is 1 + 32 |eps| for the
+	* ion shape and 1 + 59 |eps| for the electron shape. On a GPU, the
+	* threads of a warp wait for the one that needs the most draws, so
+	* the number of draws matters more than its cost suggests.
 	*
 	* @param T Temperature of the background species (eV).
 	* @param uX Cartesian X flow velocity of the background species (m/s).
@@ -323,28 +366,60 @@ namespace Collisions
 			e = std::copysign(max_skew_eps, e);
 			counts.eps_capped++;
 		}
-		const double M {skew_bound(e, shape)};
+		// Weights of the envelope's four parts: the Maxwellian, then
+		// w f_M, w^3 f_M and w^5 f_M
+		const double ae {std::fabs(e)};
+		const double cum_a {1.0 + ae * shape.env_a};
+		const double cum_b {cum_a + ae * shape.env_b};
+		const double total {cum_b + ae * shape.env_c};
 
 		while (true)
 		{
 			counts.draws++;
-			const double wX {rng.normal(0.0, 1.0)};
-			const double wY {rng.normal(0.0, 1.0)};
-			const double wZ {rng.normal(0.0, 1.0)};
+
+			// A candidate from the envelope
+			double wX {};
+			double wY {};
+			double wZ {};
+			const double pick {rng.next_double() * total};
+			if (pick < 1.0)
+			{
+				wX = rng.normal(0.0, 1.0);
+				wY = rng.normal(0.0, 1.0);
+				wZ = rng.normal(0.0, 1.0);
+			}
+			else
+			{
+				// w^k f_M: w^2 is gamma distributed with shape (k + 3) / 2
+				// and scale 2, a sum of that many exponentials of mean 2.
+				// 1 - U is in (0, 1], so the log is finite.
+				const int n_exp {pick < cum_a ? 2 : (pick < cum_b ? 3 : 4)};
+				double w2 {};
+				for (int k {}; k < n_exp; ++k)
+					w2 -= 2.0 * std::log(1.0 - rng.next_double());
+				const double w {std::sqrt(w2)};
+
+				// Uniform direction
+				const double cos_t {2.0 * rng.next_double() - 1.0};
+				const double sin_t {std::sqrt(std::fmax(0.0,
+					1.0 - cos_t * cos_t))};
+				const double phi {2.0 * Constants::pi * rng.next_double()};
+				wX = w * sin_t * std::cos(phi);
+				wY = w * sin_t * std::sin(phi);
+				wZ = w * cos_t;
+			}
+
+			// Accept with probability max(F, 0) / G
 			const double w_par {wX * b[0] + wY * b[1] + wZ * b[2]};
 			const double w_sq {wX * wX + wY * wY + wZ * wZ};
 			const double F {skew_factor(e, w_par, w_sq, shape)};
-
-			bool accept {};
-			if (F <= 0.0) counts.negative++;
-			else if (F > M)
+			if (F <= 0.0)
 			{
-				counts.above_bound++;
-				accept = true;
+				counts.negative++;
+				continue;
 			}
-			else accept = rng.next_double() * M < F;
-
-			if (accept)
+			const double G {skew_envelope_at(e, std::sqrt(w_sq), shape)};
+			if (rng.next_double() * G < F)
 				return {uX + v_th * wX, uY + v_th * wY, uZ + v_th * wZ};
 		}
 	}

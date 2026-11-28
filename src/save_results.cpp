@@ -1784,8 +1784,8 @@ namespace SaveResults
 
 		// How the thermal force's skewed sampling went: per species, the
 		// background particles sampled with a skew, the Maxwellian draws
-		// they took, draws clipped (skew factor < 0) or above the
-		// rejection bound, and samples with |eps| capped at 1
+		// they took, draws clipped (skew factor < 0), and samples with
+		// |eps| capped at 1
 		if (skew_counts != nullptr)
 		{
 			netCDF::NcGroup tf {nc_file.addGroup("thermal_force")};
@@ -1796,8 +1796,6 @@ namespace SaveResults
 				tf.putAtt(sp + "samples", netCDF::ncInt64, c.samples);
 				tf.putAtt(sp + "draws", netCDF::ncInt64, c.draws);
 				tf.putAtt(sp + "negative", netCDF::ncInt64, c.negative);
-				tf.putAtt(sp + "above_bound", netCDF::ncInt64,
-					c.above_bound);
 				tf.putAtt(sp + "eps_capped", netCDF::ncInt64, c.eps_capped);
 			}
 		}

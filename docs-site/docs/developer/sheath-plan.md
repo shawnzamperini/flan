@@ -823,14 +823,16 @@ Potentials λ are e(φ − φ₀)/kTe.
   no Debye sheath. So GITR isn't simply 1 − λ_mps / λ_w, and its low-angle
   values come from somewhere unpublished.
 
-### Still to do in S0
+### Left over from S0
 
-- **Where to get the `"brooks"` f_D(α) from.** Decision 7 below.
-- **Borodkina et al. (2016)**, Contrib. Plasma Phys. 56, 640. It may give
-  more benchmarks, but the model is in the 2015 paper.
-- **Reference curves with a sheath.** Published prompt-redeposition
-  results (ERO, GITR, Chankin et al. 2014) for S5. Brooks' reference case
-  above is the first one.
+Closed (2026-11-27), with S0 to S8 done:
+
+- ~~**Where to get the `"brooks"` f_D(α) from.**~~ Settled by decision 7
+  below.
+- ~~**Borodkina et al. (2016)**, Contrib. Plasma Phys. 56, 640.~~ Not
+  needed: the model is in the 2015 paper.
+- ~~**Reference curves with a sheath.**~~ Not pursued further: S5 is
+  checked against Fussmann's model and Brooks' reference case above.
 
 ## Decisions to make
 

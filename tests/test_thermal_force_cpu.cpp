@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 #include <omp.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "background.h"
@@ -34,17 +35,22 @@ namespace
 	// Moments of the skewed distribution f_M [1 + eps w_par (a + b w^2 +
 	// c w^4)] in units of v_th, integrated over (w_par, w_perp) with
 	// d^3w = 2 pi w_perp dw_perp dw_par and the midpoint rule. f_M is the
-	// unit Maxwellian exp(-w^2 / 2) / (2 pi)^(3 / 2).
+	// unit Maxwellian exp(-w^2 / 2) / (2 pi)^(3 / 2). With clip, the
+	// factor's negative parts are set to 0, as sample_bkg does, and env
+	// and neg are the envelope's integral f_M G and its part where the
+	// factor is <= 0 (where sample_bkg's candidates are clipped).
 	struct Moments
 	{
 		double n {};		// int f
 		double u {};		// int w_par f
 		double T {};		// int w^2 f / 3
 		double q {};		// int 1/2 w^2 w_par f
+		double env {};		// int f_M G
+		double neg {};		// int f_M G where the factor is <= 0
 	};
 
 	Moments skew_moments(const double eps,
-		const Collisions::SkewShape& shape)
+		const Collisions::SkewShape& shape, const bool clip = false)
 	{
 		constexpr int nw {800};
 		constexpr double wmax {12.0};
@@ -58,9 +64,15 @@ namespace
 			const double w_par {-wmax + (a + 0.5) * dpar};
 			const double w_perp {(b + 0.5) * dperp};
 			const double w_sq {w_par * w_par + w_perp * w_perp};
-			const double f {norm * std::exp(-0.5 * w_sq)
-				* Collisions::skew_factor(eps, w_par, w_sq, shape)
+			const double fM {norm * std::exp(-0.5 * w_sq)
 				* 2.0 * Constants::pi * w_perp * dpar * dperp};
+			const double F {Collisions::skew_factor(eps, w_par, w_sq,
+				shape)};
+			const double G {Collisions::skew_envelope_at(eps,
+				std::sqrt(w_sq), shape)};
+			const double f {fM * (clip ? std::fmax(F, 0.0) : F)};
+			m.env += fM * G;
+			if (F <= 0.0) m.neg += fM * G;
 			m.n += f;
 			m.u += w_par * f;
 			m.T += w_sq * f / 3.0;
@@ -115,7 +127,31 @@ TEST(ThermalForce, SkewShape)
 	EXPECT_DOUBLE_EQ(grad_shape.a, -1.0);
 	EXPECT_DOUBLE_EQ(grad_shape.b, 0.2);
 	EXPECT_DOUBLE_EQ(grad_shape.c, 0.0);
-	EXPECT_NEAR(grad_shape.bound, 20.0, 1e-12);
+
+	// The envelope's weights: |a| <w>, |b| <w^3>, |c| <w^5>, with the
+	// averages over the unit Maxwellian checked by a radial integral
+	EXPECT_DOUBLE_EQ(grad_shape.env_a, Collisions::maxwell_w1);
+	EXPECT_DOUBLE_EQ(grad_shape.env_b, 0.2 * Collisions::maxwell_w3);
+	EXPECT_DOUBLE_EQ(grad_shape.env_c, 0.0);
+	{
+		constexpr int nw {200000};
+		constexpr double dw {14.0 / nw};
+		double w1 {}, w3 {}, w5 {};
+		for (int i {}; i < nw; ++i)
+		{
+			const double w {(i + 0.5) * dw};
+			const double p {std::sqrt(2.0 / Constants::pi) * w * w
+				* std::exp(-0.5 * w * w) * dw};
+			w1 += w * p;
+			w3 += w * w * w * p;
+			w5 += w * w * w * w * w * p;
+		}
+		EXPECT_NEAR(Collisions::maxwell_w1, w1, 1e-8);
+		EXPECT_NEAR(Collisions::maxwell_w3, w3, 1e-7);
+		EXPECT_NEAR(Collisions::maxwell_w5, w5, 1e-6);
+	}
+	EXPECT_NEAR(ion_shape.env_c, std::fabs(ion_shape.c)
+		* Collisions::maxwell_w5, 1e-15);
 
 	// The closure values: 2.65 against Grad's 3.31 for ions, and 0.71
 	// against 1.90 for electrons
@@ -225,77 +261,92 @@ namespace
 	}
 }
 
-// The bound on the skew factor holds for |w| <= 5, and is reached at
-// w_par = w = 5 for these shapes
-TEST(ThermalForce, SkewBound)
+// The envelope is at least the skew factor at every velocity, fast ones
+// included, and its integral over the Maxwellian is skew_envelope (the
+// mean number of candidates per sample). It equals the factor where all
+// of w (a + b w^2 + c w^4) has one sign and w points along or against b,
+// e.g. for the Grad shape at large w along b.
+TEST(ThermalForce, SkewEnvelope)
 {
-	EXPECT_DOUBLE_EQ(Collisions::skew_bound(0.07, grad_shape),
-		1.0 + 20.0 * 0.07);
+	EXPECT_DOUBLE_EQ(Collisions::skew_envelope(0.07, grad_shape),
+		1.0 + 0.07 * (Collisions::maxwell_w1 + 0.2 * Collisions::maxwell_w3));
+	EXPECT_DOUBLE_EQ(Collisions::skew_envelope(0.0, ion_shape), 1.0);
+	EXPECT_DOUBLE_EQ(Collisions::skew_envelope_at(0.0, 3.0, ion_shape), 1.0);
 	for (const auto* shape : {&grad_shape, &ion_shape, &elec_shape})
-	for (const double eps : {0.07, -0.3, 1.0})
+	for (const double eps : {0.07, -0.3, 1.0, -1.0})
 	{
-		const double M {Collisions::skew_bound(eps, *shape)};
-		const double w {eps > 0.0 ? 5.0 : -5.0};
-		EXPECT_NEAR(Collisions::skew_factor(eps, w, 25.0, *shape), M,
-			1e-12 * M);
-		for (double wp {-5.0}; wp <= 5.0; wp += 0.25)
-		for (double wq {0.0}; wp * wp + wq * wq <= 25.0; wq += 0.25)
+		for (double wp {-12.0}; wp <= 12.0; wp += 0.25)
+		for (double wq {0.0}; wp * wp + wq * wq <= 144.0; wq += 0.25)
 		{
-			EXPECT_LE(Collisions::skew_factor(eps, wp, wp * wp + wq * wq,
-				*shape), M * (1.0 + 1e-12));
+			const double w_sq {wp * wp + wq * wq};
+			const double G {Collisions::skew_envelope_at(eps,
+				std::sqrt(w_sq), *shape)};
+			EXPECT_LE(Collisions::skew_factor(eps, wp, w_sq, *shape),
+				G * (1.0 + 1e-12)) << eps << " " << wp << " " << wq;
 		}
+		const auto m {skew_moments(eps, *shape)};
+		const double W {Collisions::skew_envelope(eps, *shape)};
+		EXPECT_NEAR(m.env, W, 1e-4 * W) << eps;
 	}
+	const double w {10.0};
+	const double w2 {w * w};
+	EXPECT_NEAR(Collisions::skew_factor(1.0, w, w2, grad_shape),
+		Collisions::skew_envelope_at(1.0, w, grad_shape) - 2.0 * w, 1e-9);
 }
 
-// Sampled background particles keep the flow and temperature, and carry
-// the requested heat flux along B and none across it. Clipping the
-// negative tail changes the moments a little when the skew is strong.
-// With the ion shape: nothing measurable at eps = 0.07, but at |eps| = 0.3
-// (0.28% of draws clipped) the heat flux is 0.86 of eps, the mean shifts
-// by 0.004 v_th toward the hot side (against q) and T rises by 0.7%. With
-// the electron shape at eps = 0.1 (0.045% clipped), the heat flux is 0.94
-// of eps. The statistical errors are about 5e-4 on the mean and 0.0015 on
-// the heat flux.
+// Sampled background particles have the moments of the clipped skewed
+// distribution f_M max(F, 0), worked out here by quadrature: the flow,
+// temperature and heat flux along B, and no heat flux across it. Clipping
+// the negative tail changes them a little when the skew is strong. With
+// the ion shape: nothing measurable at eps = 0.07, but at |eps| = 0.3 the
+// heat flux is 0.84 of eps, the mean shifts by 0.006 v_th toward the hot
+// side (against q) and T rises by 0.8%; at eps = 1, 0.60 of eps. With the
+// electron shape, 0.91 of eps at eps = 0.1 and 0.51 at eps = 1. The
+// statistical errors with 4 million samples are about 5e-4 on the mean,
+// 1e-3 on T and 0.0015 to 0.0022 on the heat flux (the larger at eps = 1).
+// The mean number of draws is the envelope's weight over the share of it
+// accepted, and the share clipped is the envelope's part where F <= 0.
 TEST(ThermalForce, SkewedSampler)
 {
 	const int n {4000000};
-	struct Case
+	for (const auto& [shape, eps] : std::vector<std::pair<
+		const Collisions::SkewShape*, double>> {
+		{&ion_shape, 0.07}, {&ion_shape, -0.3}, {&ion_shape, 1.0},
+		{&elec_shape, 0.02}, {&elec_shape, 0.1}, {&elec_shape, 1.0}})
 	{
-		const Collisions::SkewShape* shape;
-		double eps, q_lo, q_hi, w_par, w_tol, T, T_tol, clip_lo, clip_hi;
-	};
-	for (const auto c : std::vector<Case> {
-		{&ion_shape, 0.07, 0.066, 0.073, 0.0, 2e-3, 1.0, 3e-3, 0.0, 1e-4},
-		{&ion_shape, -0.3, -0.264, -0.250, 0.0040, 2e-3, 1.0071, 3e-3,
-			2.3e-3, 3.3e-3},
-		{&elec_shape, 0.02, 0.016, 0.024, 0.0, 2e-3, 1.0, 3e-3, 0.0, 1e-4},
-		{&elec_shape, 0.1, 0.090, 0.099, 0.0, 2e-3, 1.0, 3e-3, 3e-4,
-			6e-4}})
-	{
-		const double eps {c.eps};
-		const auto s {sample_moments(eps, *c.shape, n)};
-		EXPECT_NEAR(s.w_par, c.w_par, c.w_tol) << eps;
-		EXPECT_NEAR(s.w_perp, 0.0, 2e-3) << eps;
-		EXPECT_NEAR(s.T, c.T, c.T_tol) << eps;
-		EXPECT_GT(s.q_par, c.q_lo) << eps;
-		EXPECT_LT(s.q_par, c.q_hi) << eps;
-		EXPECT_NEAR(s.q_perp, 0.0, 6e-3) << eps;
+		const auto m {skew_moments(eps, *shape, true)};
+		const auto s {sample_moments(eps, *shape, n)};
+		EXPECT_NEAR(s.w_par, m.u / m.n, 2.5e-3) << eps;
+		EXPECT_NEAR(s.w_perp, 0.0, 2.5e-3) << eps;
+		EXPECT_NEAR(s.T, m.T / m.n, 5e-3) << eps;
+		EXPECT_NEAR(s.q_par, m.q / m.n, 0.008) << eps;
+		EXPECT_NEAR(s.q_perp, 0.0, 0.008) << eps;
 
-		// About M draws per sample, and the share of draws clipped
 		EXPECT_EQ(s.counts.samples, n);
-		const double M {Collisions::skew_bound(eps, *c.shape)};
-		EXPECT_NEAR(double(s.counts.draws) / n, M, 0.02 * M) << eps;
+		const double draws {m.env / m.n};
+		EXPECT_NEAR(double(s.counts.draws) / n, draws, 0.005 * draws)
+			<< eps;
 		const double clipped {double(s.counts.negative) / s.counts.draws};
-		EXPECT_GE(clipped, c.clip_lo) << eps;
-		EXPECT_LE(clipped, c.clip_hi) << eps;
+		EXPECT_NEAR(clipped, m.neg / m.env, 0.03 * m.neg / m.env + 2e-5)
+			<< eps;
 		EXPECT_EQ(s.counts.eps_capped, 0);
+	}
+
+	// The heat flux at strong skew, where a bound cut off at 5 v_th
+	// misses some of the fast particles that carry it (the sampler before
+	// the envelope was 0.015 low here): the electron shape at eps = 1, to
+	// under 3 statistical errors
+	{
+		const auto m {skew_moments(1.0, elec_shape, true)};
+		const auto s {sample_moments(1.0, elec_shape, n)};
+		EXPECT_NEAR(s.q_par, m.q / m.n, 0.006);
 	}
 
 	// |eps| > 1 is capped at 1 and counted
 	const auto s {sample_moments(3.0, ion_shape, 1000)};
 	EXPECT_EQ(s.counts.eps_capped, 1000);
-	const double M {Collisions::skew_bound(1.0, ion_shape)};
-	EXPECT_NEAR(double(s.counts.draws) / 1000, M, 0.15 * M);
+	const double W {Collisions::skew_envelope(1.0, ion_shape)};
+	EXPECT_NEAR(double(s.counts.draws) / 1000, W, 0.15 * W);
 }
 
 // Without a skew, the sampler is the plain drifting Maxwellian, with the
