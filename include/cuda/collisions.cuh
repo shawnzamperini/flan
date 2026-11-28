@@ -24,6 +24,17 @@ namespace Collisions
 		pcg32* rngs_d, const double elec_mass_amu, const double ion_mass_amu,
 		const Options::OptionsDevice* opts_d, unsigned long long* skew_d);
 
+	void prepare_collisions_gpu(Slots::SlotsDevice& slots_d,
+		const Background::BackgroundDevice& bkg_d, const double dt,
+		const double elec_mass_amu, const double ion_mass_amu,
+		const Options::OptionsDevice* opts_d);
+
+	void collisions_gpu(Slots::SlotsDevice& slots_d,
+		const Background::BackgroundDevice& bkg_d, const double dt,
+		ImpurityStats::StatisticsDevice& imp_stats_d, pcg32* rngs_d,
+		const double elec_mass_amu, const double ion_mass_amu,
+		const Options::OptionsDevice* opts_d, unsigned long long* skew_d);
+
 	std::array<SkewCounts, 2> skew_counts_from_device(
 		const unsigned long long* skew_d, const int device_id);
 

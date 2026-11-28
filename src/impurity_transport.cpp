@@ -760,8 +760,8 @@ namespace ImpurityTransport
 	* Applies Coulomb collisions with the background ions and electrons,
 	* choosing the CPU or GPU implementation.
 	*
-	* If GPU acceleration is on (use_gpu), Collisions::collision_gpu is
-	* called once for the ions and once for the electrons. Otherwise
+	* If GPU acceleration is on (use_gpu), Collisions::collisions_gpu
+	* collides with the ions and then the electrons. Otherwise
 	* collision_cpu is called, which does the same on the CPU. The GPU
 	* branch only exists in CUDA builds.
 	*
@@ -795,13 +795,8 @@ namespace ImpurityTransport
 #ifdef USE_CUDA
 		if (opts.use_gpu_int() > 0) 
 		{
-			// Defined in cuda/collision.cu. First call is for ions (the false)
-			Collisions::collision_gpu(slots_d, bkg_d, false, dt, imp_stats_d,
-				rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(), 
-				opts_d, skew_d);
-
-			// and the second for electrons (the true)
-			Collisions::collision_gpu(slots_d, bkg_d, true, dt, imp_stats_d,
+			// Defined in cuda/collisions.cu: the ions, then the electrons
+			Collisions::collisions_gpu(slots_d, bkg_d, dt, imp_stats_d,
 				rngs_d, bkg.get_elec_mass_amu(), bkg.get_ion_mass_amu(),
 				opts_d, skew_d);
 			return;
@@ -1440,12 +1435,12 @@ namespace ImpurityTransport
 
 			// Stop before copying anything if the run won't fit on a GPU.
 			// Each slot has about 25 arrays of 8 bytes or less, an index,
-			// its sub-step count and a 16-byte generator: 256 bytes is
-			// above that.
+			// its sub-step count, a 16-byte generator and 96 bytes of
+			// plasma values for the collisions: 384 bytes is above that.
 			GpuMemoryNeed need {};
 			need.background = bkg.device_bytes();
 			need.statistics = imp_stats.device_bytes();
-			need.slots = static_cast<std::size_t>(slots.N()) * 256;
+			need.slots = static_cast<std::size_t>(slots.N()) * 384;
 			for (int dev = 0; dev < num_gpus; dev++)
 			{
 				std::size_t free_bytes {};

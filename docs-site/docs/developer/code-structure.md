@@ -90,7 +90,7 @@ Then each pass through the loop runs these steps, in order:
 | Step | Wrapper | CPU version | GPU version |
 |---|---|---|---|
 | Ionization/recombination (if on) | `ioniz_recomb_wrapper` | `ioniz_recomb_cpu` | `OpenADAS::ioniz_recomb_gpu` |
-| Collisions (if on) | `collision_wrapper` | `collision_cpu` | `Collisions::collision_gpu` |
+| Collisions (if on) | `collision_wrapper` | `collision_cpu` | `Collisions::collisions_gpu` |
 | Boris push | `boris_wrapper` | `Boris::update_velocity_cpu` | `Boris::update_velocity_gpu` |
 | Step | `step_wrapper` | `step_cpu` | `step_gpu` |
 | Bounds check | `check_bounds_wrapper` | `Boundary::check_bounds_cpu` | `Boundary::check_bounds_gpu` |
@@ -263,6 +263,18 @@ for slots set up by hand in a test, there's no list and thread k takes slot
 k. Since each slot has its own generator and its own results, which thread
 handles it doesn't change them. A new per-particle kernel should get its
 slot the same way.
+
+The collisions run as three kernels. `collision_prep_kernel`
+(`prepare_collisions_gpu`) interpolates the plasma at each live, charged
+slot once per step, ne, Te, Ti, the flow and, with the thermal force, the
+heat fluxes and B, and works out each species' number of sub-steps. It
+stores them in the `coll_*` arrays of `SlotsDevice`. Then
+`nanbu_coll_kernel` runs for the ions and for the electrons, reading those
+values instead of interpolating again. `collisions_gpu` does all three;
+`collision_gpu` prepares and then collides with one species, for tests
+and other callers that want one at a time. A kernel that needs the
+plasma at the particles after the collisions and before the particles
+move could read the same arrays.
 
 Kernels can't use the host-side classes, so the data they need is copied to
 the GPU into plain structs of device pointers:
