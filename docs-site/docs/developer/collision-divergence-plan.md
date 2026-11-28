@@ -336,6 +336,22 @@ matter).
   with and without the order.
 - Checks: as C2.
 
+Tried and dropped (2026-11-27). The list was sorted with
+`cub::DeviceRadixSort` by a key of the electron and ion sub-step buckets
+(floor(log2 n_sub) + 1, 4 bits each), only when the list was packed 32
+to a warp, and the collision kernels skipped the neutral and dead
+entries at its start. Results were the same as C2's to rounding, and
+nsys showed no gain:
+
+| Case | Steps sorted | Collision kernel, C2 to C3 | Sort | Net |
+|---|---|---|---|---|
+| Gkeyll, 100000 | 1196 of 2450 | 0.654 to 0.671 s | 0.031 s | 0.05 s slower |
+| HERMES `all`, 160000 | 20001 of 63121 | 7.34 to 7.21 s | 0.52 s | 0.38 s slower |
+
+The electron sub-cycles left in a warp cost little next to the loads
+every lane makes, so grouping them saves less than the sort costs. The
+code is kept as a patch in `$SCRATCH/flan_gpu/coll/c3/c3.patch`.
+
 **C4. Sampler: the tighter envelope.** Done first, after C1 (C0's
 results).
 
