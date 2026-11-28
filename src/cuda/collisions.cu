@@ -643,7 +643,7 @@ namespace Collisions
 		{
 			const long long c[num_skew_counts] {skew_counts.samples,
 				skew_counts.draws, skew_counts.negative,
-				skew_counts.above_bound, skew_counts.eps_capped};
+				skew_counts.eps_capped};
 			for (int k {}; k < num_skew_counts; ++k)
 			{
 				if (c[k] != 0)
@@ -738,8 +738,7 @@ namespace Collisions
 			counts[s].samples = static_cast<long long>(c[0]);
 			counts[s].draws = static_cast<long long>(c[1]);
 			counts[s].negative = static_cast<long long>(c[2]);
-			counts[s].above_bound = static_cast<long long>(c[3]);
-			counts[s].eps_capped = static_cast<long long>(c[4]);
+			counts[s].eps_capped = static_cast<long long>(c[3]);
 		}
 		return counts;
 	}

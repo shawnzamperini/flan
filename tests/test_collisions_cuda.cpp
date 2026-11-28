@@ -173,7 +173,6 @@ namespace
 			EXPECT_EQ(gpu.counts.samples, cpu.counts.samples);
 			EXPECT_EQ(gpu.counts.draws, cpu.counts.draws);
 			EXPECT_EQ(gpu.counts.negative, cpu.counts.negative);
-			EXPECT_EQ(gpu.counts.above_bound, cpu.counts.above_bound);
 			EXPECT_EQ(gpu.counts.eps_capped, cpu.counts.eps_capped);
 		}
 	}

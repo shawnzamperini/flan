@@ -216,7 +216,7 @@ in CSR form. `distance`, `field_at` and `substeps` on a view are what
 device copy (`Sheath::to_device`, freed with `free_sheath`).
 
 The thermal force's sampler is shared the same way: `Collisions::sample_bkg`
-and the skew helpers (`skew_at`, `skew_factor`, `skew_bound`) are in
+and the skew helpers (`skew_at`, `skew_factor`, `skew_envelope_at`, `skew_envelope`) are in
 `include/collisions_hd.h`, called by `nanbu_coll` and `nanbu_coll_kernel`.
 The GPU's sampler counts go to device counters and are added to the
 host's (`skew_counts_from_device`, `add_skew_counts`), so they're reduced
