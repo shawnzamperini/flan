@@ -391,6 +391,58 @@ removed from the output.
   the GPU plan's "Later". Check that runs with few particles are no
   slower (the sort's cost).
 
+Done (2026-11-27), jobs in `$SCRATCH/flan_gpu/coll/c5` (`time.sbatch`,
+`prof.sbatch`), `main` against the branch at e28e89e (C4 and C2), both
+Release. C4 changes the random numbers, so the runs are statistically
+equivalent, not the same trajectories (HERMES 160000 takes 56574 steps
+on `main`, 63121 on the branch).
+
+Following impurities, mean of three runs alternating on one GPU of an
+otherwise idle node:
+
+| Case | `main` | Branch | Change |
+|---|---|---|---|
+| HERMES `all`, 4000 | 25.2 s | 17.4 s | -31% |
+| HERMES `all`, 40000 | 40.4 s | 25.6 s | -36% |
+| HERMES `all`, 160000 | 80.4 s | 51.2 s | -36% |
+| SOLEDGE3X `self`, 4000 | 10.2 s | 10.5 s | +2% |
+| Gkeyll, 100000 | 2.62 s | 2.65 s | 0 |
+
+nsys, collision kernels over the run (the prepare kernel and both
+collision launches on the branch):
+
+| Case | `main` | Branch | All kernels, `main` to branch |
+|---|---|---|---|
+| HERMES `all`, 160000 | 46.7 s | 16.0 s | 77.4 to 47.9 s |
+| Gkeyll, 100000 | 1.04 s | 0.88 s | 1.77 to 1.60 s |
+
+ncu, one step (step 8000 of HERMES 40000, step 1000 of Gkeyll):
+
+| Case | Kernel | `main` | Branch | Busy lanes, `main` to branch | Registers |
+|---|---|---|---|---|---|
+| HERMES | prepare | | 140 µs | 12.1 | 163 |
+| | ions | 713 µs | 107 µs | 4.4 to 4.5 | 173 to 104 |
+| | electrons | 321 µs | 56 µs | 7.5 to 7.7 | |
+| Gkeyll | prepare | | 90 µs | 32.0 | |
+| | ions | 129 µs | 28 µs | 27.4 to 24.3 | |
+| | electrons | 407 µs | 261 µs | 9.2 to 8.1 | |
+
+What this shows:
+
+- In HERMES the collisions went from 60% of the kernel time to a third,
+  and the runs are about a third faster. Almost all of it is C4: the
+  sampler's draws. The busy lanes per instruction hardly changed: the
+  kernels do less work, not the same work with fuller warps.
+- The prepare kernel is now the largest collision cost in HERMES, and
+  the Boris sub-step kernel (14 s) the largest kernel.
+- Gkeyll gains 15% in the collision kernels from doing the
+  interpolation once, which the rest of the step hides in the wall
+  time. Its electron kernel still runs 8 of 32 lanes: the sub-cycles,
+  which C3's sort didn't help.
+- SOLEDGE3X `self`, with few particles, is about 2% slower, within two
+  standard deviations of the run to run spread: these steps are launch
+  latency, and the branch launches one more kernel per step.
+
 **C6. Docs and merge.**
 
 - `code-structure.md`: the prepare kernel and the ordered list, for

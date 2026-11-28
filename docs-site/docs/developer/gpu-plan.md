@@ -707,16 +707,14 @@ All seven were accepted as recommended (2026-11-24).
   with 128-thread blocks for the heavy kernels. It was faster than
   before in every case measured, by up to about a third. This also
   covers decision 4's compacted near-wall kernel.
-- **Divergence in the collision kernel.** With the live list, the
-  collision kernel still runs only about 3 of 32 lanes per instruction:
-  the lanes of a warp take different paths (the rejection loop of the
-  skewed sampler, sub-cycles, neutrals returning early), and a warp
-  runs them one after another. Restructuring the sampling, for example
-  drawing a fixed number of candidates per pass for all lanes, is the
-  next speed-up for runs with many particles.
-  Planned in the
-  [Collision Kernel Divergence Plan](collision-divergence-plan.md),
-  which first measures which of these the idle lanes come from.
+- **Divergence in the collision kernel.** Done: see the
+  [Collision Kernel Divergence Plan](collision-divergence-plan.md). The
+  idle lanes came mostly from the skewed sampler's rejection loop,
+  whose bound took tens of draws per sample. A tighter envelope (about
+  1 + 2|eps| draws) and one plasma interpolation for both species made
+  the HERMES runs about a third faster; sorting by sub-steps didn't pay
+  for itself. The collisions are now a third of the kernel time there,
+  and the Boris sub-step kernel the largest.
 - **Backgrounds too big for one GPU** (decision 5): keep only the frames
   around the particles' times on the device.
 - **Registers.** The main kernels use 133 to 255 registers per thread,
